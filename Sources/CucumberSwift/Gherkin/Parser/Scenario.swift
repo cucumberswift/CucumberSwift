@@ -9,7 +9,7 @@
 import Foundation
 public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var title = ""
-    public private(set)  var tags = [String]()
+    public internal(set)  var tags = [String]()
     public internal(set) var steps = [Step]()
     public internal(set) var feature: Feature?
     public private(set)  var location: Lexer.Position

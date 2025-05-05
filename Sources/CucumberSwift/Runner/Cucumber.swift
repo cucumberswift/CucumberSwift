@@ -11,7 +11,7 @@ import XCTest
 import CucumberSwiftExpressions
 
 @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
-    static var shared = Cucumber()
+    @objc public static var shared = Cucumber()
 
     var features = [Feature]()
     var currentStep: Step?

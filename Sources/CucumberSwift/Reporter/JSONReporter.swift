@@ -79,6 +79,10 @@ public class CucumberJSONReporter: CucumberTestObserver {
 }
 
 extension CucumberJSONReporter {
+    struct Tag: Encodable {
+        let line: UInt
+        let name: String
+    }
     class Feature: Encodable {
         let uri: String
         let id: String
@@ -87,7 +91,7 @@ extension CucumberJSONReporter {
         let keyword: String = "Feature"
         var elements: [Scenario] = []
         let line: UInt
-        var tags: [String] = []
+        var tags: [Tag] = []
 
         init(_ feature: CucumberSwift.Feature) {
             uri = feature.uri
@@ -96,7 +100,7 @@ extension CucumberJSONReporter {
             name = feature.title
             description = feature.desc
             line = feature.location.line
-            tags = feature.tags
+            tags = feature.tags.map { Tag(line: 1, name: $0) }
         }
     }
 
@@ -108,7 +112,7 @@ extension CucumberJSONReporter {
         let description: String
         var steps: [Step] = []
         var line: UInt
-        var tags: [String] = []
+        var tags: [Tag] = []
 
         init(_ scenario: CucumberSwift.Scenario) {
 //            #warning("Add better id logic so all whitespace is replaced")
@@ -117,7 +121,7 @@ extension CucumberJSONReporter {
 //            #warning("Fix this")
             description = ""
             line = scenario.location.line
-            tags = scenario.tags
+            tags = scenario.tags.map { Tag(line: 1, name: $0) }
         }
     }
 

@@ -143,11 +143,15 @@ class ReporterTests: XCTestCase {
         if let schema = json as? [String: Any] {
             // access dictionary values
             let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-            Feature("F1") {
+            let feature = Feature("F1") {
                 Description("A test feature")
                 Scenario("S1") {
                     Given(I: print(""))
                 }
+            }
+            feature.tags = ["@tag1", "@tag2"]
+            if !feature.scenarios.isEmpty {
+                feature.scenarios[0].tags = ["@tag3", "@tag4"]
             }
             reporter.testSuiteStarted(at: Date())
             Cucumber.shared.executeFeatures()
