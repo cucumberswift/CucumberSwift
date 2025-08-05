@@ -15,6 +15,9 @@ open class CucumberTest: XCTestCase {
     private static var suiteInstance: XCTestSuite?
 
     override public class var defaultTestSuite: XCTestSuite {
+        // Auto-initialize CucumberSwift if not already done
+        Cucumber.ensureInitialized()
+
         // notify reporters every time
         Cucumber.shared.reporters.forEach { $0.testSuiteStarted(at: Date()) }
 
@@ -89,7 +92,10 @@ open class CucumberTest: XCTestCase {
                 return nil
             }
             .map { step, testCaseClass, methodSelector -> (Step, XCTestCase) in
-                objc_registerClassPair(testCaseClass)
+                // Only register class if not already registered
+                if objc_lookUpClass(NSStringFromClass(testCaseClass)) == nil {
+                    objc_registerClassPair(testCaseClass)
+                }
                 return (step, testCaseClass.init(selector: methodSelector))
             }
             .forEach { step, testCase in

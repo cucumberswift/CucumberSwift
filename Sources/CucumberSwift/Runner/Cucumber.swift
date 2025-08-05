@@ -13,6 +13,18 @@ import CucumberSwiftExpressions
 @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
     @objc public static var shared = Cucumber()
 
+    // Auto-initialization support
+    private static var hasAutoInitialized = false
+
+    /// Ensures CucumberSwift is properly initialized for test discovery.
+    /// This method is called automatically when tests are discovered, eliminating
+    /// the need for manual Cucumber.Load() calls in most cases.
+    @objc public static func ensureInitialized() {
+        guard !hasAutoInitialized else { return }
+        hasAutoInitialized = true
+        Load()
+    }
+
     var features = [Feature]()
     var currentStep: Step?
     var reportName: String = "CucumberTestResultsFor"
