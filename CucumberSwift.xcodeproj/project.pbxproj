@@ -108,6 +108,7 @@
 		CADD26DD265B1D1F00EE8707 /* JSONReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADD26DC265B1D1F00EE8707 /* JSONReporter.swift */; };
 		CAEE41EE28B324BF000D4703 /* CucumberSwiftExpressions in Frameworks */ = {isa = PBXBuildFile; productRef = CAEE41ED28B324BF000D4703 /* CucumberSwiftExpressions */; };
 		CAF87A55281453EF00F7946A /* CucumberSwift.docc in Sources */ = {isa = PBXBuildFile; fileRef = CAF87A54281453EF00F7946A /* CucumberSwift.docc */; };
+		D48FDFB52E45189E00B8CA56 /* CucumberTestConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48FDFB42E45189E00B8CA56 /* CucumberTestConfigurationTests.swift */; };
 		D4B0CDE22E44F19000F653A8 /* CucumberTestConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0CDE12E44F19000F653A8 /* CucumberTestConfiguration.swift */; };
 /* End PBXBuildFile section */
 
@@ -240,6 +241,7 @@
 		CADD26DC265B1D1F00EE8707 /* JSONReporter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JSONReporter.swift; sourceTree = "<group>"; };
 		CAF51EA42557B1C70095A5C4 /* Package.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = SOURCE_ROOT; };
 		CAF87A54281453EF00F7946A /* CucumberSwift.docc */ = {isa = PBXFileReference; lastKnownFileType = folder.documentationcatalog; path = CucumberSwift.docc; sourceTree = "<group>"; };
+		D48FDFB42E45189E00B8CA56 /* CucumberTestConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTestConfigurationTests.swift; sourceTree = "<group>"; };
 		D4B0CDE12E44F19000F653A8 /* CucumberTestConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTestConfiguration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -580,6 +582,7 @@
 		CAF51E972557B16E0095A5C4 /* CucumberSwiftTests */ = {
 			isa = PBXGroup;
 			children = (
+				D48FDFB42E45189E00B8CA56 /* CucumberTestConfigurationTests.swift */,
 				CA09728C264F505600573DA5 /* Reporter */,
 				CA5A210724C92BCC0077AD50 /* DSLTests */,
 				1DA7619723933BBD001CBA5B /* Runner */,
@@ -912,6 +915,7 @@
 				AD4E77332235A04B005938B7 /* WaitUntil.swift in Sources */,
 				CA048B692634AECE007DFDE7 /* HookTests.swift in Sources */,
 				1DA7619923933BCB001CBA5B /* RunWithLineNumberTests.swift in Sources */,
+				D48FDFB52E45189E00B8CA56 /* CucumberTestConfigurationTests.swift in Sources */,
 				AD22A1BA222B21830025E41C /* CucumberExtensions.swift in Sources */,
 				AD2F20E2216969DF0041657C /* ErrorTests.swift in Sources */,
 				AD7F1C10210507420004852A /* StepTests.swift in Sources */,

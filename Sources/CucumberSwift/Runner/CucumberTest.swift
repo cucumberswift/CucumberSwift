@@ -73,8 +73,8 @@ open class CucumberTest: XCTestCase {
 
                         // Create the main scenario test
                         var tests = [XCTestCase]()
-                        createScenarioTestCase(scenario: scenario, tests: &tests)
-                        print("   Created \(tests.count) test cases for scenario")
+                        createScenarioTestCase(feature: feature, scenario: scenario, tests: &tests)
+                        print("   Created \(tests.count) test case(s) for scenario \(scenario.title.toClassString())")
 
                         // Add scenario test to its feature suite
                         tests.forEach { featureSuite.addTest($0) }
@@ -136,14 +136,14 @@ open class CucumberTest: XCTestCase {
             }
     }
 
-    private static func createScenarioTestCase(scenario: Scenario, tests: inout [XCTestCase]) {
-        let scenarioClassName = scenario.title.toClassString()
+    private static func createScenarioTestCase(feature: Feature, scenario: Scenario, tests: inout [XCTestCase]) {
+        let featureClassName = feature.title.toClassString()
         let scenarioMethod = TestCaseMethod(withName: scenario.title.toClassString()) {
             print("🚀 Execute scenario: \(scenario.title)")
             executeScenario(scenario)
         }
 
-        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: scenarioClassName, method: scenarioMethod) {
+        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: featureClassName, method: scenarioMethod) {
             objc_registerClassPair(testCaseClass)
             let testCase = testCaseClass.init(selector: methodSelector)
             tests.append(testCase)
