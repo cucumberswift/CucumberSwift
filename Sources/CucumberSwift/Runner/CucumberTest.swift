@@ -46,44 +46,38 @@ open class CucumberTest: XCTestCase {
         let configuration = CucumberTestConfiguration.fromEnvironment()
         print("🔧 CucumberSwift Configuration: \(configuration)")
         print("📊 Total features found: \(Cucumber.shared.features.count)")
-        
+
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let className = feature.title.toClassString() + readFeatureScenarioDelimiter()
             print("🎯 Processing feature: \(feature.title)")
-            
+
             // Create a feature-level suite for better organization
             let featureSuite = XCTestSuite(name: feature.title.toClassString())
 
             for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
                 print("📝 Processing scenario: \(scenario.title) with \(scenario.steps.count) steps")
-                
+
                 switch configuration {
-                case .stepBased:
-                    // Original behavior: each step is a separate test
-                    print("   Using step-based mode")
-                    let childSuite = XCTestSuite(name: scenario.title.toClassString())
-                    var tests = [XCTestCase]()
-                    createTestCaseFor(className: className, scenario: scenario, tests: &tests)
-                    tests.forEach { childSuite.addTest($0) }
-                    featureSuite.addTest(childSuite)
-                    
-                case .scenarioBased:
-                    // New behavior: each scenario is a single test
-                    print("   Using scenario-based mode")
-                    
-                    // Create a scenario suite for organization
-                    let scenarioSuite = XCTestSuite(name: scenario.title.toClassString())
-                    
-                    // Create the main scenario test
-                    var tests = [XCTestCase]()
-                    createScenarioTestCase(className: className, scenario: scenario, tests: &tests)
-                    print("   Created \(tests.count) test cases for scenario")
-                    
-                    // Add scenario test to its suite
-                    tests.forEach { scenarioSuite.addTest($0) }
-                    
-                    // Add scenario suite to feature suite
-                    featureSuite.addTest(scenarioSuite)
+                    case .stepBased:
+                        // Original behavior: each step is a separate test
+                        print("   Using step-based mode")
+                        let childSuite = XCTestSuite(name: scenario.title.toClassString())
+                        var tests = [XCTestCase]()
+                        createTestCaseFor(className: className, scenario: scenario, tests: &tests)
+                        tests.forEach { childSuite.addTest($0) }
+                        featureSuite.addTest(childSuite)
+
+                    case .scenarioBased:
+                        // New behavior: each scenario is a single test
+                        print("   Using scenario-based mode")
+
+                        // Create the main scenario test
+                        var tests = [XCTestCase]()
+                        createScenarioTestCase(scenario: scenario, tests: &tests)
+                        print("   Created \(tests.count) test cases for scenario")
+
+                        // Add scenario test to its feature suite
+                        tests.forEach { featureSuite.addTest($0) }
                 }
             }
             
@@ -142,18 +136,18 @@ open class CucumberTest: XCTestCase {
             }
     }
 
-    private static func createScenarioTestCase(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
-        let scenarioClassName = className.appending(scenario.title.toClassString())
+    private static func createScenarioTestCase(scenario: Scenario, tests: inout [XCTestCase]) {
+        let scenarioClassName = scenario.title.toClassString()
         let scenarioMethod = TestCaseMethod(withName: scenario.title.toClassString()) {
-            print("🚀 Executing scenario: \(scenario.title)")
+            print("🚀 Execute scenario: \(scenario.title)")
             executeScenario(scenario)
         }
-        
+
         if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: scenarioClassName, method: scenarioMethod) {
             objc_registerClassPair(testCaseClass)
             let testCase = testCaseClass.init(selector: methodSelector)
             tests.append(testCase)
-            print("✅ Created test case: \(NSStringFromClass(testCaseClass)).\(NSStringFromSelector(methodSelector))")
+            print("🧪 Created test case: \(NSStringFromClass(testCaseClass)).\(NSStringFromSelector(methodSelector))")
         } else {
             print("❌ Failed to create test case for scenario: \(scenario.title)")
         }
