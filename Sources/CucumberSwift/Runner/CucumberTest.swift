@@ -36,6 +36,23 @@ open class CucumberTest: XCTestCase {
         return suite
     }
 
+    static func createScenarioTestMethod(_ scenario: Scenario, _ featureTestClass: XCTestCase.Type) -> XCTest? {
+        print("📝 Processing scenario: \(scenario.title) with \(scenario.steps.count) steps")
+        // Execute the scenario
+        let scenarioMethod = TestCaseMethod(withName: scenario.title.toClassString()) {
+            print("🚀 Execute scenario: \(scenario.title)")
+            executeScenario(scenario)
+        }
+        // Create a test method for the scenario
+        if let methodSelector = TestCaseGenerator.addTestMethod(testCase: featureTestClass, method: scenarioMethod) {
+            let scenarioTestMethod = featureTestClass.init(selector: methodSelector)
+            print("🧪 Created test case method: \(NSStringFromClass(featureTestClass)).\(NSStringFromSelector(methodSelector))")
+
+            return scenarioTestMethod
+        }
+        return nil
+    }
+    
     static func generateAlltests(_ rootSuite: XCTestSuite) {
         let stubsSuite = XCTestSuite(name: "GeneratedSteps")
         var stubTests = [XCTestCase]()
@@ -46,9 +63,9 @@ open class CucumberTest: XCTestCase {
         let configuration = CucumberTestConfiguration.fromEnvironment()
         print("🔧 CucumberSwift Configuration: \(configuration)")
         switch configuration {
-          case .stepBased:
+        case .stepBased:
             // Original behavior: each step is a separate test
-            print("   Using step-based mode")
+            print("▶️ Using \(configuration) mode")
             for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
                 let className = feature.title.toClassString() + readFeatureScenarioDelimiter()
 
@@ -60,42 +77,32 @@ open class CucumberTest: XCTestCase {
                     rootSuite.addTest(childSuite)
                 }
             }
-          case .scenarioBased:
+        case .scenarioBased:
             // New behavior: each scenario is a single test
-            print("   Using scenario-based mode")
+            print("▶️ Using \(configuration) mode")
             print("📊 Total features found: \(Cucumber.shared.features.count)")
             for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
                 print("🎯 Processing feature: \(feature.title) with \(feature.scenarios.count) scenarios")
+                // Create a feature-level suite for better organization
+                let featureSuite = XCTestSuite(name: feature.title.toClassString())
+
                 // Create a test case class for the feature
-                if var featureTestCaseClass = TestCaseGenerator.makeClass(className: feature.title.toClassString()){
-                    print("✅ Created test case class for feature: \(feature.title)")
+                if let featureTestClass = TestCaseGenerator.makeClass(className: feature.title.toClassString()) {
+                    print("⚗️ Created test case class \(NSStringFromClass(featureTestClass))")
                     // Register the feature test case class to ensure it can be used
-                    objc_registerClassPair(featureTestCaseClass!)
+                    objc_registerClassPair(featureTestClass)
                     // Create a test method for each scenario in the feature
                     for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                        print("📝 Processing scenario: \(scenario.title) with \(scenario.steps.count) steps")
-                        // Execute the scenario
-                        let scenarioMethod = TestCaseMethod(withName: scenario.title.toClassString()) {
-                            print("🚀 Execute scenario: \(scenario.title)")
-                            executeScenario(scenario)
+                        if let scenarioTestMethod = createScenarioTestMethod(scenario, featureTestClass) {
+                            featureSuite.addTest(scenarioTestMethod)
                         }
-                        // Create a test method for the scenario
-                        if let methodSelector = TestCaseGenerator.addTestMethod(testCase: featureTestCaseClass, method: scenarioMethod) {
-                            if let scenarioTestMethod = testCaseClass.init(selector: methodSelector){
-                                print("🧪 Created test case method: \(NSStringFromClass(featureTestCaseClass)).\(NSStringFromSelector(methodSelector))")
-                            } else {
-                                print("❌ Failed to create test case method for scenario: \(scenario.title)")
-                            }
-                        }
-                        print("   Test case class: \(String(describing: featureTestCaseClass))")
                     }
-                }
-                else {
+                } else {
                     print("❌ Failed to create test case class for feature: \(feature.title)")
                 }
 
                 print("✅ Finished processing feature: \(feature.title) with \(feature.scenarios.count) scenarios")
-                rootSuite.addTest(featureTestCaseClass!)
+                rootSuite.addTest(featureSuite)
             }
         }
     }
