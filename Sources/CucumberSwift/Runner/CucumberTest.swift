@@ -36,23 +36,6 @@ open class CucumberTest: XCTestCase {
         return suite
     }
 
-    static func createScenarioTestMethod(_ scenario: Scenario, _ featureTestClass: XCTestCase.Type) -> XCTest? {
-        print("📝 Processing scenario: \(scenario.title) with \(scenario.steps.count) steps")
-        // Execute the scenario
-        let scenarioMethod = TestCaseMethod(withName: scenario.title.toClassString()) {
-            print("🚀 Execute scenario: \(scenario.title)")
-            executeScenario(scenario)
-        }
-        // Create a test method for the scenario
-        if let methodSelector = TestCaseGenerator.addTestMethod(testCase: featureTestClass, method: scenarioMethod) {
-            let scenarioTestMethod = featureTestClass.init(selector: methodSelector)
-            print("🧪 Created test case method: \(NSStringFromClass(featureTestClass)).\(NSStringFromSelector(methodSelector))")
-
-            return scenarioTestMethod
-        }
-        return nil
-    }
-    
     static func generateAlltests(_ rootSuite: XCTestSuite) {
         let stubsSuite = XCTestSuite(name: "GeneratedSteps")
         var stubTests = [XCTestCase]()
@@ -83,24 +66,28 @@ open class CucumberTest: XCTestCase {
             print("📊 Total features found: \(Cucumber.shared.features.count)")
             for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
                 print("🎯 Processing feature: \(feature.title) with \(feature.scenarios.count) scenarios")
+
                 // Create a feature-level suite for better organization
                 let featureSuite = XCTestSuite(name: feature.title.toClassString())
+                let className = feature.title.toClassString()
 
-                // Create a test case class for the feature
-                if let featureTestClass = TestCaseGenerator.makeClass(className: feature.title.toClassString()) {
-                    print("⚗️ Created test case class \(NSStringFromClass(featureTestClass))")
-                    // Register the feature test case class to ensure it can be used
-                    objc_registerClassPair(featureTestClass)
-                    // Create a test method for each scenario in the feature
-                    for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                        if let scenarioTestMethod = createScenarioTestMethod(scenario, featureTestClass) {
-                            featureSuite.addTest(scenarioTestMethod)
-                        }
-                    }
-                } else {
+                // Create one test class per feature
+                guard let testCaseClass = TestCaseGenerator.makeClass(className: className) else {
                     print("❌ Failed to create test case class for feature: \(feature.title)")
+                    continue
                 }
 
+                // Create a test case for each scenario
+                let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
+
+                for (index, scenario) in scenarios.enumerated() {
+                    if let testCase = createTestCaseForScenario(testCaseClass: testCaseClass, scenario: scenario, scenarioIndex: index, totalScenarios: scenarios.count, feature: feature) {
+                        featureSuite.addTest(testCase)
+                    }
+                }
+
+                // Register the class only once after all methods are added
+                objc_registerClassPair(testCaseClass)
                 print("✅ Finished processing feature: \(feature.title) with \(feature.scenarios.count) scenarios")
                 rootSuite.addTest(featureSuite)
             }
@@ -157,91 +144,47 @@ open class CucumberTest: XCTestCase {
             }
     }
 
-    private static func executeScenario(_ scenario: Scenario) {
-        // Track scenario execution for reporters
-        let scenarioStartTime = Date()
-        Cucumber.shared.reporters.forEach { $0.didStart(scenario: scenario, at: scenarioStartTime) }
+    private static func createTestCaseForScenario(testCaseClass: XCTestCase.Type, scenario: Scenario, scenarioIndex: Int, totalScenarios: Int, feature: Feature) -> XCTestCase? {
+        guard let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCaseClass, method: scenario.method) else {
+            return nil
+        }
 
-        var scenarioResult: Reporter.Result = .passed
-        var firstFailureStep: Step?
+        let testCase = testCaseClass.init(selector: methodSelector)
+        let isLastScenario = scenarioIndex == totalScenarios - 1
 
-        for step in scenario.steps {
-            // Skip remaining steps if scenario has already failed (unless continueAfterFailure is true)
-            if scenarioResult == .failed && !(step.continueAfterFailure) {
-                step.result = .skipped
-                continue
+        testCase.addTeardownBlock {
+            // Execute after scenario hooks
+            Cucumber.shared.afterScenarioHooks.forEach { $0.hook(scenario) }
+            // Notify all reporters
+            let scenarioResult: Reporter.Result =
+                (scenario.steps.contains { $0.result == .failed }) ? .failed : .passed
+            Cucumber.shared.reporters.forEach {
+                $0.didFinish(scenario: scenario,
+                             result: scenarioResult,
+                             duration: Measurement(value: Date().timeIntervalSince(scenario.startDate), unit: .seconds))
             }
-
-            let stepStartTime = Date()
-            step.startTime = stepStartTime
-            Cucumber.shared.currentStep = step
-            Cucumber.shared.setupBeforeHooksFor(step)
-            Cucumber.shared.beforeStepHooks.forEach { $0.hook(step) }
-
-            #if compiler(>=5)
-            XCTContext.runActivity(named: "\(step.keyword.toString()) \(step.match)") { _ in
-                executeStepInScenario(step: step, scenario: scenario)
-            }
-            #else
-            _ = XCTContext.runActivity(named: "\(step.keyword.toString()) \(step.match)") { _ in
-                executeStepInScenario(step: step, scenario: scenario)
-            }
-            #endif
-
-            // Update scenario result based on step result
-            if step.result == .failed && scenarioResult != .failed {
-                scenarioResult = .failed
-                firstFailureStep = step
-                // Add scenario to failed scenarios list to skip remaining scenarios if needed
-                if !Cucumber.shared.failedScenarios.contains(where: { $0 === scenario }) {
-                    Cucumber.shared.failedScenarios.append(scenario)
+            // Execute after feature hooks if this is the last scenario
+            if isLastScenario {
+                // Execute after feature hooks
+                Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
+                // Notify all reporters
+                let featureResult: Reporter.Result =
+                    (feature.scenarios.contains { $0.steps.contains { $0.result == .failed } }) ? .failed : .passed
+                Cucumber.shared.reporters.forEach {
+                    $0.didFinish(feature: feature,
+                                 result: featureResult,
+                                 duration: Measurement(value: Date().timeIntervalSince(feature.startDate), unit: .seconds))
                 }
             }
-
-            step.endTime = Date()
-            Cucumber.shared.reporters.forEach { $0.didFinish(step: step, result: step.result, duration: step.executionDuration) }
-
-            // Setup after hooks
-            (step.executeInstance as? XCTestCase)?.tearDown()
-            Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
-            Cucumber.shared.setupAfterHooksFor(step)
         }
 
-        let scenarioEndTime = Date()
-        let scenarioDuration = Measurement(value: scenarioEndTime.timeIntervalSince(scenarioStartTime) * 1_000_000_000, unit: UnitDuration.nanoseconds)
+        // Set continueAfterFailure based on any step's setting or default
+        let continueAfterFailure = scenario.steps.first?.continueAfterFailure
+            ?? (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure
+            ?? testCase.continueAfterFailure
+        testCase.continueAfterFailure = continueAfterFailure
 
-        // Report scenario completion
-        Cucumber.shared.reporters.forEach { $0.didFinish(scenario: scenario, result: scenarioResult, duration: scenarioDuration) }
-
-        // If scenario failed, fail the XCTest
-        if scenarioResult == .failed, let failedStep = firstFailureStep {
-            XCTFail("Scenario '\(scenario.title)' failed at step: \(failedStep.keyword.toString()) \(failedStep.match). Error: \(failedStep.errorMessage)")
-        }
-    }
-
-    private static func executeStepInScenario(step: Step, scenario: Scenario) {
-        Cucumber.shared.reporters.forEach { $0.didStart(step: step, at: step.startTime ?? Date()) }
-
-        do {
-            if let `class` = step.executeClass, let selector = step.executeSelector {
-                step.executeInstance = (`class` as? NSObject.Type)?.init()
-                if let instance = step.executeInstance,
-                    instance.responds(to: selector) {
-                        (step.executeInstance as? XCTestCase)?.setUp()
-                        instance.perform(selector)
-                }
-            } else {
-                try step.execute?(step.match, step)
-            }
-            if step.execute != nil && step.result != .failed {
-                step.result = .passed
-            }
-        } catch {
-            step.result = .failed
-            step.errorMessage = error.localizedDescription
-            // Use XCTFail to properly report the failure in the test context
-            XCTFail("Step failed: \(step.keyword.toString()) \(step.match). Error: \(error.localizedDescription)")
-        }
+        return testCase
     }
 
     override open func invokeTest() {
@@ -307,15 +250,15 @@ extension Step {
                 Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
             }
 
-            #if compiler(>=5)
+#if compiler(>=5)
             XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
                 runAndReport()
             }
-            #else
+#else
             _ = XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
                 runAndReport()
             }
-            #endif
+#endif
         }
     }
 
@@ -323,15 +266,66 @@ extension Step {
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()
             if let instance = executeInstance,
-                instance.responds(to: selector) {
-                    (executeInstance as? XCTestCase)?.setUp()
-                    instance.perform(selector)
+               instance.responds(to: selector) {
+                (executeInstance as? XCTestCase)?.setUp()
+                instance.perform(selector)
             }
         } else {
             try execute?(self.match, self)
         }
         if execute != nil && result != .failed {
             result = .passed
+        }
+    }
+}
+
+extension Scenario {
+    fileprivate var method: TestCaseMethod? {
+        TestCaseMethod(withName: self.title.toClassString()) {
+            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self }) else { return }
+
+            // Execute before feature hooks and notify reporters if this is the first scenario in the feature
+            if let feature = self.feature,
+               let firstScenario = feature.scenarios.first,
+               firstScenario === self {
+                // Mark feature as started, execute before hooks and notify reporters
+                feature.startDate = Date()
+                Cucumber.shared.reporters.forEach { $0.didStart(feature: feature, at: feature.startDate) }
+                Cucumber.shared.beforeFeatureHooks.forEach { $0.hook(feature) }
+            }
+
+            // Notify reporters and execute before scenario hooks
+            self.startDate = Date()
+            Cucumber.shared.reporters.forEach { $0.didStart(scenario: self, at: self.startDate) }
+            Cucumber.shared.beforeScenarioHooks.forEach { $0.hook(self) }
+
+            for step in self.steps {
+                let startTime = Date()
+                step.startTime = startTime
+                Cucumber.shared.currentStep = step
+                Cucumber.shared.reporters.forEach { $0.didStart(step: step, at: startTime) }
+                Cucumber.shared.beforeStepHooks.forEach { $0.hook(step) }
+
+                func runStep() {
+                    XCTAssertNoThrow(try step.run())
+                    step.endTime = Date()
+                }
+
+                #if compiler(>=5)
+                XCTContext.runActivity(named: "\(step.keyword.toString()) \(step.match)") { _ in
+                    runStep()
+                }
+                #else
+                _ = XCTContext.runActivity(named: "\(step.keyword.toString()) \(step.match)") { _ in
+                    runStep()
+                }
+                #endif
+
+                // Run step teardown
+                (step.executeInstance as? XCTestCase)?.tearDown()
+                Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
+                Cucumber.shared.reporters.forEach { $0.didFinish(step: step, result: step.result, duration: step.executionDuration) }
+            }
         }
     }
 }

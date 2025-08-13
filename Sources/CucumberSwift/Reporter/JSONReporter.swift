@@ -1,6 +1,6 @@
 //
 //  JSONReporter.swift
-//  
+//
 //
 //  Created by Tyler Thompson on 5/23/21.
 //  Copyright © 2019 Tyler Thompson. All rights reserved.
@@ -11,9 +11,6 @@ import Foundation
 public class CucumberJSONReporter: CucumberTestObserver {
     let reportURL: URL
     private(set) var features: [Feature] = []
-    private var currentFeature: Feature?
-    private var currentScenario: Scenario?
-    private var currentStep: Step?
     private var encoder: JSONEncoder = {
         var encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
@@ -48,19 +45,18 @@ public class CucumberJSONReporter: CucumberTestObserver {
     public func didStart(feature: CucumberSwift.Feature, at date: Date) {
         defer { try? encoder.encode(features).write(to: reportURL) }
         features.append(Feature(feature))
-        currentFeature = features.last
     }
 
     public func didStart(scenario: CucumberSwift.Scenario, at date: Date) {
         defer { try? encoder.encode(features).write(to: reportURL) }
-        currentFeature?.elements.append(Scenario(scenario))
-        currentScenario = currentFeature?.elements.last
+        guard let targetFeature = findFeature(for: scenario) else { return }
+        targetFeature.elements.append(Scenario(scenario))
     }
 
     public func didStart(step: CucumberSwift.Step, at date: Date) {
         defer { try? encoder.encode(features).write(to: reportURL) }
-        currentScenario?.steps.append(Step(step))
-        currentStep = currentScenario?.steps.last
+        guard let targetScenario = findScenario(for: step) else { return }
+        targetScenario.steps.append(Step(step))
     }
 
     public func didFinish(feature: CucumberSwift.Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
@@ -73,8 +69,33 @@ public class CucumberJSONReporter: CucumberTestObserver {
 
     public func didFinish(step: CucumberSwift.Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
         defer { try? encoder.encode(features).write(to: reportURL) }
-        currentStep?.result = result
-        currentStep?.duration = duration
+        guard let targetStep = findStep(for: step) else { return }
+        targetStep.result = result
+        targetStep.duration = duration
+    }
+
+    // MARK: - Private Helper Methods
+
+    private func findFeature(for scenario: CucumberSwift.Scenario) -> Feature? {
+        return features.first { feature in
+            feature.uri == scenario.feature?.uri && feature.name == scenario.feature?.title
+        }
+    }
+
+    private func findScenario(for step: CucumberSwift.Step) -> Scenario? {
+        guard let feature = findFeature(for: step.scenario!) else { return nil }
+        return feature.elements.first { scenario in
+            scenario.name == step.scenario?.title && scenario.line == step.scenario?.location.line
+        }
+    }
+
+    private func findStep(for step: CucumberSwift.Step) -> Step? {
+        guard let scenario = findScenario(for: step) else { return nil }
+        return scenario.steps.first { reporterStep in
+            reporterStep.name == step.match &&
+            reporterStep.line == step.location.line &&
+            reporterStep.keyword == step.keyword
+        }
     }
 }
 
@@ -184,3 +205,4 @@ extension CucumberJSONReporter {
         }
     }
 }
+ 
