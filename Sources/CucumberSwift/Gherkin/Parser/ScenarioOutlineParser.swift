@@ -16,6 +16,8 @@ enum ScenarioOutlineParser {
             }
             return nil
         })
+        let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
+        let outlineDescription = extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes)
         return getExamplesFrom(scenarioOutlineNode)
             .flatMap { parseExample(titleLine: scenarioOutlineNode
                                             .tokens
@@ -23,12 +25,55 @@ enum ScenarioOutlineParser {
                                             .first,
                                     tokens: $0,
                                     outlineTags: tags,
-                                    stepNodes: scenarioOutlineNode
-                                        .children
-                                        .compactMap { $0 as? AST.StepNode },
+                                    stepNodes: stepNodes,
                                     backgroundStepNodes: backgroundStepNodes,
+                                    description: outlineDescription,
                                     uri: uri)
             }
+    }
+
+    private static func extractOutlineDescription(_ scenarioOutlineNode: AST.ScenarioOutlineNode, stepNodes: [AST.StepNode]) -> String {
+        // Collect tokens up to (but not including) the first Examples block
+        let tokensUpToExamples = scenarioOutlineNode.tokens.prefix { !$0.isExampleScope() }
+
+        // Determine the first step line (if any) so we stop before steps
+        let firstStepLine: UInt? = stepNodes
+            .compactMap { $0.tokens.first?.position.line }
+            .min()
+
+        // Group tokens into lines and drop the title line
+        let lines = Array(tokensUpToExamples).groupedByLine().dropFirst()
+
+        var descLines: [String] = []
+        for line in lines {
+            // If we have a first step, stop collecting when we reach it
+            if let firstStepLine, let lineNo = line.first?.position.line, lineNo >= firstStepLine {
+                break
+            }
+            // Skip pure newlines
+            let nonNewline = line.contains { !$0.isNewline() }
+            guard nonNewline else { continue }
+
+            // Build textual content from tokens on this line (only `.description` tokens)
+            let buffer = line.compactMap { tok -> String? in
+                if tok.isNewline() { return nil }
+                if case let .description(_, t) = tok { return t.description }
+                return nil
+            }
+                .joined()
+            // Keep the line even if empty, to preserve intentional blank lines
+            descLines.append(buffer)
+        }
+
+        // Trim leading/trailing empty lines while preserving inner spacing
+        let trimmed = descLines
+            .drop { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .reversed()
+            .drop { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .reversed()
+
+        guard !trimmed.isEmpty else { return "" }
+        return trimmed.joined(separator: "\n") + "\n"
     }
 
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
@@ -47,6 +92,7 @@ enum ScenarioOutlineParser {
                                      outlineTags: [String],
                                      stepNodes: [AST.StepNode],
                                      backgroundStepNodes: [AST.StepNode],
+                                     description: String,
                                      uri: String) -> [Scenario] {
         var scenarios = [Scenario]()
         let lines = tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
@@ -75,7 +121,7 @@ enum ScenarioOutlineParser {
                 steps.append(getStepFromLine(line, lookup: headerLookup, stepNode: stepNode))
             }
             let exampleNumber = index + 1
-            scenarios.append(Scenario(with: steps, title: "\(title) (example \(exampleNumber))", tags: tags, position: line.first?.position ?? .start))
+            scenarios.append(Scenario(with: steps, title: "\(title) (example \(exampleNumber))", description: description, tags: tags, position: line.first?.position ?? .start))
         }
         return scenarios
     }

@@ -10,6 +10,7 @@ import Foundation
 import XCTest
 @testable import CucumberSwift
 
+// swiftlint:disable type_body_length type_contents_order
 class ParserTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -280,4 +281,64 @@ class ParserTests: XCTestCase {
         let lastStep = cucumber.features.first?.scenarios.first?.steps.last
         XCTAssertEqual(lastStep?.keyword, [.then, .but])
     }
+
+    func testScenarioDescriptionIsParsed() {
+        let cucumber = Cucumber(withString: """
+    Feature: Some feature
+       Scenario: Scenario with description
+         This is a description line.
+         Another line.
+
+         Given a step
+         When action happens
+         Then result is observed
+    """)
+        let scenario = cucumber.features.first?.scenarios.first
+        XCTAssertEqual(scenario?.title, "Scenario with description")
+        XCTAssertEqual(scenario?.desc, "This is a description line.\nAnother line.\n")
+        // sanity: steps still parsed correctly
+        XCTAssertEqual(scenario?.steps.count, 3)
+        XCTAssertEqual(scenario?.steps.first?.keyword, .given)
+        XCTAssertEqual(scenario?.steps.first?.match, "a step")
+    }
+
+    func testScenarioOutlineDescriptionIsParsed() {
+        let cucumber = Cucumber(withString: """
+    Feature: Some feature
+       Scenario Outline: Outline with description
+         This is outline description.
+         Another line.
+
+         Given there are <start> cucumbers
+         When I eat <eat> cucumbers
+         Then I should have <left> cucumbers
+
+       Examples:
+         | start | eat | left |
+         | 12    | 5   | 7    |
+         | 20    | 5   | 15   |
+    """)
+        let feature = cucumber.features.first
+        let scenarios = feature?.scenarios ?? []
+        XCTAssertEqual(scenarios.count, 2)
+
+        // Titles expanded with example index
+        XCTAssertEqual(scenarios[safe: 0]?.title, "Outline with description (example 1)")
+        XCTAssertEqual(scenarios[safe: 1]?.title, "Outline with description (example 2)")
+
+        // Description propagated from Scenario Outline to each expanded Scenario
+        XCTAssertEqual(scenarios[safe: 0]?.desc, "This is outline description.\nAnother line.\n")
+        XCTAssertEqual(scenarios[safe: 1]?.desc, "This is outline description.\nAnother line.\n")
+
+        // Sanity: steps are parsed and values are substituted
+        XCTAssertEqual(scenarios[safe: 0]?.steps.count, 3)
+        XCTAssertEqual(scenarios[safe: 0]?.steps.first?.keyword, .given)
+        XCTAssertEqual(scenarios[safe: 0]?.steps.first?.match, "there are 12 cucumbers")
+        XCTAssertEqual(scenarios[safe: 0]?.steps.last?.keyword, .then)
+        XCTAssertEqual(scenarios[safe: 0]?.steps.last?.match, "I should have 7 cucumbers")
+
+        XCTAssertEqual(scenarios[safe: 1]?.steps.first?.match, "there are 20 cucumbers")
+        XCTAssertEqual(scenarios[safe: 1]?.steps.last?.match, "I should have 15 cucumbers")
+    }
 }
+// swiftlint:enable type_body_length type_contents_order

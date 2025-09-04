@@ -13,6 +13,7 @@ public struct ScenarioOutline: ScenarioDSL {
 
     @discardableResult public init<T>(_ title: String,
                                       tags: [String] = [],
+                                      description: String = "",
                                       headers: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
@@ -21,6 +22,7 @@ public struct ScenarioOutline: ScenarioDSL {
         scenarios = examples().map {
             Scenario(with: steps($0),
                      title: title,
+                     description: description,
                      tags: tags,
                      position: Lexer.Position(line: line, column: column))
         }
@@ -28,6 +30,7 @@ public struct ScenarioOutline: ScenarioDSL {
 
     @discardableResult public init<T>(_ title: String,
                                       tags: [String] = [],
+                                      description: String = "",
                                       headers: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
@@ -36,6 +39,7 @@ public struct ScenarioOutline: ScenarioDSL {
         scenarios = examples().map {
             Scenario(with: [steps($0)],
                      title: title,
+                     description: description,
                      tags: tags,
                      position: Lexer.Position(line: line, column: column))
         }
@@ -43,6 +47,7 @@ public struct ScenarioOutline: ScenarioDSL {
 
     @discardableResult public init<T>(_ title: (T) -> String,
                                       tags: [String] = [],
+                                      description: String = "",
                                       headers: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
@@ -51,6 +56,7 @@ public struct ScenarioOutline: ScenarioDSL {
         scenarios = examples().map {
             Scenario(with: steps($0),
                      title: title($0),
+                     description: description,
                      tags: tags,
                      position: Lexer.Position(line: line, column: column))
         }
@@ -58,6 +64,7 @@ public struct ScenarioOutline: ScenarioDSL {
 
     @discardableResult public init<T>(_ title: (T) -> String,
                                       tags: [String] = [],
+                                      description: String = "",
                                       headers: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
@@ -66,6 +73,7 @@ public struct ScenarioOutline: ScenarioDSL {
         scenarios = examples().map {
             Scenario(with: [steps($0)],
                      title: title($0),
+                     description: description,
                      tags: tags,
                      position: Lexer.Position(line: line, column: column))
         }
