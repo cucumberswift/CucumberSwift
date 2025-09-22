@@ -340,5 +340,34 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(scenarios[safe: 1]?.steps.first?.match, "there are 20 cucumbers")
         XCTAssertEqual(scenarios[safe: 1]?.steps.last?.match, "I should have 15 cucumbers")
     }
+
+    func testWhitespaceOnlyFeatureDescriptionIsIgnored() {
+        let cucumber = Cucumber(withString: """
+    Feature: Feature with whitespace description
+       \n\n         \t   \n\n
+       Scenario: Basic
+         Given a step
+    """)
+        let feature = cucumber.features.first
+        XCTAssertEqual(feature?.title, "Feature with whitespace description")
+        // Whitespace-only description should not be parsed/preserved
+        XCTAssertEqual(feature?.desc, "")
+        XCTAssertEqual(feature?.scenarios.count, 1)
+    }
+
+    func testSpecialCharactersInFeatureDescriptionArePreserved() {
+        let cucumber = Cucumber(withString: """
+    Feature: Internationalization
+       Café naïve résumé — emojis: 😀🚀, Chinese: 中文, Arabic: العربية
+       Accents: áéíóú ÁÉÍÓÚ ü Ü ñ Ñ ç Ç
+
+       Scenario: Basic
+         Given a step
+    """)
+        let feature = cucumber.features.first
+        XCTAssertEqual(feature?.title, "Internationalization")
+        let expected = "Café naïve résumé — emojis: 😀🚀, Chinese: 中文, Arabic: العربية\nAccents: áéíóú ÁÉÍÓÚ ü Ü ñ Ñ ç Ç\n"
+        XCTAssertEqual(feature?.desc, expected)
+    }
 }
 // swiftlint:enable type_body_length type_contents_order
