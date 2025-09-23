@@ -9,29 +9,17 @@
 import Foundation
 
 enum ScenarioOutlineParser {
-    static func parse(_ scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String], backgroundStepNodes: [AST.StepNode], uri: String = "") -> [Scenario] {
-        let tags = featureTags.appending(contentsOf: scenarioOutlineNode.tokens.compactMap {
-            if case Lexer.Token.tag(_, let tag) = $0 {
-                return tag
-            }
-            return nil
-        })
-        let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
-        let outlineDescription = extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes)
-        return getExamplesFrom(scenarioOutlineNode)
-            .flatMap { parseExample(titleLine: scenarioOutlineNode
-                                            .tokens
-                                            .groupedByLine()
-                                            .first,
-                                    tokens: $0,
-                                    outlineTags: tags,
-                                    stepNodes: stepNodes,
-                                    backgroundStepNodes: backgroundStepNodes,
-                                    description: outlineDescription,
-                                    uri: uri)
-            }
-    }
-
+    /**
+     Extracts the description text for a scenario outline by processing its tokens.
+     
+     The algorithm follows these steps:
+     1. Collect tokens up to (but not including) the first `Examples` block.
+     2. Identify the first step line number to ensure the description stops before any steps begin.
+     3. Build lines of description text from the collected tokens, preserving intentional blank lines.
+     4. Trim leading and trailing empty lines while preserving inner spacing.
+     
+     The resulting string is the final description text used for each generated scenario.
+     */
     private static func extractOutlineDescription(_ scenarioOutlineNode: AST.ScenarioOutlineNode, stepNodes: [AST.StepNode]) -> String {
         // Collect tokens up to (but not including) the first Examples block
         let tokensUpToExamples = scenarioOutlineNode.tokens.prefix { !$0.isExampleScope() }
@@ -74,6 +62,29 @@ enum ScenarioOutlineParser {
 
         guard !trimmed.isEmpty else { return "" }
         return trimmed.joined(separator: "\n") + "\n"
+    }
+
+    static func parse(_ scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String], backgroundStepNodes: [AST.StepNode], uri: String = "") -> [Scenario] {
+        let tags = featureTags.appending(contentsOf: scenarioOutlineNode.tokens.compactMap {
+            if case Lexer.Token.tag(_, let tag) = $0 {
+                return tag
+            }
+            return nil
+        })
+        let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
+        let outlineDescription = extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes)
+        return getExamplesFrom(scenarioOutlineNode)
+            .flatMap { parseExample(titleLine: scenarioOutlineNode
+                                            .tokens
+                                            .groupedByLine()
+                                            .first,
+                                    tokens: $0,
+                                    outlineTags: tags,
+                                    stepNodes: stepNodes,
+                                    backgroundStepNodes: backgroundStepNodes,
+                                    description: outlineDescription,
+                                    uri: uri)
+            }
     }
 
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
