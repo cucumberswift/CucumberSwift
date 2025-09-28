@@ -28,17 +28,28 @@ public protocol ScenarioDSL {
 
 extension Scenario {
     public convenience init(_ title: String,
+                            description: String = "",
                             tags: [String] = [],
                             line: UInt = #line,
                             column: UInt = #column,
                             @StepBuilder _ content: () -> [StepDSL]) {
-        self.init(with: content(), title: title, tags: tags, position: Lexer.Position(line: line, column: column))
+        self.init(with: content(),
+                  title: title,
+                  description: description,
+                  tags: tags,
+                  position: Lexer.Position(line: line, column: column))
     }
     public convenience init(_ title: String,
+                            description: String = "",
                             tags: [String] = [],
                             line: UInt = #line,
                             column: UInt = #column,
                             @StepBuilder _ content: () -> StepDSL) {
-        self.init(with: [content()], title: title, tags: tags, position: Lexer.Position(line: line, column: column))
+        self.init(with: [content()],
+                  title: title,
+                  description: description,
+                  tags: tags,
+                  position: Lexer.Position(line: line, column: column))
     }
 }
+// swiftlint:enable file_types_order

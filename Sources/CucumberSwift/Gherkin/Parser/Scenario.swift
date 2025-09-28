@@ -10,7 +10,8 @@ import Foundation
 public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var title = ""
     public internal(set)  var tags = [String]()
-    public internal(set) var steps = [Step]()
+    public internal(set)  var steps = [Step]()
+    public internal(set) var desc: String = ""
     public internal(set) var feature: Feature?
     public private(set)  var location: Lexer.Position
     public private(set)  var endLocation: Lexer.Position
@@ -19,11 +20,14 @@ public class Scenario: NSObject, Taggable, Positionable {
     init(with node: AST.ScenarioNode, tags: [String], stepNodes: [AST.StepNode]) {
         location = node.tokens.first?.position ?? .start
         endLocation = .start
+        desc = ""
         super.init()
         self.tags = tags
         for token in node.tokens {
             if case Lexer.Token.title(_, let t) = token {
                 title = t
+            } else if case Lexer.Token.description(_, let t) = token {
+                desc += t + "\n"
             } else if case Lexer.Token.tag(_, let tag) = token {
                 self.tags.append(tag)
             }
@@ -34,12 +38,13 @@ public class Scenario: NSObject, Taggable, Positionable {
         endLocation ?= steps.last?.location
     }
 
-    init(with steps: [Step], title: String?, tags: [String], position: Lexer.Position) {
+    init(with steps: [Step], title: String?, description: String? = "", tags: [String], position: Lexer.Position) {
         location = position
         endLocation = position
         super.init()
         self.steps = steps
         self.title = title ?? ""
+        self.desc = description ?? ""
         self.tags = tags
         setupSteps()
     }
@@ -68,7 +73,7 @@ public class Scenario: NSObject, Taggable, Positionable {
             "keyword": "Scenario",
             "type": "scenario",
             "name": title,
-            "description": "",
+            "description": desc,
             "steps": []
         ]
     }
