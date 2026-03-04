@@ -78,6 +78,9 @@ open class CucumberTest: XCTestCase {
 
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
         let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()))
+        if let testCase = testCase {
+            objc_registerClassPair(testCase)
+        }
         scenario
             .steps
             .lazy
@@ -89,7 +92,6 @@ open class CucumberTest: XCTestCase {
                 return nil
             }
             .map { step, testCaseClass, methodSelector -> (Step, XCTestCase) in
-                objc_registerClassPair(testCaseClass)
                 return (step, testCaseClass.init(selector: methodSelector))
             }
             .forEach { step, testCase in
