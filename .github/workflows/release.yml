@@ -9,12 +9,6 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v2
-      - name: Cocoapods Release
-        run: |
-          pod repo add-cdn trunk 'https://cdn.cocoapods.org/'
-          pod trunk push CucumberSwift.podspec --allow-warnings
-        env:
-          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
       - name: Generate DocC Static Site
         run: |
             swift package --allow-writing-to-directory ./docs \

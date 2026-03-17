@@ -1,5 +1,4 @@
 ![Build Status](https://github.com/cucumberswift/CucumberSwift/actions/workflows/CI.yml/badge.svg?branch=main)
-![Pod Platform](https://img.shields.io/cocoapods/p/CucumberSwift.svg?style=popout) [![Pod Version](https://img.shields.io/cocoapods/v/CucumberSwift.svg?style=popout)](http://cocoapods.org/pods/CucumberSwift)
 [![codecov](https://codecov.io/gh/cucumberswift/CucumberSwift/graph/badge.svg?token=ARIPC8Q7H1)](https://codecov.io/gh/cucumberswift/CucumberSwift)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/c29b0bf4883b4387a41ac1d090773f65)](https://www.codacy.com/gh/cucumberswift/CucumberSwift/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=cucumberswift/CucumberSwift&amp;utm_campaign=Badge_Grade)
 
@@ -13,6 +12,9 @@ NOTE: WatchOS support coming soon!
 * [XCTest Integration](https://github.com/cucumberswift/CucumberSwift/wiki/xctest-integration)
 
 * [Contributing](/CONTRIBUTING.md)
+
+### CocoaPods
+CocoaPods support was officially dropped starting from version 5.1.0 (March 2026). Please use Swift Package Manager instead. Note that CocoaPods itself is moving to read-only mode on December 2nd, 2026.
 
 ### What's Still Missing?
 - Some Gherkin language errors

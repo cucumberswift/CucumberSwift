@@ -7,7 +7,6 @@
         @Image(source: "CucumberSwiftSuccessfulTestRun.png", alt: "A test report showing a successful run of CucumberSwift tests")
         How to install CucumberSwift and add it to your project.
         @TutorialReference(tutorial: "doc:SPM-Step-By-Step")
-        @TutorialReference(tutorial: "doc:CocoaPods-Step-By-Step")
         @TutorialReference(tutorial: "doc:Carthage-Step-By-Step")
     }
 }

@@ -31,14 +31,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
-### ios cocoapods_liblint
-
-```sh
-[bundle exec] fastlane ios cocoapods_liblint
-```
-
-
-
 ### ios patch
 
 ```sh

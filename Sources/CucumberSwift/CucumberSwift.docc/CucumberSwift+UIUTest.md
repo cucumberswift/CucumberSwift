@@ -6,35 +6,9 @@ So in many of our projects that have to function at a large scale and have quite
 
 ### SETUP:
 
-#### Podfile:
-```ruby
-def shared_pods
-    #production pods go here
-end
+Add both `CucumberSwift` and `UIUTest` as dependencies via Swift Package Manager.
 
-target 'App' do
-  use_frameworks!
-
-  shared_pods
-end
-
-target 'AppUnitTests' do
-  use_frameworks!
-
-  shared_pods
-end
-
-target 'AppCucumberTests' do
-  use_frameworks!
-  inherit! :search_paths
-  
-  shared_pods
-  pod 'UIUTest'
-  pod 'CucumberSwift'
-end
-```
-
-#### XCode Setup
+#### Xcode Setup
 When adding your `AppCucumberTests` target make sure to add it as a `Unit Testing Bundle`
 
 There's always a weird tendency for people to lowercase the name of their features folder so the plist should contain  `FeaturesPath` with the relative path to the folder (e.g. `specs/features`)

@@ -14,12 +14,10 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-  build_for_package_managers:
+  build_swiftpm:
     needs: test
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v2
       - name: Validate SwiftPM BUILDs
         run: fastlane build_swiftpm
-      - name: Validate Cocoapods Can Deploy (lib lint)
-        run: fastlane cocoapods_liblint

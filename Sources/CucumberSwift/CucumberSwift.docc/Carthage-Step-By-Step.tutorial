@@ -1,6 +1,6 @@
 @Tutorial(time: 10) {
     @Intro(title: "Using CucumberSwift with Carthage") {
-        If you're using the CocoaPods package manager this tutorial will walk you through how to get CucumberSwift installed and added to your project.
+        If you're using the Carthage package manager this tutorial will walk you through how to get CucumberSwift installed and added to your project.
     }
     
     @Section(title: "Installing CucumberSwift") {
