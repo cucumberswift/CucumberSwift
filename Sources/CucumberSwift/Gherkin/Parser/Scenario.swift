@@ -61,6 +61,18 @@ public class Scenario: NSObject, Taggable, Positionable {
                 previousKeyword = $0.keyword
             }
         }
+        validateNoDuplicateSteps()
+    }
+
+    private func validateNoDuplicateSteps() {
+        var seen = Set<String>()
+        for step in steps {
+            let key = "\(step.keyword.toString()) \(step.match)"
+            if !seen.insert(key).inserted {
+                let uri = step.location.uri?.lastPathComponent ?? location.uri?.lastPathComponent ?? ""
+                Gherkin.errors.append("File: \(uri) duplicate step '\(step.keyword.toString()) \(step.match)' in scenario '\(title)'")
+            }
+        }
     }
 
     public func containsTags(_ tags: [String]) -> Bool {

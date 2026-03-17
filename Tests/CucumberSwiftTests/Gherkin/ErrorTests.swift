@@ -82,6 +82,63 @@ class ErrorsTests: XCTestCase {
         XCTAssert(Gherkin.errors.contains("File: single_parser_error.feature, expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'invalid line here'"))
     }
 
+    func testDuplicateStepTextInScenario() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Duplicate steps
+
+          Scenario: duplicated
+            Given some setup
+            Then the candidates appear in this order:
+              | candidate |
+              | hello     |
+              | world     |
+            When some action
+            Then the candidates appear in this order:
+              | candidate |
+              | foo       |
+              | bar       |
+        """, uri: "duplicate_step.feature")
+        XCTAssert(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
+    }
+
+    func testDuplicateStepErrorMessage() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Duplicate steps
+
+          Scenario: duplicated
+            Then do something
+            Then do something
+        """, uri: "dup.feature")
+        XCTAssert(Gherkin.errors.contains("File: dup.feature duplicate step 'Then do something' in scenario 'duplicated'"))
+    }
+
+    func testNoDuplicateErrorForUniqueSteps() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Unique steps
+
+          Scenario: unique
+            Given step one
+            When step two
+            Then step three
+        """, uri: "unique.feature")
+        XCTAssertFalse(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
+    }
+
+    func testSameStepTextInDifferentScenariosIsAllowed() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Shared steps across scenarios
+
+          Scenario: first
+            Given some setup
+            Then verify result
+
+          Scenario: second
+            Given some setup
+            Then verify result
+        """, uri: "cross_scenario.feature")
+        XCTAssertFalse(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
+    }
+
     override func tearDown() {
         Gherkin.errors.removeAll()
     }
