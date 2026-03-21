@@ -47,7 +47,7 @@ open class CucumberTest: XCTestCase {
             let className = feature.title.toClassString() + readFeatureScenarioDelimiter()
 
             for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                let childSuite = XCTestSuite(name: scenario.title.toClassString())
+                let childSuite = XCTestSuite(name: className + scenario.title.toClassString())
                 var tests = [XCTestCase]()
                 createTestCaseFor(className: className, scenario: scenario, tests: &tests)
                 tests.forEach { childSuite.addTest($0) }
