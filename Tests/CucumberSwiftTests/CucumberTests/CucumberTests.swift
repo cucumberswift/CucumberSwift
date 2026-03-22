@@ -211,7 +211,9 @@ class CucumberTests: XCTestCase {
         let featureName = "SomeTerseYetDescriptiveTextOfWhatIsDesired"
 
         // Tests default delimiter "|"
-        CucumberTest.defaultTestSuite
+        let defaultSuite = XCTestSuite(name: "DefaultDelimiterTests")
+        CucumberTest.generateAlltests(defaultSuite)
+        defaultSuite
             .tests
             .map { $0.name }
             .filter { $0.contains(featureName) }
@@ -223,7 +225,9 @@ class CucumberTests: XCTestCase {
         Bundle.swizzleInfoDictionary()
 
         // Tests custom delimiter "_"
-        CucumberTest.defaultTestSuite
+        let customSuite = XCTestSuite(name: "CustomDelimiterTests")
+        CucumberTest.generateAlltests(customSuite)
+        customSuite
             .tests
             .map { $0.name }
             .filter { $0.contains(featureName) }
