@@ -211,7 +211,7 @@ class CucumberTests: XCTestCase {
         let featureName = "SomeTerseYetDescriptiveTextOfWhatIsDesired"
 
         // Tests default delimiter "|"
-        CucumberTest.suiteInstance = nil
+        CucumberTest.resetSuiteCache()
         let defaultSuite = CucumberTest.defaultTestSuite
         XCTAssertTrue(CucumberTest.defaultTestSuite === defaultSuite, "Suite should be cached on repeated calls")
         defaultSuite
@@ -226,7 +226,7 @@ class CucumberTests: XCTestCase {
         Bundle.swizzleInfoDictionary()
 
         // Tests custom delimiter "_"
-        CucumberTest.suiteInstance = nil
+        CucumberTest.resetSuiteCache()
         CucumberTest.defaultTestSuite
             .tests
             .map { $0.name }

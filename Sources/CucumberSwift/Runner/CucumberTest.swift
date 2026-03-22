@@ -12,7 +12,13 @@ import XCTest
 open class CucumberTest: XCTestCase {
     static var didRun = false
 
-    static var suiteInstance: XCTestSuite?
+    private static var suiteInstance: XCTestSuite?
+
+    #if DEBUG
+    static func resetSuiteCache() {
+        suiteInstance = nil
+    }
+    #endif
 
     override public class var defaultTestSuite: XCTestSuite {
         // notify reporters every time
