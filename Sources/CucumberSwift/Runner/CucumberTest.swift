@@ -12,7 +12,7 @@ import XCTest
 open class CucumberTest: XCTestCase {
     static var didRun = false
 
-    private static var suiteInstance: XCTestSuite?
+    static var suiteInstance: XCTestSuite?
 
     override public class var defaultTestSuite: XCTestSuite {
         // notify reporters every time
