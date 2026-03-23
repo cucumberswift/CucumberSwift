@@ -24,8 +24,8 @@ open class CucumberTest: XCTestCase {
         // notify reporters every time
         Cucumber.shared.reporters.forEach { $0.testSuiteStarted(at: Date()) }
 
-        // create default test suite only once
-        if let existingSuite = suiteInstance {
+        // return cached suite only if its test run hasn't already completed
+        if let existingSuite = suiteInstance, existingSuite.testRun?.stopDate == nil {
             return existingSuite
         }
 
