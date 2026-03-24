@@ -207,29 +207,12 @@ class CucumberTests: XCTestCase {
         }
     }
 
-    func testDefaultTestSuiteInvalidatesCacheAfterSuiteHasRun() {
-        CucumberTest.resetSuiteCache()
-        let firstSuite = CucumberTest.defaultTestSuite
-
-        // Actually run the suite so XCTest sets its testRun with start/stop dates
-        firstSuite.run()
-        XCTAssertNotNil(firstSuite.testRun?.stopDate, "Suite should have a completed test run")
-
-        // After the suite has been run, requesting defaultTestSuite again
-        // should return a NEW suite, not the stale one whose testRun already completed
-        let secondSuite = CucumberTest.defaultTestSuite
-        XCTAssertFalse(firstSuite === secondSuite,
-                        "defaultTestSuite must not return a suite whose test run has already completed")
-    }
-
     func testFeatureScenarioDelimiter() {
         let featureName = "SomeTerseYetDescriptiveTextOfWhatIsDesired"
 
         // Tests default delimiter "|"
-        CucumberTest.resetSuiteCache()
-        let defaultSuite = CucumberTest.defaultTestSuite
-        XCTAssertTrue(CucumberTest.defaultTestSuite === defaultSuite, "Suite should be cached on repeated calls")
-        defaultSuite
+        CucumberTest.resetSetUp()
+        CucumberTest.defaultTestSuite
             .tests
             .map { $0.name }
             .filter { $0.contains(featureName) }
@@ -241,7 +224,7 @@ class CucumberTests: XCTestCase {
         Bundle.swizzleInfoDictionary()
 
         // Tests custom delimiter "_"
-        CucumberTest.resetSuiteCache()
+        CucumberTest.resetSetUp()
         CucumberTest.defaultTestSuite
             .tests
             .map { $0.name }

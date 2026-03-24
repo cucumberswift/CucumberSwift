@@ -113,14 +113,16 @@ class CustomReporterTests: XCTestCase {
         Cucumber.shared.reset()
     }
 
-    func testDefaultSuiteIsCreatedOnlyOnce() {
+    func testDefaultSuiteReturnsEmptyOnSecondCall() {
         Cucumber.shared.parseIntoFeatures(featureFile)
-        let defaultSuiteBefore = CucumberTest.defaultTestSuite
+        CucumberTest.resetSetUp()
+        let firstSuite = CucumberTest.defaultTestSuite
 
-        Cucumber.shared.executeFeatures(callDefaultTestSuite: true)
-
-        let defaultSuiteAfter = CucumberTest.defaultTestSuite
-        XCTAssertEqual(defaultSuiteBefore, defaultSuiteAfter)
+        // Second call returns empty suite to prevent XCTest from running
+        // CucumberTest twice when discovered in both test bundle and framework
+        let secondSuite = CucumberTest.defaultTestSuite
+        XCTAssertFalse(firstSuite.tests.isEmpty, "First call should return a populated suite")
+        XCTAssertTrue(secondSuite.tests.isEmpty, "Second call should return an empty suite")
     }
 
     func testReporterIsToldWhenTestSuiteStarts() {
