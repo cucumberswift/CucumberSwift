@@ -12,25 +12,25 @@ import XCTest
 open class CucumberTest: XCTestCase {
     static var didRun = false
 
-    private static var suiteInstance: XCTestSuite?
+    private static var hasBeenBuilt = false
 
     #if DEBUG
-    static func resetSuiteCache() {
-        suiteInstance = nil
+    static func resetSetUp() {
+        hasBeenBuilt = false
     }
     #endif
 
     override public class var defaultTestSuite: XCTestSuite {
-        // notify reporters every time
         Cucumber.shared.reporters.forEach { $0.testSuiteStarted(at: Date()) }
 
-        // create default test suite only once
-        if let existingSuite = suiteInstance {
-            return existingSuite
+        // XCTest discovers CucumberTest in both the test bundle and the framework,
+        // calling defaultTestSuite for each. Only the first call should return a
+        // populated suite. Subsequent calls return an empty suite to prevent double
+        // execution of scenarios and hooks, and to avoid "Invalid attempt to start
+        // a test run that has already been started".
+        guard !hasBeenBuilt else {
+            return XCTestSuite(name: String(describing: CucumberTest.self))
         }
-
-        let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
-        suiteInstance = suite
 
         Cucumber.shared.features.removeAll()
         if let bundle = (Cucumber.shared as? StepImplementation)?.bundle {
@@ -38,7 +38,10 @@ open class CucumberTest: XCTestCase {
         }
         (Cucumber.shared as? StepImplementation)?.setupSteps()
         assert(!Cucumber.shared.features.isEmpty, "CucumberSwift found no features to run. Check out our documentation for instructions on including you Features folder. Be aware it's a case sensitive search. If you're using the DSL, make sure your features are defined in the `setupSteps()` method.") // swiftlint:disable:this line_length
+
+        let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
         generateAlltests(suite)
+        hasBeenBuilt = true
         return suite
     }
 

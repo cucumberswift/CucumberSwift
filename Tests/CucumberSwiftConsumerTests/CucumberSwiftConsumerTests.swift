@@ -57,6 +57,21 @@ extension CucumberTest {
     }
 }
 
+// Z prefix ensures this runs after XCTest has already executed the CucumberTest suite
+class ZCucumberTestCacheTests: XCTestCase {
+    func testDefaultTestSuiteReturnsEmptyOnSubsequentCalls() {
+        // First call builds the full suite. Second call must return an empty suite
+        // to prevent XCTest from running CucumberTest twice when discovered in both
+        // the test bundle and framework, avoiding "Invalid attempt to start a test
+        // run that has already been started".
+        let firstSuite = CucumberTest.defaultTestSuite
+        let secondSuite = CucumberTest.defaultTestSuite
+        XCTAssertFalse(firstSuite === secondSuite)
+        XCTAssertTrue(secondSuite.tests.isEmpty,
+                      "Second call should return an empty suite")
+    }
+}
+
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
         class TestDiscovery: CucumberTest { }
