@@ -9,9 +9,12 @@
 import Foundation
 import XCTest
 
+@MainActor
 public class Step: CustomStringConvertible {
-    public var description: String {
-        "TAGS:\(tags)\n\(keyword.toString()): \(match)"
+    nonisolated public var description: String {
+        MainActor.assumeIsolated {
+            "TAGS:\(tags)\n\(keyword.toString()): \(match)"
+        }
     }
 
     public var continueAfterFailure = true {
@@ -128,7 +131,7 @@ public class Step: CustomStringConvertible {
 }
 
 extension Step {
-    public struct Keyword: OptionSet, Hashable {
+    public struct Keyword: OptionSet, Hashable, Sendable {
         public let rawValue: Int
         var primaryKeywords: Keyword {
             intersection(Self.primaryKeywords)
@@ -138,6 +141,7 @@ extension Step {
             self.rawValue = rawValue
         }
 
+        @MainActor
         public init?(_ str: String) {
             stringValue = str
             var set: Keyword = []
@@ -160,6 +164,7 @@ extension Step {
             self = set
         }
 
+        @MainActor
         public func toString() -> String {
             if let str = stringValue {
                 return str

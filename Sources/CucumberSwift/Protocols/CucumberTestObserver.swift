@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 public protocol CucumberTestObserver {
     func testSuiteStarted(at: Date)
     func testSuiteFinished(at: Date)

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+@MainActor
 public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var title = ""
     public internal(set)  var tags = [String]()

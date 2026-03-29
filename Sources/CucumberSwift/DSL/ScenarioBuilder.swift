@@ -10,6 +10,7 @@ import Foundation
 
 @resultBuilder
 public enum ScenarioBuilder {
+    @MainActor
     public static func buildBlock(_ items: ScenarioDSL...) -> [ScenarioDSL] {
         let (backgroundSteps, scenarioDSLs) = items.reduce(into: ([StepDSL](), [ScenarioDSL]())) { res, scenarioDSL in
             if let background = scenarioDSL as? Background {

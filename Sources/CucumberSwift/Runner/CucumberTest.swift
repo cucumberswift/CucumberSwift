@@ -9,6 +9,7 @@
 import Foundation
 import XCTest
 
+@MainActor
 open class CucumberTest: XCTestCase {
     static var didRun = false
 
@@ -65,6 +66,7 @@ open class CucumberTest: XCTestCase {
         }
     }
 
+    @MainActor
     private static func createTestCaseForStubs(_ tests: inout [XCTestCase]) {
         let stubs = StubGenerator.getStubs(for: Cucumber.shared.features)
         let generatedSwift = stubs.map(\.generatedSwift).joined(separator: "\n")
@@ -85,6 +87,7 @@ open class CucumberTest: XCTestCase {
         }
     }
 
+    @MainActor
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
         let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()))
         if let testCase = testCase {
@@ -157,6 +160,7 @@ open class CucumberTest: XCTestCase {
 extension CucumberTest {
     private static let defaultDelimiter = "|"
 
+    @MainActor
     private static func readFeatureScenarioDelimiter() -> String {
         guard let testBundle = (Cucumber.shared as? StepImplementation)?.bundle else { return defaultDelimiter }
         return (testBundle.infoDictionary?["FeatureScenarioDelimiter"] as? String) ?? defaultDelimiter
@@ -164,20 +168,31 @@ extension CucumberTest {
 }
 
 extension Step {
+    @MainActor
     fileprivate var method: TestCaseMethod? {
         TestCaseMethod(withName: "\(keyword.toString()) \(match)".toClassString()) {
-            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }) else { return }
-            let startTime = Date()
-            self.startTime = startTime
-            Cucumber.shared.currentStep = self
-            Cucumber.shared.setupBeforeHooksFor(self)
-            Cucumber.shared.beforeStepHooks.forEach { $0.hook(self) }
+            let shouldRun = MainActor.assumeIsolated {
+                !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario })
+            }
+            guard shouldRun else { return }
 
             func runAndReport() {
-                Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
-                XCTAssertNoThrow(try self.run())
-                self.endTime = Date()
-                Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
+                MainActor.assumeIsolated {
+                    let startTime = Date()
+                    self.startTime = startTime
+                    Cucumber.shared.currentStep = self
+                    Cucumber.shared.setupBeforeHooksFor(self)
+                    Cucumber.shared.beforeStepHooks.forEach { $0.hook(self) }
+                    
+                    Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
+                    do {
+                        try self.run()
+                    } catch {
+                        XCTFail("Step execution failed: \(error)")
+                    }
+                    self.endTime = Date()
+                    Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
+                }
             }
 
             #if compiler(>=5)
@@ -192,6 +207,7 @@ extension Step {
         }
     }
 
+    @MainActor
     fileprivate func run() throws {
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()

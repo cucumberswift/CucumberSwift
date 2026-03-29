@@ -17,7 +17,7 @@ public enum Reporter {
         return nil
     }
 
-    public enum Result {
+    public enum Result: Sendable {
         case passed
         case failed(String? = nil)
         case skipped

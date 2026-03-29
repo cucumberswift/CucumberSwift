@@ -13,9 +13,11 @@ public struct Background: ScenarioDSL {
     public var scenarios: [Scenario] { [] }
     var steps: [StepDSL]
 
+    @MainActor
     public init(@StepBuilder _ content: () -> [StepDSL]) {
         steps = content()
     }
+    @MainActor
     public init(@StepBuilder _ content: () -> StepDSL) {
         steps = [content()]
     }

@@ -9,7 +9,7 @@
 import Foundation
 
 extension Lexer {
-    public struct Position: Hashable {
+    public struct Position: Hashable, Sendable {
         static let start: Position = {
             Position(line: 0, column: 0)
         }()

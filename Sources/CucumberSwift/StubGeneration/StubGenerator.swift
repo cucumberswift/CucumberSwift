@@ -8,7 +8,7 @@
 
 import Foundation
 enum StubGenerator {
-    private static func regexForTokens(_ tokens: [Token]) -> String {
+    static func regexForTokens(_ tokens: [Token]) -> String {
         var regex = ""
         for token in tokens {
             if case .match(let m) = token {
@@ -23,6 +23,7 @@ enum StubGenerator {
         return regex.trimmingCharacters(in: .whitespaces)
     }
 
+    @MainActor
     static func getStubs(for features: [Feature]) -> [(step: Step, generatedSwift: String)] {
         var lookup = [String: Method]()
         let executableSteps = features

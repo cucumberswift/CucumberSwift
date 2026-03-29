@@ -33,13 +33,13 @@ extension Feature: Hashable {
         lhs === rhs
     }
 
-    public func hash(into hasher: inout Hasher) {
+    nonisolated public func hash(into hasher: inout Hasher) {
         hasher.combine(Unmanaged.passUnretained(self).toOpaque())
     }
 }
 
 extension Step: Hashable {
-    public static func == (lhs: Step, rhs: Step) -> Bool {
+    nonisolated public static func == (lhs: Step, rhs: Step) -> Bool {
         lhs === rhs
     }
 

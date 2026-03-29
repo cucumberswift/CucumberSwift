@@ -119,6 +119,7 @@ public class Language {
 }
 
 extension Language {
+    @MainActor
     static var `default`: Language = {
         var l = Language()
         l.featureNames = ["Feature", "Business Need", "Ability"].map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
