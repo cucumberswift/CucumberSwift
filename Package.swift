@@ -13,7 +13,7 @@ let package = Package(
             targets: ["CucumberSwift"])
     ],
     dependencies: [
-        .package(url: "https://github.com/Tyler-Keith-Thompson/CucumberSwiftExpressions.git", from: "0.0.8"),
+        .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "0.0.8"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
     ],
     targets: [

@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "CucumberSwiftExpressions",
-        "repositoryURL": "https://github.com/Tyler-Keith-Thompson/CucumberSwiftExpressions.git",
+        "repositoryURL": "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
         "state": {
           "branch": null,
           "revision": "5200dc2c5d7cd31f07a13f030ab0027224d2dbea",
