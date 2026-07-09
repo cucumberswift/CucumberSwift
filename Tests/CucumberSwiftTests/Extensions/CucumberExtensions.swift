@@ -24,6 +24,7 @@ extension Cucumber {
         environment["CUCUMBER_TAGS"] = nil
         hookedFeatures.removeAll()
         hookedScenarios.removeAll()
+        Cucumber.overrideStrictPendingSteps = false
     }
 
     func executeFeatures(callDefaultTestSuite: Bool = false) {
