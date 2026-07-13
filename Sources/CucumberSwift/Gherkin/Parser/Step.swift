@@ -110,6 +110,21 @@ public class Step: CustomStringConvertible {
         self.keyword.insert(keyword)
     }
 
+    /// `dataTable` and `docString` are the only step data not already reflected in `match` (the
+    /// literal step line). The generated XCTest selector is derived from `keyword + match` alone
+    /// (see `Step.method` in CucumberTest.swift), so two steps with identical text but different
+    /// tables/doc strings would otherwise collide on `class_addMethod` and silently share the
+    /// first occurrence's data (https://github.com/cucumberswift/CucumberSwift/issues/115).
+    /// Folding a hash of this side-channel data into the selector keeps identical-text-but-
+    /// different-data steps distinct, without requiring the step text itself to be unique.
+    var sideChannelHash: Int? {
+        guard dataTable != nil || docString != nil else { return nil }
+        var hasher = Hasher()
+        hasher.combine(dataTable?.rows)
+        hasher.combine(docString)
+        return hasher.finalize()
+    }
+
     func toJSON() -> [String: Any] {
         if #available(iOS 13.0, macOS 10.15, tvOS 13, *) {
             return [
