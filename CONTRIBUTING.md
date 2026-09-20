@@ -15,6 +15,12 @@ This isn't process for the sake of process. A quick ticket means we can agree on
 
 Typos and docs fixes are exempt, just send the PR.
 
+One issue per PR. Two bugs in one pull request isn't something we'll merge. Separate PRs mean each fix stands or falls on its own — bundled, the one we're unsure about holds up the one we're happy with — and either can be reverted later without unpicking the other. It also keeps each regression test tied to the issue it closes, so a year from now "what fixed this?" has one answer.
+
+Found a second bug while you were in there? Brilliant — open a second issue and say so in your PR. That's a contribution in its own right, and we'd far rather hear about it than not.
+
+That's one *problem* per PR, not one file. A single logical change across a dozen files is still one change, and mechanical work of the same kind — a lint pass, a dependency bump, a batch of docs edits — can go in one PR.
+
 Not sure whether the thing you're looking at is even a bug? Ask in **#contributors** on Slack, that's a good place to work it out before it becomes a bug report.
 
 [![Slack](https://img.shields.io/badge/Slack-join%20the%20community-4A154B?style=popout&logo=slack&logoColor=white)](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw)
