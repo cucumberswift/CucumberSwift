@@ -25,8 +25,6 @@ Have a look around first. Search the issues before filing a new one, and search 
 
 Finding an existing attempt doesn't automatically mean stop. If it's gone stale, say so — link it, explain why you're starting fresh, and suggest closing the old one. What we want to avoid is a duplicate opened by accident, and anyone pushing to a branch that isn't theirs.
 
-Working with a coding assistant? Point it at [this prompt](.github/AGENT_PROMPT.md) and it'll do that check before it writes anything.
-
 Not sure whether the thing you're looking at is even a bug? Ask in **#contributors** on Slack, that's a good place to work it out before it becomes a bug report.
 
 [![Slack](https://img.shields.io/badge/Slack-join%20the%20community-4A154B?style=popout&logo=slack&logoColor=white)](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw)
