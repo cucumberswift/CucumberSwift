@@ -38,9 +38,16 @@ Three scheme names are load bearing. `fastlane unit_test` and the CI workflows
 run `CucumberSwift`; Carthage discovers it too. Do not rename `CucumberSwift`,
 `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`.
 
-To check the generated project against the committed one, including the
-Carthage requirements, run:
+Regenerating replaces the whole `.xcodeproj`, including
+`project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. That file is what
+pins the CucumberSwiftExpressions version for Carthage consumers, who have no
+other lockfile. Put it back before you commit.
+
+After regenerating, confirm the scheme Carthage relies on is still shared and
+the suite still passes:
 
 ```sh
-./Scripts/verify-tuist-equivalence.sh
+ls CucumberSwift.xcodeproj/xcshareddata/xcschemes/CucumberSwift.xcscheme
+xcodebuild -list -project CucumberSwift.xcodeproj
+fastlane unit_test
 ```
