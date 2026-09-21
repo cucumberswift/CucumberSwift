@@ -172,4 +172,23 @@ class StepTest: XCTestCase {
         kw = [.and, .but]
         XCTAssertTrue(kw.hasMultipleValues())
     }
+
+    /// Regression test for #135: a step built by the Swift DSL used to compile the empty pattern
+    /// `""` on every execution, which always throws. The throw was swallowed, so the only symptom
+    /// was a console line nobody read.
+    func testExecutingADSLStepDoesNotCompileARegex() throws {
+        var handlerCalled = false
+        let step = GivenStep(line: 1,
+                             column: 1,
+                             match: "a step defined with the Swift DSL",
+                             handler: { handlerCalled = true },
+                             file: #file)
+
+        let execute = try XCTUnwrap(step.execute)
+        try execute(step.match, step)
+
+        XCTAssert(handlerCalled)
+        XCTAssert(Gherkin.errors.isEmpty,
+                  "Executing a DSL step should not compile a regex. Errors:\n\(Gherkin.errors.joined(separator: "\n"))")
+    }
 }
