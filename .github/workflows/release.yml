@@ -4,11 +4,19 @@ on:
   release:
     types: [ created ]
 
+# Default everything to read; the release job widens to `contents: write` because the
+# Deploy step pushes the generated DocC site to gh-pages using GITHUB_TOKEN.
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: macos-14
+    # contents: write -> required only by the gh-pages Deploy step below.
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Cocoapods Release
         run: |
           pod repo add-cdn trunk 'https://cdn.cocoapods.org/'
@@ -23,9 +31,10 @@ jobs:
               --transform-for-static-hosting \
               --hosting-base-path CucumberSwift/ \
               --output-path ./docs
+      # NOTE: actions-gh-pages is held at v3 by the repository's Actions allow-list.
+      # A SHA pin would no longer match that entry, so this stays on the tag.
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
- 

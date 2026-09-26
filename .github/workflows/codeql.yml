@@ -1,0 +1,57 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Weekly, Mondays at 07:17 UTC. Off-the-hour to avoid GitHub's scheduling peak.
+    - cron: '17 7 * * 1'
+  workflow_dispatch:
+
+# Least privilege: the analyze job only needs to read the code and upload results.
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze Swift
+    # Swift analysis requires a macOS runner; matches the other workflows.
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: swift
+          # `autobuild` cannot drive this project: the Package.swift build and the
+          # Xcode project disagree on the test targets, so the build below is explicit.
+          build-mode: manual
+
+      # CodeQL only sees code that is actually compiled, so this must build the
+      # CucumberSwift library target itself, not just resolve dependencies.
+      - name: Build CucumberSwift
+        run: |
+          xcodebuild build \
+            -scheme CucumberSwift \
+            -destination 'platform=macOS,variant=Mac Catalyst' \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: "/language:swift"
