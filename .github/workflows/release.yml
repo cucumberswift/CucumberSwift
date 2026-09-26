@@ -181,11 +181,6 @@ jobs:
   docs:
     needs: release
     if: needs.release.outputs.latest == 'true'
-    # One deploy at a time. If several wait, only the newest runs, and the check
-    # below makes sure it is still the highest version.
-    concurrency:
-      group: docs
-      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 30
     # contents: write -> push the generated site to the gh-pages branch, which
@@ -212,16 +207,7 @@ jobs:
           path: site
 
       - name: Push to gh-pages
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          highest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            --jq '.[] | select(.draft | not) | .tag_name' \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-          if [ "$highest" != "$TAG" ]; then
-            echo "$highest has been released since; its docs win. Skipping."
-            exit 0
-          fi
           rsync -a --delete --exclude .git ./docs/ ./site/
           touch site/.nojekyll
           cd site
