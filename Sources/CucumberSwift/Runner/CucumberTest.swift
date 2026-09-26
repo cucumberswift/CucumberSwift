@@ -165,7 +165,8 @@ extension CucumberTest {
 
 extension Step {
     fileprivate var method: TestCaseMethod? {
-        TestCaseMethod(withName: "\(keyword.toString()) \(match)".toClassString()) {
+        let selectorName = sideChannelHash.map { "\(keyword.toString()) \(match) \($0)" } ?? "\(keyword.toString()) \(match)"
+        return TestCaseMethod(withName: selectorName.toClassString()) {
             guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }) else { return }
             let startTime = Date()
             self.startTime = startTime
