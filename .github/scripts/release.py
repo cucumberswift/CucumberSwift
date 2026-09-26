@@ -95,7 +95,8 @@ def changes(repo, branch, last_tag, sha):
       }
     }"""
     pull_numbers, direct = [], []
-    for commit in run("git", "rev-list", "--reverse", f"refs/tags/{last_tag}..{sha}").split():
+    # Merge commits are skipped: a merged pull request is found through its own commits.
+    for commit in run("git", "rev-list", "--reverse", "--no-merges", f"refs/tags/{last_tag}..{sha}").split():
         pulls = api(f"repos/{repo}/commits/{commit}/pulls") or []
         # The API also returns pull requests from other repositories in the fork network.
         merged = [p["number"] for p in pulls
@@ -203,6 +204,7 @@ def plan():
     text = notes(repo, fmt(last), version, issues, lone_pulls, direct)
     with open("notes.md", "w", encoding="utf-8") as handle:
         handle.write(text)
+    print(f"This run releases {version} from {branch} (last release {fmt(last)}, Latest: {str(latest).lower()}).")
     append("GITHUB_OUTPUT", f"version={version}\nlatest={str(latest).lower()}\n")
     append("GITHUB_STEP_SUMMARY",
            f"## This run releases {version}\n\n"
