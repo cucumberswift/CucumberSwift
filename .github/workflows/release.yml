@@ -34,7 +34,7 @@ jobs:
       # NOTE: actions-gh-pages is held at v3 by the repository's Actions allow-list.
       # A SHA pin would no longer match that entry, so this stays on the tag.
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
