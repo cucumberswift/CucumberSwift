@@ -77,3 +77,14 @@ npm-debug.log
 .scannerwork
 sq-generic.xml
 .gen.swift
+
+# Tuist
+# Tuist's own scratch output. Never commit these.
+.tuist-derived/
+Tuist/.build/
+
+# NOTE: CucumberSwift.xcodeproj is deliberately NOT ignored.
+# Carthage clones this repository and runs xcodebuild against the shared
+# schemes it finds in CucumberSwift.xcodeproj/xcshareddata/xcschemes/. It has
+# no way to run `tuist generate` first, so the generated project and its shared
+# schemes must stay in version control. See CONTRIBUTING.md.
