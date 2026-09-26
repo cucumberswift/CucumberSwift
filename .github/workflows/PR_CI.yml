@@ -18,7 +18,7 @@ jobs:
         run: fastlane unit_test
       # NOTE: codecov-action is held at v1 by the repository's Actions allow-list.
       # A SHA pin would no longer match that entry, so this stays on the tag.
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
