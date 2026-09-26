@@ -9,6 +9,7 @@
 import Foundation
 @resultBuilder
 public enum StepBuilder {
+    @MainActor
     public static func buildBlock(_ items: StepDSL?...) -> [StepDSL] {
         items.compactMap { $0 }
     }

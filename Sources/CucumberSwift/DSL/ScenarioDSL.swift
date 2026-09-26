@@ -22,6 +22,7 @@ extension Scenario: ScenarioDSL {
     @objc public var scenarios: [Scenario] { [self] }
 }
 
+@MainActor
 public protocol ScenarioDSL {
     var scenarios: [Scenario] { get }
 }

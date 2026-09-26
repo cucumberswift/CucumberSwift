@@ -10,7 +10,7 @@ import Foundation
 import XCTest
 import CucumberSwiftExpressions
 
-@objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
+@MainActor @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
     @objc public static var shared = Cucumber()
 
     var features = [Feature]()

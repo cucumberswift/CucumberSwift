@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 public class CucumberJSONReporter: CucumberTestObserver {
     let reportURL: URL
     private(set) var features: [Feature] = []
@@ -93,6 +94,7 @@ extension CucumberJSONReporter {
         let line: UInt
         var tags: [Tag] = []
 
+        @MainActor
         init(_ feature: CucumberSwift.Feature) {
             uri = feature.uri
 //            #warning("Add better id logic so all whitespace is replaced")
@@ -114,6 +116,7 @@ extension CucumberJSONReporter {
         var line: UInt
         var tags: [Tag] = []
 
+        @MainActor
         init(_ scenario: CucumberSwift.Scenario) {
 //            #warning("Add better id logic so all whitespace is replaced")
             id = scenario.title.lowercased().replacingOccurrences(of: " ", with: "-")
@@ -143,13 +146,14 @@ extension CucumberJSONReporter {
         var result = Reporter.Result.pending
         var duration: Measurement<UnitDuration>?
         var name: String
-        var keyword: CucumberSwift.Step.Keyword
+        var keyword: String
         var line: UInt
         var arguments: [String]
 
+        @MainActor
         init(_ step: CucumberSwift.Step) {
             name = step.match
-            keyword = step.keyword
+            keyword = step.keyword.toString()
             line = step.location.line
             arguments = []
         }
@@ -178,7 +182,7 @@ extension CucumberJSONReporter {
 
             try container.encode(name, forKey: .name)
 //            #warning("Fix this")
-            try container.encode(keyword.toString(), forKey: .keyword)
+            try container.encode(keyword, forKey: .keyword)
             try container.encode(line, forKey: .line)
             try container.encode(arguments, forKey: .arguments)
         }

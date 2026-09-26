@@ -7,8 +7,15 @@
 //
 
 import Foundation
+
+
+
+@MainActor
+
 public protocol Taggable {
+
     var tags: [String] { get }
+
     func containsTags(_ tags: [String]) -> Bool
 }
 extension Taggable {
@@ -18,6 +25,7 @@ extension Taggable {
 }
 
 extension Array where Element: Taggable {
+    @MainActor
     func taggedElements(with environment: [String: String] = ProcessInfo.processInfo.environment, askImplementor: Bool) -> [Element] {
         if let tagNames = environment["CUCUMBER_TAGS"] {
             let tags = tagNames.components(separatedBy: ",")

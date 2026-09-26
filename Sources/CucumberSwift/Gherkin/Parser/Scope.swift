@@ -8,7 +8,7 @@
 
 import Foundation
 enum Scope: Equatable, Hashable {
-    static var language = Language() ?? Language.default
+    @MainActor static var language = Language() ?? Language.default
 
     case feature
     case background
@@ -19,7 +19,7 @@ enum Scope: Equatable, Hashable {
     case rule
     case unknown
 
-    static func scopeFor(str: String) -> Scope {
+    @MainActor static func scopeFor(str: String) -> Scope {
         if language.matchesFeature(str) {
             return .feature
         } else if language.matchesScenario(str) {

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+@MainActor
 public protocol Positionable {
     var location: Lexer.Position { get }
     var endLocation: Lexer.Position { get }

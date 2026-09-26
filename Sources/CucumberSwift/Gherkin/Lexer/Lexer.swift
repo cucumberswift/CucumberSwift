@@ -7,24 +7,76 @@
 //
 
 import Foundation
-public class Lexer: StringReader {
-    internal var atLineStart = true
-    internal var lastScope: Scope?
-    internal var lastKeyword: Step.Keyword?
-    internal var url: URL?
 
-    internal init(_ str: String, uri: String) {
-        url = URL(string: uri)
-        super.init(str)
+@MainActor
+public class Lexer: NSObject {
+    private let url: URL?
+    private let string: String
+    private var line: UInt = 1
+    private var column: UInt = 1
+    private var index: String.Index
+    private var atLineStart = true
+    private var lastScope: Scope?
+    private var lastKeyword: Step.Keyword?
+
+    private var currentChar: Character? {
+        guard index < string.endIndex else { return nil }
+        return string[index]
     }
 
-    override private init(_ str: String) {
-        super.init(str)
+    private var nextChar: Character? {
+        let nextIndex = string.index(after: index)
+        guard nextIndex < string.endIndex else { return nil }
+        return string[nextIndex]
     }
 
-    override public var position: Position {
-        let pos = super.position
-        return Position(line: pos.line, column: pos.column, uri: url)
+    private var previousChar: Character? {
+        let prevIndex = string.index(before: index)
+        guard prevIndex >= string.startIndex else { return nil }
+        return string[prevIndex]
+    }
+
+    public init(_ string: String, uri: String = "") {
+        self.string = string
+        self.url = URL(string: uri)
+        self.index = string.startIndex
+    }
+
+    private func advanceIndex() {
+        guard index < string.endIndex else { return }
+        if currentChar == .newLine {
+            line += 1
+            column = 1
+        } else {
+            column += 1
+        }
+        index = string.index(after: index)
+    }
+
+    public var position: Position {
+        Position(line: line, column: column, uri: url)
+    }
+
+    @discardableResult public func lookAheadUntil(_ evaluation: ((Character) -> Bool)) -> String {
+        var str = ""
+        var indexCopy = index
+        let currentCharacter = {
+            (indexCopy < self.string.endIndex && indexCopy >= self.string.startIndex) ? self.string[indexCopy] : nil
+        }
+        while let char = currentCharacter(), !evaluation(char) {
+            str.append(char)
+            _ = string.formIndex(&indexCopy, offsetBy: 1, limitedBy: string.endIndex)
+        }
+        return str
+    }
+
+    @discardableResult public func readUntil(_ evaluation: ((Character) -> Bool)) -> String {
+        var str = ""
+        while let char = currentChar, !evaluation(char) {
+            str.append(char)
+            advanceIndex()
+        }
+        return str
     }
 
     @discardableResult internal func readLineUntil(_ evaluation: ((Character) -> Bool)) -> String {

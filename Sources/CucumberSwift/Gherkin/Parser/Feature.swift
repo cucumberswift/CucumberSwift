@@ -7,6 +7,7 @@
 //
 
 import Foundation
+@MainActor
 public class Feature: Taggable, Positionable {
     public private(set)  var title = ""
     public private(set)  var desc = ""

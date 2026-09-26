@@ -8,6 +8,7 @@
 
 import Foundation
 extension AST {
+    @MainActor
     class Rule {
         private(set) var execute: (AST.Token, AST) -> Void
         private init(_ closure: @escaping (AST.Token, AST) -> Void) {

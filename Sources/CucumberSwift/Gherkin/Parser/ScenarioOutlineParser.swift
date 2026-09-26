@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 enum ScenarioOutlineParser {
     /**
      Extracts the description text for a scenario outline by processing its tokens.
@@ -91,6 +92,7 @@ enum ScenarioOutlineParser {
         scenarioOutlineNode.tokens.drop { !$0.isExampleScope() }.groupedByExample()
     }
 
+    @MainActor
     private static func validateTable(_ lines: [[Lexer.Token]], uri: String) {
         guard let header = lines.first else { return }
         if lines.contains(where: { $0.count != header.count }) {

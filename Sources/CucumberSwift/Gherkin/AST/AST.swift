@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 class AST {
     static var standard: AST {
         AST()

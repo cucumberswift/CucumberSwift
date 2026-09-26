@@ -7,6 +7,7 @@
 //
 
 import Foundation
+@MainActor
 enum Gherkin {
     static var errors = [String]()
 }

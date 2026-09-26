@@ -8,6 +8,7 @@
 
 import Foundation
 extension Feature {
+    @MainActor
     @discardableResult public convenience init(_ title: String,
                                                tags: [String] = [],
                                                line: UInt = #line,
@@ -23,6 +24,7 @@ extension Feature {
                   file: file)
         Cucumber.shared.features.append(self)
     }
+    @MainActor
     @discardableResult public convenience init(_ title: String,
                                                tags: [String] = [],
                                                line: UInt = #line,

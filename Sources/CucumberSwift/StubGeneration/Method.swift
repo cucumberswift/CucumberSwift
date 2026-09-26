@@ -7,6 +7,7 @@
 //
 
 import Foundation
+@MainActor
 class Method {
     var keyword: Step.Keyword = []
     var keywords: [Step.Keyword] = []
@@ -39,6 +40,7 @@ class Method {
         return keywordStrings.uniqueElements
     }
 
+    @MainActor
     func generateSwift(matchAllAllowed: Bool = true) -> String {
         Scope.language ?= Language()
         var methodStrings = [String]()

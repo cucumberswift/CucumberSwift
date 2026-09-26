@@ -8,6 +8,7 @@
 
 import Foundation
 
+@MainActor
 public struct ScenarioOutline: ScenarioDSL {
     public var scenarios: [Scenario] = []
 
