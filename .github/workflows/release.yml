@@ -178,10 +178,13 @@ jobs:
             --transform-for-static-hosting \
             --hosting-base-path "$DOCC_BASE_PATH" \
             --output-path ./docs
+      # Artifact file names may not contain ":", which DocC uses. Pack the site in one file.
+      - name: Pack the site
+        run: tar -czf docs.tar.gz -C docs .
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docs
-          path: docs
+          path: docs.tar.gz
 
   # Pushes the built site to gh-pages, which GitHub Pages serves. Runs no
   # project code: only git and GitHub-owned actions.
@@ -196,7 +199,6 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: docs
-          path: docs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: gh-pages
@@ -205,6 +207,8 @@ jobs:
         env:
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
+          mkdir docs
+          tar -xzf docs.tar.gz -C docs
           rsync -a --delete --exclude .git ./docs/ ./site/
           touch site/.nojekyll
           cd site
