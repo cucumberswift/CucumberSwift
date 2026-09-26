@@ -1,40 +1,221 @@
 name: Release
 
+# A maintainer releases by pushing a version tag, e.g. `git push origin 5.0.11`.
+# Tags are plain X.Y.Z: no `v` prefix, no pre-release part. The version files are
+# set beforehand by a normal pull request (`bundle exec fastlane patch|minor|major`),
+# so this workflow never commits to a branch.
+#
+# A release is never replaced: if the tag already has one, the workflow fails.
 on:
-  release:
-    types: [ created ]
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
 
-# Default everything to read; the release job widens to `contents: write` because the
-# Deploy step pushes the generated DocC site to gh-pages using GITHUB_TOKEN.
-permissions:
-  contents: read
+# Nothing by default; each job asks for what it uses. Only GITHUB_TOKEN is used.
+permissions: {}
+
+# One release at a time, so "is this the highest version?" cannot race.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.ref_name }}
+  # Version files that must match the tag. A file that does not exist is skipped.
+  PLIST: Sources/CucumberSwift/Info.plist
+  PODSPEC: CucumberSwift.podspec
+  DOCC_TARGET: CucumberSwift
+  DOCC_BASE_PATH: CucumberSwift/
+
+# `shell: bash` adds `-o pipefail`, so a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  release:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      latest: ${{ steps.latest.outputs.latest }}
+    steps:
+      # Full history, so we can check which branch the tagged commit is on.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Tag is a semantic version
+        run: |
+          if ! [[ "$TAG" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Tag '$TAG' is not a version of the form X.Y.Z."
+            exit 1
+          fi
+
+      - name: Tag has no release yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --silent 2>/dev/null; then
+            echo "::error::$TAG is already released. Releases are never replaced; release the next patch instead."
+            exit 1
+          fi
+
+      - name: Tag matches the version files
+        run: |
+          status=0
+          if [ -f "$PLIST" ]; then
+            version=$(python3 -c 'import plistlib, sys; print(plistlib.load(open(sys.argv[1], "rb"))["CFBundleVersion"])' "$PLIST")
+            echo "$PLIST: $version"
+            [ "$version" = "$TAG" ] || { echo "::error file=$PLIST::CFBundleVersion is $version, tag is $TAG."; status=1; }
+          fi
+          if [ -f "$PODSPEC" ]; then
+            version=$(sed -nE "s/^[[:space:]]*s\.version[[:space:]]*=[[:space:]]*['\"]([^'\"]+)['\"].*/\1/p" "$PODSPEC")
+            echo "$PODSPEC: $version"
+            [ "$version" = "$TAG" ] || { echo "::error file=$PODSPEC::s.version is $version, tag is $TAG."; status=1; }
+          fi
+          exit $status
+
+      - name: Tagged commit is on main or support/*
+        run: |
+          sha=$(git rev-parse "$TAG^{commit}")
+          for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/main refs/remotes/origin/support/); do
+            if git merge-base --is-ancestor "$sha" "$branch"; then
+              echo "$TAG ($sha) is on $branch."
+              exit 0
+            fi
+          done
+          echo "::error::$TAG ($sha) is not on main or a support/* branch."
+          exit 1
+
+      # GitHub shows one release as Latest. Only the highest version gets it, so a
+      # 5.x release after 6.0.0 does not take it over.
+      - name: Is this the highest version?
+        id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          highest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft | not) | .tag_name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+          if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$TAG" | sort -V | tail -n 1)" = "$TAG" ]; then
+            latest=true
+          else
+            latest=false
+          fi
+          echo "Highest released version: ${highest:-none}. $TAG is Latest: $latest."
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: validate
     runs-on: macos-14
-    # contents: write -> required only by the gh-pages Deploy step below.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run tests
+        run: fastlane unit_test
+
+  release:
+    needs: [validate, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # contents: write -> create the release. issues: read -> list the milestone's issues.
+    permissions:
+      contents: write
+      issues: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      LATEST: ${{ needs.validate.outputs.latest }}
+    steps:
+      # Notes come from the milestone named after the tag: breaking changes first,
+      # then the closed issues grouped by issue type. Without a milestone, or if it
+      # has no closed issues, GitHub generates the notes.
+      - name: Write release notes
+        id: notes
+        run: |
+          milestone=$(gh api --paginate "repos/$GH_REPO/milestones?state=all&per_page=100" \
+            --jq ".[] | select(.title == \"$TAG\") | .number")
+          if [ -z "$milestone" ]; then
+            echo "No milestone named $TAG."
+            exit 0
+          fi
+          gh api --paginate "repos/$GH_REPO/issues?milestone=$milestone&state=closed&per_page=100" \
+            --jq '.[] | select(.pull_request == null and .state_reason == "completed")
+                      | {number, title, type: (.type.name // ""), breaking: ([.labels[].name] | index("breaking") != null)}' \
+            | jq -r -s '
+                def section($name; f):
+                  (map(select(f)) | sort_by(.number) | map("- \(.title) (#\(.number))")) as $items
+                  | if ($items | length) == 0 then empty else "## \($name)\n\n\($items | join("\n"))\n" end;
+                def other: (.type | IN("Bug", "Feature", "Task")) | not;
+                [ section("Breaking changes"; .breaking),
+                  section("Bugs";     (.breaking | not) and .type == "Bug"),
+                  section("Features"; (.breaking | not) and .type == "Feature"),
+                  section("Tasks";    (.breaking | not) and .type == "Task"),
+                  section("Other";    (.breaking | not) and other)
+                ] | join("\n")' > notes.md
+          if grep -q '[^[:space:]]' notes.md; then
+            echo "file=notes.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "Milestone $TAG has no closed issues."
+          fi
+
+      - name: Create the release
+        env:
+          NOTES_FILE: ${{ steps.notes.outputs.file }}
+        run: |
+          if [ -n "$NOTES_FILE" ]; then
+            notes=(--notes-file "$NOTES_FILE")
+          else
+            notes=(--generate-notes)
+          fi
+          gh release create "$TAG" --verify-tag --title "Release $TAG" "${notes[@]}" --latest="$LATEST"
+
+  docs:
+    needs: [validate, release]
+    if: needs.validate.outputs.latest == 'true'
+    runs-on: macos-14
+    timeout-minutes: 30
+    # contents: write -> push the generated site to the gh-pages branch, which
+    # GitHub Pages serves. A push by GITHUB_TOKEN starts the Pages build.
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Cocoapods Release
-        run: |
-          pod repo add-cdn trunk 'https://cdn.cocoapods.org/'
-          pod trunk push CucumberSwift.podspec --allow-warnings
-        env:
-          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
-      - name: Generate DocC Static Site
-        run: |
-            swift package --allow-writing-to-directory ./docs \
-              generate-documentation --target CucumberSwift \
-              --disable-indexing \
-              --transform-for-static-hosting \
-              --hosting-base-path CucumberSwift/ \
-              --output-path ./docs
-      # NOTE: actions-gh-pages is held at v3 by the repository's Actions allow-list.
-      # A SHA pin would no longer match that entry, so this stays on the tag.
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          persist-credentials: false
+
+      - name: Generate DocC static site
+        run: |
+          swift package --allow-writing-to-directory ./docs \
+            generate-documentation --target "$DOCC_TARGET" \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path "$DOCC_BASE_PATH" \
+            --output-path ./docs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Push to gh-pages
+        run: |
+          rsync -a --delete --exclude .git ./docs/ ./site/
+          touch site/.nojekyll
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The site is unchanged."
+            exit 0
+          fi
+          git commit -m "deploy: $TAG ($GITHUB_SHA)"
+          git push origin HEAD:gh-pages
