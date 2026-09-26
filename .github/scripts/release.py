@@ -97,7 +97,9 @@ def changes(repo, branch, last_tag, sha):
     pull_numbers, direct = [], []
     for commit in run("git", "rev-list", "--reverse", f"refs/tags/{last_tag}..{sha}").split():
         pulls = api(f"repos/{repo}/commits/{commit}/pulls") or []
-        merged = [p["number"] for p in pulls if p.get("merged_at") and p["base"]["ref"] == branch]
+        # The API also returns pull requests from other repositories in the fork network.
+        merged = [p["number"] for p in pulls
+                  if p.get("merged_at") and p["base"]["ref"] == branch and p["base"]["repo"]["full_name"] == repo]
         if merged:
             pull_numbers += [n for n in merged if n not in pull_numbers]
             continue
