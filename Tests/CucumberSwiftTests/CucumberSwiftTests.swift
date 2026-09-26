@@ -493,4 +493,7 @@ extension Cucumber: StepImplementation {
 
     public static var overrideReverseOrderForAfterHooks = false
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
+
+    public static var overrideStrictPendingSteps = false
+    public var strictPendingSteps: Bool { Cucumber.overrideStrictPendingSteps }
 }

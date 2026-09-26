@@ -193,6 +193,15 @@ extension Step {
     }
 
     fileprivate func run() throws {
+        guard canExecute else {
+            // `testCase(_:didFailWithDescription:...)` in TestObservation.swift is fired
+            // for any recorded issue and sets `result = .failed(...)` on this step, so there's
+            // no need to set `result` here.
+            if (Cucumber.shared as? StepImplementation)?.strictPendingSteps == true {
+                testCase?.record(undefinedStepIssue())
+            }
+            return
+        }
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()
             if let instance = executeInstance,
@@ -206,6 +215,19 @@ extension Step {
         if execute != nil && result != .failed {
             result = .passed
         }
+    }
+
+    fileprivate func undefinedStepIssue() -> XCTIssue {
+        var sourceCodeContext = XCTSourceCodeContext()
+        if let uri = location.uri {
+            sourceCodeContext = XCTSourceCodeContext(location: .init(fileURL: uri, lineNumber: Int(location.line)))
+        }
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: "No CucumberSwift expression found that matches this step: \"\(keyword.toString()) \(match)\". Either this step has not been implemented, or a `{ _, _ in }`-style closure bound to the wrong overload (`CucumberExpression` instead of the regex-`String` API) — annotate the closure's first parameter as `[String]`, or use a `Regex` literal, to force the intended overload.", // swiftlint:disable:this line_length
+                        detailedDescription: nil,
+                        sourceCodeContext: sourceCodeContext,
+                        associatedError: nil,
+                        attachments: [])
     }
 }
 
