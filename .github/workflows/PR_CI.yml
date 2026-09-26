@@ -2,13 +2,22 @@ name: CI
 
 on: [ workflow_dispatch, pull_request ]
 
+# Least privilege. The repository default for GITHUB_TOKEN is `write`; these jobs
+# only read the checkout, so they are pinned to read.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: macos-14
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Run TESTS
         run: fastlane unit_test
+      # NOTE: codecov-action is held at v1 by the repository's Actions allow-list.
+      # A SHA pin would no longer match that entry, so this stays on the tag.
       - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -17,8 +26,10 @@ jobs:
   build_for_package_managers:
     needs: test
     runs-on: macos-14
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Validate SwiftPM BUILDs
         run: fastlane build_swiftpm
       - name: Validate Cocoapods Can Deploy (lib lint)

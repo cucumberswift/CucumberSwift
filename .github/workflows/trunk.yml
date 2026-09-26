@@ -7,12 +7,21 @@ on:
     branches: [ main ]
     types: [ completed ]
 
+# This job does all of its writing with secrets.TYLER_PAT, not GITHUB_TOKEN, so the
+# workflow token itself needs nothing beyond read. Do not widen this without also
+# reviewing the release pipeline: this workflow bumps the version, tags it and
+# creates the release that release.yml then acts on.
+permissions:
+  contents: read
+
 jobs:
   version_bump:
     runs-on: macos-14
+    permissions:
+      contents: read
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ secrets.TYLER_PAT }}
       - name: Bump version in Podspec and Plist
@@ -21,12 +30,16 @@ jobs:
           bundle exec fastlane patch
           VERSION=`/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Sources/CucumberSwift/Info.plist`
           echo "##[set-output name=version;]$VERSION"
+      # NOTE: git-auto-commit-action is held at v4 by the repository's Actions allow-list.
+      # A SHA pin would no longer match that entry, so this stays on the tag.
       - name: Commit version changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "[ci skip] Apply automatic changes"
           tagging_message: "${{ steps.bump_version.outputs.version }}"
           push_options: --force
+      # NOTE: actions/create-release is ARCHIVED and unmaintained. Replacing it is
+      # tracked separately with the trunk.yml rework.
       - name: Create a GitHub release
         uses: actions/create-release@v1
         env:
