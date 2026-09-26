@@ -183,7 +183,7 @@ def plan():
                 and succeeds("git", "merge-base", "--is-ancestor", f"refs/tags/{fmt(last)}",
                              f"refs/remotes/origin/{support_branch}")):
             fail(f"Releasing {version} needs {support_branch}, created from {fmt(last)}. "
-                 f"An admin creates it with: git push origin {fmt(last)}:refs/heads/{support_branch}")
+                 f"An admin creates it with: git push origin '{fmt(last)}^{{commit}}:refs/heads/{support_branch}'")
 
     issues, lone_pulls, direct = changes(repo, branch, fmt(last), sha)
     needed, reasons = 0, []
