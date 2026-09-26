@@ -33,7 +33,7 @@ jobs:
       # NOTE: git-auto-commit-action is held at v4 by the repository's Actions allow-list.
       # A SHA pin would no longer match that entry, so this stays on the tag.
       - name: Commit version changes
-        uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "[ci skip] Apply automatic changes"
           tagging_message: "${{ steps.bump_version.outputs.version }}"
