@@ -14,9 +14,11 @@ on:
 # Nothing by default; each job asks for what it uses. Only GITHUB_TOKEN is used.
 permissions: {}
 
-# One release at a time, so "is this the highest version?" cannot race.
+# One run per tag at a time. Different tags do not share a group: GitHub keeps
+# only one pending run per group and cancels the others, which would leave a tag
+# unreleased.
 concurrency:
-  group: release
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -38,8 +40,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    outputs:
-      latest: ${{ steps.latest.outputs.latest }}
     steps:
       # Full history, so we can check which branch the tagged commit is on.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,24 +90,6 @@ jobs:
           echo "::error::$TAG ($sha) is not on main or a support/* branch."
           exit 1
 
-      # GitHub shows one release as Latest. Only the highest version gets it, so a
-      # 5.x release after 6.0.0 does not take it over.
-      - name: Is this the highest version?
-        id: latest
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          highest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
-            --jq '.[] | select(.draft | not) | .tag_name' \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
-          if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$TAG" | sort -V | tail -n 1)" = "$TAG" ]; then
-            latest=true
-          else
-            latest=false
-          fi
-          echo "Highest released version: ${highest:-none}. $TAG is Latest: $latest."
-          echo "latest=$latest" >> "$GITHUB_OUTPUT"
-
   test:
     needs: validate
     runs-on: macos-14
@@ -129,10 +111,11 @@ jobs:
     permissions:
       contents: write
       issues: read
+    outputs:
+      latest: ${{ steps.latest.outputs.latest }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      LATEST: ${{ needs.validate.outputs.latest }}
     steps:
       # Notes come from the milestone named after the tag: breaking changes first,
       # then the closed issues grouped by issue type. Without a milestone, or if it
@@ -166,9 +149,27 @@ jobs:
             echo "Milestone $TAG has no closed issues."
           fi
 
+      # GitHub shows one release as Latest. Only the highest version gets it, so a
+      # 5.x release after 6.0.0 does not take it over. Checked here, right before
+      # the release is created, so a release made meanwhile is taken into account.
+      - name: Is this the highest version?
+        id: latest
+        run: |
+          highest=$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" \
+            --jq '.[] | select(.draft | not) | .tag_name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+          if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$TAG" | sort -V | tail -n 1)" = "$TAG" ]; then
+            latest=true
+          else
+            latest=false
+          fi
+          echo "Highest released version: ${highest:-none}. $TAG is Latest: $latest."
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
       - name: Create the release
         env:
           NOTES_FILE: ${{ steps.notes.outputs.file }}
+          LATEST: ${{ steps.latest.outputs.latest }}
         run: |
           if [ -n "$NOTES_FILE" ]; then
             notes=(--notes-file "$NOTES_FILE")
@@ -178,8 +179,13 @@ jobs:
           gh release create "$TAG" --verify-tag --title "Release $TAG" "${notes[@]}" --latest="$LATEST"
 
   docs:
-    needs: [validate, release]
-    if: needs.validate.outputs.latest == 'true'
+    needs: release
+    if: needs.release.outputs.latest == 'true'
+    # One deploy at a time. If several wait, only the newest runs, and the check
+    # below makes sure it is still the highest version.
+    concurrency:
+      group: docs
+      cancel-in-progress: false
     runs-on: macos-14
     timeout-minutes: 30
     # contents: write -> push the generated site to the gh-pages branch, which
@@ -206,7 +212,16 @@ jobs:
           path: site
 
       - name: Push to gh-pages
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          highest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft | not) | .tag_name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [ "$highest" != "$TAG" ]; then
+            echo "$highest has been released since; its docs win. Skipping."
+            exit 0
+          fi
           rsync -a --delete --exclude .git ./docs/ ./site/
           touch site/.nojekyll
           cd site
