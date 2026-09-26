@@ -7,8 +7,7 @@ updates:
   # (Settings > Actions > General > "Allow specified actions"). Third-party
   # actions are allow-listed by tag, e.g. `codecov/codecov-action@v1`, so a
   # Dependabot PR that bumps or SHA-pins one of them will fail until the
-  # allow-list entry is updated to match. See the audit on #131:
-  # https://github.com/cucumberswift/CucumberSwift/issues/131#issuecomment-5750715190
+  # allow-list entry is updated to match.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

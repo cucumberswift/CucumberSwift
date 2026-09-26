@@ -32,8 +32,7 @@ jobs:
               --hosting-base-path CucumberSwift/ \
               --output-path ./docs
       # NOTE: actions-gh-pages is held at v3 by the repository's Actions allow-list.
-      # A SHA pin would no longer match the allow-list. See the audit on #131:
-      # https://github.com/cucumberswift/CucumberSwift/issues/131#issuecomment-5750715190
+      # A SHA pin would no longer match that entry, so this stays on the tag.
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
