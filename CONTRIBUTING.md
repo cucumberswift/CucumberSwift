@@ -1,13 +1,43 @@
-### Contributing
+# Contributing to CucumberSwift
 
-Let's keep this short and sweet. So you want to contribute to CucumberSwift? Cool! There are 3 things required to do so:
+So you want to contribute to CucumberSwift? Cool! Bug reports, fixes, features, docs and reviews are all welcome.
 
-- Be available for questions. If there's confusion about what you wrote or why you wrote it that way we need to be able to talk about it before it makes it into main.
-- TEST YOUR CODE! CucumberSwift is primarily black-box tested, that's fine. Feel free to unit test as well, the point is the testing framework really ought to be tested.
-- Submit a Pull Request. At this point you've got everything tested, your new feature or bug fix is in place and you know you'll be near your email for the next few days. Submit your PR and we'll get it turned around and into main ASAP
+It comes down to three things:
 
+- **Be available for questions.** If there's confusion about what you wrote or why you wrote it that way, we need to be able to talk about it before it makes it into `main`.
+- **Test your code.** It's a testing framework, so it really ought to be tested.
+- **Open a pull request** once your change is in place and tested, and you know you'll be near your email for the next few days.
 
-### Before you open a PR
+The rest of this page explains how each step works here, so your contribution lands quickly and nobody's time is wasted, yours included.
+
+**Contents:** [Questions](#questions) · [Reporting a bug or requesting a feature](#reporting-a-bug-or-requesting-a-feature) · [Before you open a PR](#before-you-open-a-pr) · [Setting up](#setting-up) · [Making a change](#making-a-change) · [Pull request etiquette](#pull-request-etiquette) · [Review](#review) · [Using AI tools](#using-ai-tools)
+
+## Questions
+
+Ask usage questions in **#help** on [Slack](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw) or in [GitHub Discussions](https://github.com/cucumberswift/CucumberSwift/discussions), not in an issue.
+
+Not sure whether the thing you're looking at is even a bug? Ask in **#contributors** on Slack, that's a good place to work it out before it becomes a bug report.
+
+[![Slack](https://img.shields.io/badge/Slack-join%20the%20community-4A154B?style=popout&logo=slack&logoColor=white)](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw)
+
+## Reporting a bug or requesting a feature
+
+**Have a look around first.** Search the [issues](https://github.com/cucumberswift/CucumberSwift/issues?q=is%3Aissue) before filing a new one, and search the [pull requests](https://github.com/cucumberswift/CucumberSwift/pulls?q=is%3Apr) too. Look at the closed ones especially: it may already be fixed and shipped, or it may have been proposed and turned down, and that thread is worth reading before you make the same case again. If there's an open issue for it, add your details there, and a 👍 reaction on the issue helps us see how many people it affects. Two minutes of searching beats a lost weekend.
+
+Then open an issue with the **Bug report** or **Feature request** template.
+
+A good bug report has:
+
+- The CucumberSwift version, the Xcode version, and the platform (iOS, macOS or tvOS, and the OS version).
+- How you installed CucumberSwift: Swift Package Manager, Carthage or CocoaPods.
+- A minimal `.feature` file and the step definitions that reproduce the problem. This is the most useful thing you can give us.
+- What you expected to happen and what happened instead, including the test output.
+
+A good feature request starts with the problem you're trying to solve, not the solution. That way we can discuss the approach before anyone writes code.
+
+**Security vulnerabilities are different.** Do not open a public issue. Follow [SECURITY.md](SECURITY.md) to report it privately.
+
+## Before you open a PR
 
 Link an issue. If there's already one covering what you're fixing or adding, mention it in your PR. If there isn't, open one first describing the problem or the enhancement.
 
@@ -15,18 +45,114 @@ This isn't process for the sake of process. A quick ticket means we can agree on
 
 Typos and docs fixes are exempt, just send the PR.
 
-One issue per PR. Two bugs in one pull request isn't something we'll merge. Separate PRs mean each fix stands or falls on its own — bundled, the one we're unsure about holds up the one we're happy with — and either can be reverted later without unpicking the other. It also keeps each regression test tied to the issue it closes, so a year from now "what fixed this?" has one answer.
+**One issue per PR.** Two bugs in one pull request isn't something we'll merge. Separate PRs mean each fix stands or falls on its own. Bundled, the one we're unsure about holds up the one we're happy with. Either can also be reverted later without unpicking the other. It also keeps each regression test tied to the issue it closes, so a year from now "what fixed this?" has one answer.
 
-Found a second bug while you were in there? Brilliant — open a second issue and say so in your PR. That's a contribution in its own right, and we'd far rather hear about it than not.
+Found a second bug while you were in there? Brilliant. Open a second issue and say so in your PR. That's a contribution in its own right, and we'd far rather hear about it than not.
 
-That's one *problem* per PR, not one file. A single logical change across a dozen files is still one change, and mechanical work of the same kind — a lint pass, a dependency bump, a batch of docs edits — can go in one PR.
+That's one *problem* per PR, not one file. A single logical change across a dozen files is still one change, and mechanical work of the same kind (a lint pass, a dependency bump, a batch of docs edits) can go in one PR.
 
-Have a look around first. Search the issues before filing a new one, and search the pull requests too — the closed ones especially: it may already be fixed and shipped, or it may have been proposed and turned down, and that thread is worth reading before you make the same case again. If it's open right now, a review or a comment on that PR is worth more than a second one. Two minutes of searching beats a lost weekend.
+**Check for work in progress.** If someone already has an open PR for the issue, a review or a comment on that PR is worth more than a second one. If you want to pick up an issue, say so in a comment, so two people don't fix the same thing.
 
-Finding an existing attempt doesn't automatically mean stop. If it's gone stale, say so — link it, explain why you're starting fresh, and suggest closing the old one. What we want to avoid is a duplicate opened by accident, and anyone pushing to a branch that isn't theirs.
+Finding an existing attempt doesn't automatically mean stop. If it's gone stale, say so: link it, explain why you're starting fresh, and suggest closing the old one. What we want to avoid is a duplicate opened by accident, and anyone pushing to a branch that isn't theirs.
 
-Not sure whether the thing you're looking at is even a bug? Ask in **#contributors** on Slack, that's a good place to work it out before it becomes a bug report.
+## Setting up
 
-[![Slack](https://img.shields.io/badge/Slack-join%20the%20community-4A154B?style=popout&logo=slack&logoColor=white)](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw)
+1. Fork the repository and clone your fork.
+2. Create a branch for your change. Don't work on your fork's `main` branch. A pull request from a branch named `main` can stop our CI workflows from running on it.
+3. Open `CucumberSwift.xcodeproj` in Xcode.
+4. Install [SwiftLint](https://github.com/realm/SwiftLint) (for example `brew install swiftlint`). The Xcode build runs it with the repository's `.swiftlint.yml`.
 
-I realize this document is somewhat lacking in terms of process, for now I don't care. If we start seeing more contributors I'll think through more how this should work.
+Build and run the tests with `xcodebuild`:
+
+```bash
+xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
+```
+
+Please use `xcodebuild` or Xcode, not `swift build` or `swift test`. They don't build the same configuration as the Xcode project, so they can pass when CI fails, or fail when CI passes.
+
+Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
+
+## Making a change
+
+**Branch names.** We name branches after the issue type and number: `bugfix/<issue>-<short-name>`, `feature/<issue>-<short-name>` or `task/<issue>-<short-name>`, for example `bugfix/135-empty-regex`. It's not a hard rule for forks, but it helps.
+
+**Tests.** Every change that affects behaviour needs tests.
+
+- A bug fix has a test that fails without the fix and passes with it.
+- Tests fail with `XCTFail` or an assertion, not a `print`.
+- CucumberSwift is mostly black-box tested with feature files, and unit tests are welcome too. Please don't run a full Cucumber feature suite from inside a unit test. The framework drives its own runner, and nesting them causes side effects that are hard to trace.
+- Think about the edge cases: empty or whitespace-only input, accented characters and other Unicode, `And` and `But` steps, tags, comments, data tables and doc strings.
+- A failing step must never be reported as passing. Anything that could hide a failure is a serious bug.
+
+**Platforms.** The minimum deployment targets are iOS 13, macOS 10.15 and tvOS 13.
+
+- Swift regex literals need iOS 16 or macOS 13 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
+- Don't raise the deployment targets in a PR. That's a breaking change for users on older platforms, so open an issue to discuss it first.
+
+**Public API.** A change to a `public` or `open` symbol should be additive. If it has to be breaking, say so on the issue before you write it. Be careful with new overloads: one can silently change which method existing code calls (see [#125](https://github.com/cucumberswift/CucumberSwift/issues/125)).
+
+**New source files.** Add every new source file to `CucumberSwift.xcodeproj` as well as to the package. Carthage builds from the Xcode project, so a file that is missing there breaks Carthage users. Build in Xcode to check.
+
+**Keep the diff focused.**
+
+- Change only what the issue needs. No drive-by reformatting, renames or refactoring next to the fix. Open a separate issue for those.
+- Don't commit local changes, such as Xcode project settings that only your machine needs (your signing team, for example).
+- Follow the names and patterns of the code around your change.
+- If something looks unnecessary, check the history before you remove it. It may be there for a reason.
+- Add a short comment to explain a non-obvious algorithm.
+
+**Documentation.** If users will notice your change, update the DocC catalog in `Sources/CucumberSwift/CucumberSwift.docc/` in the same PR. Please don't add new Markdown files to the repository. Notes, findings and design discussion belong on the issue, where the next person will look for them.
+
+**Workflows.** If you change a GitHub Actions workflow, give every job an explicit `permissions:` block. Please don't add a new third-party action without discussing it on the issue first.
+
+**Commit and PR titles.** Start the PR title with a prefix (`fix:`, `feat:`, `docs:`, `chore:` or `ci:`), describe the change in plain words, and end with the issue number, for example:
+
+```text
+fix: stop compiling an empty regex on every DSL step execution (#135)
+```
+
+We squash-merge, so the PR title becomes the commit message on `main`. Your individual commits don't need to be perfect.
+
+## Pull request etiquette
+
+**Link exactly one issue.** Put `Closes #123` (or `Fixes #123`) in the PR description, so the issue closes when the PR merges.
+
+**Write a real description.** Say what problem the PR solves, how it solves it, and how you tested it. Explain anything a reviewer might find surprising. A PR with no description can't be reviewed, and we'll ask for one.
+
+**Open a draft if it isn't ready.** A draft PR is a good way to get early feedback on an approach. Mark it ready for review when it is.
+
+**Keep "Allow edits by maintainers" turned on.** We only use it for small fixes, such as a rebase, a lint fix or a typo. We won't replace your approach with a different one. If we think a different approach is better, we'll discuss it with you.
+
+**Stay available.** Reply to review comments, and push fixes as new commits rather than rewriting history once review has started, so reviewers can see what changed. Mark a conversation resolved when you've dealt with it. If you can no longer finish the PR, just say so. That's fine, and if we pick it up we'll credit you.
+
+**Respect other people's branches.** Don't push to a branch you didn't create. If you want to build on someone else's PR, comment on it, or open your own PR that links to it.
+
+**Keep it up to date.** If `main` moves on and your branch has conflicts, merge or rebase onto `main`. Ask if you're not sure how.
+
+**Nudge us if it goes quiet.** We're a small team. If you haven't heard back, a polite comment on the PR or a message in **#contributors** is welcome.
+
+## Review
+
+When you open a PR:
+
+1. **CI runs** the tests and checks that the package builds for each package manager. Please fix anything it reports.
+2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
+3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
+
+Once it's approved, a maintainer squash-merges the PR, and the linked issue closes. Merging doesn't publish a release. Maintainers release separately, and your change ships in the next release.
+
+If we build on your code, tests or reproduction in a different PR, we'll credit you with a `Co-authored-by:` trailer.
+
+## Using AI tools
+
+You're welcome to use AI tools to write code, tests or documentation. The standard is the same as for any other contribution, and you are responsible for the change:
+
+- Read and understand every line before you open the PR, and be ready to explain it.
+- Check that the change does what the issue asks and nothing more. AI tools tend to add extra "improvements".
+- Run the tests yourself.
+
+Maintainers may use AI tools when reviewing too, and will say so when an AI finding shapes a review.
+
+## Code of conduct
+
+Everyone taking part in this project is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
