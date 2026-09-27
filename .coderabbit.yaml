@@ -76,7 +76,9 @@ reviews:
         does not explain, such as commented-out code or a wider access level, and
         changes that bypass existing caching or earlier fixes. Prefer names and patterns
         that match similar types in the repository. A non-obvious algorithm should have
-        a short comment. Prefer safe actor isolation over assumeIsolated.
+        a short comment. Prefer safe actor isolation over assumeIsolated. Every
+        behaviour change needs unit tests in Tests/, and a bug fix needs a test that
+        fails without the fix; flag a pull request that changes behaviour without them.
     - path: "Tests/**"
       instructions: >-
         Every behaviour change needs unit tests, and a bug fix needs a test that fails
