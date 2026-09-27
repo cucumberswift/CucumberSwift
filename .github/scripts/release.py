@@ -169,8 +169,10 @@ def notes(repo, last, version, issues, lone_pulls, direct, authors):
     lines += section("Bugs", listed(lambda i: not i["breaking"] and i["type"] == "Bug"))
     lines += section("Features", listed(lambda i: not i["breaking"] and i["type"] == "Feature"))
     lines += section("Tasks", listed(lambda i: not i["breaking"] and i["type"] == "Task"))
-    lines += section("Other", listed(lambda i: not i["breaking"] and i["type"] not in known))
-    lines += section("Other changes", [f"- {clean(t)} ({pull_ref(n, authors)})" for n, t in lone_pulls]
+    # Everything else in one section: issues with no type, pull requests with no
+    # issue, and commits pushed without a pull request.
+    lines += section("Other changes", listed(lambda i: not i["breaking"] and i["type"] not in known)
+                     + [f"- {clean(t)} ({pull_ref(n, authors)})" for n, t in lone_pulls]
                      + [f"- {clean(s)} ({c})" for c, s in direct])
     if not lines:
         lines = [f"No changes since {last}.", ""]
