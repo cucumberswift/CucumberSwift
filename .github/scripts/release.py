@@ -38,14 +38,21 @@ def succeeds(*args):
     return subprocess.run(args, capture_output=True).returncode == 0
 
 
-def api(path, method="GET", body=None):
+def api(path, method="GET", body=None, allow=()):
+    """Call the GitHub API. Return None only for an HTTP status listed in `allow`,
+    such as 404 for "does not exist". Any other failure stops the run."""
     args = ["gh", "api", "-X", method, path]
     if body is not None:
         args += ["--input", "-"]
+    # A list of arguments, no shell: nothing here is interpreted as a command.
     result = subprocess.run(args, input=json.dumps(body) if body is not None else None,
                             capture_output=True, text=True)
     if result.returncode != 0:
-        return None
+        status = re.search(r"\(HTTP (\d{3})\)", result.stderr)
+        if status and int(status.group(1)) in allow:
+            return None
+        fail(f"GitHub API {method} {path.split('?')[0]} failed "
+             f"(HTTP {status.group(1) if status else 'error'}).")
     return json.loads(result.stdout) if result.stdout.strip() else {}
 
 
@@ -97,7 +104,7 @@ def changes(repo, branch, last_tag, sha):
     pull_numbers, direct = [], []
     # Merge commits are skipped: a merged pull request is found through its own commits.
     for commit in run("git", "rev-list", "--reverse", "--no-merges", f"refs/tags/{last_tag}..{sha}").split():
-        pulls = api(f"repos/{repo}/commits/{commit}/pulls") or []
+        pulls = api(f"repos/{repo}/commits/{commit}/pulls")
         # The API also returns pull requests from other repositories in the fork network.
         merged = [p["number"] for p in pulls
                   if p.get("merged_at") and p["base"]["ref"] == branch and p["base"]["repo"]["full_name"] == repo]
@@ -227,48 +234,76 @@ def set_version(path, content, version):
 
 
 def publish():
+    """Safe to run again after a partial failure: it reuses the version commit and
+    the tag that an earlier attempt of the same run created, and never replaces a
+    release."""
     repo, sha, branch = checked_env()
     version, latest = os.environ["VERSION"], os.environ["LATEST"]
     if not SEMVER.match(version) or latest not in ("true", "false"):
         fail("Unexpected version.")
+    message = f"chore: set version {version}"
 
-    changed = []
-    for path in filter(None, (os.environ.get("PLIST"), os.environ.get("PODSPEC"))):
-        found = api(f"repos/{repo}/contents/{path}?ref={sha}")
-        if found is None:
-            continue
-        content = base64.b64decode(found["content"]).decode("utf-8")
-        updated = set_version(path, content, version)
-        if updated == content:
-            continue
-        diff = [l for l in difflib.ndiff(content.splitlines(), updated.splitlines()) if l[:1] in "+-"]
-        if len(diff) != 2:
-            fail(f"The version change in {path} would touch more than one line.")
-        changed.append((path, updated))
+    # An earlier attempt may already have moved the branch to its version commit.
+    commit = None
+    head = api(f"repos/{repo}/git/ref/heads/{branch}")["object"]["sha"]
+    if head != sha:
+        found = api(f"repos/{repo}/git/commits/{head}")
+        if ([p["sha"] for p in found["parents"]] == [sha] and found["message"] == message
+                and found["author"]["name"] == "github-actions[bot]"):
+            commit = head
+            print(f"Reusing the version commit {head} from an earlier attempt.")
 
-    commit = sha
-    if changed:
-        tree = api(f"repos/{repo}/git/commits/{sha}")["tree"]["sha"]
-        items = []
-        for path, updated in changed:
-            blob = api(f"repos/{repo}/git/blobs", "POST",
-                       {"content": base64.b64encode(updated.encode("utf-8")).decode(), "encoding": "base64"})
-            items.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
-        tree = api(f"repos/{repo}/git/trees", "POST", {"base_tree": tree, "tree": items})["sha"]
-        commit = api(f"repos/{repo}/git/commits", "POST",
-                     {"message": f"chore: set version {version}", "tree": tree, "parents": [sha]})["sha"]
-        if api(f"repos/{repo}/git/refs/heads/{branch}", "PATCH", {"sha": commit, "force": False}) is None:
-            fail(f"{branch} moved during the run. Nothing was tagged or released. Start a new run.")
+    if commit is None:
+        changed = []
+        for path in filter(None, (os.environ.get("PLIST"), os.environ.get("PODSPEC"))):
+            found = api(f"repos/{repo}/contents/{path}?ref={sha}", allow=(404,))
+            if found is None:
+                continue
+            content = base64.b64decode(found["content"]).decode("utf-8")
+            updated = set_version(path, content, version)
+            if updated == content:
+                continue
+            diff = [l for l in difflib.ndiff(content.splitlines(), updated.splitlines()) if l[:1] in "+-"]
+            if len(diff) != 2:
+                fail(f"The version change in {path} would touch more than one line.")
+            changed.append((path, updated))
 
-    if api(f"repos/{repo}/git/ref/tags/{version}") is not None:
-        fail(f"The tag {version} already exists.")
-    tag = api(f"repos/{repo}/git/tags", "POST",
-              {"tag": version, "message": version, "object": commit, "type": "commit"})
-    if tag is None or api(f"repos/{repo}/git/refs", "POST", {"ref": f"refs/tags/{version}", "sha": tag["sha"]}) is None:
-        fail(f"Could not create the tag {version}.")
+        commit = sha
+        if changed:
+            tree = api(f"repos/{repo}/git/commits/{sha}")["tree"]["sha"]
+            items = []
+            for path, updated in changed:
+                blob = api(f"repos/{repo}/git/blobs", "POST",
+                           {"content": base64.b64encode(updated.encode("utf-8")).decode(), "encoding": "base64"})
+                items.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+            tree = api(f"repos/{repo}/git/trees", "POST", {"base_tree": tree, "tree": items})["sha"]
+            commit = api(f"repos/{repo}/git/commits", "POST",
+                         {"message": message, "tree": tree, "parents": [sha]})["sha"]
+            # 422: not a fast-forward, because someone pushed to the branch during the run.
+            if api(f"repos/{repo}/git/refs/heads/{branch}", "PATCH",
+                   {"sha": commit, "force": False}, allow=(422,)) is None:
+                fail(f"{branch} moved during the run. Nothing was tagged or released. Start a new run.")
 
-    subprocess.run(["gh", "release", "create", version, "--verify-tag", "--title", f"Release {version}",
-                    "--notes-file", "notes.md", f"--latest={latest}"], check=True)
+    # The tag: reuse it only if it points to exactly this commit.
+    ref = api(f"repos/{repo}/git/ref/tags/{version}", allow=(404,))
+    if ref is None:
+        tag = api(f"repos/{repo}/git/tags", "POST",
+                  {"tag": version, "message": version, "object": commit, "type": "commit"})
+        api(f"repos/{repo}/git/refs", "POST", {"ref": f"refs/tags/{version}", "sha": tag["sha"]})
+    else:
+        target = ref["object"]["sha"]
+        if ref["object"]["type"] == "tag":
+            target = api(f"repos/{repo}/git/tags/{target}")["object"]["sha"]
+        if target != commit:
+            fail(f"The tag {version} already exists and points to another commit.")
+        print(f"Reusing the tag {version} from an earlier attempt.")
+
+    # The release: create it once. An existing release is never replaced or edited.
+    if api(f"repos/{repo}/releases/tags/{version}", allow=(404,)) is None:
+        subprocess.run(["gh", "release", "create", version, "--verify-tag", "--title", f"Release {version}",
+                        "--notes-file", "notes.md", f"--latest={latest}"], check=True)
+    else:
+        print(f"The release {version} already exists. Nothing to do.")
     append("GITHUB_STEP_SUMMARY", f"Released {version} at {commit}.\n")
 
 
