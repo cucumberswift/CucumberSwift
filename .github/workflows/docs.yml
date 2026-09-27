@@ -31,7 +31,11 @@ defaults:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Only in the cucumberswift repositories, like the Release workflow. A fork
+    # used for testing opts in with the repository variable RELEASE_IN_FORK=true.
+    if: >-
+      (github.repository_owner == 'cucumberswift' || vars.RELEASE_IN_FORK == 'true') &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # contents: read -> list releases and download their assets.

@@ -1,96 +1,121 @@
 name: Release
 
-# A maintainer releases by pushing a version tag, e.g. `git push origin 5.0.11`.
-# Tags are plain X.Y.Z: no `v` prefix, no pre-release part. The version files are
-# set beforehand by a normal pull request (`bundle exec fastlane patch|minor|major`),
-# so this workflow never commits to a branch.
+# A maintainer releases from the Actions tab: Release > Run workflow, pick the
+# branch (main, or support/N.x for an older major) and patch, minor or major.
+# From a terminal: gh workflow run release.yml --ref main -f bump=minor
 #
-# A release is never replaced: if the tag already has one, the workflow fails.
+# The workflow computes the version from the last release on the branch, checks
+# it, runs the tests, commits the version files, and only then creates the tag
+# and the release. Nothing is public until every check has passed.
+#
+# Keep the name "Release": other workflows may match on it.
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Kind of release
+        required: true
+        type: choice
+        options: [patch, minor, major]
+      dry_run:
+        description: Only compute and check the version, and show the release notes
+        type: boolean
+        default: false
 
 # Nothing by default; each job asks for what it uses. Only GITHUB_TOKEN is used.
 permissions: {}
 
-# One run per tag at a time. Different tags do not share a group: GitHub keeps
-# only one pending run per group and cancels the others, which would leave a tag
-# unreleased.
+# One release run per branch at a time.
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  TAG: ${{ github.ref_name }}
-  # Version files that must match the tag. A file that does not exist is skipped.
+  # Version files the release commit updates. A file that does not exist is skipped.
   PLIST: Sources/CucumberSwift/Info.plist
   PODSPEC: CucumberSwift.podspec
   DOCC_TARGET: CucumberSwift
+  # The commit this run releases, fixed when the run starts.
+  RELEASE_SHA: ${{ github.sha }}
 
-# `shell: bash` adds `-o pipefail`, so a failing command in a pipe fails the step.
+# `shell: bash` adds `-o pipefail`.
 defaults:
   run:
     shell: bash
 
 jobs:
-  validate:
+  plan:
+    # Only in the cucumberswift repositories. A fork used for testing opts in with
+    # the repository variable RELEASE_IN_FORK=true. Every other job depends on this one.
+    if: ${{ github.repository_owner == 'cucumberswift' || vars.RELEASE_IN_FORK == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # contents: read -> tags and history. issues/pull-requests: read -> release notes.
     permissions:
       contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      branch: ${{ steps.guard.outputs.branch }}
+      version: ${{ steps.plan.outputs.version }}
+      latest: ${{ steps.plan.outputs.latest }}
     steps:
-      # Full history, so we can check which branch the tagged commit is on.
+      # Branch names and inputs are untrusted text. They reach this script only
+      # as environment variables, and nothing else uses them before this check.
+      - name: Check the branch, the input and who started the run
+        id: guard
+        env:
+          REF: ${{ github.ref }}
+          BUMP: ${{ inputs.bump }}
+          ACTOR: ${{ github.triggering_actor }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$REF" == "refs/heads/main" ]]; then
+            branch=main
+          elif [[ "$REF" =~ ^refs/heads/support/(0|[1-9][0-9]*)\.x$ ]]; then
+            branch="support/${BASH_REMATCH[1]}.x"
+          else
+            echo "::error::Releases run only on main or on a support/N.x branch."
+            exit 1
+          fi
+          case "$BUMP" in
+            patch|minor|major) ;;
+            *) echo "::error::bump must be patch, minor or major."; exit 1 ;;
+          esac
+          if ! [[ "$ACTOR" =~ ^[A-Za-z0-9-]+$ ]]; then
+            echo "::error::Only repository admins can start a release."
+            exit 1
+          fi
+          permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$ACTOR/permission" --jq .permission)
+          if [[ "$permission" != "admin" ]]; then
+            echo "::error::Only repository admins can start a release."
+            exit 1
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      # Full history and all tags, to find the last release and what changed since.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Tag is a semantic version
-        run: |
-          if ! [[ "$TAG" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::Tag '$TAG' is not a version of the form X.Y.Z."
-            exit 1
-          fi
-
-      - name: Tag has no release yet
+      - name: Compute and check the version, and write the release notes
+        id: plan
         env:
+          BRANCH: ${{ steps.guard.outputs.branch }}
+          BUMP: ${{ inputs.bump }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --silent 2>/dev/null; then
-            echo "::error::$TAG is already released. Releases are never replaced; release the next patch instead."
-            exit 1
-          fi
+        run: python3 .github/scripts/release.py plan
 
-      - name: Tag matches the version files
-        run: |
-          status=0
-          if [ -f "$PLIST" ]; then
-            version=$(python3 -c 'import plistlib, sys; print(plistlib.load(open(sys.argv[1], "rb"))["CFBundleVersion"])' "$PLIST")
-            echo "$PLIST: $version"
-            [ "$version" = "$TAG" ] || { echo "::error file=$PLIST::CFBundleVersion is $version, tag is $TAG."; status=1; }
-          fi
-          if [ -f "$PODSPEC" ]; then
-            version=$(sed -nE "s/^[[:space:]]*s\.version[[:space:]]*=[[:space:]]*['\"]([^'\"]+)['\"].*/\1/p" "$PODSPEC")
-            echo "$PODSPEC: $version"
-            [ "$version" = "$TAG" ] || { echo "::error file=$PODSPEC::s.version is $version, tag is $TAG."; status=1; }
-          fi
-          exit $status
-
-      - name: Tagged commit is on main or support/*
-        run: |
-          sha=$(git rev-parse "$TAG^{commit}")
-          for branch in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/main refs/remotes/origin/support/); do
-            if git merge-base --is-ancestor "$sha" "$branch"; then
-              echo "$TAG ($sha) is on $branch."
-              exit 0
-            fi
-          done
-          echo "::error::$TAG ($sha) is not on main or a support/* branch."
-          exit 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: notes.md
 
   test:
-    needs: validate
+    needs: plan
+    if: ${{ !inputs.dry_run }}
     runs-on: macos-14
     timeout-minutes: 60
     permissions:
@@ -98,27 +123,63 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Run tests
         run: fastlane unit_test
 
-  # Builds the docs twice, because DocC bakes the hosting path into its output:
-  # once for /X.x/ and once for the site root. The Docs workflow decides which
-  # releases go where. Built here, read-only, so that the SwiftPM plugin never
-  # runs with a write token.
+  # The only job that writes to the repository's code. It runs no project or
+  # dependency code: only the release script, git and the gh CLI.
+  release:
+    needs: [plan, test, docs-build]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # contents: write -> version commit, tag and release.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-notes
+      # Attached to the release as it is created, so a release never exists without its docs.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: docs
+      - name: Commit the version, create the tag and the release
+        env:
+          BRANCH: ${{ needs.plan.outputs.branch }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          LATEST: ${{ needs.plan.outputs.latest }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 .github/scripts/release.py publish
+
+  # DocC runs project and dependency code, so it builds with read access only.
+  # It builds twice, because DocC bakes the hosting path into its output: once
+  # for /X.x/ and once for the site root. The Docs workflow decides which
+  # releases go where.
   docs-build:
-    needs: validate
+    needs: plan
+    if: ${{ !inputs.dry_run }}
     runs-on: macos-14
     timeout-minutes: 30
     permissions:
       contents: read
     env:
+      VERSION: ${{ needs.plan.outputs.version }}
       REPO_NAME: ${{ github.event.repository.name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-
+      # Zipped, because artifact file names may not contain ":", which DocC uses.
       - name: Generate DocC static sites
         run: |
           build() {
@@ -130,9 +191,8 @@ jobs:
               --output-path "$2"
             (cd "$2" && zip -qr "$GITHUB_WORKSPACE/$3" .)
           }
-          build "$REPO_NAME/${TAG%%.*}.x" docs-major docs-major.zip
+          build "$REPO_NAME/${VERSION%%.*}.x" docs-major docs-major.zip
           build "$REPO_NAME" docs-root docs-root.zip
-
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: docs
@@ -141,82 +201,3 @@ jobs:
             docs-root.zip
           if-no-files-found: error
           retention-days: 1
-
-  release:
-    needs: [validate, test, docs-build]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    # contents: write -> create the release. issues: read -> list the milestone's issues.
-    permissions:
-      contents: write
-      issues: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      # Notes come from the milestone named after the tag: breaking changes first,
-      # then the closed issues grouped by issue type. Without a milestone, or if it
-      # has no closed issues, GitHub generates the notes.
-      - name: Write release notes
-        id: notes
-        run: |
-          milestone=$(gh api --paginate "repos/$GH_REPO/milestones?state=all&per_page=100" \
-            --jq ".[] | select(.title == \"$TAG\") | .number")
-          if [ -z "$milestone" ]; then
-            echo "No milestone named $TAG."
-            exit 0
-          fi
-          gh api --paginate "repos/$GH_REPO/issues?milestone=$milestone&state=closed&per_page=100" \
-            --jq '.[] | select(.pull_request == null and .state_reason == "completed")
-                      | {number, title, type: (.type.name // ""), breaking: ([.labels[].name] | index("breaking") != null)}' \
-            | jq -r -s '
-                def section($name; f):
-                  (map(select(f)) | sort_by(.number) | map("- \(.title) (#\(.number))")) as $items
-                  | if ($items | length) == 0 then empty else "## \($name)\n\n\($items | join("\n"))\n" end;
-                def other: (.type | IN("Bug", "Feature", "Task")) | not;
-                [ section("Breaking changes"; .breaking),
-                  section("Bugs";     (.breaking | not) and .type == "Bug"),
-                  section("Features"; (.breaking | not) and .type == "Feature"),
-                  section("Tasks";    (.breaking | not) and .type == "Task"),
-                  section("Other";    (.breaking | not) and other)
-                ] | join("\n")' > notes.md
-          if grep -q '[^[:space:]]' notes.md; then
-            echo "file=notes.md" >> "$GITHUB_OUTPUT"
-          else
-            echo "Milestone $TAG has no closed issues."
-          fi
-
-      # GitHub shows one release as Latest. Only the highest version gets it, so a
-      # 5.x release after 6.0.0 does not take it over. Checked here, right before
-      # the release is created, so a release made meanwhile is taken into account.
-      - name: Is this the highest version?
-        id: latest
-        run: |
-          highest=$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" \
-            --jq '.[] | select(.draft | not) | .tag_name' \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
-          if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$TAG" | sort -V | tail -n 1)" = "$TAG" ]; then
-            latest=true
-          else
-            latest=false
-          fi
-          echo "Highest released version: ${highest:-none}. $TAG is Latest: $latest."
-          echo "latest=$latest" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: docs
-
-      # The docs are attached as they are created, so a release never exists without them.
-      - name: Create the release
-        env:
-          NOTES_FILE: ${{ steps.notes.outputs.file }}
-          LATEST: ${{ steps.latest.outputs.latest }}
-        run: |
-          if [ -n "$NOTES_FILE" ]; then
-            notes=(--notes-file "$NOTES_FILE")
-          else
-            notes=(--generate-notes)
-          fi
-          gh release create "$TAG" --verify-tag --title "Release $TAG" "${notes[@]}" --latest="$LATEST" \
-            docs-major.zip docs-root.zip
