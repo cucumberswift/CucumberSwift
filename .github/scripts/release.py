@@ -101,15 +101,18 @@ def changes(repo, branch, last_tag, sha):
         }
       }
     }"""
-    pull_numbers, direct = [], []
+    pull_numbers, authors, direct = [], {}, []
     # Merge commits are skipped: a merged pull request is found through its own commits.
     for commit in run("git", "rev-list", "--reverse", "--no-merges", f"refs/tags/{last_tag}..{sha}").split():
         pulls = api(f"repos/{repo}/commits/{commit}/pulls")
         # The API also returns pull requests from other repositories in the fork network.
-        merged = [p["number"] for p in pulls
+        merged = [p for p in pulls
                   if p.get("merged_at") and p["base"]["ref"] == branch and p["base"]["repo"]["full_name"] == repo]
         if merged:
-            pull_numbers += [n for n in merged if n not in pull_numbers]
+            for pull in merged:
+                authors[pull["number"]] = author(pull["user"])
+                if pull["number"] not in pull_numbers:
+                    pull_numbers.append(pull["number"])
             continue
         subject = run("git", "log", "-1", "--format=%s", commit).strip()
         if not VERSION_COMMIT.match(subject):
@@ -125,20 +128,40 @@ def changes(repo, branch, last_tag, sha):
         if not linked:
             lone_pulls.append((pull["number"], pull["title"]))
         for issue in linked:
-            issues[issue["number"]] = {
+            entry = issues.setdefault(issue["number"], {
                 "title": issue["title"],
                 "type": (issue["issueType"] or {}).get("name", ""),
                 "breaking": any(l["name"] == "breaking" for l in issue["labels"]["nodes"]),
-            }
-    return issues, lone_pulls, direct
+                "pulls": [],
+            })
+            entry["pulls"].append(pull["number"])
+    return issues, lone_pulls, direct, authors
 
 
-def notes(repo, last, version, issues, lone_pulls, direct):
+LOGIN = re.compile(r"^[A-Za-z0-9-]+(\[bot\])?$")
+
+
+def author(user):
+    """"@login" for a person, the plain name for a bot. GitHub logins are only
+    letters, digits and hyphens, so they cannot carry markup."""
+    login = (user or {}).get("login", "")
+    if not LOGIN.match(login):
+        return ""
+    return login if user.get("type") == "Bot" or login.endswith("[bot]") else f"@{login}"
+
+
+def pull_ref(number, authors):
+    who = authors.get(number, "")
+    return f"#{number} by {who}" if who else f"#{number}"
+
+
+def notes(repo, last, version, issues, lone_pulls, direct, authors):
     def section(title, entries):
         return [f"## {title}", ""] + entries + [""] if entries else []
 
     def listed(predicate):
-        return [f"- {clean(i['title'])} (#{n})" for n, i in sorted(issues.items()) if predicate(i)]
+        return [f"- {clean(i['title'])} (#{n}, {', '.join(pull_ref(p, authors) for p in i['pulls'])})"
+                for n, i in sorted(issues.items()) if predicate(i)]
 
     known = ("Bug", "Feature", "Task")
     lines = []
@@ -147,7 +170,7 @@ def notes(repo, last, version, issues, lone_pulls, direct):
     lines += section("Features", listed(lambda i: not i["breaking"] and i["type"] == "Feature"))
     lines += section("Tasks", listed(lambda i: not i["breaking"] and i["type"] == "Task"))
     lines += section("Other", listed(lambda i: not i["breaking"] and i["type"] not in known))
-    lines += section("Other changes", [f"- {clean(t)} (#{n})" for n, t in lone_pulls]
+    lines += section("Other changes", [f"- {clean(t)} ({pull_ref(n, authors)})" for n, t in lone_pulls]
                      + [f"- {clean(s)} ({c})" for c, s in direct])
     if not lines:
         lines = [f"No changes since {last}.", ""]
@@ -192,7 +215,7 @@ def plan():
             fail(f"Releasing {version} needs {support_branch}, created from {fmt(last)}. "
                  f"An admin creates it with: git push origin '{fmt(last)}^{{commit}}:refs/heads/{support_branch}'")
 
-    issues, lone_pulls, direct = changes(repo, branch, fmt(last), sha)
+    issues, lone_pulls, direct, authors = changes(repo, branch, fmt(last), sha)
     needed, reasons = 0, []
     for number, issue in sorted(issues.items()):
         if issue["breaking"]:
@@ -208,7 +231,7 @@ def plan():
              "Choose a higher bump, or fix the labels and run again.")
 
     latest = highest is None or target > highest
-    text = notes(repo, fmt(last), version, issues, lone_pulls, direct)
+    text = notes(repo, fmt(last), version, issues, lone_pulls, direct, authors)
     with open("notes.md", "w", encoding="utf-8") as handle:
         handle.write(text)
     print(f"This run releases {version} from {branch} (last release {fmt(last)}, Latest: {str(latest).lower()}).")
