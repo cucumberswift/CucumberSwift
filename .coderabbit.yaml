@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# CodeRabbit review settings. CodeRabbit only advises: maintainers approve and merge.
+# CodeRabbit review settings. CodeRabbit only reviews: it does not change code, issues
+# or pull requests. Maintainers approve and merge.
 language: en-US
 tone_instructions: >-
   Plain English and short sentences; many contributors are not native speakers.
@@ -11,6 +12,7 @@ reviews:
   request_changes_workflow: false
   fail_commit_status: false
   high_level_summary: true
+  high_level_summary_in_walkthrough: true
   collapse_walkthrough: true
   sequence_diagrams: false
   poem: false
@@ -19,6 +21,9 @@ reviews:
   auto_apply_labels: false
   suggested_reviewers: false
   auto_assign_reviewers: false
+  enable_prompt_for_ai_agents: false
+  slop_detection:
+    enabled: false
 
   auto_review:
     enabled: true
@@ -29,6 +34,8 @@ reviews:
 
   # Nothing that commits to a pull request branch.
   finishing_touches:
+    simplify:
+      enabled: false
     docstrings:
       enabled: false
     unit_tests:
@@ -97,3 +104,11 @@ reviews:
 chat:
   art: false
   auto_reply: true
+
+issue_enrichment:
+  auto_enrich:
+    enabled: false
+  planning:
+    enabled: false
+    auto_planning:
+      enabled: false
