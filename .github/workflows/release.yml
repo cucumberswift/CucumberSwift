@@ -37,7 +37,7 @@ env:
   DOCC_TARGET: CucumberSwift
   # Where the docs are served on https://cucumberswift.org. DocC bakes this path
   # into its output, so it must not change once a release carries docs.
-  DOCS_PATH: docs
+  DOCS_PATH: help
   # The commit this run releases, fixed when the run starts.
   RELEASE_SHA: ${{ github.sha }}
 
@@ -165,7 +165,7 @@ jobs:
 
   # DocC runs project and dependency code, so it builds with read access only.
   # It builds twice, because DocC bakes the hosting path into its output: once
-  # for /docs/X.x/ and once for /docs/. The site that publishes the docs decides
+  # for /$DOCS_PATH/X.x/ and once for /$DOCS_PATH/. The site that publishes the docs decides
   # which releases go where.
   docs-build:
     needs: plan
