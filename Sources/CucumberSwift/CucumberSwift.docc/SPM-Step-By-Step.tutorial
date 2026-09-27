@@ -11,7 +11,7 @@
         @Steps {
             @Step {
                 @Image(source: "SPM-Add-Package.png", alt: "CucumberSwift being added to the test target through Swift Package Manager")
-                Add CucumberSwift via SPM. Under File -> Swift Packages select "Add Package Dependency". Copy the CucumberSwift repo URL: `https://github.com/Tyler-Keith-Thompson/CucumberSwift`
+                Add CucumberSwift via SPM. Under File -> Swift Packages select "Add Package Dependency". Copy the CucumberSwift repo URL: `https://github.com/cucumberswift/CucumberSwift`
                                   
                 > NOTE: The default settings of "Up to Next Major" are probably correct for your needs, select "Next", Under "Add to Target" make sure to select your test target.
             }
