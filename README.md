@@ -21,6 +21,3 @@ NOTE: WatchOS support coming soon!
 - The localization support for the DSL is powered by: [SwiftGen](https://github.com/SwiftGen/SwiftGen/)
 - The language localization JSON file is powered by: [The Official Cucumber Repo](https://github.com/Cucumber/Cucumber/)
 - The AST test JSON file is supplied by: [The Official Cucumber Repo](https://github.com/Cucumber/Cucumber/)
-
-
-![Powered by MacStadium](https://uploads-ssl.webflow.com/5ac3c046c82724970fc60918/5c019d917bba312af7553b49_MacStadium-developerlogo.png)
