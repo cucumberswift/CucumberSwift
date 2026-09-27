@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # Keep the actions used by CI, release and CodeQL current.
+  #
+  # NOTE: this repository restricts Actions to an allow-list
+  # (Settings > Actions > General > "Allow specified actions"). Third-party
+  # actions are allow-listed by tag, e.g. `codecov/codecov-action@v1`, so a
+  # Dependabot PR that bumps or SHA-pins one of them will fail until the
+  # allow-list entry is updated to match.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(actions)"
+    labels:
+      - dependencies
+      - github-actions
+
+  # Swift Package Manager dependencies declared in Package.swift.
+  - package-ecosystem: swift
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+      - swift
