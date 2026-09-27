@@ -96,7 +96,7 @@ def changes(repo, branch, last_tag, sha):
         pullRequest(number: $number) {
           number title
           closingIssuesReferences(first: 50) {
-            nodes { number title stateReason issueType { name } labels(first: 50) { nodes { name } } }
+            nodes { number title stateReason repository { nameWithOwner } issueType { name } labels(first: 50) { nodes { name } } }
           }
         }
       }
@@ -123,8 +123,10 @@ def changes(repo, branch, last_tag, sha):
         data = json.loads(run("gh", "api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}",
                               "-f", f"name={name}", "-F", f"number={number}"))
         pull = data["data"]["repository"]["pullRequest"]
+        # Only this repository's issues: a pull request can also close issues elsewhere.
         linked = [i for i in pull["closingIssuesReferences"]["nodes"]
-                  if i["stateReason"] not in ("NOT_PLANNED", "DUPLICATE")]
+                  if i["repository"]["nameWithOwner"] == repo
+                  and i["stateReason"] not in ("NOT_PLANNED", "DUPLICATE")]
         if not linked:
             lone_pulls.append((pull["number"], pull["title"]))
         for issue in linked:
@@ -232,7 +234,10 @@ def plan():
         fail(f"{bump} is too low: {', '.join(reasons)}, which needs at least {wanted}. "
              "Choose a higher bump, or fix the labels and run again.")
 
-    latest = highest is None or target > highest
+    # A support branch serves an older major, so its releases are never Latest,
+    # even before the next major is out. This also keeps a support run and a main
+    # run from both claiming Latest.
+    latest = not support and (highest is None or target > highest)
     text = notes(repo, fmt(last), version, issues, lone_pulls, direct, authors)
     with open("notes.md", "w", encoding="utf-8") as handle:
         handle.write(text)
