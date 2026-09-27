@@ -43,7 +43,7 @@ Link an issue. If there's already one covering what you're fixing or adding, men
 
 This isn't process for the sake of process. A quick ticket means we can agree on direction before you spend an evening writing code, and it keeps the diagnosis searchable even when the fix that eventually lands isn't the one you started with.
 
-Typos and docs fixes are exempt, just send the PR.
+Typos and docs fixes are exempt, just send the PR. They don't need an issue, a `Closes` line or an issue number in the title.
 
 **One issue per PR.** Two bugs in one pull request isn't something we'll merge. Separate PRs mean each fix stands or falls on its own. Bundled, the one we're unsure about holds up the one we're happy with. Either can also be reverted later without unpicking the other. It also keeps each regression test tied to the issue it closes, so a year from now "what fixed this?" has one answer.
 
@@ -58,7 +58,7 @@ Finding an existing attempt doesn't automatically mean stop. If it's gone stale,
 ## Setting up
 
 1. Fork the repository and clone your fork.
-2. Create a branch for your change. Don't work on your fork's `main` branch. A pull request from a branch named `main` can stop our CI workflows from running on it.
+2. Create a branch for your change. Don't work on your fork's `main` branch. Keeping it as a clean copy of ours makes it easy to stay in sync and to work on more than one change at a time.
 3. Open `CucumberSwift.xcodeproj` in Xcode.
 4. Install [SwiftLint](https://github.com/realm/SwiftLint) (for example `brew install swiftlint`). The Xcode build runs it with the repository's `.swiftlint.yml`.
 
@@ -86,7 +86,7 @@ Run the tests once before you change anything and note the numbers of tests, fai
 
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15 and tvOS 13.
 
-- Swift regex literals need iOS 16 or macOS 13 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
+- Swift regex literals need iOS 16, macOS 13 or tvOS 16 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
 - Don't raise the deployment targets in a PR. That's a breaking change for users on older platforms, so open an issue to discuss it first.
 
 **Public API.** A change to a `public` or `open` symbol should be additive. If it has to be breaking, say so on the issue before you write it. Be careful with new overloads: one can silently change which method existing code calls (see [#125](https://github.com/cucumberswift/CucumberSwift/issues/125)).
@@ -105,7 +105,7 @@ Run the tests once before you change anything and note the numbers of tests, fai
 
 **Workflows.** If you change a GitHub Actions workflow, give every job an explicit `permissions:` block. Please don't add a new third-party action without discussing it on the issue first.
 
-**Commit and PR titles.** Start the PR title with a prefix (`fix:`, `feat:`, `docs:`, `chore:` or `ci:`), describe the change in plain words, and end with the issue number, for example:
+**Commit and PR titles.** Start the PR title with a prefix (`fix:`, `feat:`, `docs:`, `chore:` or `ci:`), describe the change in plain words, and end with the issue number (unless it's a typo or docs fix with no issue), for example:
 
 ```text
 fix: stop compiling an empty regex on every DSL step execution (#135)
@@ -115,7 +115,7 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 ## Pull request etiquette
 
-**Link exactly one issue.** Put `Closes #123` (or `Fixes #123`) in the PR description, so the issue closes when the PR merges.
+**Link exactly one issue.** Put `Closes #123` (or `Fixes #123`) in the PR description, so the issue closes when the PR merges. Typo and docs fixes without an issue are the only exception.
 
 **Write a real description.** Say what problem the PR solves, how it solves it, and how you tested it. Explain anything a reviewer might find surprising. A PR with no description can't be reviewed, and we'll ask for one.
 
@@ -135,7 +135,7 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 When you open a PR:
 
-1. **CI runs** the tests and checks that the package builds for each package manager. Please fix anything it reports.
+1. **CI runs** the tests, builds the package with Swift Package Manager and lints the CocoaPods podspec. It doesn't build with Carthage, so if you add a source file, build the Xcode project yourself. Please fix anything it reports.
 2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
 3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
 
