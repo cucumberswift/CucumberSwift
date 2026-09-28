@@ -64,11 +64,11 @@ jobs:
   # CI builds that path, so this job is the only check that Carthage consumers can
   # still install the framework. It needs no Tuist: consumers never do.
   #
-  # Several Xcode versions, because whether the archive succeeds depends on the
-  # Xcode version, and consumers use whatever Xcode they have. `default` is the
-  # runner image's own Xcode; the macos-15 image also carries Xcode 26.
+  # Several Xcode versions, because consumers build with whatever Xcode they have,
+  # so a new Xcode that breaks this path should show up here first. `default` is
+  # the runner image's own Xcode; the macos-15 image also carries Xcode 26.
   carthage:
-    name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }}${{ matrix.variant }})
+    name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -83,13 +83,6 @@ jobs:
             xcode: default
           - os: macos-15
             xcode: '26.2'
-          # EXPERIMENT, remove before merging: the same build with
-          # CucumberSwiftExpressions patched to a dynamic library product, to test
-          # whether that fixes the Xcode 26 archive failure.
-          - os: macos-15
-            xcode: '26.2'
-            dynamic: true
-            variant: ', dynamic Expressions experiment'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,27 +102,10 @@ jobs:
           xcrun simctl list runtimes | grep -i ios || true
       - name: Install Carthage
         run: command -v carthage || brew install carthage
-      - name: Make CucumberSwiftExpressions a dynamic product (experiment)
-        if: matrix.dynamic
-        run: |
-          xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj -scheme CucumberSwift
-          manifest=$(find ~/Library/Developer/Xcode/DerivedData -path '*/SourcePackages/checkouts/CucumberSwiftExpressions/Package.swift' | head -1)
-          if [ -z "$manifest" ]; then echo "::error::CucumberSwiftExpressions checkout not found"; exit 1; fi
-          echo "checkout revision: $(git -C "$(dirname "$manifest")" rev-parse HEAD)"
-          perl -0pi -e 's/(\.library\(\s*name: "CucumberSwiftExpressions",)/$1 type: .dynamic,/' "$manifest"
-          git -C "$(dirname "$manifest")" diff
-          grep -q 'type: .dynamic' "$manifest" || { echo "::error::patch did not apply"; exit 1; }
       - name: Build the framework with Carthage
         run: carthage build --no-skip-current --use-xcframeworks --platform iOS --log-path carthage-build.log
       - name: Show what Carthage produced
         run: find Carthage/Build -maxdepth 3 \( -name '*.framework' -o -name '*.xcframework' \) | sort
-      - name: Check how CucumberSwiftExpressions is linked (experiment)
-        if: always() && matrix.dynamic
-        run: |
-          bin=Carthage/Build/CucumberSwift.xcframework/ios-arm64/CucumberSwift.framework/CucumberSwift
-          if [ -f "$bin" ]; then otool -L "$bin" | grep -i expressions || echo "no dynamic CucumberSwiftExpressions dependency"; fi
-          echo "CucumberSwiftExpressions artefacts delivered by Carthage:"
-          find Carthage/Build -iname '*CucumberSwiftExpressions*' || true
       - name: Show why the build failed
         if: failure()
         run: |
