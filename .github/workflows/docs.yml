@@ -1,0 +1,63 @@
+name: Docs
+
+# Publishes the docs of this repository's releases to its GitHub Pages site,
+# https://cucumberswift.org/CucumberSwift/:
+#
+#   /CucumberSwift/      the highest stable release
+#   /CucumberSwift/X.x/  the highest stable release of each major
+#
+# The Release workflow runs it as its last job. To redeploy without a release:
+# Docs > Run workflow, or gh workflow run docs.yml --ref main
+#
+# It builds nothing and runs no project code: the docs come from the zips
+# attached to each release, which .github/scripts/publish-docs.sh unpacks.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# Nothing by default; the job asks for what it uses. Only GITHUB_TOKEN is used.
+permissions: {}
+
+# `shell: bash` adds `-o pipefail`.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # contents: read -> releases and their assets. pages: write and id-token: write -> deploy.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    # One deployment at a time. If a third run queues, GitHub cancels the one
+    # waiting. That is safe: each run publishes every release.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    env:
+      # The path DOCS_PATH in release.yml builds the docs for.
+      DOCS_PATH: CucumberSwift
+      MODULE: cucumberswift
+      # Paths that earlier releases were built for. Their docs are moved to DOCS_PATH.
+      FORMER_PATHS: help docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Unpack the docs of the releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/scripts/publish-docs.sh "$RUNNER_TEMP/site"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
