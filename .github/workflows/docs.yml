@@ -26,7 +26,8 @@ defaults:
 jobs:
   publish:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Up to 10 minutes for deploy-pages and 11 for the site check, after the rest.
+    timeout-minutes: 30
     # contents: read -> releases and their assets. pages: write and id-token: write -> deploy.
     permissions:
       contents: read
