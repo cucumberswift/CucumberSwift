@@ -153,4 +153,7 @@ jobs:
           status=$?
           grep -E "Test Suite '.*\.xctest' (passed|failed)" -A1 catalyst-test.log | grep -E 'Executed' | sort -u
           grep -E ': error: -\[' catalyst-test.log | sed -E 's|^.*/Resources/||' | sort -u | head -20
+          # A failure before any test runs (a bad destination, a build error)
+          # prints no counts, so show xcodebuild's own errors too.
+          grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' catalyst-test.log | head -30
           exit $status
