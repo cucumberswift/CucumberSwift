@@ -13,6 +13,15 @@ name: Docs
 # attached to each release, which .github/scripts/publish-docs.sh unpacks.
 on:
   workflow_call:
+    inputs:
+      # The release that must be published: Release passes its version, and
+      # whether it is Latest. A run by hand publishes whatever the releases hold.
+      version:
+        type: string
+        required: true
+      latest:
+        type: string
+        required: true
   workflow_dispatch:
 
 # Nothing by default; the job asks for what it uses. Only GITHUB_TOKEN is used.
@@ -57,6 +66,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: .github/scripts/publish-docs.sh "$RUNNER_TEMP/site"
+      # The script skips a release whose docs do not fit and uses an older one.
+      # For a release, fail instead, before anything is deployed.
+      - name: Check that the release is in the docs
+        if: ${{ inputs.version != '' }}
+        env:
+          VERSION: ${{ inputs.version }}
+          LATEST: ${{ inputs.latest }}
+        run: |
+          site="$RUNNER_TEMP/site/versions.json"
+          major=$(jq -r --arg m "${VERSION%%.*}.x" '.majors[] | select(.major == $m) | .version' "$site")
+          if [ "$major" != "$VERSION" ]; then
+            echo "::error::${VERSION%%.*}.x shows ${major:-nothing}, not $VERSION."
+            exit 1
+          fi
+          if [ "$LATEST" = true ] && [ "$(jq -r .version "$site")" != "$VERSION" ]; then
+            echo "::error::The root shows $(jq -r .version "$site"), not $VERSION."
+            exit 1
+          fi
+          echo "$VERSION is published."
       # One artifact per attempt: deploy-pages fails if a re-run finds two with the same name.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

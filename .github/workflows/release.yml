@@ -238,7 +238,7 @@ jobs:
   # again, run Docs by hand. A release from support/N.x changes only /N.x/,
   # unless it is the highest release.
   docs:
-    needs: release
+    needs: [plan, release]
     if: ${{ !inputs.dry_run }}
     # What docs.yml needs. contents: read -> releases. pages, id-token -> deploy.
     permissions:
@@ -246,3 +246,6 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/docs.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      latest: ${{ needs.plan.outputs.latest }}

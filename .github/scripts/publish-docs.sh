@@ -105,6 +105,8 @@ publish_first() {
     if [ -n "$accepted" ]; then
       mkdir -p "$dir"
       unzip -q -o "$zip" -d "$dir"
+      # Nothing below may write through a link out of the site.
+      find "$dir" -type l -delete
       if [ "$built" != "$target" ]; then
         # Only the page shells carry the path, as "<path>... in attributes and baseUrl.
         # shellcheck disable=SC2016 # $ENV{...} is expanded by perl, not the shell
