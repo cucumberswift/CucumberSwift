@@ -1,6 +1,6 @@
 @Tutorial(time: 10) {
     @Intro(title: "Using CucumberSwift with Carthage") {
-        If you're using the CocoaPods package manager this tutorial will walk you through how to get CucumberSwift installed and added to your project.
+        If you're using the Carthage package manager this tutorial will walk you through how to get CucumberSwift installed and added to your project.
     }
     
     @Section(title: "Installing CucumberSwift") {
@@ -11,21 +11,21 @@
         @Steps {
             @Step {
                 @Code(file: "Cartfile", name: "Cartfile")
-                Add CucumberSwift to your Cartfile, then run `carthage update && carthage build --platform iOS`
+                Add CucumberSwift to your Cartfile, then run `carthage update --use-xcframeworks --platform iOS`. That builds `CucumberSwift.xcframework` under `Carthage/Build`. You need Carthage 0.37 or later.
             }
             
             @Step {
-                @Image(source: "Carthage-Copy-Files.png", alt: "A new Copy Files phase that adds CucumberSwift.framework")
-                Add CucumberSwift.framework to your test target by opening your "Build Phases" and adding a "Copy Files" phase. The framework should be located under Carthage -> Build -> iOS, CucumberSwift.framework
+                @Image(source: "Carthage-Copy-Files.png", alt: "A new Copy Files phase that adds CucumberSwift")
+                Add CucumberSwift.framework to your test target by opening your "Build Phases" and adding a "Copy Files" phase. The framework is `Carthage/Build/CucumberSwift.xcframework`.
                 
                 > NOTE: Make sure "Frameworks" is selected when you add your "Copy Files" phase.
             }
             
             @Step {
-                @Image(source: "Carthage-Link-Framework.png", alt: "A dialog ready to link CucumberSwift.framework")
+                @Image(source: "Carthage-Link-Framework.png", alt: "A dialog ready to link CucumberSwift")
                 Expand the "Link Binary with Libraries" panel and link CucumberSwift
                 
-                > NOTE: You'll need to select "Add Other" -> "Add Files" to find CucumberSwift.framework under Carthage -> Build -> iOS, CucumberSwift.framework
+                > NOTE: You'll need to select "Add Other" -> "Add Files" to find `Carthage/Build/CucumberSwift.xcframework`
             }
             
             @Step {
