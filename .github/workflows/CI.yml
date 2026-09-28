@@ -1,7 +1,8 @@
 name: CI
 
-# Pull requests run CI from the pull_request event, so pushes are limited to the
-# long-lived branches. A branch with no pull request runs no CI.
+# Pull requests run CI from the pull_request event, so pushes run it only on the
+# long-lived branches: main and the support/N.x release lines. Any other branch
+# runs CI only through a pull request.
 on:
   pull_request:
   push:
