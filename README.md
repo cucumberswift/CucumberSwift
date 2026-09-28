@@ -1,5 +1,4 @@
 ![Build Status](https://github.com/cucumberswift/CucumberSwift/actions/workflows/CI.yml/badge.svg?branch=main)
-![Pod Platform](https://img.shields.io/cocoapods/p/CucumberSwift.svg?style=popout) [![Pod Version](https://img.shields.io/cocoapods/v/CucumberSwift.svg?style=popout)](http://cocoapods.org/pods/CucumberSwift)
 [![codecov](https://codecov.io/gh/cucumberswift/CucumberSwift/graph/badge.svg?token=ARIPC8Q7H1)](https://codecov.io/gh/cucumberswift/CucumberSwift)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/c29b0bf4883b4387a41ac1d090773f65)](https://www.codacy.com/gh/cucumberswift/CucumberSwift/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=cucumberswift/CucumberSwift&amp;utm_campaign=Badge_Grade)
 
@@ -7,6 +6,8 @@
 CucumberSwift is a lightweight Swift only Cucumber implementation for iOS, tvOS, and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
 
 NOTE: WatchOS support coming soon!
+
+NOTE: CocoaPods is no longer supported as of 6.0.0. The last version published to CocoaPods is 5.0.3, and it keeps resolving, but there will be no newer ones. Install CucumberSwift with Swift Package Manager or Carthage instead.
 
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting Started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)
