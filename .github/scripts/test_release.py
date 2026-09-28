@@ -23,8 +23,6 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import release  # noqa: E402
 
-REAL_API = release.api  # the tests replace release.api with a fake
-
 REPO = "cucumberswift/CucumberSwift"
 OTHER_REPO = "cucumberswift/CucumberSwiftExpressions"
 SHA = "a" * 40
@@ -1000,6 +998,15 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(kwargs["capture_output"])
         self.assertNotIn("shell", kwargs)
 
+    def test_a_token_replaces_gh_token_for_that_call_only(self):
+        self.gh(stdout="{}")
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "workflow-token"}):
+            release.api("repos/o/r/rulesets", token="app-token")
+            release.api("repos/o/r/rulesets")
+            self.assertEqual(os.environ["GH_TOKEN"], "workflow-token")
+        self.assertEqual(self.processes[0][1]["env"]["GH_TOKEN"], "app-token")
+        self.assertIsNone(self.processes[1][1]["env"])
+
     def test_a_body_is_sent_as_json_on_stdin(self):
         self.gh(stdout='{"sha": "abc"}')
         release.api("repos/o/r/git/refs", "POST", {"ref": "refs/tags/1.0.0", "sha": "abc"})
@@ -1048,19 +1055,6 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(release.api("repos/o/r/rulesets"), [{"id": 1}])
         self.assertNotIn("--paginate", self.processes[0][0])
 
-
-# api ------------------------------------------------------------------------
-
-class ApiTests(ReleaseTestCase):
-    def test_a_token_replaces_gh_token_for_that_call_only(self):
-        os.environ["GH_TOKEN"] = "workflow-token"
-        done = subprocess.CompletedProcess([], 0, stdout="{}", stderr="")
-        with mock.patch.object(release.subprocess, "run", return_value=done) as run:
-            REAL_API("repos/x/rulesets", token="app-token")
-            REAL_API("repos/x/rulesets")
-        self.assertEqual(run.call_args_list[0].kwargs["env"]["GH_TOKEN"], "app-token")
-        self.assertIsNone(run.call_args_list[1].kwargs["env"])
-        self.assertEqual(os.environ["GH_TOKEN"], "workflow-token")
 
 
 if __name__ == "__main__":
