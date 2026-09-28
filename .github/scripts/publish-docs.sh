@@ -219,7 +219,8 @@ echo "$versions" > "$out/versions.json"
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
   echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-  sed 's|.*|  <url><loc>&</loc></url>|' "$sitemap"
+  # DocC names operator pages after the operator, e.g. <(_:_:), so escape for XML.
+  sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s|.*|  <url><loc>&</loc></url>|' "$sitemap"
   echo '</urlset>'
 } > "$out/sitemap.xml"
 
