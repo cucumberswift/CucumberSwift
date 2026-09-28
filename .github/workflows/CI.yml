@@ -58,3 +58,37 @@ jobs:
           sparse-checkout: .github/scripts
       - name: Run the release script tests
         run: python3 -m unittest discover -s .github/scripts -v
+
+  # Carthage builds CucumberSwift from the committed Xcode project and its shared
+  # CucumberSwift scheme, with no chance to run a generator first. Nothing else in
+  # CI builds that path, so this job is the only check that Carthage consumers can
+  # still install the framework. It needs no Tuist: consumers never do.
+  #
+  # Two runner images, because whether the archive succeeds depends on the Xcode
+  # version, and consumers use whatever Xcode they have.
+  carthage:
+    name: Carthage build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios || true
+      - name: Install Carthage
+        run: command -v carthage || brew install carthage
+      - name: Build the framework with Carthage
+        run: carthage build --no-skip-current --use-xcframeworks --platform iOS --log-path carthage-build.log
+      - name: Show why the build failed
+        if: failure()
+        run: |
+          grep -E '(^|[ /:])error: |\*\* (ARCHIVE|BUILD) (FAILED|SUCCEEDED)' carthage-build.log | sort -u | head -20 || true
