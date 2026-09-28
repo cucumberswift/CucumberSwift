@@ -11,6 +11,7 @@ untrusted text: they are handled as data here and never pass through a shell.
 """
 import base64
 import difflib
+import fnmatch
 import html
 import json
 import os
@@ -86,6 +87,51 @@ def clean(title):
 
 
 # plan ------------------------------------------------------------------------
+
+# Branch rules that stop a direct push of the version commit.
+BLOCKS_PUSH = {"pull_request", "required_status_checks", "update", "required_deployments", "merge_queue"}
+
+
+def check_rulesets(repo, branch, version):
+    """Stop before anything is written if a ruleset would block the version
+    commit or the tag. A ruleset counts only if this run's token cannot bypass it."""
+    rulesets = {}
+
+    def ruleset(ruleset_id):
+        if ruleset_id not in rulesets:
+            rulesets[ruleset_id] = api(f"repos/{repo}/rulesets/{ruleset_id}?includes_parents=true")
+        return rulesets[ruleset_id]
+
+    def blocks(found):
+        return found.get("current_user_can_bypass") != "always"
+
+    def name(found):
+        return " ".join(str(found.get("name", "unnamed")).split())
+
+    def matches(ref, patterns):
+        return any(p == "~ALL" or fnmatch.fnmatchcase(ref, p) for p in patterns)
+
+    problems = []
+    for rule in api(f"repos/{repo}/rules/branches/{branch}"):
+        found = ruleset(rule["ruleset_id"]) if rule["type"] in BLOCKS_PUSH else None
+        if found and blocks(found):
+            problems.append(f'ruleset "{name(found)}" ({rule["type"]}) blocks the version commit on {branch}')
+
+    ref = f"refs/tags/{version}"
+    for summary in api(f"repos/{repo}/rulesets?includes_parents=true&per_page=100"):
+        if summary.get("target") != "tag" or summary.get("enforcement") != "active":
+            continue
+        found = ruleset(summary["id"])
+        names = found.get("conditions", {}).get("ref_name", {})
+        if not matches(ref, names.get("include", [])) or matches(ref, names.get("exclude", [])):
+            continue
+        if any(r["type"] == "creation" for r in found.get("rules", [])) and blocks(found):
+            problems.append(f'ruleset "{name(found)}" (creation) blocks creating the tag {version}')
+
+    if problems:
+        fail("This release would stop part-way: " + "; ".join(problems) + ". Nothing was written. "
+             "Change the ruleset, or let GitHub Actions bypass it, and run again.")
+
 
 def changes(repo, branch, last_tag, sha):
     """Issues closed by pull requests merged since the last release, pull
@@ -219,6 +265,7 @@ def plan():
             fail(f"Releasing {version} needs {support_branch}, created from {fmt(last)}. "
                  f"An admin creates it with: git push origin '{fmt(last)}^{{commit}}:refs/heads/{support_branch}'")
 
+    check_rulesets(repo, branch, version)
     issues, lone_pulls, direct, authors = changes(repo, branch, fmt(last), sha)
     needed, reasons = 0, []
     for number, issue in sorted(issues.items()):
