@@ -29,6 +29,10 @@ reviews:
     enabled: true
     drafts: false
     auto_incremental_review: true
+    # Stacked pull requests: each layer's base is the branch below it, not main.
+    # Without this, CodeRabbit only reviews pull requests into the default branch.
+    base_branches:
+      - ".*"
     ignore_usernames:
       - dependabot[bot]
 
