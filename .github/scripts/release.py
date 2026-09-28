@@ -336,15 +336,21 @@ def plan():
 
 # publish ---------------------------------------------------------------------
 
-def set_version(path, content, version):
+def version_patterns(path):
+    """What holds the version in a version file, by name. The plist has two keys,
+    the version shown to people and the build number; both are the release version."""
     if path.endswith(".plist"):
-        pattern = re.compile(r"(<key>CFBundleVersion</key>\s*<string>)[^<]*(</string>)")
-    else:
-        pattern = re.compile(r"^(\s*s\.version\s*=\s*['\"])[^'\"]*(['\"])", re.MULTILINE)
-    updated, count = pattern.subn(lambda m: f"{m.group(1)}{version}{m.group(2)}", content)
-    if count != 1:
-        fail(f"Could not find exactly one version in {path}.")
-    return updated
+        return [(key, re.compile(rf"(<key>{key}</key>\s*<string>)[^<]*(</string>)"))
+                for key in ("CFBundleShortVersionString", "CFBundleVersion")]
+    return [("version", re.compile(r"^(\s*s\.version\s*=\s*['\"])[^'\"]*(['\"])", re.MULTILINE))]
+
+
+def set_version(path, content, version):
+    for name, pattern in version_patterns(path):
+        content, count = pattern.subn(lambda m: f"{m.group(1)}{version}{m.group(2)}", content)
+        if count != 1:
+            fail(f"Could not find exactly one {name} in {path}.")
+    return content
 
 
 def publish():
@@ -380,8 +386,9 @@ def publish():
             if updated == content:
                 continue
             diff = [l for l in difflib.ndiff(content.splitlines(), updated.splitlines()) if l[:1] in "+-"]
-            if len(diff) != 2:
-                fail(f"The version change in {path} would touch more than one line.")
+            # At most one changed line per version: one removed and one added.
+            if len(diff) > 2 * len(version_patterns(path)):
+                fail(f"The version change in {path} would touch more than the version lines.")
             changed.append((path, updated))
 
         commit = sha

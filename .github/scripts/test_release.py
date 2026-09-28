@@ -824,14 +824,30 @@ class PublishTests(ReleaseTestCase):
     def test_the_version_commit_changes_only_the_version_lines(self):
         self.call(release.publish)
         blobs = [call[2] for call in self.fake.called("POST", f"repos/{REPO}/git/blobs")]
-        for blob, before, line in ((blobs[0], PLIST_TEXT, "\t<string>5.0.11</string>"),
-                                   (blobs[1], PODSPEC_TEXT, "    s.version          = '5.0.11'")):
+        for blob, before, lines in ((blobs[0], PLIST_TEXT, ["\t<string>5.0.11</string>"] * 2),
+                                    (blobs[1], PODSPEC_TEXT, ["    s.version          = '5.0.11'"])):
             self.assertEqual(blob["encoding"], "base64")
             after = base64.b64decode(blob["content"]).decode("utf-8")
             changed = [l for l in difflib.ndiff(before.splitlines(True), after.splitlines(True)) if l[:1] in "+-"]
-            self.assertEqual(len(changed), 2, changed)
-            self.assertEqual(changed[1], f"+ {line}\n")
+            self.assertEqual(len(changed), 2 * len(lines), changed)
+            self.assertEqual([l for l in changed if l[:1] == "+"], [f"+ {line}\n" for line in lines])
             self.assertEqual(after.count("5.0.10"), 0)
+            self.assertEqual(after.count("1.0<"), 0)
+
+    def test_a_plist_key_already_current_is_left_as_it_is(self):
+        self.fake.responses[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = encoded(
+            PLIST_TEXT.replace("<string>1.0</string>", "<string>5.0.11</string>"))
+        self.call(release.publish)
+        after = base64.b64decode(self.fake.called("POST", f"repos/{REPO}/git/blobs")[0][2]["content"]).decode()
+        self.assertEqual(after, PLIST_TEXT.replace("1.0<", "5.0.11<").replace("5.0.10", "5.0.11"))
+
+    def test_a_change_beyond_the_version_lines_stops_the_run(self):
+        # A version value split over lines: replacing it would remove lines around it.
+        self.fake.responses[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = encoded(
+            PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0\n\t\n10</string>"))
+        self.assertEqual(self.fails(release.publish),
+                         f"The version change in {PLIST} would touch more than the version lines.")
+        self.assertEqual(self.writes(), [])
 
     def test_missing_or_current_version_files_are_skipped(self):
         self.fake.responses[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = Status(404)
@@ -951,21 +967,26 @@ class PublishTests(ReleaseTestCase):
 class SetVersionTests(ReleaseTestCase):
     def test_plist_and_podspec(self):
         self.assertEqual(release.set_version(PLIST, PLIST_TEXT, "5.0.11"),
-                         PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0.11</string>"))
+                         PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0.11</string>")
+                                   .replace("<string>1.0</string>", "<string>5.0.11</string>"))
         self.assertEqual(release.set_version(PODSPEC, PODSPEC_TEXT, "5.0.11"),
                          PODSPEC_TEXT.replace("'5.0.10'", "'5.0.11'"))
         double = 'Pod::Spec.new do |s|\n  s.version = "0.0.9"\nend\n'
         self.assertEqual(release.set_version("X.podspec", double, "0.1.0"), double.replace("0.0.9", "0.1.0"))
 
     def test_exactly_one_version_is_required(self):
-        cases = [(PLIST, PLIST_TEXT.replace("CFBundleVersion", "CFBundleOther")),
-                 (PLIST, PLIST_TEXT + PLIST_TEXT),
-                 (PODSPEC, PODSPEC_TEXT.replace("s.version  ", "s.versions")),
-                 (PODSPEC, PODSPEC_TEXT + "  s.version = '1.0.0'\n")]
-        for path, text in cases:
+        cases = [(PLIST, PLIST_TEXT.replace("<key>CFBundleVersion<", "<key>CFBundleOther<"), "CFBundleVersion"),
+                 (PLIST, PLIST_TEXT.replace("CFBundleShortVersionString", "CFBundleOther"),
+                  "CFBundleShortVersionString"),
+                 (PLIST, PLIST_TEXT + PLIST_TEXT, "CFBundleShortVersionString"),
+                 (PLIST, PLIST_TEXT.replace("</dict>", "\t<key>CFBundleVersion</key>\n\t<string>1</string>\n</dict>"),
+                  "CFBundleVersion"),
+                 (PODSPEC, PODSPEC_TEXT.replace("s.version  ", "s.versions"), "version"),
+                 (PODSPEC, PODSPEC_TEXT + "  s.version = '1.0.0'\n", "version")]
+        for path, text, name in cases:
             with self.subTest(path=path, text=text):
                 self.assertEqual(self.fails(release.set_version, path, text, "5.0.11"),
-                                 f"Could not find exactly one version in {path}.")
+                                 f"Could not find exactly one {name} in {path}.")
 
 
 # api ------------------------------------------------------------------------
