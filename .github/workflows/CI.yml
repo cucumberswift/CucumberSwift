@@ -110,3 +110,39 @@ jobs:
         if: failure()
         run: |
           grep -E '(^|[ /:])error: |\*\* (ARCHIVE|BUILD) (FAILED|SUCCEEDED)' carthage-build.log | sort -u | head -20 || true
+
+  # The test command CONTRIBUTING.md gives contributors runs on Mac Catalyst, but
+  # the `test` job above runs `fastlane unit_test`, which picks an iOS Simulator
+  # and never exercises Catalyst. The two destinations run test suites in a
+  # different order, which hid an order-dependent failure on the Simulator for
+  # years (#183), so run the documented command as written.
+  #
+  # No Xcode 26 leg: the macos-15 image's host is macOS 15, and Xcode 26 will not
+  # run Catalyst tests there.
+  test_catalyst:
+    name: Catalyst tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: xcodebuild -version
+      - name: Run the tests on Mac Catalyst
+        run: |
+          set +e
+          xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1
+          status=$?
+          grep -E "Test Suite '.*\.(xctest|framework)' (passed|failed)" -A1 catalyst-test.log | grep -E 'Executed' | sort -u
+          grep -E ': error: -\[' catalyst-test.log | sed -E 's|^.*/Resources/||' | sort -u | head -20
+          # A failure before any test runs (a bad destination, a build error)
+          # prints no counts, so show xcodebuild's own errors too.
+          grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' catalyst-test.log | head -30
+          exit $status
