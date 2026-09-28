@@ -206,8 +206,8 @@ jobs:
           retention-days: 1
 
   # Publishes the docs of every release, including this one, to this repository's
-  # Pages site. Last, so a failure here leaves the release as it is: run Docs by
-  # hand, or re-run this job. A release from support/N.x changes only /N.x/,
+  # Pages site. Last, so a failure here leaves the release as it is. To publish
+  # again, run Docs by hand. A release from support/N.x changes only /N.x/,
   # unless it is the highest release.
   docs:
     needs: release

@@ -56,8 +56,27 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: .github/scripts/publish-docs.sh "$RUNNER_TEMP/site"
+      # One artifact per attempt: deploy-pages fails if a re-run finds two with the same name.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: ${{ runner.temp }}/site
       - id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+      # A deployment can report success and leave the previous site online, as when
+      # this job is re-run for a commit that is already deployed. Fail visibly then.
+      - name: Check that the site serves the new docs
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsSL "${PAGE_URL%/}/versions.json" | cmp -s - "$RUNNER_TEMP/site/versions.json"; then
+              echo "The site serves the new docs."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The site still serves the previous docs. Run Docs by hand to publish them."
+          exit 1
