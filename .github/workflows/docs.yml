@@ -84,14 +84,15 @@ jobs:
             echo "::error::The root shows $(jq -r .version "$site"), not $VERSION."
             exit 1
           fi
-          # The landing page's heading names the version (after 5.0.13; release.yml
-          # adds it). Only this release's pages are checked: older ones carry none.
+          # The landing page's heading, above the title, is "Version X.Y.Z" (after
+          # 5.0.13; release.yml adds it). Only this release's pages are checked:
+          # older ones carry none.
           pages=("${VERSION%%.*}.x/")
           if [ "$LATEST" = true ]; then pages+=(""); fi
           for dir in "${pages[@]}"; do
             heading=$(jq -r .metadata.roleHeading "$RUNNER_TEMP/site/${dir}data/documentation/$MODULE.json")
-            if [[ "$heading" != *" · $VERSION" ]]; then
-              echo "::error::/$DOCS_PATH/$dir shows the heading \"$heading\", not $VERSION."
+            if [ "$heading" != "Version $VERSION" ]; then
+              echo "::error::/$DOCS_PATH/$dir shows the heading \"$heading\", not \"Version $VERSION\"."
               exit 1
             fi
           done

@@ -220,7 +220,7 @@ jobs:
             exit 1
           fi
           { head -n 1 "$page"
-            printf '\n@Metadata {\n    @TitleHeading("Framework · %s")\n}\n' "$VERSION"
+            printf '\n@Metadata {\n    @TitleHeading("Version %s")\n}\n' "$VERSION"
             tail -n +2 "$page"
           } > "$RUNNER_TEMP/landing.md"
           mv "$RUNNER_TEMP/landing.md" "$page"
