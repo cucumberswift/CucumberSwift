@@ -62,13 +62,14 @@ fi
 
 site_url=${SITE_URL:-}
 if [ -z "$site_url" ]; then
-  # e.g. https://cucumberswift.org/CucumberSwift/ -> https://cucumberswift.org
+  # e.g. https://cucumberswift.org/CucumberSwift/ -> https://cucumberswift.org. The
+  # settings report http:// when HTTPS is not enforced; the links use https anyway.
   html_url=$(gh api "repos/$GH_REPO/pages" --jq .html_url)
-  if ! [[ "$html_url" =~ ^(https://[^/]+) ]]; then
+  if ! [[ "$html_url" =~ ^https?://([^/]+) ]]; then
     echo "::error::Unexpected Pages URL: $html_url"
     exit 1
   fi
-  site_url=${BASH_REMATCH[1]}
+  site_url="https://${BASH_REMATCH[1]}"
 fi
 site_url=${site_url%/}
 
