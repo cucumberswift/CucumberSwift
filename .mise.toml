@@ -1,2 +1,28 @@
+# Tools for working on CucumberSwift's Xcode project. Consumers never need these.
+# See "The Xcode project" in CONTRIBUTING.md.
+
+# The aqua backend below needs a recent mise.
+min_version = "2026.9.15"
+
 [tools]
-tuist = "4.209.0"
+# Tuist straight from its GitHub release, checked against the release's published
+# checksums (aqua backend). mise's default Tuist backend runs code from a separate,
+# unpinned plugin repository instead.
+"aqua:tuist/tuist" = "4.209.0"
+
+[tasks.generate]
+description = "Generate CucumberSwift.xcodeproj from Project.swift"
+run = "tuist generate --no-open"
+
+[tasks.check-project]
+description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
+# Compares the regenerated project with the index, so a regenerated project that is
+# already staged passes. CI and the pre-commit hook both run this.
+run = """
+tuist generate --no-open
+if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --others --exclude-standard -- CucumberSwift.xcodeproj)" ]; then
+  git status --short -- CucumberSwift.xcodeproj
+  echo "CucumberSwift.xcodeproj does not match Project.swift. Run 'mise run generate' and commit the result."
+  exit 1
+fi
+"""
