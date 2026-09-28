@@ -125,7 +125,10 @@ def check_rulesets(repo, branch, version):
         return rulesets[ruleset_id]
 
     def blocks(found):
-        return found.get("current_user_can_bypass") != "always"
+        # GitHub reports "always", "exempt", "pull_requests_only" or "never". The
+        # version commit and the tag are direct writes, so only the first two let
+        # this run through.
+        return found.get("current_user_can_bypass") not in ("always", "exempt")
 
     def name(found):
         return " ".join(str(found.get("name", "unnamed")).split())
