@@ -97,12 +97,16 @@ BLOCKS_PUSH = {"pull_request", "required_status_checks", "update", "required_dep
 
 
 def ref_pattern(pattern):
-    """A ruleset ref pattern as GitHub reads it: `*` and `?` do not cross `/`,
-    `**` does, and `[...]` is a character set."""
+    """A ruleset ref pattern as GitHub reads it (Ruby's File.fnmatch with
+    FNM_PATHNAME): `*` and `?` do not cross `/`; `**/` matches zero or more
+    directories; `**` without a following `/` is the same as `*`; `[...]` is a
+    character set."""
     out, i = [], 0
     while i < len(pattern):
-        if pattern.startswith("**", i):
-            out.append(".*"); i += 2
+        if pattern.startswith("**/", i):
+            out.append("(?:[^/]*/)*"); i += 3
+        elif pattern.startswith("**", i):
+            out.append("[^/]*"); i += 2
         elif pattern[i] == "*":
             out.append("[^/]*"); i += 1
         elif pattern[i] == "?":
