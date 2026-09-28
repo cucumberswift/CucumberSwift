@@ -40,9 +40,10 @@ env:
   PLIST: Sources/CucumberSwift/Info.plist
   PODSPEC: CucumberSwift.podspec
   DOCC_TARGET: CucumberSwift
-  # Where the docs are served on https://cucumberswift.org. DocC bakes this path
-  # into its output, so it must not change once a release carries docs.
-  DOCS_PATH: help
+  # Where the docs are served on https://cucumberswift.org: this repository's
+  # Pages site. DocC bakes this path into its output. Docs built for an earlier
+  # path are moved when they are published (FORMER_PATHS in docs.yml).
+  DOCS_PATH: CucumberSwift
   # The commit this run releases, fixed when the run starts.
   RELEASE_SHA: ${{ github.sha }}
 
@@ -193,8 +194,8 @@ jobs:
 
   # DocC runs project and dependency code, so it builds with read access only.
   # It builds twice, because DocC bakes the hosting path into its output: once
-  # for /$DOCS_PATH/X.x/ and once for /$DOCS_PATH/. The site that publishes the docs decides
-  # which releases go where.
+  # for /$DOCS_PATH/X.x/ and once for /$DOCS_PATH/. The docs job decides which
+  # releases go where.
   docs-build:
     needs: plan
     if: ${{ !inputs.dry_run }}
@@ -231,3 +232,20 @@ jobs:
             docs-root.zip
           if-no-files-found: error
           retention-days: 1
+
+  # Publishes the docs of every release, including this one, to this repository's
+  # Pages site. Last, so a failure here leaves the release as it is. To publish
+  # again, run Docs by hand. A release from support/N.x changes only /N.x/,
+  # unless it is the highest release.
+  docs:
+    needs: [plan, release]
+    if: ${{ !inputs.dry_run }}
+    # What docs.yml needs. contents: read -> releases. pages, id-token -> deploy.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      latest: ${{ needs.plan.outputs.latest }}
