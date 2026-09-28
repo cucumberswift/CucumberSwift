@@ -11,7 +11,6 @@ untrusted text: they are handled as data here and never pass through a shell.
 """
 import base64
 import difflib
-import fnmatch
 import html
 import json
 import os
@@ -39,10 +38,11 @@ def succeeds(*args):
     return subprocess.run(args, capture_output=True).returncode == 0
 
 
-def api(path, method="GET", body=None, allow=()):
+def api(path, method="GET", body=None, allow=(), paginate=False):
     """Call the GitHub API. Return None only for an HTTP status listed in `allow`,
-    such as 404 for "does not exist". Any other failure stops the run."""
-    args = ["gh", "api", "-X", method, path]
+    such as 404 for "does not exist". Any other failure stops the run. With
+    `paginate`, read every page of a list and return one list."""
+    args = ["gh", "api", "-X", method, path] + (["--paginate", "--slurp"] if paginate else [])
     if body is not None:
         args += ["--input", "-"]
     # A list of arguments, no shell: nothing here is interpreted as a command.
@@ -54,7 +54,8 @@ def api(path, method="GET", body=None, allow=()):
             return None
         fail(f"GitHub API {method} {path.split('?')[0]} failed "
              f"(HTTP {status.group(1) if status else 'error'}).")
-    return json.loads(result.stdout) if result.stdout.strip() else {}
+    data = json.loads(result.stdout) if result.stdout.strip() else {}
+    return [item for page in data for item in page] if paginate else data
 
 
 def parse(tag):
@@ -92,6 +93,27 @@ def clean(title):
 BLOCKS_PUSH = {"pull_request", "required_status_checks", "update", "required_deployments", "merge_queue"}
 
 
+def ref_pattern(pattern):
+    """A ruleset ref pattern as GitHub reads it: `*` and `?` do not cross `/`,
+    `**` does, and `[...]` is a character set."""
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith("**", i):
+            out.append(".*"); i += 2
+        elif pattern[i] == "*":
+            out.append("[^/]*"); i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]"); i += 1
+        elif pattern[i] == "[" and "]" in pattern[i + 2:]:
+            end = pattern.index("]", i + 2)
+            body = pattern[i + 1:end]
+            body = "^" + body[1:] if body.startswith("!") else body
+            out.append("[" + body.replace("\\", "\\\\") + "]"); i = end + 1
+        else:
+            out.append(re.escape(pattern[i])); i += 1
+    return re.compile("".join(out))
+
+
 def check_rulesets(repo, branch, version):
     """Stop before anything is written if a ruleset would block the version
     commit or the tag. A ruleset counts only if this run's token cannot bypass it."""
@@ -109,16 +131,16 @@ def check_rulesets(repo, branch, version):
         return " ".join(str(found.get("name", "unnamed")).split())
 
     def matches(ref, patterns):
-        return any(p == "~ALL" or fnmatch.fnmatchcase(ref, p) for p in patterns)
+        return any(p == "~ALL" or ref_pattern(p).fullmatch(ref) for p in patterns)
 
     problems = []
-    for rule in api(f"repos/{repo}/rules/branches/{branch}"):
+    for rule in api(f"repos/{repo}/rules/branches/{branch}?per_page=100", paginate=True):
         found = ruleset(rule["ruleset_id"]) if rule["type"] in BLOCKS_PUSH else None
         if found and blocks(found):
             problems.append(f'ruleset "{name(found)}" ({rule["type"]}) blocks the version commit on {branch}')
 
     ref = f"refs/tags/{version}"
-    for summary in api(f"repos/{repo}/rulesets?includes_parents=true&per_page=100"):
+    for summary in api(f"repos/{repo}/rulesets?includes_parents=true&per_page=100", paginate=True):
         if summary.get("target") != "tag" or summary.get("enforcement") != "active":
             continue
         found = ruleset(summary["id"])
