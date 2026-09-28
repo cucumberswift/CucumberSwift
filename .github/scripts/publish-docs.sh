@@ -219,8 +219,9 @@ echo "$versions" > "$out/versions.json"
 {
   echo '<?xml version="1.0" encoding="UTF-8"?>'
   echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-  # DocC names operator pages after the operator, e.g. <(_:_:), so escape for XML.
-  sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s|.*|  <url><loc>&</loc></url>|' "$sitemap"
+  # DocC names operator pages after the operator, e.g. <(_:_:). Percent-encode
+  # what a URL path may not contain (RFC 3986), then escape & for XML.
+  perl -pe 's{([^A-Za-z0-9._~/:@!\$&\x27()*+,;=\n-])}{sprintf("%%%02X", ord($1))}ge; s/&/&amp;/g; s|.*|  <url><loc>$&</loc></url>|' "$sitemap"
   echo '</urlset>'
 } > "$out/sitemap.xml"
 
