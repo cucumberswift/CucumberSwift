@@ -38,16 +38,18 @@ def succeeds(*args):
     return subprocess.run(args, capture_output=True).returncode == 0
 
 
-def api(path, method="GET", body=None, allow=(), paginate=False):
+def api(path, method="GET", body=None, allow=(), paginate=False, token=None):
     """Call the GitHub API. Return None only for an HTTP status listed in `allow`,
     such as 404 for "does not exist". Any other failure stops the run. With
-    `paginate`, read every page of a list and return one list."""
+    `paginate`, read every page of a list and return one list. With `token`, call
+    as that token instead of GH_TOKEN."""
     args = ["gh", "api", "-X", method, path] + (["--paginate", "--slurp"] if paginate else [])
     if body is not None:
         args += ["--input", "-"]
     # A list of arguments, no shell: nothing here is interpreted as a command.
+    env = dict(os.environ, GH_TOKEN=token) if token else None
     result = subprocess.run(args, input=json.dumps(body) if body is not None else None,
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, env=env)
     if result.returncode != 0:
         status = re.search(r"\(HTTP (\d{3})\)", result.stderr)
         if status and int(status.group(1)) in allow:
@@ -123,12 +125,15 @@ def ref_pattern(pattern):
 
 def check_rulesets(repo, branch, version):
     """Stop before anything is written if a ruleset would block the version
-    commit or the tag. A ruleset counts only if this run's token cannot bypass it."""
+    commit or the tag. A ruleset counts only if the token that writes them cannot
+    bypass it. GitHub answers that for the token that asks, so the rules are read
+    with RULES_TOKEN, a read-only token of the same release app, when it is set."""
     rulesets = {}
+    token = os.environ.get("RULES_TOKEN") or None
 
     def ruleset(ruleset_id):
         if ruleset_id not in rulesets:
-            rulesets[ruleset_id] = api(f"repos/{repo}/rulesets/{ruleset_id}?includes_parents=true")
+            rulesets[ruleset_id] = api(f"repos/{repo}/rulesets/{ruleset_id}?includes_parents=true", token=token)
         return rulesets[ruleset_id]
 
     def blocks(found):
@@ -144,13 +149,13 @@ def check_rulesets(repo, branch, version):
         return any(p == "~ALL" or ref_pattern(p).fullmatch(ref) for p in patterns)
 
     problems = []
-    for rule in api(f"repos/{repo}/rules/branches/{branch}?per_page=100", paginate=True):
+    for rule in api(f"repos/{repo}/rules/branches/{branch}?per_page=100", paginate=True, token=token):
         found = ruleset(rule["ruleset_id"]) if rule["type"] in BLOCKS_PUSH else None
         if found and blocks(found):
             problems.append(f'ruleset "{name(found)}" ({rule["type"]}) blocks the version commit on {branch}')
 
     ref = f"refs/tags/{version}"
-    for summary in api(f"repos/{repo}/rulesets?includes_parents=true&per_page=100", paginate=True):
+    for summary in api(f"repos/{repo}/rulesets?includes_parents=true&per_page=100", paginate=True, token=token):
         if summary.get("target") != "tag" or summary.get("enforcement") != "active":
             continue
         found = ruleset(summary["id"])
@@ -162,7 +167,7 @@ def check_rulesets(repo, branch, version):
 
     if problems:
         fail("This release would stop part-way: " + "; ".join(problems) + ". Nothing was written. "
-             "Change the ruleset, or let GitHub Actions bypass it, and run again.")
+             "Change the ruleset, or let the release app bypass it, and run again.")
 
 
 def changes(repo, branch, last_tag, sha):
@@ -351,6 +356,8 @@ def publish():
     if not SEMVER.match(version) or latest not in ("true", "false"):
         fail("Unexpected version.")
     message = f"chore: set version {version}"
+    # The bot that makes the version commit: the release app's, passed in by the workflow.
+    bot = os.environ.get("RELEASE_BOT") or "github-actions[bot]"
 
     # An earlier attempt may already have moved the branch to its version commit.
     commit = None
@@ -358,7 +365,7 @@ def publish():
     if head != sha:
         found = api(f"repos/{repo}/git/commits/{head}")
         if ([p["sha"] for p in found["parents"]] == [sha] and found["message"] == message
-                and found["author"]["name"] == "github-actions[bot]"):
+                and found["author"]["name"] == bot):
             commit = head
             print(f"Reusing the version commit {head} from an earlier attempt.")
 

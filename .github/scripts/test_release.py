@@ -50,6 +50,7 @@ class Fake:
     def __init__(self):
         self.responses = {}   # (method, path) -> value, Status, Pages, or a function of the body
         self.calls = []       # (method, path, body, paginate)
+        self.tokens = []      # (path, token) for every API call
         self.tags = []        # every tag in the repository
         self.merged = []      # tags reachable from SHA
         self.support = {}     # remote support branch -> tags it contains
@@ -59,8 +60,9 @@ class Fake:
         self.processes = []   # every subprocess.run() call
 
     # release.api
-    def api(self, path, method="GET", body=None, allow=(), paginate=False):
+    def api(self, path, method="GET", body=None, allow=(), paginate=False, token=None):
         self.calls.append((method, path, copy.deepcopy(body), paginate))
+        self.tokens.append((path, token))
         if (method, path) not in self.responses:
             raise AssertionError(f"unexpected API call: {method} {path}")
         value = self.responses[(method, path)]
@@ -446,7 +448,7 @@ class RulesetTests(ReleaseTestCase):
                 self.assertEqual(self.check_fails(),
                                  f'This release would stop part-way: ruleset "Protect main" ({kind}) blocks '
                                  "the version commit on main. Nothing was written. Change the ruleset, or let "
-                                 "GitHub Actions bypass it, and run again.")
+                                 "the release app bypass it, and run again.")
 
     def test_branch_rules_that_do_not_block_the_version_commit(self):
         # Their rulesets are not even read.
@@ -540,9 +542,22 @@ class RulesetTests(ReleaseTestCase):
                          'This release would stop part-way: ruleset "Protect main" (pull_request) blocks the '
                          'version commit on main; ruleset "Protect main" (required_status_checks) blocks the '
                          'version commit on main; ruleset "Protect release tags" (creation) blocks creating '
-                         "the tag 5.0.11. Nothing was written. Change the ruleset, or let GitHub Actions "
+                         "the tag 5.0.11. Nothing was written. Change the ruleset, or let the release app "
                          "bypass it, and run again.")
         self.assertEqual(len(self.fake.called("GET", ruleset_path(5))), 1)
+
+    def test_the_rules_are_read_with_the_release_app_token(self):
+        os.environ["RULES_TOKEN"] = "app-token"
+        self.fake.responses[("GET", BRANCH_RULES)] = Pages([self.branch_rule("update", bypass="always")])
+        self.fake.responses[("GET", RULESETS)] = Pages([self.tag_ruleset(bypass="always")])
+        self.check()
+        self.assertEqual(len(self.fake.tokens), 4)
+        self.assertEqual({token for _, token in self.fake.tokens}, {"app-token"})
+
+    def test_without_the_release_app_token_the_rules_are_read_with_gh_token(self):
+        self.fake.responses[("GET", BRANCH_RULES)] = Pages([self.branch_rule("update", bypass="always")])
+        self.check()
+        self.assertEqual({token for _, token in self.fake.tokens}, {None})
 
     def test_plan_stops_on_a_ruleset_before_reading_changes(self):
         self.fake.tags = self.fake.merged = ["5.0.10"]
@@ -886,6 +901,20 @@ class PublishTests(ReleaseTestCase):
                 self.assertIn("main moved during the run", self.fails(release.publish))
                 self.assertTrue(self.fake.called("POST", f"repos/{REPO}/git/commits"))
 
+    def test_a_rerun_reuses_the_version_commit_made_by_the_release_app(self):
+        os.environ["RELEASE_BOT"] = "cucumberswift-release[bot]"
+        self.earlier_attempt(author="cucumberswift-release[bot]")
+        out = self.call(release.publish)
+        self.assertIn(f"Reusing the version commit {COMMIT} from an earlier attempt.", out)
+        self.assertFalse(self.fake.called("POST", f"repos/{REPO}/git/commits"))
+
+    def test_with_the_release_app_a_github_actions_commit_is_not_reused(self):
+        os.environ["RELEASE_BOT"] = "cucumberswift-release[bot]"
+        self.earlier_attempt(author="github-actions[bot]")
+        self.fake.responses[("PATCH", f"repos/{REPO}/git/refs/heads/main")] = Status(422)
+        self.assertIn("main moved during the run", self.fails(release.publish))
+        self.assertTrue(self.fake.called("POST", f"repos/{REPO}/git/commits"))
+
     def test_a_tag_on_another_commit_stops_the_run(self):
         for ref in ({"type": "commit", "sha": "b" * 40}, {"type": "tag", "sha": TAG_OBJECT}):
             with self.subTest(ref=ref):
@@ -969,6 +998,15 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(kwargs["capture_output"])
         self.assertNotIn("shell", kwargs)
 
+    def test_a_token_replaces_gh_token_for_that_call_only(self):
+        self.gh(stdout="{}")
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "workflow-token"}):
+            release.api("repos/o/r/rulesets", token="app-token")
+            release.api("repos/o/r/rulesets")
+            self.assertEqual(os.environ["GH_TOKEN"], "workflow-token")
+        self.assertEqual(self.processes[0][1]["env"]["GH_TOKEN"], "app-token")
+        self.assertIsNone(self.processes[1][1]["env"])
+
     def test_a_body_is_sent_as_json_on_stdin(self):
         self.gh(stdout='{"sha": "abc"}')
         release.api("repos/o/r/git/refs", "POST", {"ref": "refs/tags/1.0.0", "sha": "abc"})
@@ -1016,6 +1054,7 @@ class ApiTests(unittest.TestCase):
         self.gh(stdout='[{"id": 1}]')
         self.assertEqual(release.api("repos/o/r/rulesets"), [{"id": 1}])
         self.assertNotIn("--paginate", self.processes[0][0])
+
 
 
 if __name__ == "__main__":
