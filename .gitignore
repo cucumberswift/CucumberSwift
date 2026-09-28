@@ -77,6 +77,8 @@ npm-debug.log
 .scannerwork
 sq-generic.xml
 .gen.swift
+# Python bytecode, written when the release script tests run
+__pycache__/
 
 # Tuist
 # Tuist's own scratch output. Never commit these.
