@@ -3,7 +3,7 @@
     {
       "identity" : "cucumberswiftexpressions",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Tyler-Keith-Thompson/CucumberSwiftExpressions.git",
+      "location" : "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
       "state" : {
         "revision" : "5200dc2c5d7cd31f07a13f030ab0027224d2dbea",
         "version" : "0.0.8"
