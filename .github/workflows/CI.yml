@@ -106,7 +106,61 @@ jobs:
         run: carthage build --no-skip-current --use-xcframeworks --platform iOS --log-path carthage-build.log
       - name: Show what Carthage produced
         run: find Carthage/Build -maxdepth 3 \( -name '*.framework' -o -name '*.xcframework' \) | sort
+      # A build is not proof a consumer can use it. CucumberSwiftExpressions is a
+      # static package, so it must be inside the framework rather than a separate
+      # dynamic dependency that Carthage would not deliver; and the framework must
+      # import and link from outside this project.
+      - name: Check a consumer can link the framework
+        run: |
+          set -eu
+          xcf=Carthage/Build/CucumberSwift.xcframework
+          if otool -L "$xcf/ios-arm64/CucumberSwift.framework/CucumberSwift" | grep -i 'CucumberSwiftExpressions'; then
+            echo "::error::CucumberSwift links CucumberSwiftExpressions dynamically, which Carthage does not deliver"
+            exit 1
+          fi
+          sim=""
+          for slice in "$xcf"/*-simulator; do sim=$slice; done
+          if [ -z "$sim" ] || [ ! -d "$sim" ]; then echo "::error::no simulator slice in $xcf"; exit 1; fi
+          platform=$(xcrun --sdk iphonesimulator --show-sdk-platform-path)
+          cat > "$RUNNER_TEMP/Consumer.swift" <<'SWIFT'
+          import CucumberSwift
+          public func consumerTouchesCucumber() -> Int { Cucumber.shared.features.count }
+          SWIFT
+          xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios13.0-simulator \
+            -F "$sim" -F "$platform/Developer/Library/Frameworks" -I "$platform/Developer/usr/lib" \
+            -framework CucumberSwift -framework XCTest \
+            -emit-library -o "$RUNNER_TEMP/libConsumer.dylib" "$RUNNER_TEMP/Consumer.swift"
+          echo "A consumer imported and linked CucumberSwift from $sim"
       - name: Show why the build failed
         if: failure()
         run: |
           grep -E '(^|[ /:])error: |\*\* (ARCHIVE|BUILD) (FAILED|SUCCEEDED)' carthage-build.log | sort -u | head -20 || true
+
+  # CucumberSwift.xcodeproj is generated from Project.swift and committed for
+  # Carthage. This fails when the two disagree, for example after a hand edit to the
+  # project or a new source file committed without regenerating. It runs the same
+  # `mise run check-project` task as the optional pre-commit hook.
+  project_drift:
+    name: Xcode project matches Project.swift
+    runs-on: macos-15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Regenerate and compare
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run check-project
