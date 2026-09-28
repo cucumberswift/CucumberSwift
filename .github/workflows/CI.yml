@@ -64,10 +64,11 @@ jobs:
   # CI builds that path, so this job is the only check that Carthage consumers can
   # still install the framework. It needs no Tuist: consumers never do.
   #
-  # Two runner images, because whether the archive succeeds depends on the Xcode
-  # version, and consumers use whatever Xcode they have.
+  # Several Xcode versions, because whether the archive succeeds depends on the
+  # Xcode version, and consumers use whatever Xcode they have. `default` is the
+  # runner image's own Xcode; the macos-15 image also carries Xcode 26.
   carthage:
-    name: Carthage build (${{ matrix.os }})
+    name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -75,11 +76,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15]
+        include:
+          - os: macos-14
+            xcode: default
+          - os: macos-15
+            xcode: default
+          - os: macos-15
+            xcode: '26.2'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode != 'default'
+        env:
+          XCODE_VERSION: ${{ matrix.xcode }}
+        run: |
+          find /Applications -maxdepth 1 -name 'Xcode*.app' | sort
+          app=$(find /Applications -maxdepth 1 -name "Xcode_${XCODE_VERSION}*.app" | sort | head -1)
+          if [ -z "$app" ]; then echo "::error::Xcode $XCODE_VERSION is not installed on this image"; exit 1; fi
+          sudo xcode-select -s "$app/Contents/Developer"
       - name: Show the toolchain
         run: |
           xcodebuild -version
