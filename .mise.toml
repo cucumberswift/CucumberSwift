@@ -1,8 +1,9 @@
 # Tools for working on CucumberSwift's Xcode project. Consumers never need these.
 # See "The Xcode project" in CONTRIBUTING.md.
 
-# The aqua backend below needs a recent mise.
-min_version = "2026.9.15"
+# The aqua backend below needs a recent mise. 2026.9.1 is the version preinstalled on the
+# GitHub macOS runners, and the oldest verified to install Tuist this way.
+min_version = "2026.9.1"
 
 [tools]
 # Tuist straight from its GitHub release, checked against the release's published

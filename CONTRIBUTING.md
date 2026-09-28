@@ -95,7 +95,7 @@ Only if your change adds, removes or renames a file, or changes a target, a buil
 
 We pin the tool versions with [mise](https://mise.jdx.dev), a per-project tool version manager. `.mise.toml` says which version of Tuist this repository needs, much like `.nvmrc` does for Node. Tuist is pinned to an exact version and only changes in a pull request that updates it.
 
-1. Install mise, for example with `brew install mise`. You need mise 2026.9.15 or later; `.mise.toml` checks this.
+1. Install mise, for example with `brew install mise`. You need mise 2026.9.1 or later; `.mise.toml` checks this.
 2. Trust the repository: `mise trust`. mise won't use a repository's `.mise.toml` until you do, because the file can set environment variables and define tasks that run commands. Read it first. Ours pins Tuist and defines two tasks, `generate` and `check-project`. Trust applies to that directory only.
 3. Install the pinned Tuist: `mise install`. It downloads Tuist from its GitHub release and checks it against the release's published checksums.
 
