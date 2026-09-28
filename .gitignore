@@ -77,3 +77,21 @@ npm-debug.log
 .scannerwork
 sq-generic.xml
 .gen.swift
+
+# Tuist
+# Tuist's own scratch output. Never commit these.
+.tuist-derived/
+Tuist/.build/
+.package.resolved
+
+# Tuist also generates a workspace. Nothing consumes it: Carthage, fastlane and
+# CI all build CucumberSwift.xcodeproj directly, and the project carries its own
+# Package.resolved. Committing it would mean keeping a second generated artifact
+# in step for no benefit.
+CucumberSwift.xcworkspace/
+
+# NOTE: CucumberSwift.xcodeproj is deliberately NOT ignored.
+# Carthage clones this repository and runs xcodebuild against the shared
+# schemes it finds in CucumberSwift.xcodeproj/xcshareddata/xcschemes/. It has
+# no way to run `tuist generate` first, so the generated project and its shared
+# schemes must stay in version control. See CONTRIBUTING.md.
