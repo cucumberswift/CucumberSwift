@@ -91,6 +91,8 @@ def clean(title):
 
 # Branch rules that stop a direct push of the version commit. "required_signatures"
 # is not one: GitHub signs commits made through its API (committer web-flow).
+# Metadata rules (commit_message_pattern, tag_name_pattern and similar) are not
+# checked: GitHub rejects them as invalid on this organization's plan.
 BLOCKS_PUSH = {"pull_request", "required_status_checks", "update", "required_deployments", "merge_queue"}
 
 
