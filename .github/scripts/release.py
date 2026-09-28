@@ -89,7 +89,8 @@ def clean(title):
 
 # plan ------------------------------------------------------------------------
 
-# Branch rules that stop a direct push of the version commit.
+# Branch rules that stop a direct push of the version commit. "required_signatures"
+# is not one: GitHub signs commits made through its API (committer web-flow).
 BLOCKS_PUSH = {"pull_request", "required_status_checks", "update", "required_deployments", "merge_queue"}
 
 
