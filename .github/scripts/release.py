@@ -337,18 +337,23 @@ def plan():
 # publish ---------------------------------------------------------------------
 
 def version_patterns(path):
-    """What holds the version in a version file, by name. The plist has two keys,
-    the version shown to people and the build number; both are the release version."""
+    """What holds the version in a version file: a name, a pattern for every
+    occurrence of it, and a pattern for its value. The plist has two keys, the
+    version shown to people and the build number; both are the release version.
+    A value never spans lines, so each version changes exactly one line."""
     if path.endswith(".plist"):
-        return [(key, re.compile(rf"(<key>{key}</key>\s*<string>)[^<]*(</string>)"))
+        return [(key, re.compile(rf"<key>{key}</key>"),
+                 re.compile(rf"(<key>{key}</key>\s*<string>)[^<\n]*(</string>)"))
                 for key in ("CFBundleShortVersionString", "CFBundleVersion")]
-    return [("version", re.compile(r"^(\s*s\.version\s*=\s*['\"])[^'\"]*(['\"])", re.MULTILINE))]
+    return [("version", re.compile(r"^\s*s\.version\s*=", re.MULTILINE),
+             re.compile(r"^(\s*s\.version\s*=\s*['\"])[^'\"\n]*(['\"])", re.MULTILINE))]
 
 
 def set_version(path, content, version):
-    for name, pattern in version_patterns(path):
+    for name, occurrence, pattern in version_patterns(path):
+        found = len(occurrence.findall(content))
         content, count = pattern.subn(lambda m: f"{m.group(1)}{version}{m.group(2)}", content)
-        if count != 1:
+        if found != 1 or count != 1:
             fail(f"Could not find exactly one {name} in {path}.")
     return content
 

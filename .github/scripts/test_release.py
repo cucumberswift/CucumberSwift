@@ -842,9 +842,12 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(after, PLIST_TEXT.replace("1.0<", "5.0.11<").replace("5.0.10", "5.0.11"))
 
     def test_a_change_beyond_the_version_lines_stops_the_run(self):
-        # A version value split over lines: replacing it would remove lines around it.
-        self.fake.responses[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = encoded(
-            PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0\n\t\n10</string>"))
+        # set_version changes only version lines, so this guards against a future bug in it.
+        set_version = release.set_version
+        patch = mock.patch.object(release, "set_version",
+                                  lambda path, content, version: set_version(path, content, version) + "\n")
+        patch.start()
+        self.addCleanup(patch.stop)
         self.assertEqual(self.fails(release.publish),
                          f"The version change in {PLIST} would touch more than the version lines.")
         self.assertEqual(self.writes(), [])
@@ -981,8 +984,24 @@ class SetVersionTests(ReleaseTestCase):
                  (PLIST, PLIST_TEXT + PLIST_TEXT, "CFBundleShortVersionString"),
                  (PLIST, PLIST_TEXT.replace("</dict>", "\t<key>CFBundleVersion</key>\n\t<string>1</string>\n</dict>"),
                   "CFBundleVersion"),
+                 (PLIST, PLIST_TEXT.replace("</dict>", "\t<key>CFBundleVersion</key>\n\t<integer>1</integer>\n</dict>"),
+                  "CFBundleVersion"),
+                 (PLIST, PLIST_TEXT.replace("<string>1.0</string>", "<integer>1</integer>"),
+                  "CFBundleShortVersionString"),
                  (PODSPEC, PODSPEC_TEXT.replace("s.version  ", "s.versions"), "version"),
-                 (PODSPEC, PODSPEC_TEXT + "  s.version = '1.0.0'\n", "version")]
+                 (PODSPEC, PODSPEC_TEXT + "  s.version = '1.0.0'\n", "version"),
+                 (PODSPEC, PODSPEC_TEXT + "  s.version = s.name\n", "version")]
+        for path, text, name in cases:
+            with self.subTest(path=path, text=text):
+                self.assertEqual(self.fails(release.set_version, path, text, "5.0.11"),
+                                 f"Could not find exactly one {name} in {path}.")
+
+    def test_a_version_value_split_over_lines_is_refused(self):
+        # Replacing it would change more than its own line.
+        cases = [(PLIST, PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0\n10</string>"), "CFBundleVersion"),
+                 (PLIST, PLIST_TEXT.replace("<string>1.0</string>", "<string>1.\n0</string>"),
+                  "CFBundleShortVersionString"),
+                 (PODSPEC, PODSPEC_TEXT.replace("'5.0.10'", "'5.0\n10'"), "version")]
         for path, text, name in cases:
             with self.subTest(path=path, text=text):
                 self.assertEqual(self.fails(release.set_version, path, text, "5.0.11"),
