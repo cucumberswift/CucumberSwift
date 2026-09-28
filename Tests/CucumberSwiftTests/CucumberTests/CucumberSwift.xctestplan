@@ -26,6 +26,9 @@
   },
   "testTargets" : [
     {
+      "skippedTests" : [
+        "CucumberTest"
+      ],
       "target" : {
         "containerPath" : "container:CucumberSwift.xcodeproj",
         "identifier" : "AD9EB4682079CF87002494C0",

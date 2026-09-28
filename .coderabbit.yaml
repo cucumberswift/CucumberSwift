@@ -1,0 +1,120 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit review settings. CodeRabbit only reviews: it does not change code, issues
+# or pull requests. Maintainers approve and merge.
+language: en-US
+tone_instructions: >-
+  Plain English and short sentences; many contributors are not native speakers.
+  Start each comment with blocking:, question:, suggestion: or nit:, and give a reason.
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  fail_commit_status: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  poem: false
+  in_progress_fortune: false
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  enable_prompt_for_ai_agents: false
+  slop_detection:
+    enabled: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    # Stacked pull requests: each layer's base is the branch below it, not main.
+    # Without this, CodeRabbit only reviews pull requests into the default branch.
+    base_branches:
+      - ".*"
+    ignore_usernames:
+      - dependabot[bot]
+
+  # Nothing that commits to a pull request branch.
+  finishing_touches:
+    simplify:
+      enabled: false
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: >-
+        Starts with a semantic prefix (fix:, feat:, chore:, docs:, ci:) and is
+        readable on its own.
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+
+  path_filters:
+    - "!**/*.pbxproj"
+    - "!**/*.xcworkspace/**"
+    - "!**/Package.resolved"
+
+  path_instructions:
+    - path: "Sources/**/*.swift"
+      instructions: >-
+        The package supports iOS 13, macOS 10.15 and tvOS 13. Flag APIs that need a
+        newer OS without an availability check; regex literals need iOS 16 / macOS 13.
+        Flag any change to a public or open symbol, including a new overload that could
+        change which existing overload a call resolves to. Flag anything that could
+        report a failing step as passing. Flag changes the pull request description
+        does not explain, such as commented-out code or a wider access level, and
+        changes that bypass existing caching or earlier fixes. Prefer names and patterns
+        that match similar types in the repository. A non-obvious algorithm should have
+        a short comment. Prefer safe actor isolation over assumeIsolated. Every
+        behaviour change needs unit tests in Tests/, and a bug fix needs a test that
+        fails without the fix; flag a pull request that changes behaviour without them.
+    - path: "Tests/**"
+      instructions: >-
+        Every behaviour change needs unit tests, and a bug fix needs a test that fails
+        without the fix. Look for edge cases such as whitespace-only input and Unicode.
+        Tests must fail with XCTFail or an assertion, not print. Unit tests must not run
+        a full Cucumber feature suite.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Every job declares a least-privilege permissions block. Untrusted values such as
+        branch names, titles and bodies reach run steps only through quoted environment
+        variables, never through expression interpolation. Do not suggest adding
+        third-party actions; prefer run steps with the GitHub CLI.
+
+  tools:
+    swiftlint:
+      enabled: true
+      config_file: .swiftlint.yml
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+chat:
+  art: false
+  auto_reply: true
+
+issue_enrichment:
+  auto_enrich:
+    enabled: false
+  planning:
+    enabled: false
+    auto_planning:
+      enabled: false
