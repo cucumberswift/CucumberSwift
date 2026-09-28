@@ -27,7 +27,7 @@ REPO = "cucumberswift/CucumberSwift"
 OTHER_REPO = "cucumberswift/CucumberSwiftExpressions"
 SHA = "a" * 40
 MERGED_AT = "2026-09-01T00:00:00Z"
-ZWSP = "​"
+ZWSP = "\u200b"
 
 
 class Status:
