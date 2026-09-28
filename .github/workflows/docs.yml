@@ -26,7 +26,7 @@ defaults:
 jobs:
   publish:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     # contents: read -> releases and their assets. pages: write and id-token: write -> deploy.
     permissions:
       contents: read
@@ -67,11 +67,12 @@ jobs:
           artifact_name: github-pages-${{ github.run_attempt }}
       # A deployment can report success and leave the previous site online, as when
       # this job is re-run for a commit that is already deployed. Fail visibly then.
+      # Pages caches files for up to 10 minutes, so wait a little longer than that.
       - name: Check that the site serves the new docs
         env:
           PAGE_URL: ${{ steps.deploy.outputs.page_url }}
         run: |
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 66); do
             if curl -fsSL "${PAGE_URL%/}/versions.json" | cmp -s - "$RUNNER_TEMP/site/versions.json"; then
               echo "The site serves the new docs."
               exit 0
