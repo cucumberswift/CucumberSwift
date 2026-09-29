@@ -234,6 +234,35 @@ class CucumberTests: XCTestCase {
                 XCTAssertTrue(testName.contains("\(featureName)_"), "Test name does not contain custom delimiter")
             }
     }
+
+    func testStepsRunInFeatureFileOrderWhenTestsAreSortedByName() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Purchase history
+           Scenario: Purchases are listed from most recent to oldest
+             Given the customer has bought something
+             When the customer opens the purchase history
+             Then purchases are listed newest first
+        """)
+
+        var executed = [String]()
+        Given("the customer has bought something") { _, _ in executed.append("Given") }
+        When("the customer opens the purchase history") { _, _ in executed.append("When") }
+        Then("purchases are listed newest first") { _, _ in executed.append("Then") }
+
+        let suite = XCTestSuite(name: "Dummy")
+        CucumberTest.generateAlltests(suite)
+        let stepTests = suite.tests
+            .compactMap { $0 as? XCTestSuite }
+            .filter { $0.name.hasPrefix("PurchaseHistory") }
+            .flatMap(\.tests)
+            .compactMap { $0 as? XCTestCase }
+
+        // XCTest can order a class's test methods by name rather than by the order they were added.
+        stepTests.sorted { $0.name < $1.name }.forEach { $0.invokeTest() }
+
+        XCTAssertEqual(stepTests.count, 3)
+        XCTAssertEqual(executed, ["Given", "When", "Then"])
+    }
 }
 
 extension Bundle {
