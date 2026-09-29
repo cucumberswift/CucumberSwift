@@ -174,8 +174,9 @@ class StepTest: XCTestCase {
     }
 
     /// Regression test for #135: a step built by the Swift DSL used to compile the empty pattern
-    /// `""` on every execution, which always throws. The throw was swallowed, so the only symptom
-    /// was a console line nobody read.
+    /// `""` on every execution, which always throws. The throw was swallowed into a `print`, so
+    /// the only symptom was a console line nobody read - and stdout is therefore the only place
+    /// this can be observed until that `print` is replaced.
     func testExecutingADSLStepDoesNotCompileARegex() throws {
         var handlerCalled = false
         let step = GivenStep(line: 1,
@@ -183,12 +184,27 @@ class StepTest: XCTestCase {
                              match: "a step defined with the Swift DSL",
                              handler: { handlerCalled = true },
                              file: #file)
-
         let execute = try XCTUnwrap(step.execute)
-        try execute(step.match, step)
+
+        let output = try capturingStandardOutput { try execute(step.match, step) }
 
         XCTAssert(handlerCalled)
-        XCTAssert(Gherkin.errors.isEmpty,
-                  "Executing a DSL step should not compile a regex. Errors:\n\(Gherkin.errors.joined(separator: "\n"))")
+        XCTAssertFalse(output.contains("invalid regex"), "Executing a DSL step should not compile a regex. Output:\n\(output)")
+    }
+
+    private func capturingStandardOutput(_ body: () throws -> Void) throws -> String {
+        let pipe = Pipe()
+        let original = dup(STDOUT_FILENO)
+        fflush(stdout)
+        dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+
+        let result = Result { try body() }
+
+        fflush(stdout)
+        dup2(original, STDOUT_FILENO)
+        close(original)
+        try pipe.fileHandleForWriting.close()
+        try result.get()
+        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
 }
