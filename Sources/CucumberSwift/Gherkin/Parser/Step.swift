@@ -99,7 +99,10 @@ public class Step: CustomStringConvertible {
         location = position
         self.match ?= match
         self.execute = { _, step in
-            execute(self.match.matches(for: ""), step)
+            // Steps built this way come from the Swift DSL, which has no regex and therefore no
+            // capture groups. Passing "" to `matches(for:)` here used to compile an empty pattern
+            // on every execution, which always throws and always yielded [] anyway.
+            execute([], step)
         }
     }
 
