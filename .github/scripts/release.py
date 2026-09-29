@@ -345,8 +345,7 @@ def version_patterns(path):
         return [(key, re.compile(rf"<key>{key}</key>"),
                  re.compile(rf"(<key>{key}</key>\s*<string>)[^<\n]*(</string>)"))
                 for key in ("CFBundleShortVersionString", "CFBundleVersion")]
-    return [("version", re.compile(r"^\s*s\.version\s*=", re.MULTILINE),
-             re.compile(r"^(\s*s\.version\s*=\s*['\"])[^'\"\n]*(['\"])", re.MULTILINE))]
+    fail(f"{path} is not a version file the release can change.")
 
 
 def set_version(path, content, version):
@@ -382,7 +381,7 @@ def publish():
 
     if commit is None:
         changed = []
-        for path in filter(None, (os.environ.get("PLIST"), os.environ.get("PODSPEC"))):
+        for path in filter(None, (os.environ.get("PLIST"),)):
             found = api(f"repos/{repo}/contents/{path}?ref={sha}", allow=(404,))
             if found is None:
                 continue
