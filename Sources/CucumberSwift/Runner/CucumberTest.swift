@@ -147,12 +147,30 @@ open class CucumberTest: XCTestCase {
                                            userInfo: nil)
 
             failStep(XCTIssue(type: .assertionFailure,
-                              compactDescription: "No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file: \n\($0.generatedSwift)", // swiftlint:disable:this line_length
+                              compactDescription: Self.missingStepDefinitionMessage(generatedSwift: $0.generatedSwift,
+                                                                                    invalidRegularExpressions: RegularExpression.errors),
                               detailedDescription: nil,
                               sourceCodeContext: .init(location: .init(fileURL: sourceFile, lineNumber: Int($0.step.location.line))),
                               associatedError: nil,
                               attachments: [attachment]))
         }
+    }
+
+    /// The failure for a step that no step definition matches. A step definition whose regular expression
+    /// will not compile is never attached, so its steps land here too; when there are any, say where they
+    /// are, so the consumer does not write a second definition for a step they already defined.
+    static func missingStepDefinitionMessage(generatedSwift: String,
+                                             invalidRegularExpressions: [RegularExpression.Problem]) -> String {
+        let locations = invalidRegularExpressions.compactMap { problem -> String? in
+            guard let file = problem.file, let line = problem.line else { return nil }
+            return "\(URL(fileURLWithPath: file).lastPathComponent):\(line)"
+        }
+        let suggestion = "the following Swift code to your step implementation file: \n\(generatedSwift)"
+        guard let last = locations.last else {
+            return "No CucumberSwift expression found that matches this step. Try adding \(suggestion)"
+        }
+        let list = locations.count == 1 ? last : locations.dropLast().joined(separator: ", ") + " and " + last
+        return "No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, its regular expression may not compile: see \(list). Otherwise, try adding \(suggestion)" // swiftlint:disable:this line_length
     }
 
     /// Records one failure for each regular expression that will not compile. A pattern from a step

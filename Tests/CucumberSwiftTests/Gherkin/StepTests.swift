@@ -244,4 +244,39 @@ class StepTest: XCTestCase {
         XCTAssertEqual(unlocated.sourceCodeContext.location?.fileURL, URL(fileURLWithPath: "/tmp/CucumberTest.swift"))
         XCTAssertEqual(unlocated.sourceCodeContext.location?.lineNumber, 7)
     }
+
+    func testAMissingStepDefinitionPointsAtStepDefinitionsThatWillNotCompile() {
+        let problems = [
+            RegularExpression.Problem(message: "Invalid regular expression '^(': expected ')'",
+                                      file: "/tmp/StepDefinitions.swift",
+                                      line: 12),
+            RegularExpression.Problem(message: "Invalid regular expression '@(': expected ')'", file: nil, line: nil),
+            RegularExpression.Problem(message: "Invalid regular expression '^[': expected ']'",
+                                      file: "/tmp/MoreSteps.swift",
+                                      line: 16)
+        ]
+
+        let message = CucumberTest.missingStepDefinitionMessage(generatedSwift: "When(\"a step\") { _, _ in }",
+                                                                invalidRegularExpressions: problems)
+
+        XCTAssertEqual(message, """
+        No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, \
+        its regular expression may not compile: see StepDefinitions.swift:12 and MoreSteps.swift:16. \
+        Otherwise, try adding the following Swift code to your step implementation file: \n\
+        When("a step") { _, _ in }
+        """)
+    }
+
+    func testAMissingStepDefinitionSuggestsCodeWhenEveryStepDefinitionCompiles() {
+        let problems = [RegularExpression.Problem(message: "Invalid regular expression '@(': expected ')'", file: nil, line: nil)]
+
+        let message = CucumberTest.missingStepDefinitionMessage(generatedSwift: "When(\"a step\") { _, _ in }",
+                                                                invalidRegularExpressions: problems)
+
+        XCTAssertEqual(message, """
+        No CucumberSwift expression found that matches this step. \
+        Try adding the following Swift code to your step implementation file: \n\
+        When("a step") { _, _ in }
+        """)
+    }
 }
