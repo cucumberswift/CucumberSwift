@@ -89,13 +89,43 @@ def clean(title):
     return title.replace("@", "@​")  # no mentions
 
 
-# CommonMark: a backtick fence's info string has no backticks, a closing fence
-# is the same character, at least as long, followed only by spaces, and a code
-# span is closed by a backtick run of exactly the opening run's length.
+# CommonMark: a backtick fence's info string has no backticks, and a closing
+# fence is the same character, at least as long, followed only by spaces.
 FENCE_OPEN = re.compile(r"^ {0,3}(?:(`{3,})[^`]*|(~{3,}).*)$")
 FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 HEADING = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t#]*$")
-CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+
+
+def code_spans(line):
+    """(start, end) of each code span in `line`, as CommonMark reads them. A
+    backtick escaped with a backslash cannot open one. A span closes at the next
+    backtick run of exactly the opening run's length; backslashes inside a span
+    are literal, so they do not escape its closing run."""
+    spans, i = [], 0
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2  # the next character is escaped
+            continue
+        if line[i] != "`":
+            i += 1
+            continue
+        run = len(line[i:]) - len(line[i:].lstrip("`"))
+        j, end = i + run, None
+        while j < len(line):
+            if line[j] != "`":
+                j += 1
+                continue
+            length = len(line[j:]) - len(line[j:].lstrip("`"))
+            if length == run:
+                end = j + length
+                break
+            j += length
+        if end is None:
+            i += run  # no closing run: the backticks are literal
+        else:
+            spans.append((i, end))
+            i = end
+    return spans
 
 
 def fence_after(line, fence):
@@ -140,10 +170,10 @@ def clean_block(text):
             out.append(line)
             continue
         parts, last = [], 0
-        for span in CODE_SPAN.finditer(line):
-            parts.append(html.escape(line[last:span.start()], quote=False).replace("@", "@​"))
-            parts.append(span.group(0))
-            last = span.end()
+        for start, end in code_spans(line):
+            parts.append(html.escape(line[last:start], quote=False).replace("@", "@​"))
+            parts.append(line[start:end])
+            last = end
         parts.append(html.escape(line[last:], quote=False).replace("@", "@​"))
         out.append("".join(parts))
     return "\n".join(out)

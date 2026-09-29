@@ -793,6 +793,22 @@ class MigrationTests(PlanTestCase):
             with self.subTest(text=text):
                 self.assertEqual(release.clean_block(text), shown)
 
+    def test_an_escaped_backtick_does_not_open_a_code_span(self):
+        # Each case checked against GitHub's Markdown renderer.
+        cases = {
+            # Escaped opener: not code.
+            "\\`@team\\`": f"\\`@{ZWSP}team\\`",
+            "\\``@c``": f"\\``@{ZWSP}c``",
+            # An escaped backslash leaves the backtick active: code.
+            "\\\\`@a`": "\\\\`@a`",
+            # Backslashes inside a span are literal, so the span closes after one.
+            "`a\\`@b <i>": f"`a\\`@{ZWSP}b &lt;i&gt;",
+            "`` \\`@d`` x": "`` \\`@d`` x",
+        }
+        for text, shown in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(release.clean_block(text), shown)
+
     def test_a_closing_fence_has_only_spaces_after_it(self):
         text = "```\n@a <b>\n``` not a close\n```  \n@c <d>"
         self.assertEqual(release.clean_block(text), f"```\n@a <b>\n``` not a close\n```  \n@{ZWSP}c &lt;d&gt;")
