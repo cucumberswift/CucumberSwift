@@ -189,6 +189,31 @@ class StepTest: XCTestCase {
 
         XCTAssert(handlerCalled)
         XCTAssert(RegularExpression.errors.isEmpty,
-                  "Executing a DSL step should not compile a regex. Errors:\n\(RegularExpression.errors.joined(separator: "\n"))")
+                  "Executing a DSL step should not compile a regex. Errors:\n\(RegularExpression.errors.map(\.message).joined(separator: "\n"))")
+    }
+
+    /// #218: a step definition's regex that will not compile is reported at the step definition,
+    /// so Xcode marks the consumer's own line rather than a line inside CucumberSwift.
+    func testAStringRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
+        Cucumber.shared.parseIntoFeatures("""
+    Feature: Some feature
+       Scenario: Some determinable business situation
+         When a broken step runs
+    """)
+        let pattern: String = "^a broken (step runs$"
+
+        When(pattern, callback: { _, _ in }, line: 42, file: "StepDefinitions.swift")
+
+        XCTAssertEqual(RegularExpression.errors.count, 1, "The pattern should be recorded once, with its location")
+        let problem = RegularExpression.errors.first
+        XCTAssertEqual(problem?.file, "StepDefinitions.swift")
+        XCTAssertEqual(problem?.line, 42)
+        XCTAssert(problem?.message.contains(pattern) ?? false)
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) {
+            XCTAssert(problem?.message.hasSuffix("expected ')'") ?? false,
+                      "The message should say what is wrong with the pattern: \(problem?.message ?? "")")
+        }
+        XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
+                     "A pattern that will not compile can never match, so it should not be attached")
     }
 }

@@ -238,6 +238,7 @@ import CucumberSwiftExpressions
                               callback: @escaping (([String], Step) throws -> Void),
                               line: Int,
                               file: StaticString) {
+        guard RegularExpression.validate(regex, file: file, line: line) else { return }
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
@@ -278,6 +279,7 @@ import CucumberSwiftExpressions
                               selector: Selector,
                               line: Int,
                               file: StaticString) {
+        guard RegularExpression.validate(regex, file: file, line: line) else { return }
         attachClosureToSteps(keyword: keyword,
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,

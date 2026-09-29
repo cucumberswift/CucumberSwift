@@ -29,7 +29,7 @@ class StringExtensionsTests: XCTestCase {
         let matches = "This is a test".matches(for: "^(.*? is a test$")
 
         XCTAssertEqual(matches.count, 0)
-        XCTAssert(RegularExpression.errors.dropFirst(initialErrors.count).contains { $0.contains("^(.*? is a test$") },
+        XCTAssert(RegularExpression.errors.dropFirst(initialErrors.count).contains { $0.message.contains("^(.*? is a test$") },
                   "A pattern that will not compile should be recorded as a regular expression error, not printed")
         XCTAssertEqual(Gherkin.errors,
                        initialGherkinErrors,

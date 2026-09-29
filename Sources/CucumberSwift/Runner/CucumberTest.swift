@@ -137,11 +137,17 @@ open class CucumberTest: XCTestCase {
             XCTFail($0)
         }
 
-        XCTAssert(RegularExpression.errors.isEmpty,
-                  "Invalid regular expressions found in step definitions or CUCUMBER_TAGS:\n\(RegularExpression.errors.joined(separator: "\n"))")
-
-        RegularExpression.errors.forEach {
-            XCTFail($0)
+        RegularExpression.errors.forEach { [self] problem in
+            guard let file = problem.file, let line = problem.line else {
+                XCTFail("\(problem.message) (in CUCUMBER_TAGS or a pattern CucumberSwift could not trace to a step definition)")
+                return
+            }
+            failStep(XCTIssue(type: .assertionFailure,
+                              compactDescription: problem.message,
+                              detailedDescription: nil,
+                              sourceCodeContext: .init(location: .init(fileURL: URL(fileURLWithPath: file), lineNumber: line)),
+                              associatedError: nil,
+                              attachments: []))
         }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
