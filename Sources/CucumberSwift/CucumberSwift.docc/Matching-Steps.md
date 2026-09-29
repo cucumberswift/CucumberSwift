@@ -2,8 +2,33 @@
 
 Gherkin defined in `.feature` files can be matched in several ways. All matching is done using global functions that align with gherkin keywords. For example, ``Given``, ``When``, and ``Then`` functions. These functions are also localized, so if you'd rather use spanish you can use ``ES_Dado``. 
 
+## How a string pattern is read
+When you pass a string to ``Given``, ``When`` or ``Then``, CucumberSwift decides from its shape whether it is a regular expression or a Cucumber expression, the same way other Cucumber implementations do:
+
+| The string | Is read as | Example |
+|---|---|---|
+| starts with `^` or ends with `$` | a regular expression | `Given("^the app is at the Main Menu$")` |
+| starts and ends with `/` | a regular expression, without the slashes | `Given("/the app is at the Main Menu/")` |
+| anything else | a Cucumber expression | `Given("the app is at the {word} Menu")` |
+
+A step definition whose closure takes `[String]`, such as `{ matches, _ in … matches[1] … }`, uses the older regular expression API instead: its string is always a regular expression, and Xcode shows a deprecation warning.
+
+### Upgrading to 6.0.0
+Before 6.0.0, a string that started with `^` or ended with `$` was read as a Cucumber expression, which treated `^` and `$` as literal characters. A step definition such as `Given("^the app is at the Main Menu$") { _, _ in }` therefore matched nothing, and its step was reported as unimplemented. From 6.0.0 it is a regular expression and matches as written.
+
+Most step definitions need no change. Check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`:
+
+- If it is a valid regular expression, it silently stops matching. `Given("I owe 5$")` no longer matches the step `I owe 5$`, because `$` now means "end of text".
+- If it is not a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
+
+To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. This works on every platform and deployment target:
+
+```swift
+Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
+```
+
 ## Matching with Cucumber Expressions
-Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. Normally, Cucumber implementations use expressions by default in languages that have regular expression literals. However, because CucumberSwift was created long before Swift supported regex literals they are *not* the default.
+Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 
 Imagine the following step:
 ```gherkin
@@ -83,3 +108,5 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 ```
 
 > NOTE: You can use regex builders in Swift to transform into concrete types. It's a little verbose, but is supported by CucumberSwift.
+
+> Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form above also needs Swift 6 language mode or the `BareSlashRegexLiterals` upcoming feature; `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
