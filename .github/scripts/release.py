@@ -100,7 +100,13 @@ def code_spans(line):
     """(start, end) of each code span in `line`, as CommonMark reads them. A
     backtick escaped with a backslash cannot open one. A span closes at the next
     backtick run of exactly the opening run's length; backslashes inside a span
-    are literal, so they do not escape its closing run."""
+    are literal, so they do not escape its closing run.
+
+    Lines are read one at a time. CommonMark lets a span in a paragraph wrap
+    onto the next line; such a span is escaped like plain text, which only
+    shows `&lt;` in its code. Joining lines would need the block structure
+    (list items, quotes, tables) to be right, and getting it wrong would leave
+    text outside code unescaped."""
     spans, i = [], 0
     while i < len(line):
         if line[i] == "\\":

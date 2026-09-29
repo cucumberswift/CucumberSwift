@@ -809,6 +809,12 @@ class MigrationTests(PlanTestCase):
             with self.subTest(text=text):
                 self.assertEqual(release.clean_block(text), shown)
 
+    def test_a_code_span_that_wraps_a_line_is_escaped_like_text(self):
+        # Safe side: a wrapped span shows escaped characters, and a backtick
+        # that opens in one list item never hides the next item's text.
+        self.assertEqual(release.clean_block("Use `Array<\nInt>` @x"), f"Use `Array&lt;\nInt&gt;` @{ZWSP}x")
+        self.assertEqual(release.clean_block("- a `b\n- c` @y"), f"- a `b\n- c` @{ZWSP}y")
+
     def test_a_closing_fence_has_only_spaces_after_it(self):
         text = "```\n@a <b>\n``` not a close\n```  \n@c <d>"
         self.assertEqual(release.clean_block(text), f"```\n@a <b>\n``` not a close\n```  \n@{ZWSP}c &lt;d&gt;")
