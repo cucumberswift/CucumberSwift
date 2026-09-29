@@ -16,7 +16,7 @@ A step definition whose closure takes `[String]`, such as `{ matches, _ in … m
 ### Upgrading to 6.0.0
 Before 6.0.0, a string that started with `^` or ended with `$` was read as a Cucumber expression, which treated `^` and `$` as literal characters. A step definition such as `Given("^the app is at the Main Menu$") { _, _ in }` therefore matched nothing, and its step was reported as unimplemented. From 6.0.0 it is a regular expression and matches as written.
 
-Most step definitions need no change. Check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`:
+Most step definitions need no change. Step definitions whose closure takes `[String]` are not affected at all: they already read the string as a regular expression. For the rest, check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`:
 
 - If it is a valid regular expression, it silently stops matching. `Given("I owe 5$")` no longer matches the step `I owe 5$`, because `$` now means "end of text".
 - If it is not a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
@@ -109,4 +109,4 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 
 > NOTE: You can use regex builders in Swift to transform into concrete types. It's a little verbose, but is supported by CucumberSwift.
 
-> Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form above also needs Swift 6 language mode or the `BareSlashRegexLiterals` upcoming feature; `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
+> Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form above also needs Swift 6 language mode or the `BareSlashRegexLiterals` upcoming feature; `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
