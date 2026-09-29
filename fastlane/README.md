@@ -31,38 +31,6 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
-### ios cocoapods_liblint
-
-```sh
-[bundle exec] fastlane ios cocoapods_liblint
-```
-
-
-
-### ios patch
-
-```sh
-[bundle exec] fastlane ios patch
-```
-
-Release a new version with a patch bump_type
-
-### ios minor
-
-```sh
-[bundle exec] fastlane ios minor
-```
-
-Release a new version with a minor bump_type
-
-### ios major
-
-```sh
-[bundle exec] fastlane ios major
-```
-
-Release a new version with a major bump_type
-
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

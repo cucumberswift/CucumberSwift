@@ -6,33 +6,8 @@ So in many of our projects that have to function at a large scale and have quite
 
 ### SETUP:
 
-#### Podfile:
-```ruby
-def shared_pods
-    #production pods go here
-end
-
-target 'App' do
-  use_frameworks!
-
-  shared_pods
-end
-
-target 'AppUnitTests' do
-  use_frameworks!
-
-  shared_pods
-end
-
-target 'AppCucumberTests' do
-  use_frameworks!
-  inherit! :search_paths
-  
-  shared_pods
-  pod 'UIUTest'
-  pod 'CucumberSwift'
-end
-```
+#### Packages:
+Add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest](https://github.com/nallick/UIUTest) to your `AppCucumberTests` target with Swift Package Manager. In Xcode, choose **File > Add Package Dependencies...** and add both to that target only.
 
 #### XCode Setup
 When adding your `AppCucumberTests` target make sure to add it as a `Unit Testing Bundle`

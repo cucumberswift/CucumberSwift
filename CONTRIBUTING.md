@@ -29,7 +29,7 @@ Then open an issue with the **Bug report** or **Feature request** template.
 A good bug report has:
 
 - The CucumberSwift version, the Xcode version, and the platform (iOS, macOS or tvOS, and the OS version).
-- How you installed CucumberSwift: Swift Package Manager, Carthage or CocoaPods.
+- How you installed CucumberSwift: Swift Package Manager or Carthage.
 - A minimal `.feature` file and the step definitions that reproduce the problem. This is the most useful thing you can give us.
 - What you expected to happen and what happened instead, including the test output.
 
@@ -199,7 +199,7 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 When you open a PR:
 
-1. **CI runs** the tests, builds the package with Swift Package Manager and lints the CocoaPods podspec. It doesn't build with Carthage, so if you add a source file, build the Xcode project yourself. Please fix anything it reports.
+1. **CI runs** the tests, and builds the package with Swift Package Manager. It doesn't build with Carthage, so if you add a source file, build the Xcode project yourself. Please fix anything it reports.
 2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
 3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
 
