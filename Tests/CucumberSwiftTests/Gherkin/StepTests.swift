@@ -216,4 +216,25 @@ class StepTest: XCTestCase {
         XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
                      "A pattern that will not compile can never match, so it should not be attached")
     }
+
+    /// #220: a Cucumber Expression that is treated as a regular expression but will not compile is
+    /// reported at the step definition too, instead of crashing the run.
+    func testAnExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
+        Cucumber.shared.parseIntoFeatures("""
+    Feature: Some feature
+       Scenario: Some determinable business situation
+         When a broken step runs
+    """)
+
+        When("^a broken (step runs$", callback: { _, _ in }, line: 42, file: "StepDefinitions.swift")
+
+        XCTAssertEqual(RegularExpression.errors.count, 1, "The expression should be recorded once, with its location")
+        let problem = RegularExpression.errors.first
+        XCTAssertEqual(problem?.file, "StepDefinitions.swift")
+        XCTAssertEqual(problem?.line, 42)
+        XCTAssert(problem?.message.hasPrefix(#"CucumberExpression: "^a broken (step runs$""#) ?? false,
+                  problem?.message ?? "")
+        XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
+                     "An expression that will not compile can never match, so it should not be attached")
+    }
 }
