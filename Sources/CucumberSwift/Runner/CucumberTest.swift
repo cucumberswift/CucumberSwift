@@ -138,16 +138,11 @@ open class CucumberTest: XCTestCase {
         }
 
         RegularExpression.errors.forEach { [self] problem in
-            guard let file = problem.file, let line = problem.line else {
+            if let issue = Self.issue(for: problem) {
+                failStep(issue)
+            } else {
                 XCTFail("\(problem.message) (in CUCUMBER_TAGS or a pattern CucumberSwift could not trace to a step definition)")
-                return
             }
-            failStep(XCTIssue(type: .assertionFailure,
-                              compactDescription: problem.message,
-                              detailedDescription: nil,
-                              sourceCodeContext: .init(location: .init(fileURL: URL(fileURLWithPath: file), lineNumber: line)),
-                              associatedError: nil,
-                              attachments: []))
         }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
@@ -164,6 +159,18 @@ open class CucumberTest: XCTestCase {
                               associatedError: nil,
                               attachments: [attachment]))
         }
+    }
+
+    /// The failure for a regular expression that will not compile, at the step definition that wrote
+    /// it, so Xcode marks the consumer's own line. `nil` when the pattern has no step definition.
+    static func issue(for problem: RegularExpression.Problem) -> XCTIssue? {
+        guard let file = problem.file, let line = problem.line else { return nil }
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: problem.message,
+                        detailedDescription: nil,
+                        sourceCodeContext: .init(location: .init(fileURL: URL(fileURLWithPath: file), lineNumber: line)),
+                        associatedError: nil,
+                        attachments: [])
     }
 
     public dynamic func failStep(_ issue: XCTIssue) {
