@@ -27,6 +27,7 @@
 		344EE67C43D7A89FE3233699 /* StubGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E84199B26F53AA7B1C99323 /* StubGenerator.swift */; };
 		3524BEC3BD4E5B0D21560C43 /* CucumberTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7186AE45E7F0E5C115CB318 /* CucumberTest.swift */; };
 		35C841D0A6D85B5E7666F6A6 /* CucumberSwiftExpressions in Frameworks */ = {isa = PBXBuildFile; productRef = 2CDBAE796D9B8F4FF5141E76 /* CucumberSwiftExpressions */; };
+		3859273DD63104B8F8884F39 /* AnchoredExpressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CFD515A4F176B7208088254 /* AnchoredExpressionTests.swift */; };
 		391247ECA2620253A55374FF /* DSLStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E8D40617C457BFA0335118 /* DSLStepTests.swift */; };
 		39D983B03D054D99F94D8ECF /* DSLRuleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75BCE63E2E09648B990BC047 /* DSLRuleTests.swift */; };
 		3A23FD5469B97CCEE90CA3E7 /* JSONSchema in Frameworks */ = {isa = PBXBuildFile; productRef = 5E3FE9513504C54CFC7DEE12 /* JSONSchema */; };
@@ -194,6 +195,7 @@
 		1EDABCBC861D11AD3E422012 /* DSLBackgroundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLBackgroundTests.swift; sourceTree = "<group>"; };
 		27009DC17F4BA44009C09B53 /* Token.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Token.swift; sourceTree = "<group>"; };
 		28F7ADE24B1C68204F9BDF39 /* StubGeneratorToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubGeneratorToken.swift; sourceTree = "<group>"; };
+		2CFD515A4F176B7208088254 /* AnchoredExpressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnchoredExpressionTests.swift; sourceTree = "<group>"; };
 		2D9CF0803D60B5788FE598E2 /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
 		30F41536F7999395E0E2F7EC /* TestingExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestingExtensions.swift; sourceTree = "<group>"; };
 		3392BF56B436489C26EF79F6 /* CucumberExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberExtensions.swift; sourceTree = "<group>"; };
@@ -618,6 +620,7 @@
 		D5446707BA3A39E9090564A6 /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				2CFD515A4F176B7208088254 /* AnchoredExpressionTests.swift */,
 				9B330B9C8309E062DC5F80CC /* HookTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
 			);
@@ -877,6 +880,7 @@
 				79F283AFD904F44B71ADB6FE /* MightEqualOperatorTests.swift in Sources */,
 				B1CCDDA288AE05759A3608D7 /* CustomReporterTests.swift in Sources */,
 				6B4A543BCCB35C350BB65F77 /* ReporterTests.swift in Sources */,
+				3859273DD63104B8F8884F39 /* AnchoredExpressionTests.swift in Sources */,
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
 				BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */,
@@ -1436,7 +1440,7 @@
 			repositoryURL = "https://github.com/cucumberswift/CucumberSwiftExpressions.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.0.8;
+				minimumVersion = 1.0.0;
 			};
 		};
 		AD3E8E4A6C3684CD29E6B6B4 /* XCRemoteSwiftPackageReference "JSONSchema.swift" */ = {
