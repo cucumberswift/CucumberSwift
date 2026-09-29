@@ -729,7 +729,6 @@ class NotesTests(PlanTestCase):
 # publish --------------------------------------------------------------------
 
 PLIST = "Sources/CucumberSwift/Info.plist"
-PODSPEC = "CucumberSwift.podspec"
 PLIST_TEXT = """<?xml version="1.0" encoding="UTF-8"?>
 <plist version="1.0">
 <dict>
@@ -742,13 +741,6 @@ PLIST_TEXT = """<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>
 """
-PODSPEC_TEXT = """Pod::Spec.new do |s|
-    s.name             = 'CucumberSwift'
-    s.version          = '5.0.10'
-    s.source           = { :git => 'https://github.com/cucumberswift/CucumberSwift.git', :tag => s.version.to_s }
-    s.swift_version = '5.4'
-end
-"""
 COMMIT = "c" * 40
 TAG_OBJECT = "7" * 40
 
@@ -760,13 +752,12 @@ def encoded(text):
 class PublishTests(ReleaseTestCase):
     def setUp(self):
         super().setUp()
-        os.environ.update(BRANCH="main", VERSION="5.0.11", LATEST="true", PLIST=PLIST, PODSPEC=PODSPEC)
+        os.environ.update(BRANCH="main", VERSION="5.0.11", LATEST="true", PLIST=PLIST)
         r = self.fake.responses
         r[("GET", f"repos/{REPO}/git/ref/heads/main")] = {"object": {"sha": SHA}}
         r[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = encoded(PLIST_TEXT)
-        r[("GET", f"repos/{REPO}/contents/{PODSPEC}?ref={SHA}")] = encoded(PODSPEC_TEXT)
         r[("GET", f"repos/{REPO}/git/commits/{SHA}")] = {"sha": SHA, "tree": {"sha": "t" * 40}}
-        self.blobs = iter(("1" * 40, "2" * 40))
+        self.blobs = iter(("1" * 40,))
         r[("POST", f"repos/{REPO}/git/blobs")] = lambda body: {"sha": next(self.blobs)}
         r[("POST", f"repos/{REPO}/git/trees")] = {"sha": "e" * 40}
         r[("POST", f"repos/{REPO}/git/commits")] = {"sha": COMMIT}
@@ -794,7 +785,6 @@ class PublishTests(ReleaseTestCase):
         out = self.call(release.publish)
         self.assertEqual(self.writes(), [
             ("POST", f"repos/{REPO}/git/blobs"),
-            ("POST", f"repos/{REPO}/git/blobs"),
             ("POST", f"repos/{REPO}/git/trees"),
             ("POST", f"repos/{REPO}/git/commits"),
             ("PATCH", f"repos/{REPO}/git/refs/heads/main"),
@@ -802,8 +792,7 @@ class PublishTests(ReleaseTestCase):
             ("POST", f"repos/{REPO}/git/refs"),
         ])
         self.assertEqual(self.body("POST", "git/trees"), {"base_tree": "t" * 40, "tree": [
-            {"path": PLIST, "mode": "100644", "type": "blob", "sha": "1" * 40},
-            {"path": PODSPEC, "mode": "100644", "type": "blob", "sha": "2" * 40}]})
+            {"path": PLIST, "mode": "100644", "type": "blob", "sha": "1" * 40}]})
         self.assertEqual(self.body("POST", "git/commits"),
                          {"message": "chore: set version 5.0.11", "tree": "e" * 40, "parents": [SHA]})
         self.assertEqual(self.body("PATCH", "git/refs/heads/main"), {"sha": COMMIT, "force": False})
@@ -824,8 +813,7 @@ class PublishTests(ReleaseTestCase):
     def test_the_version_commit_changes_only_the_version_lines(self):
         self.call(release.publish)
         blobs = [call[2] for call in self.fake.called("POST", f"repos/{REPO}/git/blobs")]
-        for blob, before, lines in ((blobs[0], PLIST_TEXT, ["\t<string>5.0.11</string>"] * 2),
-                                    (blobs[1], PODSPEC_TEXT, ["    s.version          = '5.0.11'"])):
+        for blob, before, lines in ((blobs[0], PLIST_TEXT, ["\t<string>5.0.11</string>"] * 2),):
             self.assertEqual(blob["encoding"], "base64")
             after = base64.b64decode(blob["content"]).decode("utf-8")
             changed = [l for l in difflib.ndiff(before.splitlines(True), after.splitlines(True)) if l[:1] in "+-"]
@@ -854,8 +842,6 @@ class PublishTests(ReleaseTestCase):
 
     def test_missing_or_current_version_files_are_skipped(self):
         self.fake.responses[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = Status(404)
-        self.fake.responses[("GET", f"repos/{REPO}/contents/{PODSPEC}?ref={SHA}")] = encoded(
-            PODSPEC_TEXT.replace("5.0.10", "5.0.11"))
         self.call(release.publish)
         # Nothing to commit: the release is tagged at the released commit.
         self.assertEqual(self.writes(), [("POST", f"repos/{REPO}/git/tags"), ("POST", f"repos/{REPO}/git/refs")])
@@ -863,7 +849,6 @@ class PublishTests(ReleaseTestCase):
 
     def test_unset_version_files_are_not_read(self):
         del os.environ["PLIST"]
-        os.environ["PODSPEC"] = ""
         self.call(release.publish)
         self.assertFalse([c for c in self.fake.calls if "/contents/" in c[1]])
 
@@ -914,7 +899,7 @@ class PublishTests(ReleaseTestCase):
                        {"parents": ("b" * 40,)}, {"parents": (SHA, "b" * 40)}):
             with self.subTest(**kwargs):
                 self.fake.calls.clear()
-                self.blobs = iter(("1" * 40, "2" * 40))
+                self.blobs = iter(("1" * 40,))
                 self.earlier_attempt(**kwargs)
                 self.fake.responses[("PATCH", f"repos/{REPO}/git/refs/heads/main")] = Status(422)
                 self.assertIn("main moved during the run", self.fails(release.publish))
@@ -940,7 +925,7 @@ class PublishTests(ReleaseTestCase):
                 self.fake.responses[("GET", f"repos/{REPO}/git/ref/tags/5.0.11")] = {"object": ref}
                 self.fake.responses[("GET", f"repos/{REPO}/git/tags/{TAG_OBJECT}")] = {
                     "object": {"type": "commit", "sha": "b" * 40}}
-                self.blobs = iter(("1" * 40, "2" * 40))
+                self.blobs = iter(("1" * 40,))
                 self.assertEqual(self.fails(release.publish),
                                  "The tag 5.0.11 already exists and points to another commit.")
                 self.assertEqual(self.fake.processes, [])
@@ -968,14 +953,12 @@ class PublishTests(ReleaseTestCase):
 
 
 class SetVersionTests(ReleaseTestCase):
-    def test_plist_and_podspec(self):
+    def test_plist(self):
         self.assertEqual(release.set_version(PLIST, PLIST_TEXT, "5.0.11"),
                          PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0.11</string>")
                                    .replace("<string>1.0</string>", "<string>5.0.11</string>"))
-        self.assertEqual(release.set_version(PODSPEC, PODSPEC_TEXT, "5.0.11"),
-                         PODSPEC_TEXT.replace("'5.0.10'", "'5.0.11'"))
-        double = 'Pod::Spec.new do |s|\n  s.version = "0.0.9"\nend\n'
-        self.assertEqual(release.set_version("X.podspec", double, "0.1.0"), double.replace("0.0.9", "0.1.0"))
+        self.assertEqual(self.fails(release.set_version, "X.txt", "version = 1", "5.0.11"),
+                         "X.txt is not a version file the release can change.")
 
     def test_exactly_one_version_is_required(self):
         cases = [(PLIST, PLIST_TEXT.replace("<key>CFBundleVersion<", "<key>CFBundleOther<"), "CFBundleVersion"),
@@ -987,10 +970,7 @@ class SetVersionTests(ReleaseTestCase):
                  (PLIST, PLIST_TEXT.replace("</dict>", "\t<key>CFBundleVersion</key>\n\t<integer>1</integer>\n</dict>"),
                   "CFBundleVersion"),
                  (PLIST, PLIST_TEXT.replace("<string>1.0</string>", "<integer>1</integer>"),
-                  "CFBundleShortVersionString"),
-                 (PODSPEC, PODSPEC_TEXT.replace("s.version  ", "s.versions"), "version"),
-                 (PODSPEC, PODSPEC_TEXT + "  s.version = '1.0.0'\n", "version"),
-                 (PODSPEC, PODSPEC_TEXT + "  s.version = s.name\n", "version")]
+                  "CFBundleShortVersionString")]
         for path, text, name in cases:
             with self.subTest(path=path, text=text):
                 self.assertEqual(self.fails(release.set_version, path, text, "5.0.11"),
@@ -1000,8 +980,7 @@ class SetVersionTests(ReleaseTestCase):
         # Replacing it would change more than its own line.
         cases = [(PLIST, PLIST_TEXT.replace("<string>5.0.10</string>", "<string>5.0\n10</string>"), "CFBundleVersion"),
                  (PLIST, PLIST_TEXT.replace("<string>1.0</string>", "<string>1.\n0</string>"),
-                  "CFBundleShortVersionString"),
-                 (PODSPEC, PODSPEC_TEXT.replace("'5.0.10'", "'5.0\n10'"), "version")]
+                  "CFBundleShortVersionString")]
         for path, text, name in cases:
             with self.subTest(path=path, text=text):
                 self.assertEqual(self.fails(release.set_version, path, text, "5.0.11"),
