@@ -51,6 +51,16 @@ class StringExtensionsTests: XCTestCase {
     }
 #endif
 
+    func testAnInvalidRegexIsRecordedOnceHoweverOftenItIsMatched() {
+        let initialErrors = RegularExpression.errors
+        defer { RegularExpression.errors = initialErrors }
+
+        _ = "@smoke".matches(for: "@a(")
+        _ = "@regression".matches(for: "@a(")
+
+        XCTAssertEqual(RegularExpression.errors.dropFirst(initialErrors.count).filter { $0.message.contains("'@a('") }.count, 1)
+    }
+
     func testMatchesReturnsAnEmptyArrayForNonMatchingRegex() {
         let matches = "This is a test".matches(for: "^xc7qqv....$")
         XCTAssertEqual(matches.count, 0)

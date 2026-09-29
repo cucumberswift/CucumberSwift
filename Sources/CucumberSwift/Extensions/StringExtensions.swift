@@ -78,7 +78,11 @@ extension String {
             // the way every other setup problem is - `CucumberTest.testGherkin()` turns
             // `RegularExpression.errors` into an XCTFail - rather than printing into console noise
             // nobody reads.
-            RegularExpression.errors.append(.init(message: RegularExpression.message(for: regex, error), file: nil, line: nil))
+            // A tag filter is matched against every feature and scenario, so record each pattern once.
+            let problem = RegularExpression.Problem(message: RegularExpression.message(for: regex, error), file: nil, line: nil)
+            if !RegularExpression.errors.contains(problem) {
+                RegularExpression.errors.append(problem)
+            }
             return []
         }
     }
