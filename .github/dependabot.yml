@@ -20,6 +20,11 @@ updates:
     labels:
       - dependencies
       - github-actions
+    # init and analyze must run the same version, so update them together.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
 
   # Swift Package Manager dependencies declared in Package.swift.
   - package-ecosystem: swift

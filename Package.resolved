@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
         "state": {
           "branch": null,
-          "revision": "5200dc2c5d7cd31f07a13f030ab0027224d2dbea",
-          "version": "0.0.8"
+          "revision": "6f10ab9c0d2ed940d8bb586456c0c4b66f79f6fc",
+          "version": "1.0.0"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/apple/swift-docc-plugin",
         "state": {
           "branch": null,
-          "revision": "3e4f133a77e644a5812911a0513aeb7288b07d06",
-          "version": "1.4.5"
+          "revision": "647c708be89f834fa6a6d4945442793a77ddf5b6",
+          "version": "1.5.0"
         }
       },
       {

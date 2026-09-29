@@ -84,6 +84,18 @@ jobs:
             echo "::error::The root shows $(jq -r .version "$site"), not $VERSION."
             exit 1
           fi
+          # The landing page's heading, above the title, is "Version X.Y.Z" (after
+          # 5.0.13; release.yml adds it). Only this release's pages are checked:
+          # older ones carry none.
+          pages=("${VERSION%%.*}.x/")
+          if [ "$LATEST" = true ]; then pages+=(""); fi
+          for dir in "${pages[@]}"; do
+            heading=$(jq -r .metadata.roleHeading "$RUNNER_TEMP/site/${dir}data/documentation/$MODULE.json")
+            if [ "$heading" != "Version $VERSION" ]; then
+              echo "::error::/$DOCS_PATH/$dir shows the heading \"$heading\", not \"Version $VERSION\"."
+              exit 1
+            fi
+          done
           echo "$VERSION is published."
       # One artifact per attempt: deploy-pages fails if a re-run finds two with the same name.
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

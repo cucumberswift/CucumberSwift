@@ -36,9 +36,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # Version files the release commit updates. A file that does not exist is skipped.
+  # Version file the release commit updates.
   PLIST: Sources/CucumberSwift/Info.plist
-  PODSPEC: CucumberSwift.podspec
   DOCC_TARGET: CucumberSwift
   # Where the docs are served on https://cucumberswift.org: this repository's
   # Pages site. DocC bakes this path into its output. Docs built for an earlier
@@ -210,6 +209,20 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      # In this checkout only; nothing is committed. $VERSION, not Info.plist: this
+      # commit comes before the version commit. docs.yml checks the heading.
+      - name: Show the version on the landing page
+        run: |
+          page="Sources/$DOCC_TARGET/$DOCC_TARGET.docc/$DOCC_TARGET.md"
+          if [ "$(head -n 1 "$page")" != "# \`\`$DOCC_TARGET\`\`" ] || grep -q '@Metadata' "$page"; then
+            echo "::error::$page must start with its title and have no @Metadata."
+            exit 1
+          fi
+          { head -n 1 "$page"
+            printf '\n@Metadata {\n    @TitleHeading("Version %s")\n}\n' "$VERSION"
+            tail -n +2 "$page"
+          } > "$RUNNER_TEMP/landing.md"
+          mv "$RUNNER_TEMP/landing.md" "$page"
       # Zipped, because artifact file names may not contain ":", which DocC uses.
       - name: Generate DocC static sites
         run: |

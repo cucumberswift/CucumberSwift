@@ -22,35 +22,4 @@ platform :ios do
       configuration: "release"
     )
   end
-
-  lane :cocoapods_liblint do
-    pod_lib_lint(podspec: 'CucumberSwift.podspec', allow_warnings: true)
-  end
-
-  desc "Release a new version with a patch bump_type"
-  lane :patch do
-    release("patch")
-  end
-
-  desc "Release a new version with a minor bump_type"
-  lane :minor do
-    release("minor")
-  end
-
-  desc "Release a new version with a major bump_type"
-  lane :major do
-    release("major")
-  end
-
-  def release(type)
-    podspec_name = "CucumberSwift.podspec"
-    version = version_bump_podspec(path: podspec_name,
-                                   bump_type: type)
-    update_plist(
-      plist_path: "Sources/CucumberSwift/Info.plist",
-      block: proc do |plist|
-        plist[:CFBundleVersion] = version
-      end
-    )
-  end
 end
