@@ -209,10 +209,12 @@ class StepTest: XCTestCase {
         XCTAssertEqual(problem?.file, "StepDefinitions.swift")
         XCTAssertEqual(problem?.line, 42)
         XCTAssert(problem?.message.contains(pattern) ?? false)
+#if compiler(>=5.7) && canImport(_StringProcessing)
         if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) {
             XCTAssert(problem?.message.hasSuffix("expected ')'") ?? false,
                       "The message should say what is wrong with the pattern: \(problem?.message ?? "")")
         }
+#endif
         XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
                      "A pattern that will not compile can never match, so it should not be attached")
     }
