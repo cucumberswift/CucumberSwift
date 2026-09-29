@@ -89,9 +89,25 @@ def clean(title):
     return title.replace("@", "@​")  # no mentions
 
 
-FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# CommonMark: a backtick fence's info string has no backticks, a closing fence
+# is the same character, at least as long, followed only by spaces, and a code
+# span is closed by a backtick run of exactly the opening run's length.
+FENCE_OPEN = re.compile(r"^ {0,3}(?:(`{3,})[^`]*|(~{3,}).*)$")
+FENCE_CLOSE = re.compile(r"^ {0,3}(`{3,}|~{3,})[ \t]*$")
 HEADING = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t#]*$")
-CODE_SPAN = re.compile(r"(`+)(.+?)\1")
+CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
+
+
+def fence_after(line, fence):
+    """The code fence open after `line`, given the one open before it, or None
+    outside a fenced code block."""
+    if fence:
+        closed = FENCE_CLOSE.match(line)
+        if closed and closed.group(1)[0] == fence[0] and len(closed.group(1)) >= len(fence):
+            return None
+        return fence
+    opened = FENCE_OPEN.match(line)
+    return (opened.group(1) or opened.group(2)) if opened else None
 
 
 def migration(body):
@@ -100,13 +116,8 @@ def migration(body):
     fenced code blocks are never taken for headings."""
     found, lines, fence = False, [], None
     for line in (body or "").replace("\r\n", "\n").split("\n"):
-        opened = FENCE.match(line)
-        if fence:
-            if opened and opened.group(1)[0] == fence[0] and len(opened.group(1)) >= len(fence):
-                fence = None
-        elif opened:
-            fence = opened.group(1)
-        else:
+        code, fence = bool(fence), fence_after(line, fence)
+        if not (code or fence):
             heading = HEADING.match(line)
             if heading and len(heading.group(1)) <= 2:
                 if found:
@@ -124,14 +135,8 @@ def clean_block(text):
     code blocks, links and other Markdown are kept."""
     out, fence = [], None
     for line in text.split("\n"):
-        opened = FENCE.match(line)
-        if fence:
-            if opened and opened.group(1)[0] == fence[0] and len(opened.group(1)) >= len(fence):
-                fence = None
-            out.append(line)
-            continue
-        if opened:
-            fence = opened.group(1)
+        code, fence = bool(fence), fence_after(line, fence)
+        if code or fence:
             out.append(line)
             continue
         parts, last = [], 0

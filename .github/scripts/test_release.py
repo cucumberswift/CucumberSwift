@@ -778,6 +778,35 @@ class MigrationTests(PlanTestCase):
                          "[docs](https://example.com)\n"
                          "Use `Array<Int>` and ``a ` @b``.\n\n```swift\nlet x: Array<Int> = [] // @main\n```")
 
+    def test_a_code_span_needs_a_closing_run_of_the_same_length(self):
+        cases = {
+            # One tick opens, two do not close: not code.
+            "`@team``": f"`@{ZWSP}team``",
+            "```@a``": f"```@{ZWSP}a``",
+            # Two ticks open and close, with a tick inside: code.
+            "`` `@team`` `": "`` `@team`` `",
+            "``@a`` and `<b>`": "``@a`` and `<b>`",
+            # The single tick closes at the next single tick, past the double one.
+            "`@a`` and `@b`": f"`@a`` and `@{ZWSP}b`",
+        }
+        for text, shown in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(release.clean_block(text), shown)
+
+    def test_a_closing_fence_has_only_spaces_after_it(self):
+        text = "```\n@a <b>\n``` not a close\n```  \n@c <d>"
+        self.assertEqual(release.clean_block(text), f"```\n@a <b>\n``` not a close\n```  \n@{ZWSP}c &lt;d&gt;")
+        body = "## Migration\n\n```\n## inside\n```text\n## still inside\n```\n\nDone.\n\n## Next"
+        self.assertEqual(release.migration(body), "```\n## inside\n```text\n## still inside\n```\n\nDone.")
+
+    def test_a_closing_fence_is_the_same_character_and_at_least_as_long(self):
+        text = "````\n@a\n```\n~~~~\n@b\n````\n@c"
+        self.assertEqual(release.clean_block(text), f"````\n@a\n```\n~~~~\n@b\n````\n@{ZWSP}c")
+
+    def test_backticks_in_the_info_string_do_not_open_a_fence(self):
+        self.assertEqual(release.clean_block("```a`b @c\n@d"), f"```a`b @{ZWSP}c\n@{ZWSP}d")
+        self.assertEqual(release.migration("## Migration\n\n```a`b\n## Next\n\nNot this."), "```a`b")
+
     def test_an_unclosed_code_span_is_not_code(self):
         self.assertEqual(release.clean_block("A `tick and <b>"), "A `tick and &lt;b&gt;")
 
