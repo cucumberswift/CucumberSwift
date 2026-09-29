@@ -97,14 +97,18 @@ class AnchoredExpressionTests: XCTestCase {
     // The compatibility break in 6.0.0. A trailing `$` used to be a literal character; it is now a
     // regular expression anchor, so this definition no longer matches the step text `I owe 5$`.
     // Because `I owe 5$` is a valid regular expression, nothing traps — it silently stops matching.
-    func testTrailingLiteralDollarIsNowAnAnchor() {
+    //
+    // Asserts on `canExecute` rather than on the closure not running: "did not run" would also pass
+    // if the step were never parsed or never executed, so it would not prove the definition failed
+    // to attach.
+    func testTrailingLiteralDollarIsNowAnAnchor() throws {
         parseFeature(withStep: "I owe 5$")
 
-        var ran = false
-        Given("I owe 5$") { _, _ in ran = true }
+        Given("I owe 5$") { _, _ in }
 
-        Cucumber.shared.executeFeatures()
-
-        XCTAssertFalse(ran, "a trailing $ is an anchor from 6.0.0, not a literal character")
+        let step = try XCTUnwrap(Cucumber.shared.features.first?.scenarios.first?.steps.first,
+                                 "the feature must parse into one step for this test to mean anything")
+        XCTAssertEqual(step.match, "I owe 5$")
+        XCTAssertFalse(step.canExecute, "a trailing $ is an anchor from 6.0.0, not a literal character")
     }
 }
