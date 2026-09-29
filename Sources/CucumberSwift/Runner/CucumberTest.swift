@@ -90,12 +90,16 @@ open class CucumberTest: XCTestCase {
         if let testCase = testCase {
             objc_registerClassPair(testCase)
         }
+        // XCTest may order a class's test methods by name, so each name starts with the step's
+        // zero-padded position to keep that order the same as the feature file's.
+        let indexWidth = max(3, String(scenario.steps.count - 1).count)
         scenario
             .steps
+            .enumerated()
             .lazy
-            .compactMap { step -> (step: Step, XCTestCase.Type, Selector)? in // swiftlint:disable:this large_tuple
+            .compactMap { index, step -> (step: Step, XCTestCase.Type, Selector)? in // swiftlint:disable:this large_tuple
                 if let testCase = testCase,
-                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method) {
+                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, width: indexWidth)) {
                     return (step, testCase, methodSelector)
                 }
                 return nil
@@ -164,8 +168,9 @@ extension CucumberTest {
 }
 
 extension Step {
-    fileprivate var method: TestCaseMethod? {
-        TestCaseMethod(withName: "\(keyword.toString()) \(match)".toClassString()) {
+    fileprivate func method(at index: Int, width: Int) -> TestCaseMethod? {
+        let position = String(format: "%0*d", width, index)
+        return TestCaseMethod(withName: "Step\(position)_" + "\(keyword.toString()) \(match)".toClassString()) {
             guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }) else { return }
             let startTime = Date()
             self.startTime = startTime
