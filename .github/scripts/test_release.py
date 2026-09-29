@@ -137,8 +137,12 @@ def pull(number, login="alice", user_type="User", base="main", repo=REPO, merged
             "user": {"login": login, "type": user_type}}
 
 
-def issue(number, title, kind="Task", labels=(), repo=REPO, state="COMPLETED"):
-    return {"number": number, "title": title, "stateReason": state,
+# An issue body with a migration section, as every breaking issue needs.
+MIGRATION = "Some context.\n\n## Migration\n\nCall `run()` instead.\n\n## Details\n\nMore."
+
+
+def issue(number, title, kind="Task", labels=(), repo=REPO, state="COMPLETED", body=""):
+    return {"number": number, "title": title, "body": body, "stateReason": state,
             "repository": {"nameWithOwner": repo},
             "issueType": {"name": kind} if kind else None,
             "labels": {"nodes": [{"name": label} for label in labels]}}
@@ -330,7 +334,7 @@ class BumpCheckTests(PlanTestCase):
         self.fake.tags = self.fake.merged = ["0.3.0", "0.3.1"]
 
     def test_breaking_needs_major(self):
-        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Task", ["breaking"])])
+        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Task", ["breaking"], body=MIGRATION)])
         for bump in ("patch", "minor"):
             with self.subTest(bump):
                 self.assertEqual(self.plan_fails(bump),
@@ -340,7 +344,7 @@ class BumpCheckTests(PlanTestCase):
 
     def test_breaking_needs_at_least_minor_below_1_0_0(self):
         self.at_0x()
-        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Bug", ["breaking"])])
+        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Bug", ["breaking"], body=MIGRATION)])
         self.assertIn("which needs at least minor", self.plan_fails("patch"))
         self.assertEqual(self.plan("minor")["version"], "0.4.0")
 
@@ -630,7 +634,7 @@ class NotesTests(PlanTestCase):
         self.fake.commit("e" * 40, "[ci skip] Apply automatic changes")
         self.fake.merge(42, "Tags and docs", [issue(13, "Filter by tag", "Feature"),
                                               issue(14, "Document tags", None),
-                                              issue(15, "Rename Scenario", "Bug", ["breaking"])], login="bob")
+                                              issue(15, "Rename Scenario", "Bug", ["breaking"], body=MIGRATION)], login="bob")
         self.fake.merge(43, "Fix the crash again", [issue(12, "Crash on launch", "Bug")], login="carol")
         # A second commit of #40.
         self.fake.commit("f" * 40, "Review fixes", [pull(40)])
@@ -641,6 +645,10 @@ class NotesTests(PlanTestCase):
             "## Breaking changes",
             "",
             "- Rename Scenario (#15, #42 by @bob)",
+            "",
+            "  **Migration:**",
+            "",
+            "  Call `run()` instead.",
             "",
             "## Bugs",
             "",
@@ -724,6 +732,126 @@ class NotesTests(PlanTestCase):
         self.assertEqual(release.pull_ref(40, {}), "#40")
         self.assertEqual(release.pull_ref(40, {40: ""}), "#40")
         self.assertEqual(release.pull_ref(40, {40: "@alice"}), "#40 by @alice")
+
+
+class MigrationTests(PlanTestCase):
+    def setUp(self):
+        super().setUp()
+        self.fake.support = {"support/5.x": {"5.0.10"}}
+
+    def test_the_section_runs_to_the_next_heading_of_the_same_level(self):
+        body = ("## Summary\n\nWhy.\n\n## Migration\n\nStep one.\n\n### On macOS\n\nStep two.\n\n"
+                "## Root cause\n\nNot this.")
+        self.assertEqual(release.migration(body), "Step one.\n\n### On macOS\n\nStep two.")
+
+    def test_the_last_section_runs_to_the_end(self):
+        self.assertEqual(release.migration("Intro.\n\n## Migration\n\nDo this.\n"), "Do this.")
+
+    def test_a_top_level_heading_also_ends_it(self):
+        self.assertEqual(release.migration("## Migration\n\nDo this.\n\n# Appendix\n\nNot this."), "Do this.")
+
+    def test_no_section(self):
+        for body in ("", None, "## Summary\n\nNothing to migrate.", "### Migration\n\nToo deep.",
+                     "## Migration notes\n\nAnother heading.", "Migration\n\nNot a heading."):
+            with self.subTest(body=body):
+                self.assertEqual(release.migration(body), "")
+
+    def test_the_heading_ignores_case_spacing_and_closing_hashes(self):
+        for heading in ("## Migration", "##   migration  ", "## MIGRATION ##", "  ## Migration"):
+            with self.subTest(heading=heading):
+                self.assertEqual(release.migration(f"{heading}\n\nDo this."), "Do this.")
+
+    def test_windows_line_endings(self):
+        self.assertEqual(release.migration("## Migration\r\n\r\nDo this.\r\n## Next\r\n"), "Do this.")
+
+    def test_headings_inside_code_blocks_do_not_count(self):
+        body = ("```\n## Migration\nNot this.\n```\n\n## Migration\n\nRun:\n\n```bash\n# a comment\n"
+                "## another\n```\n\n~~~~\n```\n## still code\n~~~~\n\nDone.\n\n## Next")
+        self.assertEqual(release.migration(body),
+                         "Run:\n\n```bash\n# a comment\n## another\n```\n\n~~~~\n```\n## still code\n~~~~\n\nDone.")
+
+    def test_html_and_mentions_are_neutralised_outside_code(self):
+        text = ("Thanks @octocat. <script>x</script> & <b>y</b>, [docs](https://example.com)\n"
+                "Use `Array<Int>` and ``a ` @b``.\n\n```swift\nlet x: Array<Int> = [] // @main\n```")
+        self.assertEqual(release.clean_block(text),
+                         f"Thanks @{ZWSP}octocat. &lt;script&gt;x&lt;/script&gt; &amp; &lt;b&gt;y&lt;/b&gt;, "
+                         "[docs](https://example.com)\n"
+                         "Use `Array<Int>` and ``a ` @b``.\n\n```swift\nlet x: Array<Int> = [] // @main\n```")
+
+    def test_an_unclosed_code_span_is_not_code(self):
+        self.assertEqual(release.clean_block("A `tick and <b>"), "A `tick and &lt;b&gt;")
+
+    def test_the_section_is_listed_under_its_issue(self):
+        self.fake.tags = self.fake.merged = ["5.0.10"]
+        body = "## Migration\n\nUse `run()`:\n\n```swift\nrun()\n```\n\n- one\n- two"
+        self.fake.merge(40, "Rename", [issue(12, "Rename start", "Task", ["breaking"], body=body)])
+        self.fake.merge(41, "Drop pods", [issue(13, "Drop CocoaPods", "Task", body="## Migration\n\nUse SwiftPM.")])
+        self.fake.merge(42, "Fix", [issue(14, "Crash", "Bug", body="## Summary\n\nNo migration.")])
+        self.plan("major")
+        self.assertEqual(self.read("notes.md"), "\n".join([
+            "## Breaking changes",
+            "",
+            "- Rename start (#12, #40 by @alice)",
+            "",
+            "  **Migration:**",
+            "",
+            "  Use `run()`:",
+            "",
+            "  ```swift",
+            "  run()",
+            "  ```",
+            "",
+            "  - one",
+            "  - two",
+            "",
+            "## Bugs",
+            "",
+            "- Crash (#14, #42 by @alice)",
+            "",
+            "## Tasks",
+            "",
+            "- Drop CocoaPods (#13, #41 by @alice)",
+            "",
+            "  **Migration:**",
+            "",
+            "  Use SwiftPM.",
+            "",
+            f"**Full list of changes:** https://github.com/{REPO}/compare/5.0.10...6.0.0",
+            "",
+        ]))
+        self.assertIn("  Use `run()`:", self.read(self.summary))
+
+    def test_a_breaking_issue_without_a_section_is_refused(self):
+        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Task", ["breaking"])])
+        self.assertEqual(self.plan_fails("major"),
+                         '#12 is labelled breaking but has no "## Migration" section. Add one to the issue body, '
+                         "saying what consumers must change, and run again. Nothing was created.")
+        self.assertFalse(os.path.exists("notes.md"))
+        self.assertEqual(self.read(self.output), "")
+
+    def test_an_empty_section_is_refused(self):
+        body = "## Migration\n\n   \n\n## Details\n\nMore."
+        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Task", ["breaking"], body=body)])
+        self.assertIn("#12 is labelled breaking but has no", self.plan_fails("major"))
+
+    def test_every_breaking_issue_without_a_section_is_listed(self):
+        self.fake.merge(40, "Remove APIs", [issue(12, "Remove A", "Task", ["breaking"]),
+                                            issue(13, "Remove B", "Task", ["breaking"], body=MIGRATION),
+                                            issue(14, "Remove C", "Bug", ["breaking"])])
+        self.assertTrue(self.plan_fails("major").startswith(
+            '#12, #14 are labelled breaking but have no "## Migration" section.'))
+
+    def test_the_bump_is_checked_before_the_section(self):
+        self.fake.merge(40, "Remove API", [issue(12, "Remove API", "Task", ["breaking"])])
+        self.assertIn("patch is too low", self.plan_fails("patch"))
+
+    def test_the_section_never_reaches_a_command(self):
+        self.fake.tags = self.fake.merged = ["5.0.10"]
+        body = "## Migration\n\nRun $(touch pwned) and `touch pwned`."
+        self.fake.merge(40, "Rename", [issue(12, "Rename", "Task", ["breaking"], body=body)])
+        self.plan("major")
+        self.assertIn("Run $(touch pwned) and `touch pwned`.", self.read("notes.md"))
+        self.assertFalse([r for r in self.fake.runs if any("pwned" in str(a) for a in r)])
 
 
 # publish --------------------------------------------------------------------

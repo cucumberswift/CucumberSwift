@@ -155,6 +155,8 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 **Public API.** A change to a `public` or `open` symbol should be additive. If it has to be breaking, say so on the issue before you write it. Be careful with new overloads: one can silently change which method existing code calls (see [#125](https://github.com/cucumberswift/CucumberSwift/issues/125)).
 
+**Breaking changes need a migration note.** If users have to change something to upgrade, the issue body gets a `## Migration` section that says what to change, with an example. The release notes copy it under the issue's entry, and a release refuses to start while an issue labelled `breaking` has none. Any other issue can have one too, for example when an install channel goes away. Keep it to what users must do; the background belongs in the rest of the issue.
+
 **New source files.** `Project.swift` picks up source files by glob, so you don't add them to the Xcode project by hand. Run `mise run generate` and commit the regenerated `CucumberSwift.xcodeproj` with your change. Carthage builds from that project, so a file missing there breaks Carthage users. See [The Xcode project](#the-xcode-project).
 
 **Keep the diff focused.**

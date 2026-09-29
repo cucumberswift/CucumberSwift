@@ -89,6 +89,61 @@ def clean(title):
     return title.replace("@", "@​")  # no mentions
 
 
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+HEADING = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t#]*$")
+CODE_SPAN = re.compile(r"(`+)(.+?)\1")
+
+
+def migration(body):
+    """The text of the issue body's "## Migration" section, up to the next
+    heading of the same or a higher level, or "" when there is none. Lines in
+    fenced code blocks are never taken for headings."""
+    found, lines, fence = False, [], None
+    for line in (body or "").replace("\r\n", "\n").split("\n"):
+        opened = FENCE.match(line)
+        if fence:
+            if opened and opened.group(1)[0] == fence[0] and len(opened.group(1)) >= len(fence):
+                fence = None
+        elif opened:
+            fence = opened.group(1)
+        else:
+            heading = HEADING.match(line)
+            if heading and len(heading.group(1)) <= 2:
+                if found:
+                    break
+                found = len(heading.group(1)) == 2 and (heading.group(2) or "").strip().lower() == "migration"
+                continue
+        if found:
+            lines.append(line)
+    return "\n".join(lines).strip("\n")
+
+
+def clean_block(text):
+    """Make Markdown written in an issue safe to copy into the release notes.
+    HTML and mentions are neutralised outside code, as in `clean`; code spans,
+    code blocks, links and other Markdown are kept."""
+    out, fence = [], None
+    for line in text.split("\n"):
+        opened = FENCE.match(line)
+        if fence:
+            if opened and opened.group(1)[0] == fence[0] and len(opened.group(1)) >= len(fence):
+                fence = None
+            out.append(line)
+            continue
+        if opened:
+            fence = opened.group(1)
+            out.append(line)
+            continue
+        parts, last = [], 0
+        for span in CODE_SPAN.finditer(line):
+            parts.append(html.escape(line[last:span.start()], quote=False).replace("@", "@​"))
+            parts.append(span.group(0))
+            last = span.end()
+        parts.append(html.escape(line[last:], quote=False).replace("@", "@​"))
+        out.append("".join(parts))
+    return "\n".join(out)
+
+
 # plan ------------------------------------------------------------------------
 
 # Branch rules that stop a direct push of the version commit. "required_signatures"
@@ -179,7 +234,7 @@ def changes(repo, branch, last_tag, sha):
         pullRequest(number: $number) {
           number title
           closingIssuesReferences(first: 50) {
-            nodes { number title stateReason repository { nameWithOwner } issueType { name } labels(first: 50) { nodes { name } } }
+            nodes { number title body stateReason repository { nameWithOwner } issueType { name } labels(first: 50) { nodes { name } } }
           }
         }
       }
@@ -217,6 +272,7 @@ def changes(repo, branch, last_tag, sha):
                 "title": issue["title"],
                 "type": (issue["issueType"] or {}).get("name", ""),
                 "breaking": any(l["name"] == "breaking" for l in issue["labels"]["nodes"]),
+                "migration": migration(issue.get("body")),
                 "pulls": [],
             })
             entry["pulls"].append(pull["number"])
@@ -244,9 +300,17 @@ def notes(repo, last, version, issues, lone_pulls, direct, authors):
     def section(title, entries):
         return [f"## {title}", ""] + entries + [""] if entries else []
 
+    def entry(n, i):
+        line = f"- {clean(i['title'])} (#{n}, {', '.join(pull_ref(p, authors) for p in i['pulls'])})"
+        text = i.get("migration", "")
+        if not text:
+            return line
+        # Indented under the entry, so it belongs to that list item.
+        block = "\n".join(f"  {l}" if l.strip() else "" for l in clean_block(text).split("\n"))
+        return f"{line}\n\n  **Migration:**\n\n{block}"
+
     def listed(predicate):
-        return [f"- {clean(i['title'])} (#{n}, {', '.join(pull_ref(p, authors) for p in i['pulls'])})"
-                for n, i in sorted(issues.items()) if predicate(i)]
+        return [entry(n, i) for n, i in sorted(issues.items()) if predicate(i)]
 
     known = ("Bug", "Feature", "Task")
     lines = []
@@ -317,6 +381,12 @@ def plan():
         wanted = {2: "minor", 3: "major"}[needed]
         fail(f"{bump} is too low: {', '.join(reasons)}, which needs at least {wanted}. "
              "Choose a higher bump, or fix the labels and run again.")
+    # A breaking change must say what consumers have to change.
+    missing = [f"#{n}" for n, i in sorted(issues.items()) if i["breaking"] and not i["migration"].strip()]
+    if missing:
+        fail(f"{', '.join(missing)} {'is' if len(missing) == 1 else 'are'} labelled breaking but "
+             f"{'has' if len(missing) == 1 else 'have'} no \"## Migration\" section. Add one to the issue body, "
+             "saying what consumers must change, and run again. Nothing was created.")
 
     # A support branch serves an older major, so its releases are never Latest,
     # even before the next major is out. This also keeps a support run and a main
