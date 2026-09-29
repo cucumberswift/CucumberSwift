@@ -7,6 +7,13 @@
 //
 
 import Foundation
+/// Regular expressions that would not compile. They come from a step definition's pattern or from
+/// `CUCUMBER_TAGS`, not from a .feature file, so `CucumberTest.testGherkin()` reports them apart
+/// from `Gherkin.errors`.
+enum RegularExpression {
+    static var errors = [String]()
+}
+
 extension String {
     init(_ staticString: StaticString) {
         self = staticString.withUTF8Buffer {
@@ -29,10 +36,10 @@ extension String {
             return matches
         } catch let error {
             // A pattern that will not compile is a programming error, not a non-match. Surface it
-            // the way every other setup problem does - `CucumberTest.testGherkin()` turns
-            // `Gherkin.errors` into an XCTFail - rather than printing into console noise nobody
-            // reads.
-            Gherkin.errors.append("Invalid regular expression '\(regex)': \(error.localizedDescription)")
+            // the way every other setup problem is - `CucumberTest.testGherkin()` turns
+            // `RegularExpression.errors` into an XCTFail - rather than printing into console noise
+            // nobody reads.
+            RegularExpression.errors.append("Invalid regular expression '\(regex)': \(error.localizedDescription)")
             return []
         }
     }

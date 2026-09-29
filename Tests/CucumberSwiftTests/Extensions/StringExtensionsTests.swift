@@ -19,14 +19,21 @@ class StringExtensionsTests: XCTestCase {
     }
 
     func testMatchesReturnsAnEmptyArrayForInvalidRegex() {
-        let initialErrors = Gherkin.errors
-        defer { Gherkin.errors = initialErrors }
+        let initialGherkinErrors = Gherkin.errors
+        let initialErrors = RegularExpression.errors
+        defer {
+            Gherkin.errors = initialGherkinErrors
+            RegularExpression.errors = initialErrors
+        }
 
         let matches = "This is a test".matches(for: "^(.*? is a test$")
 
         XCTAssertEqual(matches.count, 0)
-        XCTAssert(Gherkin.errors.dropFirst(initialErrors.count).contains { $0.contains("^(.*? is a test$") },
-                  "A pattern that will not compile should be recorded as a Gherkin error, not printed")
+        XCTAssert(RegularExpression.errors.dropFirst(initialErrors.count).contains { $0.contains("^(.*? is a test$") },
+                  "A pattern that will not compile should be recorded as a regular expression error, not printed")
+        XCTAssertEqual(Gherkin.errors,
+                       initialGherkinErrors,
+                       "A pattern that will not compile is not a problem in a .feature file, so it is not a Gherkin error")
     }
 
     func testMatchesReturnsAnEmptyArrayForNonMatchingRegex() {

@@ -175,7 +175,7 @@ class StepTest: XCTestCase {
 
     /// Regression test for #135: a step built by the Swift DSL used to compile the empty pattern
     /// `""` on every execution, which always throws. An uncompilable pattern is now recorded in
-    /// `Gherkin.errors`, so that is where the bug would show if it came back.
+    /// `RegularExpression.errors`, so that is where the bug would show if it came back.
     func testExecutingADSLStepDoesNotCompileARegex() throws {
         var handlerCalled = false
         let step = GivenStep(line: 1,
@@ -188,7 +188,7 @@ class StepTest: XCTestCase {
         try execute(step.match, step)
 
         XCTAssert(handlerCalled)
-        XCTAssert(Gherkin.errors.isEmpty,
-                  "Executing a DSL step should not compile a regex. Errors:\n\(Gherkin.errors.joined(separator: "\n"))")
+        XCTAssert(RegularExpression.errors.isEmpty,
+                  "Executing a DSL step should not compile a regex. Errors:\n\(RegularExpression.errors.joined(separator: "\n"))")
     }
 }

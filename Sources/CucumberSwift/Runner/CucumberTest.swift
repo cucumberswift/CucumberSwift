@@ -137,6 +137,13 @@ open class CucumberTest: XCTestCase {
             XCTFail($0)
         }
 
+        XCTAssert(RegularExpression.errors.isEmpty,
+                  "Invalid regular expressions found in step definitions or CUCUMBER_TAGS:\n\(RegularExpression.errors.joined(separator: "\n"))")
+
+        RegularExpression.errors.forEach {
+            XCTFail($0)
+        }
+
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
             let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
