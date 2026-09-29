@@ -1,4 +1,5 @@
 ![Build Status](https://github.com/cucumberswift/CucumberSwift/actions/workflows/CI.yml/badge.svg?branch=main)
+[![Latest version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcucumberswift.org%2FCucumberSwift%2Fversions.json&query=%24.version&label=latest%20version&color=brightgreen)](https://github.com/cucumberswift/CucumberSwift/releases/latest)
 [![codecov](https://codecov.io/gh/cucumberswift/CucumberSwift/graph/badge.svg?token=ARIPC8Q7H1)](https://codecov.io/gh/cucumberswift/CucumberSwift)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/c29b0bf4883b4387a41ac1d090773f65)](https://www.codacy.com/gh/cucumberswift/CucumberSwift/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=cucumberswift/CucumberSwift&amp;utm_campaign=Badge_Grade)
 
