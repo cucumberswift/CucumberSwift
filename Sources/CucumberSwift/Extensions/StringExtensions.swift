@@ -28,7 +28,11 @@ extension String {
             }
             return matches
         } catch let error {
-            print("invalid regex: \(error.localizedDescription)")
+            // A pattern that will not compile is a programming error, not a non-match. Surface it
+            // the way every other setup problem does - `CucumberTest.testGherkin()` turns
+            // `Gherkin.errors` into an XCTFail - rather than printing into console noise nobody
+            // reads.
+            Gherkin.errors.append("Invalid regular expression '\(regex)': \(error.localizedDescription)")
             return []
         }
     }
