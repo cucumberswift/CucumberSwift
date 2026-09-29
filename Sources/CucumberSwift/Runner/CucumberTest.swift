@@ -137,13 +137,7 @@ open class CucumberTest: XCTestCase {
             XCTFail($0)
         }
 
-        RegularExpression.errors.forEach { [self] problem in
-            if let issue = Self.issue(for: problem) {
-                failStep(issue)
-            } else {
-                XCTFail("\(problem.message) (in CUCUMBER_TAGS or a pattern CucumberSwift could not trace to a step definition)")
-            }
-        }
+        Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
@@ -161,16 +155,30 @@ open class CucumberTest: XCTestCase {
         }
     }
 
-    /// The failure for a regular expression that will not compile, at the step definition that wrote
-    /// it, so Xcode marks the consumer's own line. `nil` when the pattern has no step definition.
-    static func issue(for problem: RegularExpression.Problem) -> XCTIssue? {
-        guard let file = problem.file, let line = problem.line else { return nil }
-        return XCTIssue(type: .assertionFailure,
-                        compactDescription: problem.message,
-                        detailedDescription: nil,
-                        sourceCodeContext: .init(location: .init(fileURL: URL(fileURLWithPath: file), lineNumber: line)),
-                        associatedError: nil,
-                        attachments: [])
+    /// Records one failure for each regular expression that will not compile. A pattern from a step
+    /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
+    /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
+    static func reportInvalidRegularExpressions(_ problems: [RegularExpression.Problem],
+                                                file: StaticString = #filePath,
+                                                line: Int = #line,
+                                                record: (XCTIssue) -> Void) {
+        problems.forEach { problem in
+            let description: String
+            let location: XCTSourceCodeLocation
+            if let problemFile = problem.file, let problemLine = problem.line {
+                description = problem.message
+                location = XCTSourceCodeLocation(fileURL: URL(fileURLWithPath: problemFile), lineNumber: problemLine)
+            } else {
+                description = "\(problem.message) (in CUCUMBER_TAGS or a pattern CucumberSwift could not trace to a step definition)"
+                location = XCTSourceCodeLocation(filePath: String(file), lineNumber: line)
+            }
+            record(XCTIssue(type: .assertionFailure,
+                            compactDescription: description,
+                            detailedDescription: nil,
+                            sourceCodeContext: .init(location: location),
+                            associatedError: nil,
+                            attachments: []))
+        }
     }
 
     public dynamic func failStep(_ issue: XCTIssue) {

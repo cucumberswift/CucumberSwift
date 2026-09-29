@@ -217,23 +217,29 @@ class StepTest: XCTestCase {
                      "A pattern that will not compile can never match, so it should not be attached")
     }
 
-    /// `testGherkin()` reports the failure at the step definition, so Xcode marks the consumer's line.
-    func testAnInvalidRegexIsReportedAtItsStepDefinition() throws {
-        let problem = RegularExpression.Problem(message: "Invalid regular expression '^(': expected ')'",
-                                                file: "/tmp/StepDefinitions.swift",
-                                                line: 42)
+    /// `testGherkin()` reports each pattern that will not compile as a failure: at its step
+    /// definition when it has one, so Xcode marks the consumer's line, and otherwise from CucumberSwift.
+    func testInvalidRegularExpressionsAreReportedAtTheirStepDefinitions() throws {
+        let problems = [
+            RegularExpression.Problem(message: "Invalid regular expression '^(': expected ')'",
+                                      file: "/tmp/StepDefinitions.swift",
+                                      line: 42),
+            RegularExpression.Problem(message: "Invalid regular expression '@(': expected ')'", file: nil, line: nil)
+        ]
+        var issues = [XCTIssue]()
 
-        let issue = try XCTUnwrap(CucumberTest.issue(for: problem))
+        CucumberTest.reportInvalidRegularExpressions(problems, file: "/tmp/CucumberTest.swift", line: 7) { issues.append($0) }
 
-        XCTAssertEqual(issue.type, .assertionFailure)
-        XCTAssertEqual(issue.compactDescription, "Invalid regular expression '^(': expected ')'")
-        XCTAssertEqual(issue.sourceCodeContext.location?.fileURL, URL(fileURLWithPath: "/tmp/StepDefinitions.swift"))
-        XCTAssertEqual(issue.sourceCodeContext.location?.lineNumber, 42)
-    }
-
-    func testAnInvalidRegexWithNoStepDefinitionIsNotReportedAtALocation() {
-        let problem = RegularExpression.Problem(message: "Invalid regular expression '^(': expected ')'", file: nil, line: nil)
-
-        XCTAssertNil(CucumberTest.issue(for: problem))
+        XCTAssertEqual(issues.count, 2)
+        let located = try XCTUnwrap(issues.first)
+        XCTAssertEqual(located.type, .assertionFailure)
+        XCTAssertEqual(located.compactDescription, "Invalid regular expression '^(': expected ')'")
+        XCTAssertEqual(located.sourceCodeContext.location?.fileURL, URL(fileURLWithPath: "/tmp/StepDefinitions.swift"))
+        XCTAssertEqual(located.sourceCodeContext.location?.lineNumber, 42)
+        let unlocated = try XCTUnwrap(issues.last)
+        XCTAssert(unlocated.compactDescription.hasPrefix("Invalid regular expression '@(': expected ')' (in CUCUMBER_TAGS"),
+                  unlocated.compactDescription)
+        XCTAssertEqual(unlocated.sourceCodeContext.location?.fileURL, URL(fileURLWithPath: "/tmp/CucumberTest.swift"))
+        XCTAssertEqual(unlocated.sourceCodeContext.location?.lineNumber, 7)
     }
 }
