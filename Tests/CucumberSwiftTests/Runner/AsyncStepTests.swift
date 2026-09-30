@@ -23,6 +23,16 @@ private func isOnMainThread() -> Bool {
 
 private struct StepError: Error { }
 
+/// Never runs: `startAStepSynchronously` is called from inside a task, where starting a step throws.
+private func stepThatNeverRuns() async throws {
+    XCTFail("A step started synchronously from inside a task should not run")
+}
+
+@MainActor
+private func startAStepSynchronously() -> Result<Void, Error> {
+    Result { try AsyncStepRunner.run(stepThatNeverRuns) }
+}
+
 class AsyncStepTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -442,9 +452,7 @@ class AsyncStepTests: XCTestCase {
 
     func testStartingAnAsyncStepSynchronouslyFromInsideATaskThrows() async {
         // The task returns what happened rather than writing to a captured var, which Swift 5.10 rejects.
-        let result = await Task { @MainActor in
-            Result { try AsyncStepRunner.run { /* Never runs: starting it from inside a task throws. */ } }
-        }.value
+        let result = await Task { @MainActor in startAStepSynchronously() }.value
 
         guard case .failure(let error) = result else { return XCTFail("Expected an error") }
         XCTAssert(error is AsyncStepRunner.NestedWaitError)
