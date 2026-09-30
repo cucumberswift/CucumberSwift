@@ -160,13 +160,15 @@ open class CucumberTest: XCTestCase {
 
     // A test case needs at least one test to trigger the observer
     final func testGherkin() {
-        XCTAssert(Gherkin.errors.isEmpty, "Gherkin language errors found:\n\(Gherkin.errors.joined(separator: "\n"))")
+        let gherkinErrors = Gherkin.errors.snapshot
+        XCTAssert(gherkinErrors.isEmpty, "Gherkin language errors found:\n\(gherkinErrors.joined(separator: "\n"))")
 
-        Gherkin.errors.forEach {
+        gherkinErrors.forEach {
             XCTFail($0)
         }
 
-        Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
+        let invalidRegularExpressions = RegularExpression.errors.snapshot
+        Self.reportInvalidRegularExpressions(invalidRegularExpressions) { [self] in failStep($0) }
         Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
@@ -178,7 +180,7 @@ open class CucumberTest: XCTestCase {
 
             failStep(XCTIssue(type: .assertionFailure,
                               compactDescription: Self.missingStepDefinitionMessage(generatedSwift: $0.generatedSwift,
-                                                                                    invalidRegularExpressions: RegularExpression.errors),
+                                                                                    invalidRegularExpressions: invalidRegularExpressions),
                               detailedDescription: nil,
                               sourceCodeContext: .init(location: .init(fileURL: sourceFile, lineNumber: Int($0.step.location.line))),
                               associatedError: nil,

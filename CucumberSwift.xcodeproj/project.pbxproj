@@ -69,6 +69,7 @@
 		79F283AFD904F44B71ADB6FE /* MightEqualOperatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C81A88E41DDD343049CA6970 /* MightEqualOperatorTests.swift */; };
 		7A8947F876323F92020B9311 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DC264A5553551E1D8FBB53B /* XCTest.framework */; };
 		7CE534F756C528287DA119F7 /* StepBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEA7D8F25DD9C78B1F89FE0 /* StepBuilder.swift */; };
+		839EC3796E4B571B50B33E7F /* Locked.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22C7E99FE79D21B6087E54D /* Locked.swift */; };
 		8516266936C3D4A5F25EEBD1 /* WaitUntil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AB3A7392FB1651B0C69F5F /* WaitUntil.swift */; };
 		87D45B5DE00C3DC4F9247BDC /* ParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4653CC61B70D4024CE614C44 /* ParserTests.swift */; };
 		88F314E8090C164E5B972A74 /* Scenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A5C50E6EFEF58ED875D57 /* Scenario.swift */; };
@@ -94,6 +95,7 @@
 		A43AE851A9E592AAA58A6878 /* RuleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEA059D8DEDD462293ADB60B /* RuleTests.swift */; };
 		AB534846BC00891622829F85 /* StubGeneratorLexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C1B5E7AB9544FC9BB382DF /* StubGeneratorLexer.swift */; };
 		AB94B653663DE4361CE17BE5 /* CucumberExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3392BF56B436489C26EF79F6 /* CucumberExtensions.swift */; };
+		AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 086CE04A08240D7473E13F9E /* LockedTests.swift */; };
 		B1CCDDA288AE05759A3608D7 /* CustomReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1ADBAACCE85FCB69F0BF9B /* CustomReporterTests.swift */; };
 		B5542ACAE3A6679D467F9644 /* MightEqualOperator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18AC3C01665C42A22172F9A8 /* MightEqualOperator.swift */; };
 		BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */; };
@@ -191,6 +193,7 @@
 /* Begin PBXFileReference section */
 		0006DD7EFF030FA8203A74E3 /* CucumberTestObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTestObserver.swift; sourceTree = "<group>"; };
 		00A3288C94AE05DFE8A5D543 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		086CE04A08240D7473E13F9E /* LockedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedTests.swift; sourceTree = "<group>"; };
 		08883C950D6801B5DEDD2A73 /* DocString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocString.swift; sourceTree = "<group>"; };
 		0A22F85448DE49049412E696 /* JSONReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONReporter.swift; sourceTree = "<group>"; };
 		0E69AB7C3EADA654EE7DBA45 /* ASTRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASTRule.swift; sourceTree = "<group>"; };
@@ -278,6 +281,7 @@
 		B9233E6D52476E61D53F633A /* DuplicateStepDefinitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateStepDefinitionTests.swift; sourceTree = "<group>"; };
 		BBDC4212509FAA0191193789 /* DSLScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLScenarioTests.swift; sourceTree = "<group>"; };
 		BE716D4307D80176A0335D18 /* FeatureHook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureHook.swift; sourceTree = "<group>"; };
+		C22C7E99FE79D21B6087E54D /* Locked.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locked.swift; sourceTree = "<group>"; };
 		C455AF279815B0232F592257 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C51321BF66FB4F58D26A41D5 /* AST.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AST.swift; sourceTree = "<group>"; };
 		C703E4EA2036DBAF96097ED7 /* TestCaseGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCaseGenerator.swift; sourceTree = "<group>"; };
@@ -645,6 +649,7 @@
 				F7186AE45E7F0E5C115CB318 /* CucumberTest.swift */,
 				5F0C284D7333521C49F93910 /* DuplicateStepDefinition.swift */,
 				C70AED670EF8F80C94174E51 /* Globals.swift */,
+				C22C7E99FE79D21B6087E54D /* Locked.swift */,
 				9BB5321E29869AEB96319604 /* StepImplementation.swift */,
 				A5E2A0F5A3377FF046984D39 /* TestObservation.swift */,
 			);
@@ -660,6 +665,7 @@
 				2ADF912DAC05C2E2AFA648EB /* AsyncStepTests.swift */,
 				B9233E6D52476E61D53F633A /* DuplicateStepDefinitionTests.swift */,
 				9B330B9C8309E062DC5F80CC /* HookTests.swift */,
+				086CE04A08240D7473E13F9E /* LockedTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
 			);
 			path = Runner;
@@ -924,6 +930,7 @@
 				8F653CF2BE81F16AFD588809 /* AsyncStepTests.swift in Sources */,
 				9A7176D0074FE65676AF7EB3 /* DuplicateStepDefinitionTests.swift in Sources */,
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
+				AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
 				D2ABB8C03D687F2610679F88 /* SendableTests.swift in Sources */,
 				BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */,
@@ -989,6 +996,7 @@
 				95186D42C4735C46EE593D41 /* Hook.swift in Sources */,
 				43EEE291F9B3463C4D5FB8FC /* ScenarioHook.swift in Sources */,
 				94EA6D58C98A53FF267FC9AD /* StepHook.swift in Sources */,
+				839EC3796E4B571B50B33E7F /* Locked.swift in Sources */,
 				E36DE6011552787DF61454D7 /* StepImplementation.swift in Sources */,
 				5E6BB303A08A1FCCD23F5011 /* TestObservation.swift in Sources */,
 				133B0984FA23614E461D4D3D /* Method.swift in Sources */,

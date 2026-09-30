@@ -19,7 +19,7 @@ enum RegularExpression {
         let line: Int?
     }
 
-    static var errors = [Problem]()
+    static let errors = Locked([Problem]())
 
     /// Records `pattern` with the step definition's location if it will not compile.
     /// - Returns: whether it compiles, so a caller can skip a pattern that never can match.
@@ -80,9 +80,7 @@ extension String {
             // nobody reads.
             // A tag filter is matched against every feature and scenario, so record each pattern once.
             let problem = RegularExpression.Problem(message: RegularExpression.message(for: regex, error), file: nil, line: nil)
-            if !RegularExpression.errors.contains(problem) {
-                RegularExpression.errors.append(problem)
-            }
+            RegularExpression.errors.appendIfAbsent(problem)
             return []
         }
     }

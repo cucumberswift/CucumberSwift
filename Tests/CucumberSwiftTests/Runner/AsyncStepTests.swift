@@ -593,8 +593,8 @@ class AsyncStepTests: XCTestCase {
 
         When("^a broken (step runs$", callback: { _, _ in await Task.yield() }, line: 42, file: "StepDefinitions.swift")
 
-        XCTAssertEqual(RegularExpression.errors.map(\.line), [42])
-        XCTAssertEqual(RegularExpression.errors.first?.file, "StepDefinitions.swift")
+        XCTAssertEqual(RegularExpression.errors.snapshot.map(\.line), [42])
+        XCTAssertEqual(RegularExpression.errors.snapshot.first?.file, "StepDefinitions.swift")
         XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
                      "An expression that will not compile can never match, so it should not be attached")
     }

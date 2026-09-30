@@ -320,7 +320,7 @@ class CucumberTests: XCTestCase {
                | product |
                | pear    |
         """)
-        XCTAssertEqual(Gherkin.errors, [])
+        XCTAssertEqual(Gherkin.errors.snapshot, [])
 
         var tables = [[DataTable.Row]]()
         When("I add these products:") { _, step in tables.append(step.dataTable?.rows ?? []) }

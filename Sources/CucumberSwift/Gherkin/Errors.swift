@@ -8,5 +8,6 @@
 
 import Foundation
 enum Gherkin {
-    static var errors = [String]()
+    /// Problems in a .feature file. `CucumberTest.testGherkin()` fails each one.
+    static let errors = Locked([String]())
 }

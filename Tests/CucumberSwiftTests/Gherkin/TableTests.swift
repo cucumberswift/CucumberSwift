@@ -298,7 +298,7 @@ class TableTests: XCTestCase {
         XCTAssertEqual(table?.rows[1][0], "size")
         XCTAssertEqual(table?.rows[1][1], ">12000")
 
-        XCTAssert(Gherkin.errors.isEmpty)
+        XCTAssert(Gherkin.errors.snapshot.isEmpty)
         Cucumber.shared.executeFeatures()
     }
 
@@ -462,7 +462,7 @@ class TableTests: XCTestCase {
         XCTAssertEqual(table?.rows[6][3], "(Ignored)")
         XCTAssertEqual(table?.rows[6][4], "<none>")
 
-        XCTAssert(Gherkin.errors.isEmpty)
+        XCTAssert(Gherkin.errors.snapshot.isEmpty)
         Cucumber.shared.executeFeatures()
     }
 
