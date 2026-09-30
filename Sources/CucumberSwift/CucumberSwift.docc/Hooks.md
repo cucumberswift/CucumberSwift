@@ -38,7 +38,7 @@ extension Cucumber: StepImplementation {
             
         }
 
-        AfterStep = { step in
+        AfterStep { step in
             
         }
     }
