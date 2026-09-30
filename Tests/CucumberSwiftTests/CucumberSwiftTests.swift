@@ -465,15 +465,18 @@ class CucumberSwiftTests: XCTestCase {
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
+        if let bundle = Cucumber.overrideBundle { return bundle }
         // SwiftPM copies the Features folder into a separate resource bundle,
         // not into the test bundle as Xcode does.
         #if SWIFT_PACKAGE
-        Bundle.module
+        return Bundle.module
         #else
-        Bundle(for: CucumberSwiftTests.self)
+        return Bundle(for: CucumberSwiftTests.self)
         #endif
     }
     static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
+    public static var overrideBundle: Bundle?
+    public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
     public func setupSteps() { }
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
         Cucumber.shouldRunWith(scenario, tags)
@@ -481,7 +484,5 @@ extension Cucumber: StepImplementation {
 
     public static var overrideReverseOrderForAfterHooks = false
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
-
-    public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
     public var regexLiteralStyle: RegexLiteralStyle { Cucumber.overrideRegexLiteralStyle }
 }
