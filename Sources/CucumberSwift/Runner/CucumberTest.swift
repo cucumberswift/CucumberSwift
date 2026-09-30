@@ -34,16 +34,44 @@ open class CucumberTest: XCTestCase {
 
         Cucumber.shared.features.removeAll()
         DuplicateStepDefinition.reset()
-        if let bundle = (Cucumber.shared as? StepImplementation)?.bundle {
+        let bundle = (Cucumber.shared as? StepImplementation)?.bundle
+        if let bundle = bundle {
             Cucumber.shared.readFromFeaturesFolder(in: bundle)
         }
         (Cucumber.shared as? StepImplementation)?.setupSteps()
-        assert(!Cucumber.shared.features.isEmpty, "CucumberSwift found no features to run. Check out our documentation for instructions on including you Features folder. Be aware it's a case sensitive search. If you're using the DSL, make sure your features are defined in the `setupSteps()` method.") // swiftlint:disable:this line_length
+
+        hasBeenBuilt = true
+        // Report a missing Features folder as a failing test rather than stopping the
+        // process, so every other test in the bundle still runs and the reason is shown.
+        guard !Cucumber.shared.features.isEmpty else {
+            return noFeaturesSuite(bundle: bundle)
+        }
 
         let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
         generateAlltests(suite)
-        hasBeenBuilt = true
         return suite
+    }
+
+    static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
+        let suite = XCTestSuite(name: String(describing: CucumberTest.self))
+        let message = noFeaturesMessage(bundle: bundle)
+        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwift",
+                                                                            method: TestCaseMethod(withName: "FoundNoFeatures", closure: { reportFailure(message) })) {
+            objc_registerClassPair(testCaseClass)
+            suite.addTest(testCaseClass.init(selector: methodSelector))
+        }
+        return suite
+    }
+
+    static func noFeaturesMessage(bundle: Bundle?) -> String {
+        guard let bundle = bundle else {
+            return "CucumberSwift found no features to run, because Cucumber does not conform to StepImplementation in this test bundle. "
+                + "Add `extension Cucumber: StepImplementation` with a `bundle` and a `setupSteps()`."
+        }
+        return "CucumberSwift found no features to run. It looks for a folder named Features (case sensitive) in \(bundle.bundleURL.path), "
+            + "the bundle your StepImplementation's `bundle` returns. "
+            + "With Swift Package Manager, add `resources: [.copy(\"Features\")]` to your test target and return `Bundle.module`. "
+            + "If you use the DSL, define your features in `setupSteps()`."
     }
 
     static func generateAlltests(_ rootSuite: XCTestSuite) {

@@ -63,13 +63,46 @@ Finding an existing attempt doesn't automatically mean stop. If it's gone stale,
 4. Install [SwiftLint](https://github.com/realm/SwiftLint) (for example `brew install swiftlint`). The Xcode build runs it with the repository's `.swiftlint.yml`.
 5. Only if you'll add, remove or rename files, or change targets or settings, set up Tuist as described in [The Xcode project](#the-xcode-project). Most changes don't need it.
 
-Build and run the tests with `xcodebuild`:
+## Running the tests
+
+### With Xcode
 
 ```bash
 xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
 ```
 
-Please use `xcodebuild` or Xcode, not `swift build` or `swift test`. They don't build the same configuration as the Xcode project, so they can pass when CI fails, or fail when CI passes.
+This is the reference run. It builds every test target through the Xcode project that CI and Carthage use, on Mac Catalyst.
+
+### With Swift Package Manager
+
+CI also runs every test target with SwiftPM. Run all three packages:
+
+```bash
+swift test
+swift test --package-path Tests/CucumberSwiftConsumerTests
+swift test --package-path Tests/CucumberSwiftDSLConsumerTests
+```
+
+or, with [mise](https://mise.jdx.dev) installed and the repository trusted (steps 1 and 2 of [Setting up](#setting-up-1) under The Xcode project; the task needs no Tuist):
+
+```bash
+mise run test-swiftpm
+```
+
+**Why three packages.** SwiftPM links all of a package's test targets into one test bundle. Each test target here declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle, so the others would silently run nothing. So each consumer test folder is a package of its own, and the root package holds only `CucumberSwiftTests`. The same rule applies to projects that use CucumberSwift: see "Running Tests with Swift Package Manager" in the documentation.
+
+**Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles. The root package runs 12 tests more than the `CucumberSwiftTests` bundle, because the Xcode test plan skips `CucumberTest`, the run of `Tests/CucumberSwiftTests/Features`. `swift test --skip 'CucumberSwift\.CucumberTest'` leaves those out, so its count matches the bundle exactly.
+
+Also worth knowing:
+
+- **Each package builds separately**, in its own `.build` folder of about 300 MB, so the first run builds CucumberSwift three times.
+- **The consumer packages have no committed `Package.resolved`** (it's in `.gitignore`). They resolve CucumberSwiftExpressions within `Package.swift`'s range, as a project that uses CucumberSwift does.
+- **Keep `name: "CucumberSwift"`** in the consumer packages' `.package(name:path:)`. Without it, SwiftPM names the dependency after the checkout's folder, and the build fails in a worktree or a renamed clone.
+- **`swift test --filter` can't select a scenario.** Scenarios become tests only when the suite runs, so `swift test list` shows none of them, and a filter for one runs nothing, successfully. Select scenarios by tag instead, for example `CUCUMBER_TAGS=smoke swift test`.
+- **Don't use `swift test --parallel`.** It runs only the tests `swift test list` shows, so no scenario runs, and it still passes.
+- **SwiftPM builds for macOS only.** iOS and Mac Catalyst behaviour still needs `xcodebuild`.
+- **The generated step definitions are compiled.** `GeneratedStepDefinitions.swift` (in `CucumberSwiftTests`) and `GeneratedBareSlashStepDefinitions.swift` (in `CucumberSwiftConsumerTests`, which turns on bare slash regex literals) hold the stub generator's output for both regex literal styles. `GeneratedStepDefinitionTests` fails when the generator's output changes and prints the new output to paste in.
+- **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
 
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 
@@ -96,7 +129,7 @@ Only if your change adds, removes or renames a file, or changes a target, a buil
 We pin the tool versions with [mise](https://mise.jdx.dev), a per-project tool version manager. `.mise.toml` says which version of Tuist this repository needs, much like `.nvmrc` does for Node. Tuist is pinned to an exact version and only changes in a pull request that updates it.
 
 1. Install mise, for example with `brew install mise`. You need mise 2026.9.1 or later; `.mise.toml` checks this.
-2. Trust the repository: `mise trust`. mise won't use a repository's `.mise.toml` until you do, because the file can set environment variables and define tasks that run commands. Read it first. Ours pins Tuist and defines two tasks, `generate` and `check-project`. Trust applies to that directory only.
+2. Trust the repository: `mise trust`. mise won't use a repository's `.mise.toml` until you do, because the file can set environment variables and define tasks that run commands. Read it first. Ours pins Tuist and defines three tasks, `generate`, `check-project` and `test-swiftpm`. Trust applies to that directory only.
 3. Install the pinned Tuist: `mise install`. It downloads Tuist from its GitHub release and checks it against the release's published checksums.
 
 You don't have to activate mise in your shell. The commands below all go through `mise run` or `mise exec`.
@@ -129,6 +162,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 - **Three scheme names are load bearing.** `fastlane unit_test` and the CI workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`.
 - **`project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is a lockfile for Carthage users.** It pins the CucumberSwiftExpressions version they get. Regenerating leaves it alone. If your diff changes it anyway, put it back unless updating that dependency is what your change is for.
+- **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve`, run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, or when the two lockfiles pin a package differently, and its error says which file to fix.
 
 ### Troubleshooting
 

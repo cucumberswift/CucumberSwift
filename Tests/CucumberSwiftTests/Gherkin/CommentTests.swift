@@ -56,6 +56,37 @@ class CommentTests: XCTestCase {
         XCTAssertEqual(steps?.count, 1)
     }
 
+    func testTrailingCommentEndsAtEndOfLine() {
+        let cucumber = Cucumber(withString: """
+    Feature: F
+      Scenario: S
+        Given I am logged in #switch to OAuth
+        Then I see my name
+    """)
+        let steps = cucumber.features.first?.scenarios.first?.steps
+        XCTAssertEqual(steps?.count, 2)
+        XCTAssertEqual(steps?.first?.keyword, .given)
+        XCTAssertEqual(steps?.first?.match, "I am logged in")
+        XCTAssertEqual(steps?.last?.keyword, .then)
+        XCTAssertEqual(steps?.last?.match, "I see my name")
+        XCTAssert(Gherkin.errors.isEmpty)
+    }
+
+    func testTrailingCommentsBeforeSeveralSteps() {
+        let cucumber = Cucumber(withString: """
+    Feature: F
+      Scenario: S
+        Given I order item #42 now
+        And a # b
+        Then done
+        And the color is \\#123456
+    """)
+        let steps = cucumber.features.first?.scenarios.first?.steps
+        XCTAssertEqual(steps?.map(\.keyword), [.given, [.and, .given], .then, [.and, .then]])
+        XCTAssertEqual(steps?.map(\.match), ["I order item", "a", "done", "the color is #123456"])
+        XCTAssert(Gherkin.errors.isEmpty)
+    }
+
     func testLanguageIsParsed() {
         let cucumber = Cucumber(withString: """
     #language:en

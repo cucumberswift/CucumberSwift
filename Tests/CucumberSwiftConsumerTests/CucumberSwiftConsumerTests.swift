@@ -74,8 +74,14 @@ class ZCucumberTestCacheTests: XCTestCase {
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
+        // SwiftPM copies the Features folder into a separate resource bundle,
+        // not into the test bundle as Xcode does.
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
         class TestDiscovery: CucumberTest { }
         return Bundle(for: TestDiscovery.self)
+        #endif
     }
 
     public func setupSteps() {
@@ -119,79 +125,79 @@ extension Cucumber: StepImplementation {
             guard recordedIssues.count == 13 else { return }
             XCTAssert(recordedIssues[0].description.contains(
                 """
-                Given(/^I have some steps that have not been implemented$/) { _, _ in
+                Given(#/^I have some steps that have not been implemented$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[1].description.contains(
                 """
-                Given(/^a DocString of some kind that is not implemented$/) { _, step in
+                Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
                     let docString = step.docString
                 }
                 """))
             XCTAssert(recordedIssues[2].description.contains(
                 """
-                Given(/^I have some data table that is not implemented$/) { _, step in
+                Given(#/^I have some data table that is not implemented$/#) { _, step in
                     let dataTable = step.dataTable
                 }
                 """))
             XCTAssert(recordedIssues[3].description.contains(
                 """
-                When(/^I look in my test report$/) { _, _ in
+                When(#/^I look in my test report$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[4].description.contains(
                 """
-                When(/^I look in my test report$/) { _, _ in
+                When(#/^I look in my test report$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[5].description.contains(
                 """
-                When(/^I look in my test report$/) { _, _ in
+                When(#/^I look in my test report$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[6].description.contains(
                 """
-                Then(/^I see some PENDING steps with a swift attachment$/) { _, _ in
+                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[7].description.contains(
                 """
-                Then(/^I can access the data table$/) { _, _ in
+                Then(#/^I can access the data table$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[8].description.contains(
                 """
-                Then(/^I see some PENDING steps with a swift attachment$/) { _, _ in
+                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[9].description.contains(
                 """
-                Then(/^I see some PENDING steps with a swift attachment$/) { _, _ in
+                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[10].description.contains(
                 """
-                Then(/^I can copy and paste the swift code into my test case$/) { _, _ in
+                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[11].description.contains(
                 """
-                Then(/^I can copy and paste the swift code into my test case$/) { _, _ in
+                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
 
                 }
                 """))
             XCTAssert(recordedIssues[12].description.contains(
                 """
-                Then(/^I can copy and paste the swift code into my test case$/) { _, _ in
+                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
 
                 }
                 """))

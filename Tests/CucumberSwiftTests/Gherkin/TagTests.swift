@@ -33,6 +33,19 @@ class TagTests: XCTestCase {
 
     """
 
+    func testCommentAfterTagIsIgnored() {
+        let cucumber = Cucumber(withString: """
+        Feature: Test functionality
+          @Disable # TODO: comment
+          Scenario: Test scenario
+            Given Do smth
+        """)
+        let scenario = cucumber.features.first?.scenarios.first
+        XCTAssertEqual(scenario?.tags, ["Disable"])
+        XCTAssertEqual(scenario?.steps.map(\.match), ["Do smth"])
+        XCTAssert(Gherkin.errors.isEmpty)
+    }
+
     func testTagsAreScopedAndInheritedCorrectly() {
         let cucumber = Cucumber(withString: featureFileWithTags)
         XCTAssert(cucumber.features.first?.containsTag("featuretag") ?? false)

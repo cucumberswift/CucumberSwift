@@ -194,6 +194,17 @@ let cucumberSwiftTests = Target.target(
     additionalFiles: ["Tests/CucumberSwiftTests/CucumberTests/CucumberSwift.xctestplan"]
 )
 
+// Each consumer test folder is also a Swift package, so that `swift test` can run it
+// in a test bundle of its own. Keep its manifest, and whatever SwiftPM builds or checks
+// out there, out of the Xcode target.
+func consumerTestPackageFiles(_ folder: String) -> [Path] {
+    [
+        "Tests/\(folder)/Package.swift",
+        "Tests/\(folder)/.build/**",
+        "Tests/\(folder)/.swiftpm/**"
+    ]
+}
+
 let cucumberSwiftConsumerTests = Target.target(
     name: "CucumberSwiftConsumerTests",
     destinations: [.iPhone, .iPad, .macCatalyst],
@@ -201,7 +212,10 @@ let cucumberSwiftConsumerTests = Target.target(
     bundleId: "dignityhealth.CucumberSwiftConsumerTests",
     deploymentTargets: .iOS("13.0"),
     infoPlist: .file(path: "Tests/CucumberSwiftConsumerTests/Info.plist"),
-    sources: ["Tests/CucumberSwiftConsumerTests/**/*.swift"],
+    sources: [.glob(
+        "Tests/CucumberSwiftConsumerTests/**/*.swift",
+        excluding: consumerTestPackageFiles("CucumberSwiftConsumerTests")
+    )],
     resources: [.folderReference(path: "Tests/CucumberSwiftConsumerTests/Features")],
     dependencies: [
         .target(name: "CucumberSwift"),
@@ -229,7 +243,10 @@ let cucumberSwiftDSLConsumerTests = Target.target(
     bundleId: "TT.CucumberSwiftDSLConsumerTests",
     deploymentTargets: .iOS("13.0"),
     infoPlist: .file(path: "Tests/CucumberSwiftDSLConsumerTests/Info.plist"),
-    sources: ["Tests/CucumberSwiftDSLConsumerTests/**/*.swift"],
+    sources: [.glob(
+        "Tests/CucumberSwiftDSLConsumerTests/**/*.swift",
+        excluding: consumerTestPackageFiles("CucumberSwiftDSLConsumerTests")
+    )],
     dependencies: [.target(name: "CucumberSwift")],
     settings: .settings(
         base: [

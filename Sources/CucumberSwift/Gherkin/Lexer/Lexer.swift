@@ -214,7 +214,8 @@ public class Lexer: StringReader {
                 Gherkin.errors.append("File: \(url?.lastPathComponent ?? "") declares an unsupported language")
             }
         }
-        return advance(advanceToNextToken())
+        // Leave the newline for the next token, so a comment at the end of a step ends that step.
+        return advanceToNextToken()
     }
 
     // Feature, Scenario, Step etc...

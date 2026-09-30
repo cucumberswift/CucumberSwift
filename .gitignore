@@ -36,6 +36,9 @@ playground.xcworkspace
 # Packages/
 # Package.pins
 .build/
+# The consumer test packages under Tests/ resolve CucumberSwiftExpressions within
+# Package.swift's range, as a consumer would, so they keep no lockfile.
+Tests/*/Package.resolved
 
 # Carthage
 #
