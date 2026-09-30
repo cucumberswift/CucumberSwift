@@ -196,6 +196,16 @@ open class CucumberTest: XCTestCase {
                         attachments: [])
     }
 
+    /// Fails an ambiguous step on the test XCTest is running, at the step in its feature file. With no
+    /// running test known, it fails whatever test is current, without the feature-file location.
+    static func recordAmbiguousStep(_ step: Step, on runningTestCase: XCTestCase?) {
+        guard let runningTestCase = runningTestCase else {
+            XCTFail(ambiguousStepMessage(for: step))
+            return
+        }
+        runningTestCase.record(ambiguousStepIssue(for: step))
+    }
+
     /// Records one failure for each regular expression that will not compile. A pattern from a step
     /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
     /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
@@ -269,11 +279,7 @@ extension Step {
     fileprivate func run() throws {
         if isAmbiguous {
             // Record first: a recorded failure sets the step's result to failed, and this one is ambiguous.
-            if let runningTestCase = Cucumber.shared.runningTestCase {
-                runningTestCase.record(CucumberTest.ambiguousStepIssue(for: self))
-            } else {
-                XCTFail(CucumberTest.ambiguousStepMessage(for: self))
-            }
+            CucumberTest.recordAmbiguousStep(self, on: Cucumber.shared.runningTestCase)
             errorMessage = CucumberTest.ambiguousStepMessage(for: self)
             result = .ambiguous
             return

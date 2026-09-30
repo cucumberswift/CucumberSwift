@@ -240,6 +240,37 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertEqual(calls, 1)
     }
 
+    func testAnAmbiguousStepIsRecordedAtTheStepOnTheRunningTest() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        parseFeature(withSteps: "Given some precondition")
+        Given("some precondition") { _, _ in }
+        MatchAll("some precondition") { _, _ in }
+        let step = try XCTUnwrap(steps.first)
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in
+            issue.compactDescription == CucumberTest.ambiguousStepMessage(for: step)
+                && issue.sourceCodeContext.location?.fileURL == URL(string: "file:///Features/Ambiguous.feature")
+        }
+        XCTExpectFailure("The step is ambiguous", options: options) {
+            CucumberTest.recordAmbiguousStep(step, on: self)
+        }
+    }
+
+    func testAnAmbiguousStepFailsTheCurrentTestWhenNoRunningTestIsKnown() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        parseFeature(withSteps: "Given some precondition")
+        Given("some precondition") { _, _ in }
+        MatchAll("some precondition") { _, _ in }
+        let step = try XCTUnwrap(steps.first)
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in issue.compactDescription.hasSuffix(CucumberTest.ambiguousStepMessage(for: step)) }
+        XCTExpectFailure("The step is ambiguous", options: options) {
+            CucumberTest.recordAmbiguousStep(step, on: nil)
+        }
+    }
+
     // The failure for an ambiguous step goes to the test XCTest is running.
     func testRunningTestCaseObserverTracksTheTestThatIsRunning() {
         let observer = RunningTestCaseObserver()
