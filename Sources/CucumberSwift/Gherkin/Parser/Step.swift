@@ -156,7 +156,7 @@ public class Step: CustomStringConvertible {
 }
 
 extension Step {
-    public struct Keyword: OptionSet, Hashable {
+    public struct Keyword: OptionSet, Hashable, Sendable {
         public let rawValue: Int
         var primaryKeywords: Keyword {
             intersection(Self.primaryKeywords)
