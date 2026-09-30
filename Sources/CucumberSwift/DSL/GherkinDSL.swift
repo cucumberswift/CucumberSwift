@@ -174,7 +174,7 @@ extension GherkinDSL {
                   file: file)
     }
 
-    @discardableResult public init(I handler: @escaping @MainActor () async throws -> Void, // NOSONAR S117: `I` is the DSL's existing public label
+    @discardableResult public init(I handler: @escaping @MainActor () async throws -> Void,
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
