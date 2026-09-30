@@ -239,15 +239,32 @@ import CucumberSwiftExpressions
         }
     }
 
+    /// A step definition's body: synchronous, or async and run to completion by `AsyncStepRunner`.
+    private enum StepBody {
+        case sync(Step.Execute)
+        case async(Step.AsyncExecute)
+    }
+
     private func attachClosureToSteps(keyword: Step.Keyword?,
-                                      execute: Step.Execute? = nil,
-                                      executeAsync: Step.AsyncExecute? = nil,
+                                      body: StepBody? = nil,
                                       matchesExpression: @escaping Step.MatchesExpression,
                                       line: Int,
                                       file: StaticString,
                                       executeSelector: Selector? = nil,
                                       executeClass: AnyClass? = nil) {
-        let execute = executeAsync.map(AsyncStepRunner.blockingStep) ?? execute
+        let execute: Step.Execute?
+        let executeAsync: Step.AsyncExecute?
+        switch body {
+            case .sync(let body)?:
+                execute = body
+                executeAsync = nil
+            case .async(let body)?:
+                execute = AsyncStepRunner.blockingStep(body)
+                executeAsync = body
+            case nil:
+                execute = nil
+                executeAsync = nil
+        }
         let definition = Step.Definition(file: file, line: line, matches: matchesExpression, execute: execute, executeAsync: executeAsync)
         features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
@@ -281,7 +298,7 @@ import CucumberSwiftExpressions
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
         DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
-                             execute: { match, step in try callback(match.matches(for: regex), step) },
+                             body: .sync { match, step in try callback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,
                              file: file)
@@ -295,7 +312,7 @@ import CucumberSwiftExpressions
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
         DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
-                             executeAsync: { match, step in try await asyncCallback(match.matches(for: regex), step) },
+                             body: .async { match, step in try await asyncCallback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,
                              file: file)
@@ -314,7 +331,7 @@ import CucumberSwiftExpressions
         }
         DuplicateStepDefinition.register(pattern: expression.regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
-                             execute: { match, step in try callback(try XCTUnwrap(expression.match(in: match)), step) },
+                             body: .sync { match, step in try callback(try XCTUnwrap(expression.match(in: match)), step) },
                              matchesExpression: { str in expression.match(in: str) != nil },
                              line: line,
                              file: file)
@@ -331,7 +348,7 @@ import CucumberSwiftExpressions
         }
         DuplicateStepDefinition.register(pattern: expression.regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
-                             executeAsync: { match, step in try await asyncCallback(try XCTUnwrap(expression.match(in: match)), step) },
+                             body: .async { match, step in try await asyncCallback(try XCTUnwrap(expression.match(in: match)), step) },
                              matchesExpression: { str in expression.match(in: str) != nil },
                              line: line,
                              file: file)
@@ -345,7 +362,7 @@ import CucumberSwiftExpressions
                                       line: Int,
                                       file: StaticString) {
         attachClosureToSteps(keyword: keyword,
-                             execute: { match, step in try callback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
+                             body: .sync { match, step in try callback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
                              matchesExpression: { str in (try? regex.wholeMatch(in: str)) != nil },
                              line: line,
                              file: file)
@@ -358,7 +375,7 @@ import CucumberSwiftExpressions
                                       line: Int,
                                       file: StaticString) {
         attachClosureToSteps(keyword: keyword,
-                             executeAsync: { match, step in try await asyncCallback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
+                             body: .async { match, step in try await asyncCallback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
                              matchesExpression: { str in (try? regex.wholeMatch(in: str)) != nil },
                              line: line,
                              file: file)
