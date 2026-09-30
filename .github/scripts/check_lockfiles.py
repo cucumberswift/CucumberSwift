@@ -49,10 +49,13 @@ REQUIREMENT = re.compile(
     r'|\.exact\s*\(\s*"([^"]+)"'
     r'|"([^"]+)"\s*\.\.[.<]')
 URL = re.compile(r'\burl\s*:\s*"([^"]+)"')
+# A pbxproj value is either quoted or a bare word. The two forms are separate
+# alternatives so that the pattern cannot backtrack between them.
+PBX_VALUE = r'(?:"([^"]*)"|([^";\s]*))'
 PBX_REFERENCE = re.compile(
-    r"isa = XCRemoteSwiftPackageReference;\s*repositoryURL = \"?([^\";]+)\"?;\s*"
-    r"requirement = \{(.*?)\};", re.S)
-PBX_FIELD = re.compile(r"(\w+) = \"?([^\";]+)\"?;")
+    r"isa = XCRemoteSwiftPackageReference;\s*repositoryURL = " + PBX_VALUE + r";\s*"
+    r"requirement = \{([^{}]*)\};")
+PBX_FIELD = re.compile(r"(\w+) = " + PBX_VALUE + ";")
 
 
 class CheckError(Exception):
@@ -73,54 +76,66 @@ def same_repository(first, second):
     return normalized(first) == normalized(second)
 
 
+def string_end(text, index):
+    """The index just after the string literal that starts at `index`, which is a `"`.
+    Handles escapes and multiline (triple-quoted) strings; an unterminated string runs
+    to the end."""
+    quote = '"""' if text.startswith('"""', index) else '"'
+    index += len(quote)
+    while index < len(text) and not text.startswith(quote, index):
+        index += 2 if text[index] == "\\" else 1
+    return min(index + len(quote), len(text))
+
+
+def block_comment_end(text, index):
+    """The index just after the `/* */` comment that starts at `index`. They nest."""
+    depth, index = 1, index + 2
+    while depth and index < len(text):
+        pair = text[index:index + 2]
+        depth += {"/*": 1, "*/": -1}.get(pair, 0)
+        index += 2 if pair in ("/*", "*/") else 1
+    return index
+
+
 def strip_comments(text):
     """Swift source without its comments: `//` to the end of the line, and `/* */`,
     which nest. String literals are kept as they are, so `//` in a URL survives."""
-    out, index, depth = [], 0, 0
+    out, index = [], 0
     while index < len(text):
         pair = text[index:index + 2]
-        if depth:
-            depth += {"/*": 1, "*/": -1}.get(pair, 0)
-            index += 2 if pair in ("/*", "*/") else 1
-        elif pair == "/*":
-            depth, index = 1, index + 2
+        if pair == "/*":
+            index = block_comment_end(text, index)
         elif pair == "//":
-            end = text.find("\n", index)
-            index = len(text) if end < 0 else end
-        elif text[index] == '"':
-            quote = '"""' if text.startswith('"""', index) else '"'
-            end = index + len(quote)
-            while end < len(text) and not text.startswith(quote, end):
-                end += 2 if text[end] == "\\" else 1
-            end = min(end + len(quote), len(text))
+            newline = text.find("\n", index)
+            index = len(text) if newline < 0 else newline
+        else:
+            end = string_end(text, index) if text[index] == '"' else index + 1
             out.append(text[index:end])
             index = end
-        else:
-            out.append(text[index])
-            index += 1
     return "".join(out)
 
 
+def call_end(text, index):
+    """The index of the `)` closing a call whose arguments start at `index`, or None.
+    Parentheses inside a string literal do not count."""
+    depth = 1
+    while index < len(text):
+        if text[index] == '"':
+            index = string_end(text, index)
+            continue
+        depth += {"(": 1, ")": -1}.get(text[index], 0)
+        if depth == 0:
+            return index
+        index += 1
+    return None
+
+
 def package_calls(text):
-    """Yield the argument text of each `.package(...)` call. Parentheses inside a
-    string literal do not count."""
+    """Yield the argument text of each `.package(...)` call."""
     for match in re.finditer(r"\.package\s*\(", text):
-        depth, start, index, in_string = 1, match.end(), match.end(), False
-        while index < len(text):
-            char = text[index]
-            if in_string:
-                if char == "\\":
-                    index += 1
-                elif char == '"':
-                    in_string = False
-            elif char == '"':
-                in_string = True
-            else:
-                depth += {"(": 1, ")": -1}.get(char, 0)
-                if depth == 0:
-                    yield text[start:index]
-                    break
-            index += 1
+        end = call_end(text, match.end())
+        if end is not None:
+            yield text[match.end():end]
 
 
 def parse_package_swift(text):
@@ -142,8 +157,9 @@ def parse_package_swift(text):
 def parse_pbxproj(text):
     """Return {identity: (url, lower bound)} for each XCRemoteSwiftPackageReference."""
     dependencies = {}
-    for url, body in PBX_REFERENCE.findall(text):
-        fields = dict(PBX_FIELD.findall(body))
+    for quoted_url, bare_url, body in PBX_REFERENCE.findall(text):
+        url = quoted_url or bare_url
+        fields = {name: quoted or bare for name, quoted, bare in PBX_FIELD.findall(body)}
         bound = fields.get("minimumVersion") or fields.get("version")
         if not bound:
             raise CheckError(f"{PBXPROJ}: {url} has a `{fields.get('kind', 'unknown')}` "
