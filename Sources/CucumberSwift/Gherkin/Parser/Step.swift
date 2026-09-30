@@ -63,13 +63,22 @@ public class Step: CustomStringConvertible {
     var sourceLine: Int?
     var sourceFile: StaticString?
     /// A step definition that matches this step: where it was registered, and what it matches and runs.
-    struct Definition {
+    /// One instance per registration, shared by every step it matches, so it can be counted once.
+    final class Definition {
         let file: StaticString
         let line: Int
         let matches: MatchesExpression
         let execute: Execute?
         /// The body of an async step definition, which `execute` runs and waits for.
-        var executeAsync: AsyncExecute?
+        let executeAsync: AsyncExecute?
+
+        init(file: StaticString, line: Int, matches: @escaping MatchesExpression, execute: Execute?, executeAsync: AsyncExecute? = nil) {
+            self.file = file
+            self.line = line
+            self.matches = matches
+            self.execute = execute
+            self.executeAsync = executeAsync
+        }
     }
     /// Every step definition that matches this step. A step that more than one step definition
     /// matches is ambiguous: it fails and runs none of them.

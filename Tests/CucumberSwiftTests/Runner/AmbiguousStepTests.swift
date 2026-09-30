@@ -203,6 +203,43 @@ class AmbiguousStepTests: XCTestCase {
         }
     }
 
+    // A definition attached only to a later step still competes for the requested text.
+    func testExecuteFirstStepIsAmbiguousWhenAnotherStepHasTheOtherMatchingDefinition() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        parseFeature(withSteps: """
+             Given there are 3 flights
+               And there are 4 flights
+        """)
+        var calls = 0
+        let firstLine = #line + 1
+        Given("^there are \\d+ flights$") { _, _ in calls += 1 }
+        Given("^there are 4 flights$") { _, _ in calls += 1 }
+        XCTAssertFalse(steps[0].isAmbiguous)
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in
+            issue.compactDescription.hasSuffix("it matches 2 step definitions, at AmbiguousStepTests.swift:\(firstLine) and AmbiguousStepTests.swift:\(firstLine + 1). Remove all but one of them, or make their patterns more specific.")
+        }
+        XCTExpectFailure("The requested text is ambiguous", options: options) {
+            ExecuteFirstStep(matching: "there are 4 flights")
+        }
+        XCTAssertEqual(calls, 0)
+    }
+
+    // A definition attached to several steps is still one step definition.
+    func testExecuteFirstStepCountsADefinitionOnSeveralStepsOnce() throws {
+        parseFeature(withSteps: """
+             Given there are 3 flights
+               And there are 4 flights
+        """)
+        var calls = 0
+        Given("^there are \\d+ flights$") { _, _ in calls += 1 }
+
+        ExecuteFirstStep(matching: "there are 5 flights")
+
+        XCTAssertEqual(calls, 1)
+    }
+
     // The failure for an ambiguous step goes to the test XCTest is running.
     func testRunningTestCaseObserverTracksTheTestThatIsRunning() {
         let observer = RunningTestCaseObserver()
