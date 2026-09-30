@@ -3,12 +3,18 @@
 ## Supported Versions
 
 CucumberSwift is a test-only dependency: it is consumed by test targets and is not shipped
-inside production app binaries. Security fixes are applied to the current minor release line
-only. Older major versions are not patched — please upgrade.
+inside production app binaries.
+
+- **6.x** is the current release line and gets all fixes and features.
+- **5.x** is supported until 7.0.0 ships. It gets hotfixes only: urgent bugs such as security
+  issues, data loss, or wrong test results with no workaround. The maintainers may backport
+  another change case by case, when it is important enough or a user asks for it.
+- **4.x and older** are not supported. Please upgrade.
 
 | Version | Supported          | Notes                                              |
 | ------- | ------------------ | -------------------------------------------------- |
-| 5.0.x   | :white_check_mark: | Current release line.                               |
+| 6.x     | :white_check_mark: | Current release line. All fixes and features.      |
+| 5.x     | :white_check_mark: | Hotfixes only, until 7.0.0. Last release 5.0.13 (September 2026). |
 | 4.x     | :x:                | Last release 4.3.2 (June 2023). Please upgrade.     |
 | 3.x     | :x:                | Last release 3.3.26 (February 2023).                |
 | 2.x     | :x:                | Last release 2.2.37 (July 2020).                    |
