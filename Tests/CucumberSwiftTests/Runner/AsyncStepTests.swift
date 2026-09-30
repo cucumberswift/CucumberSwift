@@ -639,16 +639,17 @@ class AsyncStepTests: XCTestCase {
             executionOrder.append("async \(isInsideTask())")
         }
 
+        let scenario = Scenario("Some determinable business situation") {
+            Given(I: syncStep())
+            When(I: asyncStep)
+            // swiftlint:disable:next trailing_closure
+            Then(the: {
+                try await Task.sleep(nanoseconds: 50_000_000)
+                executionOrder.append("closure \(isInsideTask())")
+            })
+        }
         Feature("Some terse yet descriptive text of what is desired") {
-            Scenario("Some determinable business situation") {
-                Given(I: syncStep())
-                When(I: asyncStep)
-                // swiftlint:disable:next trailing_closure
-                Then(the: {
-                    try await Task.sleep(nanoseconds: 50_000_000)
-                    executionOrder.append("closure \(isInsideTask())")
-                })
-            }
+            scenario
         }
 
         let steps = Cucumber.shared.features.first?.scenarios.first?.steps ?? []

@@ -29,37 +29,37 @@ public func AfterStep(priority: UInt? = nil, closure: @escaping ((Step) -> Void)
 }
 // MARK: Async hooks
 // Each runs on the main actor, and CucumberSwift waits for it to finish before going on. A thrown error fails the test.
-public func BeforeFeature(priority: UInt? = nil,
+public func BeforeFeature(priority: UInt? = nil, // NOSONAR S100: `BeforeFeature` is the existing public hook name; this is its async overload
                           file: StaticString = #filePath,
                           line: UInt = #line,
                           closure: @escaping @MainActor (Feature) async throws -> Void) {
     Cucumber.shared.beforeFeatureHooks.append(.init(priority: priority, hook: AsyncStepRunner.blockingHook(closure, file: file, line: line)))
 }
-public func AfterFeature(priority: UInt? = nil,
+public func AfterFeature(priority: UInt? = nil, // NOSONAR S100: `AfterFeature` is the existing public hook name; this is its async overload
                          file: StaticString = #filePath,
                          line: UInt = #line,
                          closure: @escaping @MainActor (Feature) async throws -> Void) {
     Cucumber.shared.afterFeatureHooks.append(.init(priority: priority, hook: AsyncStepRunner.blockingHook(closure, file: file, line: line)))
 }
-public func BeforeScenario(priority: UInt? = nil,
+public func BeforeScenario(priority: UInt? = nil, // NOSONAR S100: `BeforeScenario` is the existing public hook name; this is its async overload
                            file: StaticString = #filePath,
                            line: UInt = #line,
                            closure: @escaping @MainActor (Scenario) async throws -> Void) {
     Cucumber.shared.beforeScenarioHooks.append(.init(priority: priority, hook: AsyncStepRunner.blockingHook(closure, file: file, line: line)))
 }
-public func AfterScenario(priority: UInt? = nil,
+public func AfterScenario(priority: UInt? = nil, // NOSONAR S100: `AfterScenario` is the existing public hook name; this is its async overload
                           file: StaticString = #filePath,
                           line: UInt = #line,
                           closure: @escaping @MainActor (Scenario) async throws -> Void) {
     Cucumber.shared.afterScenarioHooks.append(.init(priority: priority, hook: AsyncStepRunner.blockingHook(closure, file: file, line: line)))
 }
-public func BeforeStep(priority: UInt? = nil,
+public func BeforeStep(priority: UInt? = nil, // NOSONAR S100: `BeforeStep` is the existing public hook name; this is its async overload
                        file: StaticString = #filePath,
                        line: UInt = #line,
                        closure: @escaping @MainActor (Step) async throws -> Void) {
     Cucumber.shared.beforeStepHooks.append(.init(priority: priority, hook: AsyncStepRunner.blockingHook(closure, file: file, line: line)))
 }
-public func AfterStep(priority: UInt? = nil,
+public func AfterStep(priority: UInt? = nil, // NOSONAR S100: `AfterStep` is the existing public hook name; this is its async overload
                       file: StaticString = #filePath,
                       line: UInt = #line,
                       closure: @escaping @MainActor (Step) async throws -> Void) {
@@ -72,6 +72,6 @@ public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) {
 }
 // From inside an async step or hook, execute a step matching the given step definition and wait for it
 @MainActor
-public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) async {
+public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) async { // NOSONAR S100: `ExecuteFirstStep` is existing public API; this is its async overload
     await Cucumber.shared.executeFirstStep(keyword: keyword, matching: matching)
 }
