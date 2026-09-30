@@ -249,6 +249,7 @@ import CucumberSwiftExpressions
                               line: Int,
                               file: StaticString) {
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
+        DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
@@ -267,6 +268,7 @@ import CucumberSwiftExpressions
             RegularExpression.errors.append(.init(message: invalid.description, file: String(file), line: line))
             return
         }
+        DuplicateStepDefinition.register(pattern: expression.regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(try XCTUnwrap(expression.match(in: match)), step) },
                              matchesExpression: { str in expression.match(in: str) != nil },
@@ -296,6 +298,7 @@ import CucumberSwiftExpressions
                               line: Int,
                               file: StaticString) {
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
+        DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,

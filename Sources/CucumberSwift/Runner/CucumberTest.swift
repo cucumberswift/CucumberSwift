@@ -33,6 +33,7 @@ open class CucumberTest: XCTestCase {
         }
 
         Cucumber.shared.features.removeAll()
+        DuplicateStepDefinition.reset()
         if let bundle = (Cucumber.shared as? StepImplementation)?.bundle {
             Cucumber.shared.readFromFeaturesFolder(in: bundle)
         }
@@ -138,6 +139,7 @@ open class CucumberTest: XCTestCase {
         }
 
         Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
+        Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
@@ -206,9 +208,10 @@ open class CucumberTest: XCTestCase {
         runningTestCase.record(ambiguousStepIssue(for: step))
     }
 
-    /// Records one failure for each regular expression that will not compile. A pattern from a step
-    /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
-    /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
+    /// Records one failure for each problem found in the step definitions, such as a regular expression
+    /// that will not compile or a duplicate step definition. A problem from a step definition fails at
+    /// that step definition, so Xcode marks the consumer's own line. One with no step definition, such
+    /// as a `CUCUMBER_TAGS` filter, fails here.
     static func reportInvalidRegularExpressions(_ problems: [RegularExpression.Problem],
                                                 file: StaticString = #filePath,
                                                 line: Int = #line,
