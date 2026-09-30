@@ -37,9 +37,12 @@ public class Step: CustomStringConvertible {
 
     typealias MatchesExpression = ((_ str: String) -> Bool)
     typealias Execute = ((_ match: String, _ steps: Step) throws -> Void)
+    typealias AsyncExecute = @MainActor (_ match: String, _ steps: Step) async throws -> Void
 
     var result: Reporter.Result = .pending
     var execute: Execute?
+    /// The body of an async step definition. `execute` then runs it and waits for it to finish.
+    var executeAsync: AsyncExecute?
     var executeSelector: Selector?
     var executeClass: AnyClass?
     var executeInstance: NSObject?

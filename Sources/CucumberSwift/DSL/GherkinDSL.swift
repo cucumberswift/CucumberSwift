@@ -8,6 +8,8 @@
 // swiftlint:disable file_types_order
 
 import Foundation
+import XCTest
+
 public protocol GherkinDSL {
     init(line: Int, file: StaticString)
     @discardableResult init(line: UInt, column: UInt, match: String?, handler: @escaping () -> Void, file: StaticString)
@@ -152,6 +154,103 @@ extension GherkinDSL {
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
                   handler: handler,
+                  file: file)
+    }
+}
+
+// Async steps take a closure or a function rather than an autoclosure, which cannot be async here:
+// `Given(I: signIn)` or `Given(I: { try await signIn(as: .testUser) })`. Each runs on the main actor, the
+// next step starts only once it has finished, and a thrown error fails the step.
+extension GherkinDSL {
+    @discardableResult public init(_ handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(I handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(it handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(my handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(some handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(a handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    @discardableResult public init(the handler: @escaping @MainActor () async throws -> Void,
+                                   line: UInt = #line,
+                                   column: UInt = #column,
+                                   file: StaticString = #file,
+                                   function: StaticString = #function) {
+        self.init(line: line,
+                  column: column,
+                  match: try? readStepName(lineNumber: line, column: column, filePath: file),
+                  asyncHandler: handler,
+                  file: file)
+    }
+
+    private init(line: UInt, column: UInt, match: String?, asyncHandler: @escaping AsyncStepRunner.Body, file: StaticString) {
+        self.init(line: line,
+                  column: column,
+                  match: match,
+                  handler: { AsyncStepRunner.runFailingOnError(asyncHandler, file: file, line: line) },
                   file: file)
     }
 }

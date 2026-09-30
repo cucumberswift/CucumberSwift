@@ -27,6 +27,44 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
 ```
 
+## Async steps
+A step definition can be `async` and `throws`. Write `await` in its closure and CucumberSwift runs it as an async step:
+
+```swift
+Given("the user has signed in") { _, _ in
+    try await session.signIn(as: .testUser)
+}
+```
+
+A closure without `await` is an ordinary synchronous step definition, exactly as before. This works with Cucumber expressions, string patterns and regex literals alike.
+
+Steps still run one at a time, in the order the feature file declares them. An async step runs on the main actor, and the next step starts only once it has finished, so nothing in a scenario ever runs in parallel. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
+
+- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. With `continueTestingAfterFailure` off (the default), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
+- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
+
+  ```swift
+  extension Cucumber: StepImplementation {
+      public var asyncStepTimeout: TimeInterval { 120 }
+      // ...
+  }
+  ```
+
+  Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
+- **Running another step.** From inside an async step, use `await ExecuteFirstStep(matching:)`. The synchronous `ExecuteFirstStep(matching:)` works from synchronous steps, including when the step it runs is async.
+
+With the Swift DSL, pass an async function or closure rather than a call:
+
+```swift
+Feature("Sign in") {
+    Scenario("A returning user") {
+        Given(I: signIn)                                  // an async function
+        When(I: { try await open(.settings) })            // a closure
+        Then(the: settingsAreShown())                     // a synchronous call, as before
+    }
+}
+```
+
 ## Matching with Cucumber Expressions
 Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 

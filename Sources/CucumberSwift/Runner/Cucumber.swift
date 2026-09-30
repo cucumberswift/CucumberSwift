@@ -184,8 +184,8 @@ import CucumberSwiftExpressions
             .map { Feature(with: $0, uri: uri) })
     }
 
-    func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) {
-        let firstMatchingStep = features
+    private func firstStep(keyword: Step.Keyword?, matching: String) -> Step? {
+        features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
             .first {step -> Bool in
                 if  let k = keyword,
@@ -196,6 +196,10 @@ import CucumberSwiftExpressions
                 }
                 return false
             }
+    }
+
+    func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) {
+        let firstMatchingStep = firstStep(keyword: keyword, matching: matching)
 
         if let firstMatchingStep = firstMatchingStep {
             XCTAssertNoThrow(try firstMatchingStep.execute?(matching, firstMatchingStep))
@@ -204,8 +208,27 @@ import CucumberSwiftExpressions
         }
     }
 
+    /// From inside an async step or hook, runs the first matching step definition and waits for it.
+    @MainActor
+    func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) async {
+        guard let step = firstStep(keyword: keyword, matching: matching) else {
+            XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
+            return
+        }
+        do {
+            if let executeAsync = step.executeAsync {
+                try await executeAsync(matching, step)
+            } else {
+                try step.execute?(matching, step)
+            }
+        } catch {
+            XCTFail("ExecuteFirstStep threw error \"\(error)\"")
+        }
+    }
+
     private func attachClosureToSteps(keyword: Step.Keyword?,
                                       execute: Step.Execute? = nil,
+                                      executeAsync: Step.AsyncExecute? = nil,
                                       matchesExpression: @escaping Step.MatchesExpression,
                                       line: Int,
                                       file: StaticString,
@@ -224,7 +247,8 @@ import CucumberSwiftExpressions
             }
             .forEach { step in
                 step.result = .undefined
-                step.execute = execute
+                step.execute = executeAsync.map(AsyncStepRunner.blockingStep) ?? execute
+                step.executeAsync = executeAsync
                 step.matchesExpression = matchesExpression
                 step.sourceLine = line
                 step.sourceFile = file
@@ -241,6 +265,19 @@ import CucumberSwiftExpressions
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(match.matches(for: regex), step) },
+                             matchesExpression: { str in !str.matches(for: regex).isEmpty },
+                             line: line,
+                             file: file)
+    }
+
+    func attachClosureToSteps(keyword: Step.Keyword? = nil,
+                              regex: String,
+                              asyncCallback: @escaping @MainActor ([String], Step) async throws -> Void,
+                              line: Int,
+                              file: StaticString) {
+        guard RegularExpression.validate(regex, file: file, line: line) else { return }
+        attachClosureToSteps(keyword: keyword,
+                             executeAsync: { match, step in try await asyncCallback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,
                              file: file)
@@ -264,6 +301,22 @@ import CucumberSwiftExpressions
                              file: file)
     }
 
+    func attachClosureToSteps(keyword: Step.Keyword? = nil,
+                              expression: CucumberExpression,
+                              asyncCallback: @escaping @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void,
+                              line: Int,
+                              file: StaticString) {
+        if let invalid = expression.invalidRegularExpression {
+            RegularExpression.errors.append(.init(message: invalid.description, file: String(file), line: line))
+            return
+        }
+        attachClosureToSteps(keyword: keyword,
+                             executeAsync: { match, step in try await asyncCallback(try XCTUnwrap(expression.match(in: match)), step) },
+                             matchesExpression: { str in expression.match(in: str) != nil },
+                             line: line,
+                             file: file)
+    }
+
 #if compiler(>=5.7) && canImport(_StringProcessing)
     @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func attachClosureToSteps<Output>(keyword: Step.Keyword? = nil,
@@ -273,6 +326,19 @@ import CucumberSwiftExpressions
                                       file: StaticString) {
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
+                             matchesExpression: { str in (try? regex.wholeMatch(in: str)) != nil },
+                             line: line,
+                             file: file)
+    }
+
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+    func attachClosureToSteps<Output>(keyword: Step.Keyword? = nil,
+                                      regex: Regex<Output>,
+                                      asyncCallback: @escaping @MainActor (Regex<Output>.Match, Step) async throws -> Void,
+                                      line: Int,
+                                      file: StaticString) {
+        attachClosureToSteps(keyword: keyword,
+                             executeAsync: { match, step in try await asyncCallback(try XCTUnwrap(regex.wholeMatch(in: match)), step) },
                              matchesExpression: { str in (try? regex.wholeMatch(in: str)) != nil },
                              line: line,
                              file: file)

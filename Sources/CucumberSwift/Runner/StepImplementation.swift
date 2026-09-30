@@ -16,4 +16,6 @@ import Foundation
     @objc optional func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool
     @objc optional var continueTestingAfterFailure: Bool { get }
     @objc optional var reverseOrderForAfterHooks: Bool { get }
+    /// How many seconds an async step or hook may run before it fails. Defaults to 60.
+    @objc optional var asyncStepTimeout: TimeInterval { get }
 }

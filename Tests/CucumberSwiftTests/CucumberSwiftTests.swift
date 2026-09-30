@@ -493,4 +493,7 @@ extension Cucumber: StepImplementation {
 
     public static var overrideReverseOrderForAfterHooks = false
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
+
+    public static var overrideAsyncStepTimeout: TimeInterval?
+    public var asyncStepTimeout: TimeInterval { Cucumber.overrideAsyncStepTimeout ?? AsyncStepRunner.defaultTimeout }
 }
