@@ -189,22 +189,26 @@ import CucumberSwiftExpressions
     }
 
     func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) {
-        // The first step that a step definition matching the text is attached to, and every such definition.
-        let firstMatch = features
-            .lazy
+        // Every step definition that matches the text, from every step it could run on, each counted once,
+        // with the first such step.
+        var matches = [(definition: Step.Definition, step: Step)]()
+        features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
             .filter { step in keyword.map { step.keyword.contains($0) } ?? true }
-            .map { step in (step: step, definitions: step.matchingDefinitions.filter { $0.matches(matching) }) }
-            .first { !$0.definitions.isEmpty }
+            .forEach { step in
+                step.matchingDefinitions
+                    .filter { definition in definition.matches(matching) && !matches.contains { $0.definition === definition } }
+                    .forEach { matches.append((definition: $0, step: step)) }
+            }
 
-        guard let (step, definitions) = firstMatch else {
+        guard let (definition, step) = matches.first else {
             XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
             return
         }
-        if definitions.count > 1 {
-            XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: definitions))
+        if matches.count > 1 {
+            XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
         } else {
-            XCTAssertNoThrow(try definitions.first?.execute?(matching, step))
+            XCTAssertNoThrow(try definition.execute?(matching, step))
         }
     }
 
@@ -215,6 +219,7 @@ import CucumberSwiftExpressions
                                       file: StaticString,
                                       executeSelector: Selector? = nil,
                                       executeClass: AnyClass? = nil) {
+        let definition = Step.Definition(file: file, line: line, matches: matchesExpression, execute: execute)
         features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
             .filter { step -> Bool in
@@ -227,7 +232,7 @@ import CucumberSwiftExpressions
                 return false
             }
             .forEach { step in
-                step.matchingDefinitions.append(.init(file: file, line: line, matches: matchesExpression, execute: execute))
+                step.matchingDefinitions.append(definition)
                 step.result = .undefined
                 step.execute = execute
                 step.matchesExpression = matchesExpression
