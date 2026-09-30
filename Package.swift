@@ -14,7 +14,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.2.0"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
+        .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -28,24 +30,13 @@ let package = Package(
             exclude: ["Info.plist"]),
         .testTarget(
             name: "CucumberSwiftTests",
-            dependencies: ["CucumberSwift"],
+            dependencies: [
+                "CucumberSwift",
+                .product(name: "JSONSchema", package: "JSONSchema.swift")
+            ],
             exclude: ["Info.plist", "CucumberTests/CucumberSwift.xctestplan"],
             resources: [
                 .copy("testdata"),
-                .copy("Features")
-            ]),
-        .testTarget(
-            name: "CucumberSwiftConsumerTests",
-            dependencies: ["CucumberSwift"],
-            exclude: ["Info.plist"],
-            resources: [
-                .copy("Features")
-            ]),
-        .testTarget(
-            name: "CucumberSwiftDSLConsumerTests",
-            dependencies: ["CucumberSwift"],
-            exclude: ["Info.plist"],
-            resources: [
                 .copy("Features")
             ])
     ]

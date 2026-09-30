@@ -74,8 +74,14 @@ class ZCucumberTestCacheTests: XCTestCase {
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
+        // SwiftPM copies the Features folder into a separate resource bundle,
+        // not into the test bundle as Xcode does.
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
         class TestDiscovery: CucumberTest { }
         return Bundle(for: TestDiscovery.self)
+        #endif
     }
 
     public func setupSteps() {

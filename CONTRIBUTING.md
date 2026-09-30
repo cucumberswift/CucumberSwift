@@ -69,7 +69,17 @@ Build and run the tests with `xcodebuild`:
 xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
 ```
 
-Please use `xcodebuild` or Xcode, not `swift build` or `swift test`. They don't build the same configuration as the Xcode project, so they can pass when CI fails, or fail when CI passes.
+That runs every test target, through the same Xcode project CI and Carthage use, so it's the command to trust.
+
+You can also run the tests with Swift Package Manager, and CI does both. SwiftPM links all of a package's test targets into one test bundle. Each test target declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle. So each consumer test folder is a package of its own. Run all three:
+
+```bash
+swift test --skip 'CucumberSwift\.CucumberTest'
+swift test --package-path Tests/CucumberSwiftConsumerTests
+swift test --package-path Tests/CucumberSwiftDSLConsumerTests
+```
+
+The `--skip` leaves out the feature-file run in `CucumberSwiftTests`, as the Xcode test plan does. The unit tests then match the `CucumberSwiftTests` bundle in `xcodebuild`, test for test. SwiftPM builds for macOS only, so Mac Catalyst and iOS behaviour still needs `xcodebuild`.
 
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 

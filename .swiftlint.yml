@@ -75,6 +75,10 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - .build/
   - .swiftpm/
   - Package.swift
+  # The consumer test packages, run with `swift test` from their own folders.
+  - Tests/*/.build/
+  - Tests/*/.swiftpm/
+  - Tests/*/Package.swift
   - .swiftlint.yml
   - Sources/CucumberSwift/Generated
   - Sources/CucumberSwift/CucumberSwift.docc
