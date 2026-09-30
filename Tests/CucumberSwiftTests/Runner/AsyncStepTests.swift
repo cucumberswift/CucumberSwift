@@ -440,20 +440,14 @@ class AsyncStepTests: XCTestCase {
         XCTAssertFalse(testCase.continueAfterFailure)
     }
 
-    func testStartingAnAsyncStepSynchronouslyFromInsideATaskThrows() {
-        let done = expectation(description: "task finished")
-        var caught: Error?
-        Task { @MainActor in
-            defer { done.fulfill() }
-            do {
-                try AsyncStepRunner.run { /* Never runs: starting it from inside a task throws. */ }
-            } catch {
-                caught = error
-            }
-        }
-        wait(for: [done], timeout: 5)
+    func testStartingAnAsyncStepSynchronouslyFromInsideATaskThrows() async {
+        // The task returns what happened rather than writing to a captured var, which Swift 5.10 rejects.
+        let result = await Task { @MainActor in
+            Result { try AsyncStepRunner.run { /* Never runs: starting it from inside a task throws. */ } }
+        }.value
 
-        XCTAssert(caught is AsyncStepRunner.NestedWaitError)
+        guard case .failure(let error) = result else { return XCTFail("Expected an error") }
+        XCTAssert(error is AsyncStepRunner.NestedWaitError)
     }
 
     // MARK: Ambiguous steps
