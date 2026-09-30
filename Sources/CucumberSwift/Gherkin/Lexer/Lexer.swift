@@ -134,7 +134,7 @@ public class Lexer: StringReader {
             case .comment: return readComment()
             case .tagMarker where atLineStart || inTagLine:
                 inTagLine = true
-                return advance(.tag(position, readLineUntil({ !$0.isTagCharacter })))
+                return advance(.tag(position, readLineUntil { !$0.isTagCharacter }))
             case .tableCellDelimiter:
                 let tableCellContents = advance(readCell())
                 if currentChar != Character.tableCellDelimiter {

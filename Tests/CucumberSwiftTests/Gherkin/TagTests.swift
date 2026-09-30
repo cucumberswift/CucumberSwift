@@ -206,7 +206,7 @@ class TagTests: XCTestCase {
             "a @MainActor function step 1",
             "the @delimits tags",
             "I type \"test@example.com\"",
-            "I email support@example.com",
+            "I email support@example.com"
         ])
         XCTAssertEqual(scenario?.tags, [])
         XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
