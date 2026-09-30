@@ -31,6 +31,11 @@ import CucumberSwiftExpressions
     MainActorModel.shared.record(event)
 }
 
+/// An async DSL step, passed as a function.
+@MainActor func dslAsyncStep() async {
+    await awaitMainActorCode("DSL async step")
+}
+
 /// A value that must be `Sendable` to cross into a detached task.
 func send<T: Sendable>(_ value: T) {
     Task.detached { _ = value }
@@ -54,16 +59,16 @@ struct AirportParameter: Parameter {
 }
 
 final class MainActorReporter: CucumberTestObserver {
-    func testSuiteStarted(at: Date) { }
-    func testSuiteFinished(at: Date) { }
-    func didStart(feature: Feature, at date: Date) { }
-    func didStart(scenario: Scenario, at date: Date) { }
-    func didStart(step: Step, at date: Date) {
+    func testSuiteStarted(at _: Date) { }
+    func testSuiteFinished(at _: Date) { }
+    func didStart(feature _: Feature, at _: Date) { }
+    func didStart(scenario _: Scenario, at _: Date) { }
+    func didStart(step _: Step, at _: Date) {
         useMainActorCode("reporter")
     }
-    func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) { }
-    func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) { }
-    func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+    func didFinish(feature _: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) { }
+    func didFinish(scenario _: Scenario, result _: Reporter.Result, duration _: Measurement<UnitDuration>) { }
+    func didFinish(step _: Step, result: Reporter.Result, duration _: Measurement<UnitDuration>) {
         send(result)
     }
 }
@@ -140,9 +145,7 @@ extension Cucumber: @retroactive StepImplementation {
         Feature("Swift 6 language mode DSL") {
             Scenario("DSL steps use main-actor code") {
                 Given(I: useMainActorCode("DSL sync step"))
-                // An async DSL step takes a closure, not an autoclosure.
-                // swiftlint:disable:next trailing_closure
-                Then(I: { await awaitMainActorCode("DSL async step") })
+                Then(I: dslAsyncStep)
             }
         }
     }

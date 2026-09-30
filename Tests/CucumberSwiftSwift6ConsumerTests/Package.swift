@@ -15,17 +15,12 @@ let package = Package(
         // Keep `name:`. Without it, SwiftPM names a path dependency after its folder,
         // which is not "CucumberSwift" in a worktree or a renamed clone, and the
         // "CucumberSwift" dependency below would no longer resolve.
-        .package(name: "CucumberSwift", path: "../.."),
-        // Resolved through CucumberSwift's own requirement; listed so the tests can import it.
-        .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.2.0")
+        .package(name: "CucumberSwift", path: "../..")
     ],
     targets: [
         .testTarget(
             name: "CucumberSwiftSwift6ConsumerTests",
-            dependencies: [
-                "CucumberSwift",
-                .product(name: "CucumberSwiftExpressions", package: "CucumberSwiftExpressions")
-            ],
+            dependencies: ["CucumberSwift"],
             path: ".",
             exclude: ["Package.swift"],
             resources: [
