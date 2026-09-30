@@ -273,5 +273,24 @@ extension Cucumber: StepImplementation {
         And("The steps are slightly different") { _, _ in
             XCTAssert(true)
         }
+
+        // Regression coverage for https://github.com/cucumberswift/CucumberSwift/issues/115:
+        // two steps with identical literal text but different side-channel data (a DataTable or
+        // DocString) must each run with their own data, not silently alias to the first.
+        var repeatedDataTableRows = [[DataTable.Row]]()
+        Given("a step with a repeated data table") { _, step in
+            repeatedDataTableRows.append(step.dataTable?.rows ?? [])
+        }
+        Then("each repeated data table step saw its own table") { _, _ in
+            XCTAssertEqual(repeatedDataTableRows, [[["value"], ["one"]], [["value"], ["two"]]])
+        }
+
+        var repeatedDocStrings = [String]()
+        Given("a step with a repeated doc string") { _, step in
+            repeatedDocStrings.append(step.docString?.literal ?? "")
+        }
+        Then("each repeated doc string step saw its own doc string") { _, _ in
+            XCTAssertEqual(repeatedDocStrings, ["first", "second"])
+        }
     }
 }
