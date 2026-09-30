@@ -16,7 +16,8 @@ import CucumberSwift
 /// If the generator changes, replace everything between the BEGIN and END lines with the output
 /// the failing test prints.
 enum GeneratedStepDefinitions {
-    static let feature = #"""
+    // `\#` is Gherkin's escape for a literal `#`, so the raw string needs `##`.
+    static let feature = ##"""
     Feature: Generated step definitions
       Scenario: Every kind of generated step definition
         Given a step with no parameters
@@ -24,6 +25,7 @@ enum GeneratedStepDefinitions {
         When I log in as "Dave" with the password "secret"
         And I pay 5 to "Sue" and 6 to "Bob"
         Then I see 3 messages
+        And I open the path a/\#b
         And a data table
           | a | b |
           | 1 | 2 |
@@ -34,7 +36,7 @@ enum GeneratedStepDefinitions {
       Scenario: The same step with different keywords
         Given a repeated step
         When a repeated step
-    """#
+    """##
 
     @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     static func register() {
@@ -61,6 +63,9 @@ enum GeneratedStepDefinitions {
             let string = matches.2
             let integerTwo = matches.3
             let stringTwo = matches.4
+        }
+        Then(#/^I open the path a\/#b$/#) { _, _ in
+
         }
         Then(#/^a data table$/#) { _, step in
             let dataTable = step.dataTable

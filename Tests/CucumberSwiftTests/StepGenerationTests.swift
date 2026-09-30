@@ -64,6 +64,17 @@ class StepGenerationTests: XCTestCase {
                        [#"Given(/^I open a\/b and c\/d$/) { _, _ in"# + "\n\n}"])
     }
 
+    func testGeneratedRegexKeepsAnEscapedSlashBeforeAHash() {
+        // `\/#` does not end a `#/…/#` literal: Swift reads the escaped slash as part of the pattern.
+        let cucumber = Cucumber(withString: ##"""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given I open a/\#1
+        """##)
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
+                       [#"Given(#/^I open a\/#(\d+)$/#) { matches, _ in"# + "\n    let integer = matches.1\n}"])
+    }
+
     func testGeneratedCapturesAreNumberedInTheOrderOfTheStep() {
         let cucumber = Cucumber(withString: """
         Feature: Some terse yet descriptive text of what is desired

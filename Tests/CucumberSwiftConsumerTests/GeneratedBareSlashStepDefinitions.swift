@@ -42,6 +42,9 @@ func registerGeneratedBareSlashStepDefinitions() {
         let integerTwo = matches.3
         let stringTwo = matches.4
     }
+    Then(/^I open the path a\/#b$/) { _, _ in
+
+    }
     Then(/^a data table$/) { _, step in
         let dataTable = step.dataTable
     }

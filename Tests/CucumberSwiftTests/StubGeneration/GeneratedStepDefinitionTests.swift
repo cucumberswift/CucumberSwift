@@ -48,7 +48,7 @@ class GeneratedStepDefinitionTests: XCTestCase {
         Cucumber.shared.executeFeatures()
 
         let steps = Cucumber.shared.features.flatMap(\.scenarios).flatMap(\.steps)
-        XCTAssertEqual(steps.count, 9)
+        XCTAssertEqual(steps.count, 10)
         steps.forEach { XCTAssertEqual($0.result, .passed, "\($0.keyword) \($0.match)") }
     }
 
