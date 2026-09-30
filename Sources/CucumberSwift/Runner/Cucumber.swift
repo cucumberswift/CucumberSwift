@@ -192,14 +192,14 @@ import CucumberSwiftExpressions
         // Every step definition that matches the text, from every step it could run on, each counted once,
         // with the first such step.
         var matches = [(definition: Step.Definition, step: Step)]()
-        features
-            .flatMap { $0.scenarios.flatMap { $0.steps } }
-            .filter { step in keyword.map { step.keyword.contains($0) } ?? true }
-            .forEach { step in
-                step.matchingDefinitions
-                    .filter { definition in definition.matches(matching) && !matches.contains { $0.definition === definition } }
-                    .forEach { matches.append((definition: $0, step: step)) }
+        let steps = features.flatMap { $0.scenarios.flatMap { $0.steps } }
+        for step in steps where keyword.map({ step.keyword.contains($0) }) ?? true {
+            for definition in step.matchingDefinitions where definition.matches(matching) {
+                if !matches.contains(where: { $0.definition === definition }) {
+                    matches.append((definition: definition, step: step))
+                }
             }
+        }
 
         guard let (definition, step) = matches.first else {
             XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
