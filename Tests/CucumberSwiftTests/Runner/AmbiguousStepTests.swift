@@ -228,6 +228,22 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertEqual(calls, 0)
     }
 
+    func testExecuteFirstStepFailsWhenNoDefinitionMatchesTheRequestedText() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        parseFeature(withSteps: "Given there are 3 flights")
+        var calls = 0
+        Given("^there are \\d+ flights$") { _, _ in calls += 1 }
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in
+            issue.compactDescription.hasSuffix("No CucumberSwift expression found that matches step 'there are no flights'")
+        }
+        XCTExpectFailure("No step definition matches the text", options: options) {
+            ExecuteFirstStep(matching: "there are no flights")
+        }
+        XCTAssertEqual(calls, 0)
+    }
+
     // A definition attached to several steps is still one step definition.
     func testExecuteFirstStepCountsADefinitionOnSeveralStepsOnce() throws {
         parseFeature(withSteps: """
