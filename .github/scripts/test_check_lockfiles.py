@@ -298,6 +298,15 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(check_lockfiles.parse_package_swift(text),
                          {"foo": ("https://example.com/Foo.git", "1.0.0")})
 
+    def test_a_dependency_whose_url_is_not_a_literal_fails(self):
+        # Treating it as local would leave a remote dependency unchecked.
+        for call in ['.package(url: expressionsURL, from: "1.2.0")',
+                     '.package(id: "cucumberswift.expressions", from: "1.2.0")']:
+            with self.subTest(call):
+                with self.assertRaises(check_lockfiles.CheckError) as raised:
+                    check_lockfiles.parse_package_swift(call)
+                self.assertIn("this check cannot read the URL of", str(raised.exception))
+
     def test_an_exact_xcode_requirement_gives_its_version(self):
         parsed = check_lockfiles.parse_pbxproj(pbxproj("kind = exactVersion;\n\t\t\t\tversion = 1.2.0;"))
         self.assertEqual(parsed["cucumberswiftexpressions"], (EXPRESSIONS, "1.2.0"))

@@ -50,6 +50,7 @@ REQUIREMENT = re.compile(
     r'|"([^"]+)"\s*\.\.[.<]')
 # The start of a string literal: a `"`, after any `#`s of a raw string's delimiter.
 STRING_START = re.compile(r'#*"')
+LOCAL = re.compile(r'\bpath\s*:\s*"')
 URL = re.compile(r'\burl\s*:\s*"([^"]+)"')
 # A pbxproj value is either quoted or a bare word. The two forms are separate
 # alternatives so that the pattern cannot backtrack between them.
@@ -149,8 +150,14 @@ def parse_package_swift(text):
     dependencies = {}
     for arguments in package_calls(strip_comments(text)):
         url = URL.search(arguments)
+        if not url and LOCAL.search(arguments):
+            continue  # a local package has no lockfile pin
         if not url:
-            continue  # a local `path:` package has no lockfile pin
+            # Fail rather than skip: a remote dependency whose URL is not a string
+            # literal (a constant, a registry `id:`) would otherwise go unchecked.
+            raise CheckError(f"{PACKAGE_SWIFT}: this check cannot read the URL of "
+                             f"`.package({' '.join(arguments.split())})`. Write the URL as a "
+                             f"string literal, `url: \"https://...\"`.")
         requirement = REQUIREMENT.search(arguments)
         if not requirement:
             raise CheckError(f"{PACKAGE_SWIFT}: {url.group(1)} has no version requirement this "
