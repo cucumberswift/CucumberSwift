@@ -40,6 +40,8 @@
                 Add your StepImplementation. Note that you must supply the bundle your features folder is referenced from.
                 
                 > NOTE: You can replace the xcode generated test file with this step implementation. It should be named something like `{TEST_TARGET}Tests.swift`. If you run your tests right now they may fail if you have no .feature files.
+
+                > NOTE: This tutorial adds CucumberSwift to a test target in an Xcode project. For a test target in a `Package.swift` that you run with `swift test`, return `Bundle.module` instead: see <doc:Running-Tests-With-Swift-Package-Manager>.
             }
             
             @Step {

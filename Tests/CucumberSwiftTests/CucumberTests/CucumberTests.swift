@@ -235,6 +235,51 @@ class CucumberTests: XCTestCase {
             }
     }
 
+    func testNoFeaturesSuiteHoldsOneFailingTestInsteadOfStopping() {
+        let bundle = Bundle(for: CucumberTests.self)
+        var reported = [String]()
+        let suite = CucumberTest.noFeaturesSuite(bundle: bundle) { reported.append($0) }
+
+        XCTAssertEqual(suite.tests.count, 1)
+        XCTAssertTrue(suite.tests.first?.name.contains("FoundNoFeatures") == true, "Unexpected test name: \(suite.tests.first?.name ?? "none")")
+        // Runs only the generated test, with the failure captured instead of recorded.
+        (suite.tests.first as? XCTestCase)?.invokeTest()
+        XCTAssertEqual(reported, [CucumberTest.noFeaturesMessage(bundle: bundle)])
+    }
+
+    func testDefaultTestSuiteReportsMissingFeaturesInsteadOfStopping() {
+        // XCTest's own bundle has no Features folder.
+        let bundle = Bundle(for: XCTestCase.self)
+        Cucumber.overrideBundle = bundle
+        defer {
+            Cucumber.overrideBundle = nil
+            CucumberTest.resetSetUp()
+        }
+
+        CucumberTest.resetSetUp()
+        let suite = CucumberTest.defaultTestSuite
+
+        XCTAssertTrue(Cucumber.shared.features.isEmpty)
+        XCTAssertEqual(suite.tests.map(\.name).count, 1)
+        XCTAssertTrue(suite.tests.first?.name.contains("FoundNoFeatures") == true, "Unexpected tests: \(suite.tests.map(\.name))")
+    }
+
+    func testNoFeaturesMessageNamesTheBundleAndTheSwiftPMSetup() {
+        let bundle = Bundle(for: CucumberTests.self)
+        let message = CucumberTest.noFeaturesMessage(bundle: bundle)
+
+        XCTAssertTrue(message.contains(bundle.bundleURL.path))
+        XCTAssertTrue(message.contains("resources: [.copy(\"Features\")]"))
+        XCTAssertTrue(message.contains("Bundle.module"))
+        XCTAssertTrue(message.contains("setupSteps()"))
+    }
+
+    func testNoFeaturesMessageWithoutAStepImplementation() {
+        let message = CucumberTest.noFeaturesMessage(bundle: nil)
+
+        XCTAssertTrue(message.contains("extension Cucumber: StepImplementation"))
+    }
+
     func testStepsRunInFeatureFileOrderWhenTestsAreSortedByName() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Purchase history
