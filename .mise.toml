@@ -1,4 +1,4 @@
-# Tools for working on CucumberSwift's Xcode project. Consumers never need these.
+# Tools and tasks for working on CucumberSwift. Consumers never need these.
 # See "The Xcode project" in CONTRIBUTING.md.
 
 # The aqua backend below needs a recent mise. 2026.9.1 is the version preinstalled on the
@@ -27,3 +27,13 @@ if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --other
   exit 1
 fi
 """
+
+[tasks.test-swiftpm]
+description = "Run every test target with Swift Package Manager"
+# SwiftPM links all of a package's test targets into one bundle, so each consumer
+# test folder is a package of its own. See "Running the tests" in CONTRIBUTING.md.
+run = [
+  "swift test",
+  "swift test --package-path Tests/CucumberSwiftConsumerTests",
+  "swift test --package-path Tests/CucumberSwiftDSLConsumerTests",
+]

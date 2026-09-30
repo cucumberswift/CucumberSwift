@@ -5,7 +5,7 @@
 //  Created by Tyler Thompson on 4/7/18.
 //  Copyright © 2018 Tyler Thompson. All rights reserved.
 //
-// swiftlint:disable function_body_length type_body_length file_length
+// swiftlint:disable type_body_length file_length
 
 import XCTest
 import CucumberSwiftExpressions
@@ -21,21 +21,12 @@ class CucumberSwiftTests: XCTestCase {
     }
 
     func testStepsGetCallbacksAttachedCorrectly() {
-        let bundle: Bundle = {
-            #if canImport(CucumberSwift_ObjC)
-            // swiftlint:disable:next force_unwrapping
-            return Bundle(url: Bundle.module.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwift_CucumberSwiftTests.bundle"))!
-            #else
-            return Bundle(for: CucumberSwiftTests.self)
-            #endif
-        }()
-
         // Each section loads the features again, so each checks one step definition on its own. Without
         // this, earlier definitions stay attached and a later one that matches the same step makes it
         // ambiguous (#37).
         func loadFeatures() {
             Cucumber.shared.features.removeAll()
-            Cucumber.shared.readFromFeaturesFolder(in: bundle)
+            Cucumber.shared.readFromFeaturesFolder(in: Cucumber.shared.bundle)
         }
 
         loadFeatures()
@@ -95,7 +86,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
 #if swift(>=5.7)
-    @available(iOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     func testStepsGetCallbacksAttachedCorrectly_WithRegexLiterals() {
         let featureFile: String =
         """
@@ -121,7 +112,7 @@ class CucumberSwiftTests: XCTestCase {
 
         loadFeature()
         var givenCalled = false
-        Given(/^S(.)mE (?:precondition)$/.ignoresCase()) { match, _  in
+        Given(#/^S(.)mE (?:precondition)$/#.ignoresCase()) { match, _  in
             givenCalled = true
             XCTAssertEqual(match.1, "o")
         }
@@ -130,7 +121,7 @@ class CucumberSwiftTests: XCTestCase {
 
         loadFeature()
         var whenCalled = false
-        When(/^some (\w+) by the actor$/) { match, _ in
+        When(#/^some (\w+) by the actor$/#) { match, _ in
             whenCalled = true
             XCTAssertEqual(match.1, "action")
         }
@@ -139,7 +130,7 @@ class CucumberSwiftTests: XCTestCase {
 
         loadFeature()
         var thenCalled = false
-        Then(/^some (\w+) outcome is achieved$/) { match, _ in
+        Then(#/^some (\w+) outcome is achieved$/#) { match, _ in
             thenCalled = true
             XCTAssertEqual(match.1, "testable")
         }
@@ -148,7 +139,7 @@ class CucumberSwiftTests: XCTestCase {
 
         loadFeature()
         var andCalled = false
-        Given(/^some (\w+) precondition$/) { match, _ in
+        Given(#/^some (\w+) precondition$/#) { match, _ in
             andCalled = true
             XCTAssertEqual(match.1, "other")
         }
@@ -157,7 +148,7 @@ class CucumberSwiftTests: XCTestCase {
 
         loadFeature()
         var matchAllCalled = false
-        MatchAll(/(.*?)/) { _, _ in
+        MatchAll(#/(.*?)/#) { _, _ in
             matchAllCalled = true
         }
         Cucumber.shared.executeFeatures()
@@ -328,7 +319,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
 #if swift(>=5.7)
-    @available(iOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     func testExecuteFirstStep_WithoutParameterWithRegexLiteral() {
         let featureFile: String =
         """
@@ -341,18 +332,18 @@ class CucumberSwiftTests: XCTestCase {
 
         Cucumber.shared.parseIntoFeatures(featureFile)
         var givenCalledCount = 0
-        Given(/^some precondition$/) { _, _  in
+        Given(#/^some precondition$/#) { _, _  in
             givenCalledCount += 1
         }
 
-        Given(/^some other precondition$/) { _, _  in
+        Given(#/^some other precondition$/#) { _, _  in
             ExecuteFirstStep(matching: "some precondition")
         }
         Cucumber.shared.executeFeatures()
         XCTAssertEqual(givenCalledCount, 2)
     }
 
-    @available(iOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     func testExecuteFirstStep_WithParameterWithRegexLiteral() {
         let featureFile: String =
         """
@@ -365,11 +356,11 @@ class CucumberSwiftTests: XCTestCase {
 
         Cucumber.shared.parseIntoFeatures(featureFile)
         var givenParameters = [String]()
-        Given(/some precondition with (.*)/) { match, _  in
+        Given(#/some precondition with (.*)/#) { match, _  in
             givenParameters.append("\(match.1)")
         }
 
-        Given(/some other precondition/) { _, _  in
+        Given(#/some other precondition/#) { _, _  in
             ExecuteFirstStep(matching: "some precondition with parameter2")
         }
         Cucumber.shared.executeFeatures()
@@ -448,16 +439,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
     func testGivenWorksForChainedAnd() {
-        let bundle: Bundle = {
-            #if canImport(CucumberSwift_ObjC)
-            // swiftlint:disable:next force_unwrapping
-            return Bundle(url: Bundle.module.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwift_CucumberSwiftTests.bundle"))!
-            #else
-            return Bundle(for: CucumberSwiftTests.self)
-            #endif
-        }()
-
-        Cucumber.shared.readFromFeaturesFolder(in: bundle)
+        Cucumber.shared.readFromFeaturesFolder(in: Cucumber.shared.bundle)
         var givenCalled = false
         Given("S(.)mE (?:precondition)") { matches, _  in
             givenCalled = true
@@ -516,9 +498,18 @@ class CucumberSwiftTests: XCTestCase {
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
-        Bundle(for: CucumberSwiftTests.self)
+        if let bundle = Cucumber.overrideBundle { return bundle }
+        // SwiftPM copies the Features folder into a separate resource bundle,
+        // not into the test bundle as Xcode does.
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
+        return Bundle(for: CucumberSwiftTests.self)
+        #endif
     }
     static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
+    public static var overrideBundle: Bundle?
+    public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
     public func setupSteps() { }
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
         Cucumber.shouldRunWith(scenario, tags)
@@ -526,4 +517,5 @@ extension Cucumber: StepImplementation {
 
     public static var overrideReverseOrderForAfterHooks = false
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
+    public var regexLiteralStyle: RegexLiteralStyle { Cucumber.overrideRegexLiteralStyle }
 }
