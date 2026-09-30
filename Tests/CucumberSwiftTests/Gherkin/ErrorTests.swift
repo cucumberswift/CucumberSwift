@@ -23,7 +23,7 @@ class ErrorsTests: XCTestCase {
         Cucumber.shared.parseIntoFeatures("""
             Not Gherkin
         """, uri: "test.feature")
-        XCTAssert(Gherkin.errors.contains("File: test.feature does not contain any valid gherkin"))
+        XCTAssert(Gherkin.errors.snapshot.contains("File: test.feature does not contain any valid gherkin"))
     }
     func testInvalidLanguage() {
         Cucumber.shared.parseIntoFeatures("""
@@ -34,7 +34,7 @@ class ErrorsTests: XCTestCase {
               Scenario: minimalistic
                 Given the minimalism
         """, uri: "failedLanguage.feature")
-        XCTAssert(Gherkin.errors.contains("File: failedLanguage.feature declares an unsupported language"))
+        XCTAssert(Gherkin.errors.snapshot.contains("File: failedLanguage.feature declares an unsupported language"))
     }
 
     func testUnexpectedEndOfFile() {
@@ -46,7 +46,7 @@ class ErrorsTests: XCTestCase {
 
               @tag
         """, uri: "unexpected_eof.feature")
-        XCTAssert(Gherkin.errors.contains("File: unexpected_eof.feature unexpected end of file, expected: #TagLine, #ScenarioLine, #Comment, #Empty"))
+        XCTAssert(Gherkin.errors.snapshot.contains("File: unexpected_eof.feature unexpected end of file, expected: #TagLine, #ScenarioLine, #Comment, #Empty"))
     }
 
     func testInconsistenCellCount() {
@@ -66,7 +66,7 @@ class ErrorsTests: XCTestCase {
           | what       |
           | minimalism | extra |
         """, uri: "inconsistent_cell_count.feature")
-        XCTAssert(Gherkin.errors.contains("File: inconsistent_cell_count.feature inconsistent cell count within the table"))
+        XCTAssert(Gherkin.errors.snapshot.contains("File: inconsistent_cell_count.feature inconsistent cell count within the table"))
     }
 
     func testSingleParserError() {
@@ -79,7 +79,7 @@ class ErrorsTests: XCTestCase {
           Scenario: minimalistic
             Given the minimalism
         """, uri: "single_parser_error.feature")
-        XCTAssert(Gherkin.errors.contains("File: single_parser_error.feature, expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'invalid line here'"))
+        XCTAssert(Gherkin.errors.snapshot.contains("File: single_parser_error.feature, expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'invalid line here'"))
     }
 
     func testRepeatedStepTextInScenarioIsAllowed() {
@@ -92,7 +92,7 @@ class ErrorsTests: XCTestCase {
             And I navigate back
             Then I am on the home page
         """, uri: "repeated_step.feature")
-        XCTAssertEqual(Gherkin.errors, [])
+        XCTAssertEqual(Gherkin.errors.snapshot, [])
     }
 
     func testRepeatedStepTextWithDifferentDataTablesInScenarioIsAllowed() {
@@ -111,7 +111,7 @@ class ErrorsTests: XCTestCase {
               | foo       |
               | bar       |
         """, uri: "repeated_step_data_table.feature")
-        XCTAssertEqual(Gherkin.errors, [])
+        XCTAssertEqual(Gherkin.errors.snapshot, [])
     }
 
     func testSameStepTextInDifferentScenariosIsAllowed() {
@@ -126,7 +126,7 @@ class ErrorsTests: XCTestCase {
             Given some setup
             Then verify result
         """, uri: "cross_scenario.feature")
-        XCTAssertEqual(Gherkin.errors, [])
+        XCTAssertEqual(Gherkin.errors.snapshot, [])
     }
 
     override func tearDown() {

@@ -188,8 +188,8 @@ class StepTest: XCTestCase {
         try execute(step.match, step)
 
         XCTAssert(handlerCalled)
-        XCTAssert(RegularExpression.errors.isEmpty,
-                  "Executing a DSL step should not compile a regex. Errors:\n\(RegularExpression.errors.map(\.message).joined(separator: "\n"))")
+        XCTAssert(RegularExpression.errors.snapshot.isEmpty,
+                  "Executing a DSL step should not compile a regex. Errors:\n\(RegularExpression.errors.snapshot.map(\.message).joined(separator: "\n"))")
     }
 
     /// #218: a step definition's regex that will not compile is reported at the step definition,
@@ -204,8 +204,8 @@ class StepTest: XCTestCase {
 
         When(pattern, callback: { _, _ in }, line: 42, file: "StepDefinitions.swift")
 
-        XCTAssertEqual(RegularExpression.errors.count, 1, "The pattern should be recorded once, with its location")
-        let problem = RegularExpression.errors.first
+        XCTAssertEqual(RegularExpression.errors.snapshot.count, 1, "The pattern should be recorded once, with its location")
+        let problem = RegularExpression.errors.snapshot.first
         XCTAssertEqual(problem?.file, "StepDefinitions.swift")
         XCTAssertEqual(problem?.line, 42)
         XCTAssert(problem?.message.contains(pattern) ?? false)
@@ -291,8 +291,8 @@ class StepTest: XCTestCase {
 
         When("^a broken (step runs$", callback: { _, _ in }, line: 42, file: "StepDefinitions.swift")
 
-        XCTAssertEqual(RegularExpression.errors.count, 1, "The expression should be recorded once, with its location")
-        let problem = RegularExpression.errors.first
+        XCTAssertEqual(RegularExpression.errors.snapshot.count, 1, "The expression should be recorded once, with its location")
+        let problem = RegularExpression.errors.snapshot.first
         XCTAssertEqual(problem?.file, "StepDefinitions.swift")
         XCTAssertEqual(problem?.line, 42)
         XCTAssert(problem?.message.hasPrefix(#"CucumberExpression: "^a broken (step runs$""#) ?? false,

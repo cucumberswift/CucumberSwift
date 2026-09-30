@@ -16,9 +16,18 @@ enum DuplicateStepDefinition {
         let line: Int
     }
 
-    private static var registrations = [Registration]()
+    private struct State {
+        var registrations = [Registration]()
+        var errors = [RegularExpression.Problem]()
+    }
+
+    /// One lock for both, so that finding an earlier registration and adding this one is atomic.
+    private static let state = Locked(State())
+
     /// One problem per duplicate, at the duplicate's own line. `testGherkin()` fails each one there.
-    static var errors = [RegularExpression.Problem]()
+    static var errors: [RegularExpression.Problem] {
+        state.snapshot.errors
+    }
 
     /// Records a step definition, and a problem if it repeats an earlier one.
     /// - Parameters:
@@ -26,17 +35,18 @@ enum DuplicateStepDefinition {
     ///     from its Cucumber expression. Regex literals cannot be compared, so they are not registered.
     ///   - keyword: the keyword it was registered with; `nil` for `MatchAll`.
     static func register(pattern: String, keyword: Step.Keyword?, file: StaticString, line: Int) {
-        if let earlier = registrations.first(where: { $0.pattern == pattern && canCompete($0.keyword, keyword) }) {
-            errors.append(.init(message: message(earlier: (earlier.file, earlier.line), duplicate: (file, line)),
-                                file: String(file),
-                                line: line))
+        state.withLock { state in
+            if let earlier = state.registrations.first(where: { $0.pattern == pattern && canCompete($0.keyword, keyword) }) {
+                state.errors.append(.init(message: message(earlier: (earlier.file, earlier.line), duplicate: (file, line)),
+                                          file: String(file),
+                                          line: line))
+            }
+            state.registrations.append(.init(pattern: pattern, keyword: keyword, file: file, line: line))
         }
-        registrations.append(.init(pattern: pattern, keyword: keyword, file: file, line: line))
     }
 
     static func reset() {
-        registrations.removeAll()
-        errors.removeAll()
+        state.withLock { $0 = State() }
     }
 
     /// Whether step definitions registered with these keywords can match the same step. `MatchAll` matches

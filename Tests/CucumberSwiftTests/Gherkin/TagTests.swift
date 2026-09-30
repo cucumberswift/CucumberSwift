@@ -43,7 +43,7 @@ class TagTests: XCTestCase {
         let scenario = cucumber.features.first?.scenarios.first
         XCTAssertEqual(scenario?.tags, ["Disable"])
         XCTAssertEqual(scenario?.steps.map(\.match), ["Do smth"])
-        XCTAssert(Gherkin.errors.isEmpty)
+        XCTAssert(Gherkin.errors.snapshot.isEmpty)
     }
 
     func testTagsAreScopedAndInheritedCorrectly() {
