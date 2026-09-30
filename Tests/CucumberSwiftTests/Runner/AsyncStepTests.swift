@@ -408,6 +408,68 @@ class AsyncStepTests: XCTestCase {
         XCTAssert(caught is AsyncStepRunner.NestedWaitError)
     }
 
+    // MARK: Ambiguous steps
+
+    func testAnAsyncStepDefinitionCountsTowardAmbiguity() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given some precondition
+        """)
+        let firstLine = #line + 1
+        Given("some precondition") { _, _ in await Task.yield() }
+        let secondLine = #line + 1
+        MatchAll("some precondition") { _, _ in }
+
+        let step = try XCTUnwrap(Cucumber.shared.features.first?.scenarios.first?.steps.first)
+        XCTAssertTrue(step.isAmbiguous)
+        XCTAssertEqual(step.matchingDefinitions.map(\.line), [firstLine, secondLine])
+    }
+
+    func testAnAmbiguousStepWithAnAsyncDefinitionRunsNeither() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given some precondition
+        """)
+        var calls = 0
+        Given("some precondition") { _, _ in calls += 1 }
+        MatchAll("some precondition") { _, _ in
+            await Task.yield()
+            calls += 1
+        }
+
+        // The feature's tests are not run by XCTest here, so the failure lands on this test.
+        XCTExpectFailure("The step is ambiguous") {
+            Cucumber.shared.executeFeatures()
+        }
+
+        XCTAssertEqual(calls, 0)
+        XCTAssertEqual(Cucumber.shared.features.first?.scenarios.first?.steps.first?.result, .ambiguous)
+    }
+
+    @MainActor
+    func testAwaitExecuteFirstStepFailsOnAnAmbiguousStepAndRunsNothing() async throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given some precondition
+        """)
+        var calls = 0
+        Given("some precondition") { _, _ in
+            await Task.yield()
+            calls += 1
+        }
+        MatchAll("some precondition") { _, _ in calls += 1 }
+
+        XCTExpectFailure("The step is ambiguous")
+        await ExecuteFirstStep(matching: "some precondition")
+
+        XCTAssertEqual(calls, 0)
+    }
+
     // MARK: Overload selection
 
     func testCucumberExpressionClosuresBindToTheMatchingOverload() {
