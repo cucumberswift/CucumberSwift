@@ -8,7 +8,7 @@
 
 import Foundation
 
-public protocol CucumberTestObserver {
+@preconcurrency @MainActor public protocol CucumberTestObserver {
     func testSuiteStarted(at: Date)
     func testSuiteFinished(at: Date)
     func didStart(feature: Feature, at date: Date)

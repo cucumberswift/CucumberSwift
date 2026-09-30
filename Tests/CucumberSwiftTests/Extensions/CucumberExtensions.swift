@@ -15,6 +15,7 @@ extension Cucumber {
         Cucumber.shouldRunWith = { _, _ in true }
         Gherkin.errors.removeAll()
         RegularExpression.errors.removeAll()
+        DuplicateStepDefinition.reset()
         features.removeAll()
         beforeFeatureHooks.removeAll()
         beforeScenarioHooks.removeAll()

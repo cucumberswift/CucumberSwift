@@ -37,9 +37,12 @@ public class Step: CustomStringConvertible {
 
     typealias MatchesExpression = ((_ str: String) -> Bool)
     typealias Execute = ((_ match: String, _ steps: Step) throws -> Void)
+    typealias AsyncExecute = @MainActor (_ match: String, _ steps: Step) async throws -> Void
 
     var result: Reporter.Result = .pending
     var execute: Execute?
+    /// The body of an async step definition. `execute` then runs it and waits for it to finish.
+    var executeAsync: AsyncExecute?
     var executeSelector: Selector?
     var executeClass: AnyClass?
     var executeInstance: NSObject?
@@ -59,6 +62,28 @@ public class Step: CustomStringConvertible {
     var tokens = [Lexer.Token]()
     var sourceLine: Int?
     var sourceFile: StaticString?
+    /// A step definition that matches this step: where it was registered, and what it matches and runs.
+    /// One instance per registration, shared by every step it matches, so it can be counted once.
+    final class Definition {
+        let file: StaticString
+        let line: Int
+        let matches: MatchesExpression
+        let execute: Execute?
+        /// The body of an async step definition, which `execute` runs and waits for.
+        let executeAsync: AsyncExecute?
+
+        init(file: StaticString, line: Int, matches: @escaping MatchesExpression, execute: Execute?, executeAsync: AsyncExecute? = nil) {
+            self.file = file
+            self.line = line
+            self.matches = matches
+            self.execute = execute
+            self.executeAsync = executeAsync
+        }
+    }
+    /// Every step definition that matches this step. A step that more than one step definition
+    /// matches is ambiguous: it fails and runs none of them.
+    var matchingDefinitions = [Definition]()
+    var isAmbiguous: Bool { matchingDefinitions.count > 1 }
 
     init(with node: AST.StepNode) {
         location = node.tokens.first { $0.isKeyword() }?.position ?? .start
@@ -131,7 +156,7 @@ public class Step: CustomStringConvertible {
 }
 
 extension Step {
-    public struct Keyword: OptionSet, Hashable {
+    public struct Keyword: OptionSet, Hashable, Sendable {
         public let rawValue: Int
         var primaryKeywords: Keyword {
             intersection(Self.primaryKeywords)

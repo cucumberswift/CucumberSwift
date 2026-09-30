@@ -75,12 +75,13 @@ This is the reference run. It builds every test target through the Xcode project
 
 ### With Swift Package Manager
 
-CI also runs every test target with SwiftPM. Run all three packages:
+CI also runs every test target with SwiftPM. Run all four packages:
 
 ```bash
 swift test
 swift test --package-path Tests/CucumberSwiftConsumerTests
 swift test --package-path Tests/CucumberSwiftDSLConsumerTests
+swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
 ```
 
 or, with [mise](https://mise.jdx.dev) installed and the repository trusted (steps 1 and 2 of [Setting up](#setting-up-1) under The Xcode project; the task needs no Tuist):
@@ -89,13 +90,15 @@ or, with [mise](https://mise.jdx.dev) installed and the repository trusted (step
 mise run test-swiftpm
 ```
 
-**Why three packages.** SwiftPM links all of a package's test targets into one test bundle. Each test target here declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle, so the others would silently run nothing. So each consumer test folder is a package of its own, and the root package holds only `CucumberSwiftTests`. The same rule applies to projects that use CucumberSwift: see "Running Tests with Swift Package Manager" in the documentation.
+**Why separate packages.** SwiftPM links all of a package's test targets into one test bundle. Each test target here declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle, so the others would silently run nothing. So each consumer test folder is a package of its own, and the root package holds only `CucumberSwiftTests`. The same rule applies to projects that use CucumberSwift: see "Running Tests with Swift Package Manager" in the documentation.
+
+**The Swift 6 package has no Xcode target.** `Tests/CucumberSwiftSwift6ConsumerTests` builds its test target in the Swift 6 language mode, as a project that has moved to Swift 6 would, while CucumberSwift itself stays in the Swift 5 language mode. It checks that the setup in "Matching Steps" → "Swift 6 language mode" compiles and runs. If a change makes Swift 6 code stop compiling, this package fails to build.
 
 **Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles. The root package runs 12 tests more than the `CucumberSwiftTests` bundle, because the Xcode test plan skips `CucumberTest`, the run of `Tests/CucumberSwiftTests/Features`. `swift test --skip 'CucumberSwift\.CucumberTest'` leaves those out, so its count matches the bundle exactly.
 
 Also worth knowing:
 
-- **Each package builds separately**, in its own `.build` folder of about 300 MB, so the first run builds CucumberSwift three times.
+- **Each package builds separately**, in its own `.build` folder of about 300 MB, so the first run builds CucumberSwift four times.
 - **The consumer packages have no committed `Package.resolved`** (it's in `.gitignore`). They resolve CucumberSwiftExpressions within `Package.swift`'s range, as a project that uses CucumberSwift does.
 - **Keep `name: "CucumberSwift"`** in the consumer packages' `.package(name:path:)`. Without it, SwiftPM names the dependency after the checkout's folder, and the build fails in a worktree or a renamed clone.
 - **`swift test --filter` can't select a scenario.** Scenarios become tests only when the suite runs, so `swift test list` shows none of them, and a filter for one runs nothing, successfully. Select scenarios by tag instead, for example `CUCUMBER_TAGS=smoke swift test`.

@@ -27,6 +27,63 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
 ```
 
+## Async steps
+A step definition can be `async` and `throws`. Write `await` in its closure and CucumberSwift runs it as an async step:
+
+```swift
+Given("the user has signed in") { _, _ in
+    try await session.signIn(as: .testUser)
+}
+```
+
+A closure without `await` is an ordinary synchronous step definition, exactly as before. This works with Cucumber expressions, string patterns and regex literals alike.
+
+Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
+
+- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. With `continueTestingAfterFailure` off (the default), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
+- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
+
+  ```swift
+  extension Cucumber: StepImplementation {
+      public var asyncStepTimeout: TimeInterval { 120 }
+      // ...
+  }
+  ```
+
+  Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
+- **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
+- **Running another step.** From inside an async step, use `await ExecuteFirstStep(matching:)`. The synchronous `ExecuteFirstStep(matching:)` works from synchronous steps, including when the step it runs is async.
+
+With the Swift DSL, pass an async function or closure rather than a call:
+
+```swift
+@MainActor func signIn() async throws { /* ... */ }
+
+Feature("Sign in") {
+    Scenario("A returning user") {
+        Given(I: signIn)                                  // an async function
+        When(I: { try await open(.settings) })            // a closure
+        Then(the: settingsAreShown())                     // a synchronous call, as before
+    }
+}
+```
+
+### Swift 6 language mode
+In a test target that builds in Swift 6 language mode, mark the conformance `@retroactive`, because both `Cucumber` and `StepImplementation` come from CucumberSwift:
+
+```swift
+extension Cucumber: @retroactive StepImplementation {
+    public var bundle: Bundle { /* ... */ }
+    public func setupSteps() { /* ... */ }
+}
+```
+
+The same goes for `extension Cucumber: @retroactive CucumberTestObservable` when you add a reporter (see <doc:Generating-Reports>).
+
+`StepImplementation` and `CucumberTestObserver` are main-actor protocols, so `setupSteps()`, the steps, hooks and DSL steps declared in it, and a custom reporter's methods can all use main-actor code, such as `XCUIApplication`. An async step can also change a variable it shares with other steps, such as a `var` declared in `setupSteps()`. CucumberSwift calls all of them on the main thread.
+
+In Swift 5 language mode nothing changes: the protocols are marked `@preconcurrency`, so code written for earlier versions of CucumberSwift compiles as before.
+
 ## Matching with Cucumber Expressions
 Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 
@@ -119,3 +176,18 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 > Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 The step definitions CucumberSwift suggests for undefined steps use `#/…/#`. Return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle` to get `/…/` instead.
+
+## When more than one step definition matches a step
+Each step should match exactly one step definition. A step that more than one step definition matches is *ambiguous*, as in other Cucumber implementations: CucumberSwift runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
+
+A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step and any `And` or `But` step that follows one, and ``MatchAll`` fits every step. So:
+
+```swift
+Given("some precondition") { _, _ in }
+When("some precondition") { _, _ in }      // not ambiguous for "Given some precondition": When never fits a Given step
+MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: both fit "Given some precondition"
+```
+
+Two step definitions with the *same* pattern are a mistake even when no step uses them, as in Cucumber for Java. The test run fails at the second one, and the failure names both, if their keywords can match the same steps: the same keyword, ``MatchAll`` with any keyword, or ``And`` or ``But`` with ``Given``, ``When`` or ``Then``. `Given("x")` and `When("x")` are not duplicates. Two patterns count as the same when they are the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, cannot be compared, so only the ambiguity check applies to them.
+
+Earlier versions reported neither: the step definition registered last silently replaced the others, so a step ran whichever came last. To fix an ambiguous step or a duplicate, remove all but one of the step definitions, or make their patterns more specific so that each step matches only one.

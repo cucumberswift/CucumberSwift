@@ -245,3 +245,5 @@ jobs:
         run: swift test --package-path Tests/CucumberSwiftConsumerTests
       - name: Run the DSL consumer tests
         run: swift test --package-path Tests/CucumberSwiftDSLConsumerTests
+      - name: Run the Swift 6 language mode consumer tests
+        run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests

@@ -298,5 +298,39 @@ extension Cucumber: StepImplementation {
         Then("each repeated doc string step saw its own doc string") { _, _ in
             XCTAssertEqual(repeatedDocStrings, ["first", "second"])
         }
+
+        setupAsyncSteps()
+    }
+
+    // Async steps and hooks (#229): each step waits for the one before it, on the main actor.
+    private func setupAsyncSteps() {
+        var executionOrder = [String]()
+        var asyncStepsOnMainThread = [Bool]()
+        func isOnMainThread() -> Bool { Thread.isMainThread }
+
+        BeforeScenario { scenario in
+            guard scenario.feature?.title == "Async steps" else { return }
+            await Task.yield()
+            executionOrder.append("async BeforeScenario")
+        }
+        Given("an async step that waits") { _, _ in
+            try await Task.sleep(nanoseconds: 100_000_000)
+            asyncStepsOnMainThread.append(isOnMainThread())
+            executionOrder.append("async wait")
+        }
+        Given("a sync step") { _, _ in
+            executionOrder.append("sync")
+        }
+        When("an async step awaits work on a background thread") { _, _ in
+            let answer = await Task.detached { isOnMainThread() ? 0 : 42 }.value
+            asyncStepsOnMainThread.append(isOnMainThread())
+            executionOrder.append("background \(answer)")
+        }
+        Then("every async step ran on the main thread") { _, _ in
+            XCTAssertEqual(asyncStepsOnMainThread, [true, true])
+        }
+        Then("the steps and the async hook ran in the order written") { _, _ in
+            XCTAssertEqual(executionOrder, ["async BeforeScenario", "async wait", "sync", "background 42"])
+        }
     }
 }
