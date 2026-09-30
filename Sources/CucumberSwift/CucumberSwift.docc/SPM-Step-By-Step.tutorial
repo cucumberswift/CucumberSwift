@@ -52,6 +52,8 @@
             @Step {
                 @Image(source: "ViewGeneratedStubs.png", alt: "The GENERATED_Unimplemented_Step_Definitions file shown in the test report navigator")
                 Run the tests. They should fail because no CucumberSwift expressions match the Gherkin in you `.feature` files. To make your life easier CucumberSwift actually generates step stub implementations. Open your [report navigator](https://developer.apple.com/library/archive/documentation/IDEs/Conceptual/xcode_guide-continuous_integration/view_integration_results.html) in Xcode and expand the step named "GenerateStepStubsIfNecessary". Expand the "Pending Steps" tree section. Open the file named "GENERATED_Unimplemented_Step_Definitions.swift"
+
+                > NOTE: Leave parallel testing off for your CucumberSwift test target: the "Execute in parallel" option on that target in your scheme or test plan. XCTest's parallel workers do not run CucumberSwift's scenarios correctly. Depending on the setup, each scenario runs once in every worker, or not at all, and the test run can still pass.
             }
             
             @Step {
