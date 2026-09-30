@@ -191,4 +191,75 @@ class TagTests: XCTestCase {
 
         Cucumber.shouldRunWith = { _, _ in true }
     }
+
+    func testAtSignInStepTextIsText() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given a @MainActor function step 1
+             And the @delimits tags
+             When I type "test@example.com"
+             Then I email support@example.com
+        """, uri: "at_sign_in_step.feature")
+        let scenario = Cucumber.shared.features.first?.scenarios.first
+        XCTAssertEqual(scenario?.steps.map(\.match), [
+            "a @MainActor function step 1",
+            "the @delimits tags",
+            "I type \"test@example.com\"",
+            "I email support@example.com"
+        ])
+        XCTAssertEqual(scenario?.tags, [])
+        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+    }
+
+    func testAtSignInTitlesAndDescriptionsIsText() {
+        let cucumber = Cucumber(withString: """
+        Feature: Mail to support@example.com
+          Replies come from noreply@example.com
+
+           Scenario: Reply to @someone
+             Given a scenario
+        """)
+        let feature = cucumber.features.first
+        XCTAssertEqual(feature?.title, "Mail to support@example.com")
+        XCTAssertEqual(feature?.desc.trimmingCharacters(in: .whitespacesAndNewlines), "Replies come from noreply@example.com")
+        XCTAssertEqual(feature?.tags, [])
+        XCTAssertEqual(feature?.scenarios.first?.title, "Reply to @someone")
+        XCTAssertEqual(feature?.scenarios.first?.tags, [])
+        XCTAssertEqual(feature?.scenarios.first?.steps.map(\.match), ["a scenario"])
+        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+    }
+
+    func testTagLinesStillParseAlongsideAtSignInStepText() {
+        let cucumber = Cucumber(withString: """
+        @feature_tag1 @feature_tag2
+          @feature_tag3
+        Feature: Minimal Scenario Outline
+
+        @scenario_tag1
+        Scenario: minimalistic
+            Given the minimalism
+
+        @joined_tag3@joined_tag4
+        Scenario: joined tags
+          Given the @delimits tags
+        """)
+        let feature = cucumber.features.first
+        XCTAssertEqual(feature?.tags, ["feature_tag1", "feature_tag2", "feature_tag3"])
+        XCTAssertEqual(feature?.scenarios.first?.tags, ["feature_tag1", "feature_tag2", "feature_tag3", "scenario_tag1"])
+        XCTAssertEqual(feature?.scenarios.last?.tags, ["feature_tag1", "feature_tag2", "feature_tag3", "joined_tag3", "joined_tag4"])
+        XCTAssertEqual(feature?.scenarios.last?.steps.map(\.match), ["the @delimits tags"])
+        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+    }
+
+    func testEscapedAtSignInStepTextStillWorks() {
+        let cucumber = Cucumber(withString: #"""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             When I type "test\@surglogs.com"
+        """#)
+        XCTAssertEqual(cucumber.features.first?.scenarios.first?.steps.map(\.match), ["I type \"test@surglogs.com\""])
+        XCTAssertEqual(cucumber.features.first?.scenarios.first?.tags, [])
+        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+    }
 }

@@ -9,6 +9,8 @@
 import Foundation
 public class Lexer: StringReader {
     internal var atLineStart = true
+    // A tag line is one whose first non-space character is `@`; anywhere else `@` is text.
+    internal var inTagLine = false
     internal var lastScope: Scope?
     internal var lastKeyword: Step.Keyword?
     internal var url: URL?
@@ -119,6 +121,7 @@ public class Lexer: StringReader {
         defer {
             if char.isNewline {
                 atLineStart = true
+                inTagLine = false
                 lastScope = nil
                 lastKeyword = nil
             } else if char.isSymbol && previousChar?.isNewline != true {
@@ -129,7 +132,9 @@ public class Lexer: StringReader {
         switch char {
             case .newLine: return advance(.newLine(position))
             case .comment: return readComment()
-            case .tagMarker: return advance(.tag(position, readLineUntil({ !$0.isTagCharacter })))
+            case .tagMarker where atLineStart || inTagLine:
+                inTagLine = true
+                return advance(.tag(position, readLineUntil { !$0.isTagCharacter }))
             case .tableCellDelimiter:
                 let tableCellContents = advance(readCell())
                 if currentChar != Character.tableCellDelimiter {
@@ -148,11 +153,12 @@ public class Lexer: StringReader {
                 return .title(position, title)
             case .quote: return readString()
             case _ where char.isEscapeCharacter:
-                if nextChar == .comment {
-                    return advance(advance(.match(position, "\(Character.comment)")))
+                if let next = nextChar, next == .comment || next == .tagMarker {
+                    return advance(advance(.match(position, "\(next)")))
                 } else {
                     return advance(.match(position, "\(char)" + readLineUntil { $0.isSymbol }))
                 }
+            case .tagMarker where lastKeyword != nil: return advance(.match(position, "\(Character.tagMarker)"))
             case _ where lastKeyword != nil: return .match(position, readLineUntil { $0.isSymbol })
             default: return advance(advanceToNextToken())
         }
