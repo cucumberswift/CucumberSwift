@@ -161,6 +161,26 @@ class AsyncStepTests: XCTestCase {
         ])
     }
 
+    func testAnAsyncAfterStepHookRunsAfterEachStep() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given some precondition
+             Then some testable result is achieved
+        """)
+        var executionOrder = [String]()
+        AfterStep { step in
+            await Task.yield()
+            executionOrder.append("AfterStep \(step.match)")
+        }
+        Given("some precondition") { _, _ in executionOrder.append("Given") }
+        Then("some testable result is achieved") { _, _ in executionOrder.append("Then") }
+
+        Cucumber.shared.executeFeatures()
+
+        XCTAssertEqual(executionOrder, ["Given", "AfterStep some precondition", "Then", "AfterStep some testable result is achieved"])
+    }
+
     func testAsyncHooksKeepTheirPriority() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Some terse yet descriptive text of what is desired
@@ -303,6 +323,35 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(executionOrder, ["async", "async", "sync"])
     }
 
+    @MainActor
+    func testAwaitExecuteFirstStepFailsWhenNoStepDefinitionMatches() async throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { $0.compactDescription.contains("No CucumberSwift expression found that matches step 'nothing matches this'") }
+        XCTExpectFailure("No step definition matches the text", options: options)
+
+        await ExecuteFirstStep(matching: "nothing matches this")
+    }
+
+    @MainActor
+    func testAwaitExecuteFirstStepFailsWhenTheStepItRunsThrows() async throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some text
+           Scenario: Some determinable business situation
+             Given a step that throws
+        """)
+        Given("a step that throws") { _, _ in
+            await Task.yield()
+            throw StepError()
+        }
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { $0.compactDescription.contains("ExecuteFirstStep threw error") }
+        XCTExpectFailure("The step throws", options: options)
+
+        await ExecuteFirstStep(matching: "a step that throws")
+    }
+
     // MARK: Failure, errors and timeout
 
     func testAFailureDuringAnAsyncStepSkipsTheRestOfTheScenario() {
@@ -423,6 +472,8 @@ class AsyncStepTests: XCTestCase {
             try await Task.sleep(nanoseconds: 10_000_000_000)
         }) { error in
             XCTAssertEqual((error as? AsyncStepRunner.TimeoutError)?.timeout, 0.2)
+            XCTAssertEqual(error.localizedDescription,
+                           "The async step did not finish within 0.2 seconds. Set `asyncStepTimeout` in your StepImplementation to allow longer.")
         }
     }
 
@@ -456,6 +507,7 @@ class AsyncStepTests: XCTestCase {
 
         guard case .failure(let error) = result else { return XCTFail("Expected an error") }
         XCTAssert(error is AsyncStepRunner.NestedWaitError)
+        XCTAssert(error.localizedDescription.contains("Use `await ExecuteFirstStep(matching:)` there instead"), error.localizedDescription)
     }
 
     // MARK: Ambiguous steps
@@ -532,6 +584,21 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(DuplicateStepDefinition.errors.map(\.line), [secondLine])
     }
 
+    func testAnAsyncExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some feature
+           Scenario: Some determinable business situation
+             When a broken step runs
+        """)
+
+        When("^a broken (step runs$", callback: { _, _ in await Task.yield() }, line: 42, file: "StepDefinitions.swift")
+
+        XCTAssertEqual(RegularExpression.errors.map(\.line), [42])
+        XCTAssertEqual(RegularExpression.errors.first?.file, "StepDefinitions.swift")
+        XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
+                     "An expression that will not compile can never match, so it should not be attached")
+    }
+
     @available(*, deprecated, message: "Exercises the deprecated regular expression String API")
     func testAnAsyncRegexStringDefinitionCanDuplicateASyncOne() {
         Given("^there are (\\d+) flights$") { (_: [String], _) in
@@ -541,6 +608,28 @@ class AsyncStepTests: XCTestCase {
         Given("^there are (\\d+) flights$") { (_: [String], _) in await Task.yield() }
 
         XCTAssertEqual(DuplicateStepDefinition.errors.map(\.line), [secondLine])
+    }
+
+    func testEveryAsyncDSLLabelRunsItsStepInOrder() {
+        var executionOrder = [String]()
+        func unlabeled() async { await Task.yield(); executionOrder.append("unlabeled") }
+        func itStep() async { await Task.yield(); executionOrder.append("it") }
+        func myStep() async { await Task.yield(); executionOrder.append("my") }
+        func someStep() async { await Task.yield(); executionOrder.append("some") }
+
+        let scenario = Scenario("Some determinable business situation") {
+            Given(unlabeled)
+            When(it: itStep)
+            Then(my: myStep)
+            And(some: someStep)
+        }
+        Feature("Some terse yet descriptive text of what is desired") {
+            scenario
+        }
+
+        Cucumber.shared.executeFeatures()
+
+        XCTAssertEqual(executionOrder, ["unlabeled", "it", "my", "some"])
     }
 
     // MARK: Overload selection
