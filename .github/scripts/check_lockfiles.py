@@ -65,23 +65,68 @@ def identity(url):
     return name[:-4] if name.endswith(".git") else name
 
 
+def same_repository(first, second):
+    """Whether two URLs name the same repository, ignoring case, a trailing / and .git."""
+    def normalized(url):
+        url = url.lower().rstrip("/")
+        return url[:-4] if url.endswith(".git") else url
+    return normalized(first) == normalized(second)
+
+
+def strip_comments(text):
+    """Swift source without its comments: `//` to the end of the line, and `/* */`,
+    which nest. String literals are kept as they are, so `//` in a URL survives."""
+    out, index, depth = [], 0, 0
+    while index < len(text):
+        pair = text[index:index + 2]
+        if depth:
+            depth += {"/*": 1, "*/": -1}.get(pair, 0)
+            index += 2 if pair in ("/*", "*/") else 1
+        elif pair == "/*":
+            depth, index = 1, index + 2
+        elif pair == "//":
+            end = text.find("\n", index)
+            index = len(text) if end < 0 else end
+        elif text[index] == '"':
+            quote = '"""' if text.startswith('"""', index) else '"'
+            end = index + len(quote)
+            while end < len(text) and not text.startswith(quote, end):
+                end += 2 if text[end] == "\\" else 1
+            end = min(end + len(quote), len(text))
+            out.append(text[index:end])
+            index = end
+        else:
+            out.append(text[index])
+            index += 1
+    return "".join(out)
+
+
 def package_calls(text):
-    """Yield the argument text of each `.package(...)` call."""
+    """Yield the argument text of each `.package(...)` call. Parentheses inside a
+    string literal do not count."""
     for match in re.finditer(r"\.package\s*\(", text):
-        depth, start = 1, match.end()
-        for index in range(start, len(text)):
-            depth += {"(": 1, ")": -1}.get(text[index], 0)
-            if depth == 0:
-                yield text[start:index]
-                break
+        depth, start, index, in_string = 1, match.end(), match.end(), False
+        while index < len(text):
+            char = text[index]
+            if in_string:
+                if char == "\\":
+                    index += 1
+                elif char == '"':
+                    in_string = False
+            elif char == '"':
+                in_string = True
+            else:
+                depth += {"(": 1, ")": -1}.get(char, 0)
+                if depth == 0:
+                    yield text[start:index]
+                    break
+            index += 1
 
 
 def parse_package_swift(text):
     """Return {identity: (url, lower bound)} for each remote dependency."""
-    # A comment starts with `//` after whitespace; a URL's `//` follows a colon.
-    text = re.sub(r"(^|(?<=\s))//[^\n]*", "", text, flags=re.M)
     dependencies = {}
-    for arguments in package_calls(text):
+    for arguments in package_calls(strip_comments(text)):
         url = URL.search(arguments)
         if not url:
             continue  # a local `path:` package has no lockfile pin
@@ -132,6 +177,9 @@ def check_bounds(manifest, dependencies, lockfile, pins, fix):
         pin = pins.get(name)
         if pin is None:
             errors.append(f"{lockfile} has no pin for {url}, which {manifest} requires. {fix}")
+        elif not same_repository(pin["url"], url):
+            errors.append(f"{manifest} requires {url}, but {lockfile} pins {pin['url']}, a "
+                          f"different repository with the same package identity. {fix}")
         elif pin["version"] is None:
             errors.append(f"{lockfile} pins {url} to a branch or revision, not a version. {fix}")
         elif pin["version"] != bound:
@@ -146,7 +194,13 @@ def check_shared(swiftpm_pins, xcode_pins):
     errors = []
     for name in sorted(swiftpm_pins.keys() & xcode_pins.keys()):
         ours, theirs = swiftpm_pins[name], xcode_pins[name]
-        if (ours["version"], ours["revision"]) != (theirs["version"], theirs["revision"]):
+        if not same_repository(ours["url"], theirs["url"]):
+            errors.append(
+                f"The lockfiles pin different repositories with the same package identity: "
+                f"{PACKAGE_RESOLVED} pins {ours['url']}, {XCODE_RESOLVED} pins {theirs['url']}. "
+                f"Use the same URL in {PACKAGE_SWIFT} and Project.swift, then re-resolve. "
+                f"For {PACKAGE_RESOLVED}: {FIX_SWIFTPM} For the Xcode lockfile: {FIX_XCODE}")
+        elif (ours["version"], ours["revision"]) != (theirs["version"], theirs["revision"]):
             errors.append(
                 f"The lockfiles disagree on {ours['url']}: {PACKAGE_RESOLVED} pins "
                 f"{ours['version']} ({ours['revision']}), {XCODE_RESOLVED} pins "
