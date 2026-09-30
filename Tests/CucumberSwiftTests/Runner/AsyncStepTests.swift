@@ -333,6 +333,19 @@ class AsyncStepTests: XCTestCase {
         guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
     }
 
+    func testAnErrorOtherThanCancellationIsStillReturnedAfterAFailureCancelsTheBody() {
+        let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: true, hasFailed: { true }, body: {
+            do {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+            } catch {
+                throw StepError()
+            }
+        })
+
+        guard case .threw(let error) = outcome else { return XCTFail("Expected an error, got \(outcome)") }
+        XCTAssert(error is StepError)
+    }
+
     func testAFailureDoesNotCancelTheBodyWhenTestingContinuesAfterFailure() {
         var completed = false
         let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: false, hasFailed: { true }, body: {

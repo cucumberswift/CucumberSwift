@@ -137,8 +137,9 @@ enum AsyncStepRunner {
         }
 
         if timedOut { return .timedOut }
-        // The failure that cancelled the body is already recorded; what it threw on the way out is not news.
-        if cancelledOnFailure { return .finished }
+        // The failure that cancelled the body is already recorded, so the cancellation it threw on the way
+        // out is not news. Any other error is.
+        if cancelledOnFailure, state.error == nil || state.error is CancellationError { return .finished }
         if let error = state.error { return .threw(error) }
         return .finished
     }
