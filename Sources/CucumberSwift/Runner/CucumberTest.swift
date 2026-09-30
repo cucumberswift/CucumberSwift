@@ -51,11 +51,11 @@ open class CucumberTest: XCTestCase {
         return suite
     }
 
-    static func noFeaturesSuite(bundle: Bundle?) -> XCTestSuite {
+    static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
         let suite = XCTestSuite(name: String(describing: CucumberTest.self))
         let message = noFeaturesMessage(bundle: bundle)
         if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwift",
-                                                                            method: TestCaseMethod(withName: "FoundNoFeatures", closure: { XCTFail(message) })) {
+                                                                            method: TestCaseMethod(withName: "FoundNoFeatures", closure: { reportFailure(message) })) {
             objc_registerClassPair(testCaseClass)
             suite.addTest(testCaseClass.init(selector: methodSelector))
         }

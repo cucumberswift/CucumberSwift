@@ -236,10 +236,15 @@ class CucumberTests: XCTestCase {
     }
 
     func testNoFeaturesSuiteHoldsOneFailingTestInsteadOfStopping() {
-        let suite = CucumberTest.noFeaturesSuite(bundle: Bundle(for: CucumberTests.self))
+        let bundle = Bundle(for: CucumberTests.self)
+        var reported = [String]()
+        let suite = CucumberTest.noFeaturesSuite(bundle: bundle) { reported.append($0) }
 
         XCTAssertEqual(suite.tests.count, 1)
         XCTAssertTrue(suite.tests.first?.name.contains("FoundNoFeatures") == true, "Unexpected test name: \(suite.tests.first?.name ?? "none")")
+        // Runs only the generated test, with the failure captured instead of recorded.
+        (suite.tests.first as? XCTestCase)?.invokeTest()
+        XCTAssertEqual(reported, [CucumberTest.noFeaturesMessage(bundle: bundle)])
     }
 
     func testNoFeaturesMessageNamesTheBundleAndTheSwiftPMSetup() {
