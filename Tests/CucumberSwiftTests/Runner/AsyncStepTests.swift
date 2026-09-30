@@ -23,6 +23,12 @@ private func isOnMainThread() -> Bool {
 
 private struct StepError: Error { }
 
+/// Holds what a task caught, for the test that waits for it. A task cannot change a captured `var`
+/// under Swift 5.10's checking, but it can change a property of a captured object.
+private final class CaughtError {
+    var error: Error?
+}
+
 class AsyncStepTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -442,18 +448,18 @@ class AsyncStepTests: XCTestCase {
 
     func testStartingAnAsyncStepSynchronouslyFromInsideATaskThrows() {
         let done = expectation(description: "task finished")
-        var caught: Error?
+        let caught = CaughtError()
         Task { @MainActor in
             defer { done.fulfill() }
             do {
                 try AsyncStepRunner.run { /* Never runs: starting it from inside a task throws. */ }
             } catch {
-                caught = error
+                caught.error = error
             }
         }
         wait(for: [done], timeout: 5)
 
-        XCTAssert(caught is AsyncStepRunner.NestedWaitError)
+        XCTAssert(caught.error is AsyncStepRunner.NestedWaitError)
     }
 
     // MARK: Ambiguous steps
