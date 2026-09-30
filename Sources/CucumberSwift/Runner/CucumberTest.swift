@@ -137,6 +137,8 @@ open class CucumberTest: XCTestCase {
             XCTFail($0)
         }
 
+        Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
+
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
             let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
@@ -145,11 +147,55 @@ open class CucumberTest: XCTestCase {
                                            userInfo: nil)
 
             failStep(XCTIssue(type: .assertionFailure,
-                              compactDescription: "No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file: \n\($0.generatedSwift)", // swiftlint:disable:this line_length
+                              compactDescription: Self.missingStepDefinitionMessage(generatedSwift: $0.generatedSwift,
+                                                                                    invalidRegularExpressions: RegularExpression.errors),
                               detailedDescription: nil,
                               sourceCodeContext: .init(location: .init(fileURL: sourceFile, lineNumber: Int($0.step.location.line))),
                               associatedError: nil,
                               attachments: [attachment]))
+        }
+    }
+
+    /// The failure for a step that no step definition matches. A step definition whose regular expression
+    /// will not compile is never attached, so its steps land here too; when there are any, say where they
+    /// are, so the consumer does not write a second definition for a step they already defined.
+    static func missingStepDefinitionMessage(generatedSwift: String,
+                                             invalidRegularExpressions: [RegularExpression.Problem]) -> String {
+        let locations = invalidRegularExpressions.compactMap { problem -> String? in
+            guard let file = problem.file, let line = problem.line else { return nil }
+            return "\(URL(fileURLWithPath: file).lastPathComponent):\(line)"
+        }
+        let suggestion = "the following Swift code to your step implementation file: \n\(generatedSwift)"
+        guard let last = locations.last else {
+            return "No CucumberSwift expression found that matches this step. Try adding \(suggestion)"
+        }
+        let list = locations.count == 1 ? last : locations.dropLast().joined(separator: ", ") + " and " + last
+        return "No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, its regular expression may not compile: see \(list). Otherwise, try adding \(suggestion)" // swiftlint:disable:this line_length
+    }
+
+    /// Records one failure for each regular expression that will not compile. A pattern from a step
+    /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
+    /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
+    static func reportInvalidRegularExpressions(_ problems: [RegularExpression.Problem],
+                                                file: StaticString = #filePath,
+                                                line: Int = #line,
+                                                record: (XCTIssue) -> Void) {
+        problems.forEach { problem in
+            let description: String
+            let location: XCTSourceCodeLocation
+            if let problemFile = problem.file, let problemLine = problem.line {
+                description = problem.message
+                location = XCTSourceCodeLocation(fileURL: URL(fileURLWithPath: problemFile), lineNumber: problemLine)
+            } else {
+                description = "\(problem.message) (in CUCUMBER_TAGS or a pattern CucumberSwift could not trace to a step definition)"
+                location = XCTSourceCodeLocation(filePath: String(file), lineNumber: line)
+            }
+            record(XCTIssue(type: .assertionFailure,
+                            compactDescription: description,
+                            detailedDescription: nil,
+                            sourceCodeContext: .init(location: location),
+                            associatedError: nil,
+                            attachments: []))
         }
     }
 

@@ -14,6 +14,7 @@ extension Cucumber {
     func reset() {
         Cucumber.shouldRunWith = { _, _ in true }
         Gherkin.errors.removeAll()
+        RegularExpression.errors.removeAll()
         features.removeAll()
         beforeFeatureHooks.removeAll()
         beforeScenarioHooks.removeAll()
