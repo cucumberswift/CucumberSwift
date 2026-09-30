@@ -166,7 +166,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -178,7 +178,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -190,7 +190,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -202,7 +202,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -214,7 +214,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -226,7 +226,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
@@ -238,7 +238,7 @@ extension GherkinDSL {
                                    line: UInt = #line,
                                    column: UInt = #column,
                                    file: StaticString = #file,
-                                   function: StaticString = #function) {
+                                   function _: StaticString = #function) {
         self.init(line: line,
                   column: column,
                   match: try? readStepName(lineNumber: line, column: column, filePath: file),
