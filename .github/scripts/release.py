@@ -284,9 +284,12 @@ def changes(repo, branch, last_tag, sha):
     # Merge commits are skipped: a merged pull request is found through its own commits.
     for commit in run("git", "rev-list", "--reverse", "--no-merges", f"refs/tags/{last_tag}..{sha}").split():
         pulls = api(f"repos/{repo}/commits/{commit}/pulls")
-        # The API also returns pull requests from other repositories in the fork network.
+        # The API also returns pull requests from other repositories in the fork network. A layer
+        # of a stacked pull request is squashed onto the branch but keeps the base it had in the
+        # stack, so a pull request whose merge commit is this commit counts too.
         merged = [p for p in pulls
-                  if p.get("merged_at") and p["base"]["ref"] == branch and p["base"]["repo"]["full_name"] == repo]
+                  if p.get("merged_at") and p["base"]["repo"]["full_name"] == repo
+                  and (p["base"]["ref"] == branch or p.get("merge_commit_sha") == commit)]
         if merged:
             for pull in merged:
                 authors[pull["number"]] = author(pull["user"])
