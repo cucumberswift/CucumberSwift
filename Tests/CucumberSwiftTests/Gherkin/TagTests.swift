@@ -209,7 +209,7 @@ class TagTests: XCTestCase {
             "I email support@example.com"
         ])
         XCTAssertEqual(scenario?.tags, [])
-        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
     }
 
     func testAtSignInTitlesAndDescriptionsIsText() {
@@ -227,7 +227,7 @@ class TagTests: XCTestCase {
         XCTAssertEqual(feature?.scenarios.first?.title, "Reply to @someone")
         XCTAssertEqual(feature?.scenarios.first?.tags, [])
         XCTAssertEqual(feature?.scenarios.first?.steps.map(\.match), ["a scenario"])
-        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
     }
 
     func testTagLinesStillParseAlongsideAtSignInStepText() {
@@ -249,7 +249,7 @@ class TagTests: XCTestCase {
         XCTAssertEqual(feature?.scenarios.first?.tags, ["feature_tag1", "feature_tag2", "feature_tag3", "scenario_tag1"])
         XCTAssertEqual(feature?.scenarios.last?.tags, ["feature_tag1", "feature_tag2", "feature_tag3", "joined_tag3", "joined_tag4"])
         XCTAssertEqual(feature?.scenarios.last?.steps.map(\.match), ["the @delimits tags"])
-        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
     }
 
     func testEscapedAtSignInStepTextStillWorks() {
@@ -260,6 +260,6 @@ class TagTests: XCTestCase {
         """#)
         XCTAssertEqual(cucumber.features.first?.scenarios.first?.steps.map(\.match), ["I type \"test@surglogs.com\""])
         XCTAssertEqual(cucumber.features.first?.scenarios.first?.tags, [])
-        XCTAssert(Gherkin.errors.isEmpty, "\(Gherkin.errors)")
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
     }
 }
