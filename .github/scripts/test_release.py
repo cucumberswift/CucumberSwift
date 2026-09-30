@@ -131,8 +131,8 @@ class Fake:
                                 "closingIssuesReferences": {"nodes": list(issues)}}
 
 
-def pull(number, login="alice", user_type="User", base="main", repo=REPO, merged=True):
-    return {"number": number, "merged_at": MERGED_AT if merged else None,
+def pull(number, login="alice", user_type="User", base="main", repo=REPO, merged=True, merge_commit=None):
+    return {"number": number, "merged_at": MERGED_AT if merged else None, "merge_commit_sha": merge_commit,
             "base": {"ref": base, "repo": {"full_name": repo}},
             "user": {"login": login, "type": user_type}}
 
@@ -396,11 +396,26 @@ class BumpCheckTests(PlanTestCase):
         self.fake.graphql[40] = {"number": 40, "title": "Add tags", "closingIssuesReferences": {
             "nodes": [issue(13, "Add tags", "Feature")]}}
         self.fake.commit("b" * 40, "Add tags", [pull(40, base="support/4.x"),
+                                                pull(40, base="support/4.x", merge_commit="c" * 40),
                                                 pull(40, repo="someone/CucumberSwift"),
                                                 pull(40, merged=False)])
         self.plan("patch")
         self.assertIn("- Add tags (bbbbbbb)", self.read("notes.md"))
         self.assertFalse([r for r in self.fake.runs if r[:3] == ("gh", "api", "graphql")])
+
+    def test_a_stacked_pull_request_is_found_by_its_merge_commit(self):
+        # A stack merge squashes each layer onto main, but a layer keeps the base it had in the
+        # stack: the branch of the layer below it.
+        self.fake.merge(40, "Report errors at the step definition", [issue(12, "Report errors", "Bug")])
+        self.fake.graphql[41] = {"number": 41, "title": "Report expression errors too", "closingIssuesReferences": {
+            "nodes": [issue(13, "Report expression errors", "Feature")]}}
+        self.fake.commit("d" * 40, "Report expression errors too (#41)",
+                         [pull(41, base="bugfix/12-report-errors", merge_commit="d" * 40)])
+        self.plan("minor")
+        notes = self.read("notes.md")
+        self.assertIn("- Report expression errors (#13, #41 by @alice)", notes)
+        self.assertNotIn("dddddddd"[:7], notes)
+        self.assertNotIn("Other changes", notes)
 
 
 # plan: ruleset check --------------------------------------------------------
