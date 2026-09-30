@@ -170,4 +170,56 @@ class AmbiguousStepTests: XCTestCase {
         }
         XCTAssertEqual(calls, 0)
     }
+
+    // Ambiguity for ExecuteFirstStep is about the text asked for, not the text of the step it finds.
+    func testExecuteFirstStepRunsTheOneDefinitionThatMatchesTheRequestedText() throws {
+        parseFeature(withSteps: "Given there are 3 flights")
+        var exactCalled = false
+        var patternCalled = false
+        Given("^there are 3 flights$") { _, _ in exactCalled = true }
+        Given("^there are \\d+ flights$") { _, _ in patternCalled = true }
+        XCTAssertTrue(try XCTUnwrap(steps.first).isAmbiguous)
+
+        ExecuteFirstStep(matching: "there are 4 flights")
+
+        XCTAssertFalse(exactCalled)
+        XCTAssertTrue(patternCalled)
+    }
+
+    func testExecuteFirstStepNamesOnlyTheDefinitionsThatMatchTheRequestedText() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
+        parseFeature(withSteps: "Given there are 3 flights")
+        Given("^there are 3 flights$") { _, _ in }
+        let firstLine = #line + 1
+        Given("^there are \\d+ flights$") { _, _ in }
+        MatchAll("^there are (\\d+) flights$") { _, _ in }
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in
+            issue.compactDescription.hasSuffix("Ambiguous step 'there are 4 flights': it matches 2 step definitions, at AmbiguousStepTests.swift:\(firstLine) and AmbiguousStepTests.swift:\(firstLine + 1). Remove all but one of them, or make their patterns more specific.")
+        }
+        XCTExpectFailure("The requested text is ambiguous", options: options) {
+            ExecuteFirstStep(matching: "there are 4 flights")
+        }
+    }
+
+    // The failure for an ambiguous step goes to the test XCTest is running.
+    func testRunningTestCaseObserverTracksTheTestThatIsRunning() {
+        let observer = RunningTestCaseObserver()
+        let first = XCTestCase()
+        let second = XCTestCase()
+
+        observer.testCaseWillStart(first)
+        XCTAssertIdentical(observer.testCase, first)
+
+        observer.testCaseDidFinish(second)
+        XCTAssertIdentical(observer.testCase, first, "Another test finishing leaves the running one in place")
+
+        observer.testCaseDidFinish(first)
+        XCTAssertNil(observer.testCase)
+    }
+
+    func testCucumberRecordsOnTheTestThatIsRunning() {
+        XCTAssertIdentical(Cucumber.shared.runningTestCase, self)
+    }
 }

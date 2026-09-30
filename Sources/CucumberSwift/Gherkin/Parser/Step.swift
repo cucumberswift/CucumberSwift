@@ -62,9 +62,18 @@ public class Step: CustomStringConvertible {
     var tokens = [Lexer.Token]()
     var sourceLine: Int?
     var sourceFile: StaticString?
-    /// Where each step definition that matches this step was registered. A step that more than one
-    /// step definition matches is ambiguous: it fails and runs none of them.
-    var matchingDefinitions = [(file: StaticString, line: Int)]()
+    /// A step definition that matches this step: where it was registered, and what it matches and runs.
+    struct Definition {
+        let file: StaticString
+        let line: Int
+        let matches: MatchesExpression
+        let execute: Execute?
+        /// The body of an async step definition, which `execute` runs and waits for.
+        var executeAsync: AsyncExecute?
+    }
+    /// Every step definition that matches this step. A step that more than one step definition
+    /// matches is ambiguous: it fails and runs none of them.
+    var matchingDefinitions = [Definition]()
     var isAmbiguous: Bool { matchingDefinitions.count > 1 }
 
     init(with node: AST.StepNode) {
