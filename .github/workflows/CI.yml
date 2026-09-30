@@ -164,6 +164,29 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run check-project
 
+  # Package.swift and the Xcode project each have a lockfile. This fails when a
+  # manifest's lower bound is not the version its lockfile pins, when a lockfile is
+  # stale or does not satisfy its manifest, or when the two lockfiles pin a shared
+  # package differently. Dependabot updates only Package.swift and Package.resolved,
+  # so its pull requests fail here until the Xcode side is updated to match. No
+  # path filter, so it runs on every pull request and can be a required check.
+  lockfiles:
+    name: Manifests match their lockfiles
+    runs-on: macos-15
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Check each manifest against its lockfile
+        run: python3 .github/scripts/check_lockfiles.py --resolve
+
   # The test command CONTRIBUTING.md gives contributors runs on Mac Catalyst, but
   # the `test` job above runs `fastlane unit_test`, which picks an iOS Simulator
   # and never exercises Catalyst. The two destinations run test suites in a
