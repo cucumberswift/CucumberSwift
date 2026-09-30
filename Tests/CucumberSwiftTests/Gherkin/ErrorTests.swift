@@ -82,11 +82,24 @@ class ErrorsTests: XCTestCase {
         XCTAssert(Gherkin.errors.contains("File: single_parser_error.feature, expected: #EOF, #Language, #TagLine, #FeatureLine, #Comment, #Empty, got 'invalid line here'"))
     }
 
-    func testDuplicateStepTextInScenario() {
+    func testRepeatedStepTextInScenarioIsAllowed() {
         Cucumber.shared.parseIntoFeatures("""
-        Feature: Duplicate steps
+        Feature: Navigation
 
-          Scenario: duplicated
+          Scenario: Going back twice returns to the start
+            Given I am on the checkout page
+            When I navigate back
+            And I navigate back
+            Then I am on the home page
+        """, uri: "repeated_step.feature")
+        XCTAssertEqual(Gherkin.errors, [])
+    }
+
+    func testRepeatedStepTextWithDifferentDataTablesInScenarioIsAllowed() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Candidates
+
+          Scenario: Candidates are reordered
             Given some setup
             Then the candidates appear in this order:
               | candidate |
@@ -97,31 +110,8 @@ class ErrorsTests: XCTestCase {
               | candidate |
               | foo       |
               | bar       |
-        """, uri: "duplicate_step.feature")
-        XCTAssert(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
-    }
-
-    func testDuplicateStepErrorMessage() {
-        Cucumber.shared.parseIntoFeatures("""
-        Feature: Duplicate steps
-
-          Scenario: duplicated
-            Then do something
-            Then do something
-        """, uri: "dup.feature")
-        XCTAssert(Gherkin.errors.contains("File: dup.feature duplicate step 'Then do something' in scenario 'duplicated'"))
-    }
-
-    func testNoDuplicateErrorForUniqueSteps() {
-        Cucumber.shared.parseIntoFeatures("""
-        Feature: Unique steps
-
-          Scenario: unique
-            Given step one
-            When step two
-            Then step three
-        """, uri: "unique.feature")
-        XCTAssertFalse(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
+        """, uri: "repeated_step_data_table.feature")
+        XCTAssertEqual(Gherkin.errors, [])
     }
 
     func testSameStepTextInDifferentScenariosIsAllowed() {
@@ -136,7 +126,7 @@ class ErrorsTests: XCTestCase {
             Given some setup
             Then verify result
         """, uri: "cross_scenario.feature")
-        XCTAssertFalse(Gherkin.errors.contains(where: { $0.contains("duplicate step") }))
+        XCTAssertEqual(Gherkin.errors, [])
     }
 
     override func tearDown() {

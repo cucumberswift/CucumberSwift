@@ -86,3 +86,23 @@ as expected
         When I look in my test report
         Then I see some PENDING steps with a swift attachment
             And I can copy and paste the swift code into my test case
+
+    Scenario: Repeated step text with different data tables is not aliased
+        Given a step with a repeated data table
+            | value |
+            | one |
+        Given a step with a repeated data table
+            | value |
+            | two |
+        Then each repeated data table step saw its own table
+
+    Scenario: Repeated step text with different doc strings is not aliased
+        Given a step with a repeated doc string
+        """
+        first
+        """
+        Given a step with a repeated doc string
+        """
+        second
+        """
+        Then each repeated doc string step saw its own doc string

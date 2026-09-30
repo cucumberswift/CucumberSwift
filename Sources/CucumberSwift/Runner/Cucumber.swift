@@ -192,14 +192,14 @@ import CucumberSwiftExpressions
     /// with the first such step.
     private func matchingDefinitions(keyword: Step.Keyword?, matching: String) -> [(definition: Step.Definition, step: Step)] {
         var matches = [(definition: Step.Definition, step: Step)]()
-        features
-            .flatMap { $0.scenarios.flatMap { $0.steps } }
-            .filter { step in keyword.map { step.keyword.contains($0) } ?? true }
-            .forEach { step in
-                step.matchingDefinitions
-                    .filter { definition in definition.matches(matching) && !matches.contains { $0.definition === definition } }
-                    .forEach { matches.append((definition: $0, step: step)) }
+        let steps = features.flatMap { $0.scenarios.flatMap { $0.steps } }
+        for step in steps where keyword.map({ step.keyword.contains($0) }) ?? true {
+            for definition in step.matchingDefinitions where definition.matches(matching) {
+                if !matches.contains(where: { $0.definition === definition }) {
+                    matches.append((definition: definition, step: step))
+                }
             }
+        }
         return matches
     }
 
