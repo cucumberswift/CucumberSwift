@@ -32,6 +32,48 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
+      # The sonarqube job reads this report. Paths in it are relative to the
+      # repository root, so it does not depend on where that job checks out.
+      - name: Convert coverage for SonarQube Cloud
+        run: |
+          set -eu
+          bundle=$(find fastlane/test_output -maxdepth 1 -name '*.xcresult' | head -1)
+          if [ -z "$bundle" ]; then echo "::error::fastlane wrote no result bundle"; exit 1; fi
+          python3 .github/scripts/sonar_coverage.py --xcresult "$bundle" --root . --output sq-generic.xml
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonar-coverage
+          path: sq-generic.xml
+          if-no-files-found: error
+          retention-days: 1
+
+  # Code analysis and coverage on SonarQube Cloud (sonar-project.properties).
+  # Pull requests from forks get no secrets, so they skip it.
+  sonarqube:
+    name: SonarQube Cloud
+    needs: test
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-14
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # SonarQube Cloud uses the history to tell new code from old.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sonar-coverage
+      - name: Install sonar-scanner
+        run: |
+          brew install sonar-scanner
+          sonar-scanner --version
+      - name: Analyse
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: sonar-scanner
 
   build_for_package_managers:
     needs: test
