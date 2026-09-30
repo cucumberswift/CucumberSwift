@@ -27,6 +27,61 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
 ```
 
+## Async steps
+A step definition can be `async` and `throws`. Write `await` in its closure and CucumberSwift runs it as an async step:
+
+```swift
+Given("the user has signed in") { _, _ in
+    try await session.signIn(as: .testUser)
+}
+```
+
+A closure without `await` is an ordinary synchronous step definition, exactly as before. This works with Cucumber expressions, string patterns and regex literals alike.
+
+Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
+
+- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. With `continueTestingAfterFailure` off (the default), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
+- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
+
+  ```swift
+  extension Cucumber: StepImplementation {
+      public var asyncStepTimeout: TimeInterval { 120 }
+      // ...
+  }
+  ```
+
+  Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
+- **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
+- **Running another step.** From inside an async step, use `await ExecuteFirstStep(matching:)`. The synchronous `ExecuteFirstStep(matching:)` works from synchronous steps, including when the step it runs is async.
+
+With the Swift DSL, pass an async function or closure rather than a call:
+
+```swift
+@MainActor func signIn() async throws { /* ... */ }
+
+Feature("Sign in") {
+    Scenario("A returning user") {
+        Given(I: signIn)                                  // an async function
+        When(I: { try await open(.settings) })            // a closure
+        Then(the: settingsAreShown())                     // a synchronous call, as before
+    }
+}
+```
+
+### Swift 6 language mode
+In a test target that builds in Swift 6 language mode, declare your step implementation on the main actor:
+
+```swift
+@MainActor extension Cucumber: @retroactive @preconcurrency StepImplementation {
+    public var bundle: Bundle { /* ... */ }
+    public func setupSteps() { /* ... */ }
+}
+```
+
+Without it, the compiler rejects an async step that changes a variable it shares with other steps, such as a `var` declared in `setupSteps()`, because the async step runs on the main actor and `setupSteps()` does not. It also rejects synchronous steps, hooks and DSL calls that use main-actor code. CucumberSwift calls `setupSteps()` and runs every step on the main thread, so this declaration only tells the compiler what already happens.
+
+A custom reporter that uses main-actor code needs the same: `@MainActor final class MyReporter: @preconcurrency CucumberTestObserver`.
+
 ## Matching with Cucumber Expressions
 Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 

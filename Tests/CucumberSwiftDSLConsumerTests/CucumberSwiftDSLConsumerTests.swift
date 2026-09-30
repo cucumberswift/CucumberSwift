@@ -17,6 +17,9 @@ var beforeStepHooks = [Step: Int]()
 var afterStepHooks = [Step: Int]()
 var afterScenarioHooks = [String: Int]()
 var afterFeatureHooks = [Feature: Int]()
+// Async steps and hooks (#229)
+var asyncExecutionOrder = [String]()
+var asyncStepsOnMainThread = [Bool]()
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
@@ -114,6 +117,30 @@ extension Cucumber: StepImplementation {
                 Then(the: scenarioRunsWithoutCrashing())
             }
         }
+
+        setupAsyncSteps()
+    }
+
+    // Async steps and hooks (#229): each step waits for the one before it, on the main actor. An async
+    // DSL step takes a function or a closure, since an autoclosure cannot be async here.
+    func setupAsyncSteps() {
+        BeforeScenario { scenario in
+            guard scenario.feature?.title == "Async steps" else { return }
+            await Task.yield()
+            asyncExecutionOrder.append("async BeforeScenario")
+        }
+
+        Feature("Async steps") {
+            Description("Step definitions and hooks can be async. Steps still run one at a time, in the order written.")
+
+            Scenario("Async and sync steps run in the order written") {
+                Given(a: stepThatWaits)
+                    And(a: syncStep())
+                When(a: stepThatAwaitsWorkOnABackgroundThread)
+                Then(the: asyncStepsRanOnTheMainThread())
+                    And(the: stepsAndTheAsyncHookRanInTheOrderWritten())
+            }
+        }
     }
 }
 
@@ -160,6 +187,34 @@ private func runTheTests() {
 
 private func scenarioRunsWithoutCrashing() {
     XCTAssert(true) // did not crash if it executes this
+}
+
+private func isOnMainThread() -> Bool { Thread.isMainThread }
+
+@MainActor
+private func stepThatWaits() async throws {
+    try await Task.sleep(nanoseconds: 100_000_000)
+    asyncStepsOnMainThread.append(isOnMainThread())
+    asyncExecutionOrder.append("async wait")
+}
+
+private func syncStep() {
+    asyncExecutionOrder.append("sync")
+}
+
+@MainActor
+private func stepThatAwaitsWorkOnABackgroundThread() async {
+    let answer = await Task.detached { isOnMainThread() ? 0 : 42 }.value
+    asyncStepsOnMainThread.append(isOnMainThread())
+    asyncExecutionOrder.append("background \(answer)")
+}
+
+private func asyncStepsRanOnTheMainThread() {
+    XCTAssertEqual(asyncStepsOnMainThread, [true, true])
+}
+
+private func stepsAndTheAsyncHookRanInTheOrderWritten() {
+    XCTAssertEqual(asyncExecutionOrder, ["async BeforeScenario", "async wait", "sync", "background 42"])
 }
 
 /* STUFF THAT IS NOT COVERED SO FAR

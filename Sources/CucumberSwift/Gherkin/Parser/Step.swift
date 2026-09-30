@@ -37,9 +37,12 @@ public class Step: CustomStringConvertible {
 
     typealias MatchesExpression = ((_ str: String) -> Bool)
     typealias Execute = ((_ match: String, _ steps: Step) throws -> Void)
+    typealias AsyncExecute = @MainActor (_ match: String, _ steps: Step) async throws -> Void
 
     var result: Reporter.Result = .pending
     var execute: Execute?
+    /// The body of an async step definition. `execute` then runs it and waits for it to finish.
+    var executeAsync: AsyncExecute?
     var executeSelector: Selector?
     var executeClass: AnyClass?
     var executeInstance: NSObject?
@@ -66,12 +69,15 @@ public class Step: CustomStringConvertible {
         let line: Int
         let matches: MatchesExpression
         let execute: Execute?
+        /// The body of an async step definition, which `execute` runs and waits for.
+        let executeAsync: AsyncExecute?
 
-        init(file: StaticString, line: Int, matches: @escaping MatchesExpression, execute: Execute?) {
+        init(file: StaticString, line: Int, matches: @escaping MatchesExpression, execute: Execute?, executeAsync: AsyncExecute? = nil) {
             self.file = file
             self.line = line
             self.matches = matches
             self.execute = execute
+            self.executeAsync = executeAsync
         }
     }
     /// Every step definition that matches this step. A step that more than one step definition
