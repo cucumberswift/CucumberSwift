@@ -4,7 +4,8 @@ Run from the repository root:
 
   python3 -m unittest discover -s .github/scripts -v
 
-xccov is replaced with a fake, so the tests need no Xcode. Only the standard
+xccov is replaced with a fake, so the tests need no Xcode. main() runs in a
+temporary directory, since its paths are fixed relative to the working one. Only the standard
 library is used.
 """
 import json
@@ -14,7 +15,7 @@ import sys
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from unittest import mock
 
@@ -100,73 +101,83 @@ class XmlTests(unittest.TestCase):
 
 
 class MainTests(unittest.TestCase):
+    """main() run in a temporary repository root."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = os.path.realpath(self.tmp.name)
+        cwd = os.getcwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, cwd)
+
     def run_main(self, *args):
         with redirect_stdout(StringIO()) as out:
             sonar_coverage.main(list(args))
         return out.getvalue()
 
-    def test_converts_an_lcov_file(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source = os.path.join(tmp, "Sources", "A.swift")
-            lcov = os.path.join(tmp, "info.lcov")
-            output = os.path.join(tmp, "out.xml")
-            with open(lcov, "w", encoding="utf-8") as handle:
-                handle.write(f"SF:{source}\nDA:1,1\nDA:2,0\nend_of_record\n")
-            printed = self.run_main("--lcov", lcov, "--root", tmp, "--include", "Sources",
-                                    "--output", output)
-            with open(output, encoding="utf-8") as handle:
-                self.assertEqual(lines_of(handle.read()),
-                                 {os.path.join("Sources", "A.swift"): {1: True, 2: False}})
-            self.assertIn("1 files (2 lines)", printed)
+    def assert_fails(self, *args, code=1):
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            with self.assertRaises(SystemExit) as raised:
+                sonar_coverage.main(list(args))
+        self.assertEqual(raised.exception.code, code)
+        self.assertFalse(os.path.exists(sonar_coverage.OUTPUT))
 
-    def test_converts_an_xcresult_through_xccov(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source = os.path.join(tmp, "Sources", "A.swift")
-            output = os.path.join(tmp, "out.xml")
-            bundle = os.path.join(tmp, "T.xcresult")
-            report = {source: [{"line": 7, "isExecutable": True, "executionCount": 1}]}
-            done = subprocess.CompletedProcess([], 0, stdout=json.dumps(report), stderr="")
-            with mock.patch.object(sonar_coverage.subprocess, "run", return_value=done) as run:
-                self.run_main("--xcresult", bundle, "--root", tmp, "--output", output)
-            self.assertEqual(run.call_args.args[0],
-                             ["xcrun", "xccov", "view", "--archive", "--json",
-                              os.path.realpath(bundle)])
-            with open(output, encoding="utf-8") as handle:
-                self.assertEqual(lines_of(handle.read()),
-                                 {os.path.join("Sources", "A.swift"): {7: True}})
+    def output(self):
+        with open(sonar_coverage.OUTPUT, encoding="utf-8") as handle:
+            return lines_of(handle.read())
+
+    def make_bundle(self, name):
+        path = os.path.join(self.root, "fastlane", "test_output", name)
+        os.makedirs(path)
+        return path
+
+    def test_converts_info_lcov_keeping_only_sources(self):
+        source = os.path.join(self.root, "Sources", "A.swift")
+        test = os.path.join(self.root, "Tests", "ATests.swift")
+        with open("info.lcov", "w", encoding="utf-8") as handle:
+            handle.write(f"SF:{source}\nDA:1,1\nDA:2,0\nend_of_record\n"
+                         f"SF:{test}\nDA:1,1\nend_of_record\n")
+        printed = self.run_main("lcov")
+        self.assertEqual(self.output(), {os.path.join("Sources", "A.swift"): {1: True, 2: False}})
+        self.assertIn("1 files (2 lines)", printed)
+
+    def test_converts_the_result_bundle_through_xccov(self):
+        bundle = self.make_bundle("CucumberSwift.xcresult")
+        source = os.path.join(self.root, "Sources", "A.swift")
+        report = {source: [{"line": 7, "isExecutable": True, "executionCount": 1}]}
+        done = subprocess.CompletedProcess([], 0, stdout=json.dumps(report), stderr="")
+        with mock.patch.object(sonar_coverage.subprocess, "run", return_value=done) as run:
+            self.run_main("xcresult")
+        self.assertEqual(run.call_args.args[0],
+                         ["xcrun", "xccov", "view", "--archive", "--json", bundle])
+        self.assertEqual(self.output(), {os.path.join("Sources", "A.swift"): {7: True}})
+
+    def test_fails_unless_there_is_exactly_one_result_bundle(self):
+        with mock.patch.object(sonar_coverage.subprocess, "run") as run:
+            self.assert_fails("xcresult")
+            self.make_bundle("A.xcresult")
+            self.make_bundle("B.xcresult")
+            self.assert_fails("xcresult")
+        run.assert_not_called()
 
     def test_fails_when_xccov_fails(self):
+        self.make_bundle("CucumberSwift.xcresult")
         failed = subprocess.CompletedProcess([], 1, stdout="", stderr="bad bundle")
         with mock.patch.object(sonar_coverage.subprocess, "run", return_value=failed):
-            with self.assertRaises(SystemExit) as raised:
-                self.run_main("--xcresult", "T.xcresult", "--root", ".", "--output", "o.xml")
-        self.assertEqual(raised.exception.code, 1)
+            self.assert_fails("xcresult")
 
-    def test_fails_when_no_file_is_under_root(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            lcov = os.path.join(tmp, "info.lcov")
-            with open(lcov, "w", encoding="utf-8") as handle:
-                handle.write("SF:/nowhere/A.swift\nDA:1,1\nend_of_record\n")
-            output = os.path.join(tmp, "out.xml")
-            with self.assertRaises(SystemExit) as raised:
-                self.run_main("--lcov", lcov, "--root", tmp, "--output", output)
-            self.assertEqual(raised.exception.code, 1)
-            self.assertFalse(os.path.exists(output))
+    def test_fails_when_info_lcov_is_missing(self):
+        self.assert_fails("lcov")
 
-    def test_fails_when_a_file_argument_is_outside_root(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = os.path.join(tmp, "repo")
-            inside = os.path.join(root, "out.xml")
-            outside = os.path.join(tmp, "elsewhere.xml")
-            for args in (["--lcov", outside, "--output", inside],
-                         ["--lcov", inside, "--output", outside],
-                         ["--xcresult=-evil", "--output", inside]):
-                with self.subTest(args=args):
-                    with mock.patch.object(sonar_coverage.subprocess, "run") as run:
-                        with self.assertRaises(SystemExit) as raised:
-                            self.run_main(*args, "--root", root)
-                    self.assertEqual(raised.exception.code, 1)
-                    run.assert_not_called()
+    def test_fails_when_no_file_is_under_sources(self):
+        with open("info.lcov", "w", encoding="utf-8") as handle:
+            handle.write("SF:/nowhere/A.swift\nDA:1,1\nend_of_record\n")
+        self.assert_fails("lcov")
+
+    def test_rejects_any_other_argument(self):
+        self.assert_fails("info.lcov", code=2)
+        self.assert_fails("lcov", "--output", "x.xml", code=2)
 
 
 if __name__ == "__main__":

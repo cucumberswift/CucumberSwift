@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 """Convert test coverage into SonarQube's generic coverage format.
 
-  sonar_coverage.py --xcresult PATH --root DIR [--include DIR ...] --output FILE
-  sonar_coverage.py --lcov PATH --root DIR [--include DIR ...] --output FILE
+  sonar_coverage.py xcresult   read the Xcode result bundle fastlane writes
+                               under fastlane/test_output, through `xcrun xccov`
+  sonar_coverage.py lcov       read info.lcov, as `llvm-cov export -format=lcov`
+                               writes it for Codecov
 
---xcresult reads an Xcode result bundle through `xcrun xccov`. --lcov reads an
-lcov file, such as the one `llvm-cov export -format=lcov` writes for Codecov.
-Only files under --root are kept, and their paths are written relative to it,
-so the report can be read by a job with its checkout somewhere else. Each
---include (relative to --root) narrows that to files under one of those folders.
-The input and output files must be under --root too.
+Run it from the repository root. It writes sq-generic.xml there, with only the
+files under Sources/, and with their paths relative to the root, so the report
+can be read by a job with its checkout somewhere else. The paths are fixed
+rather than arguments, so nothing on the command line reaches a file or xccov.
 
 The same file is used by CucumberSwift and CucumberSwiftExpressions; keep the
 two copies identical.
 """
 import argparse
+import glob
 import json
 import os
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+
+RESULT_BUNDLES = os.path.join("fastlane", "test_output", "*.xcresult")
+LCOV = "info.lcov"
+OUTPUT = "sq-generic.xml"
+SOURCES = "Sources"
 
 
 def fail(message):
@@ -63,14 +69,6 @@ def under(folder, path):
     return os.path.commonpath([folder, path]) == folder
 
 
-def inside(root, path, name):
-    """The absolute path of a file argument, which must be under root."""
-    full = os.path.realpath(path)
-    if not under(root, full):
-        fail(f"{name} {path} is not under --root")
-    return full
-
-
 def relative_to_root(coverage, root, include=()):
     """Keep files under root (and under an include, if any), keyed relative to root."""
     root = os.path.realpath(root)
@@ -93,38 +91,42 @@ def to_xml(coverage):
     return ET.tostring(top, encoding="unicode") + "\n"
 
 
+def read_xcresult():
+    bundles = sorted(glob.glob(RESULT_BUNDLES))
+    if len(bundles) != 1:
+        fail(f"expected one result bundle matching {RESULT_BUNDLES}, found {len(bundles)}")
+    # An absolute path, so xccov can never read it as an option.
+    bundle = os.path.abspath(bundles[0])
+    result = subprocess.run(
+        ["xcrun", "xccov", "view", "--archive", "--json", bundle],
+        capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        fail(f"xccov could not read {bundles[0]}: {result.stderr.strip()}")
+    return from_xccov(json.loads(result.stdout))
+
+
+def read_lcov():
+    if not os.path.isfile(LCOV):
+        fail(f"{LCOV} not found")
+    with open(LCOV, encoding="utf-8") as handle:
+        return from_lcov(handle.read())
+
+
+READERS = {"xcresult": read_xcresult, "lcov": read_lcov}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    source = parser.add_mutually_exclusive_group(required=True)
-    source.add_argument("--xcresult")
-    source.add_argument("--lcov")
-    parser.add_argument("--root", required=True)
-    parser.add_argument("--include", action="append", default=[])
-    parser.add_argument("--output", required=True)
+    parser.add_argument("format", choices=sorted(READERS))
     args = parser.parse_args(argv)
-    root = os.path.realpath(args.root)
-    output = inside(root, args.output, "--output")
 
-    if args.xcresult:
-        # An absolute path, so xccov can never read it as an option.
-        xcresult = inside(root, args.xcresult, "--xcresult")
-        result = subprocess.run(
-            ["xcrun", "xccov", "view", "--archive", "--json", xcresult],
-            capture_output=True, text=True, check=False)
-        if result.returncode != 0:
-            fail(f"xccov could not read {args.xcresult}: {result.stderr.strip()}")
-        coverage = from_xccov(json.loads(result.stdout))
-    else:
-        with open(inside(root, args.lcov, "--lcov"), encoding="utf-8") as handle:
-            coverage = from_lcov(handle.read())
-
-    coverage = relative_to_root(coverage, root, args.include)
+    coverage = relative_to_root(READERS[args.format](), os.curdir, [SOURCES])
     if not coverage:
-        fail(f"no covered files under {args.root} {' '.join(args.include)}".rstrip())
-    with open(output, "w", encoding="utf-8") as handle:
+        fail(f"no covered files under {SOURCES}/")
+    with open(OUTPUT, "w", encoding="utf-8") as handle:
         handle.write(to_xml(coverage))
     lines = sum(len(lines) for lines in coverage.values())
-    print(f"Wrote coverage for {len(coverage)} files ({lines} lines) to {args.output}")
+    print(f"Wrote coverage for {len(coverage)} files ({lines} lines) to {OUTPUT}")
 
 
 if __name__ == "__main__":

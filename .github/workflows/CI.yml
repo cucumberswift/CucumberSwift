@@ -35,11 +35,7 @@ jobs:
       # The sonarqube job reads this report. Paths in it are relative to the
       # repository root, so it does not depend on where that job checks out.
       - name: Convert coverage for SonarQube Cloud
-        run: |
-          set -eu
-          bundle=$(find fastlane/test_output -maxdepth 1 -name '*.xcresult' | head -1)
-          if [ -z "$bundle" ]; then echo "::error::fastlane wrote no result bundle"; exit 1; fi
-          python3 .github/scripts/sonar_coverage.py --xcresult "$bundle" --root . --include Sources --output sq-generic.xml
+        run: python3 .github/scripts/sonar_coverage.py xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sonar-coverage
