@@ -160,4 +160,6 @@ When("some precondition") { _, _ in }      // not ambiguous for "Given some prec
 MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: both fit "Given some precondition"
 ```
 
-Earlier versions did not report this: the step definition registered last silently replaced the others, so the step ran whichever came last. To fix an ambiguous step, remove all but one of its step definitions, or make their patterns more specific so that each step matches only one.
+Two step definitions with the *same* pattern are a mistake even when no step uses them, as in Cucumber for Java. The test run fails at the second one, and the failure names both, if their keywords can match the same steps: the same keyword, ``MatchAll`` with any keyword, or ``And`` or ``But`` with ``Given``, ``When`` or ``Then``. `Given("x")` and `When("x")` are not duplicates. Two patterns count as the same when they are the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, cannot be compared, so only the ambiguity check applies to them.
+
+Earlier versions reported neither: the step definition registered last silently replaced the others, so a step ran whichever came last. To fix an ambiguous step or a duplicate, remove all but one of the step definitions, or make their patterns more specific so that each step matches only one.

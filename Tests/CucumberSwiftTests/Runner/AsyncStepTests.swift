@@ -487,6 +487,23 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(calls, 0)
     }
 
+    func testAnAsyncCucumberExpressionDefinitionCanDuplicateASyncOne() {
+        Given("there are {int} flights") { _, _ in }
+        let secondLine = #line + 1
+        Given("there are {int} flights") { _, _ in await Task.yield() }
+
+        XCTAssertEqual(DuplicateStepDefinition.errors.map(\.line), [secondLine])
+    }
+
+    @available(*, deprecated, message: "Exercises the deprecated regular expression String API")
+    func testAnAsyncRegexStringDefinitionCanDuplicateASyncOne() {
+        Given("^there are (\\d+) flights$") { (_: [String], _) in }
+        let secondLine = #line + 1
+        Given("^there are (\\d+) flights$") { (_: [String], _) in await Task.yield() }
+
+        XCTAssertEqual(DuplicateStepDefinition.errors.map(\.line), [secondLine])
+    }
+
     // MARK: Overload selection
 
     func testCucumberExpressionClosuresBindToTheMatchingOverload() {
