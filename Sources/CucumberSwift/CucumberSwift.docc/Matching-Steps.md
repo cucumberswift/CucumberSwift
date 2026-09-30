@@ -68,6 +68,20 @@ Feature("Sign in") {
 }
 ```
 
+### Swift 6 language mode
+In a test target that builds in Swift 6 language mode, declare your step implementation on the main actor:
+
+```swift
+@MainActor extension Cucumber: @retroactive @preconcurrency StepImplementation {
+    public var bundle: Bundle { /* ... */ }
+    public func setupSteps() { /* ... */ }
+}
+```
+
+Without it, the compiler rejects an async step that changes a variable it shares with other steps, such as a `var` declared in `setupSteps()`, because the async step runs on the main actor and `setupSteps()` does not. It also rejects synchronous steps, hooks and DSL calls that use main-actor code. CucumberSwift calls `setupSteps()` and runs every step on the main thread, so this declaration only tells the compiler what already happens.
+
+A custom reporter that uses main-actor code needs the same: `@MainActor final class MyReporter: @preconcurrency CucumberTestObserver`.
+
 ## Matching with Cucumber Expressions
 Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 
