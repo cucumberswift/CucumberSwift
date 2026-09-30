@@ -109,4 +109,13 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 
 > NOTE: You can use regex builders in Swift to transform into concrete types. It's a little verbose, but is supported by CucumberSwift.
 
-> Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form above also needs Swift 6 language mode or the `BareSlashRegexLiterals` upcoming feature; `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
+The same step definition with an extended delimiter, which compiles in any test target:
+```swift
+When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
+    XCTAssertEqual(match.1, "action")
+}
+```
+
+> Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
+
+The step definitions CucumberSwift suggests for undefined steps use `#/…/#`. Return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle` to get `/…/` instead.

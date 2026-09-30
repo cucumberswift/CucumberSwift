@@ -13,13 +13,24 @@ class Method {
     var comment = ""
     private(set) var regex = ""
     private(set) var matchesParameter = ""
+    private(set) var captures: [String] = []
     private(set) var variables: [(type: String, count: Int)] = []
-    init(keyword: Step.Keyword, regex: String, matchesParameter: String, variables: [(type: String, count: Int)]) {
+    init(keyword: Step.Keyword, regex: String, matchesParameter: String, captures: [String], variables: [(type: String, count: Int)]) {
         self.keyword = keyword
         self.keywords = [keyword]
         self.regex = regex
         self.matchesParameter = matchesParameter
+        self.captures = captures
         self.variables = variables
+    }
+
+    /// `string`, `stringTwo`, `stringThree`, …
+    private static func variableName(type: String, number: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .spellOut
+        formatter.locale = Locale(identifier: "en-US")
+        let spelledNumber = (number > 1) ? formatter.string(from: .init(value: number)) ?? "" : ""
+        return "\(type) \(spelledNumber)".camelCasingString()
     }
 
     func insertKeyword(_ keyword: Step.Keyword) {
@@ -39,29 +50,32 @@ class Method {
         return keywordStrings.uniqueElements
     }
 
-    func generateSwift(matchAllAllowed: Bool = true) -> String {
+    func generateSwift(matchAllAllowed: Bool = true, regexLiteralStyle: RegexLiteralStyle = .extendedDelimiter) -> String {
         Scope.language ?= Language()
+        let pattern = "^\(regex.trimmingCharacters(in: .whitespacesAndNewlines))$"
+        // The pattern escapes every `/`, so neither delimiter can end the literal early.
+        let literal: String
+        switch regexLiteralStyle {
+            case .bareSlash: literal = "/\(pattern)/"
+            case .extendedDelimiter: literal = "#/\(pattern)/#"
+        }
         var methodStrings = [String]()
         for keywordString in getKeywordStrings(matchAllAllowed: matchAllAllowed) {
             // swiftlint:disable:next empty_count
             let variablesOnStepObject = variables.filter { $0.type == "dataTable" || $0.type == "docString" }.filter { $0.count > 0 }
             let stepParameter = (!variablesOnStepObject.isEmpty) ? "step" : "_"
-            var methodString = "\(keywordString.capitalizingFirstLetter())(/^\(regex.trimmingCharacters(in: .whitespacesAndNewlines))$/) { \(matchesParameter), \(stepParameter) in\n"
-            for variable in variables {
-                for i in 0..<variable.count {
-                    let formatter = NumberFormatter()
-                    formatter.numberStyle = .spellOut
-                    formatter.locale = Locale(identifier: "en-US")
-                    let spelledNumber = (i > 0) ? formatter.string(from: .init(value: i + 1)) ?? "" : ""
-                    let varName = "\(variable.type) \(spelledNumber)".camelCasingString()
-                    if variable.type != "dataTable" && variable.type != "docString" {
-                        methodString += "    let \(varName) = \(matchesParameter)[\(i + 1)]\n"
-                    } else {
-                        methodString += "    let \(varName) = step.\(variable.type)\n"
-                    }
-                }
+            var methodString = "\(keywordString.capitalizingFirstLetter())(\(literal)) { \(matchesParameter), \(stepParameter) in\n"
+            // A regex literal's match holds the whole match at .0 and each capture at .1, .2, …
+            var countByType = [String: Int]()
+            for (position, type) in captures.enumerated() {
+                let count = countByType[type, default: 0] + 1
+                countByType[type] = count
+                methodString += "    let \(Self.variableName(type: type, number: count)) = \(matchesParameter).\(position + 1)\n"
             }
-            if variables.reduce(0, { $0 + $1.count }) <= 0 {
+            for variable in variablesOnStepObject {
+                methodString += "    let \(Self.variableName(type: variable.type, number: 1)) = step.\(variable.type)\n"
+            }
+            if captures.isEmpty && variablesOnStepObject.isEmpty {
                 methodString += "\n"
             }
             methodString += "}"
