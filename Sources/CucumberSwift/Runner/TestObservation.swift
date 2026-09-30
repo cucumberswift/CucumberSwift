@@ -39,3 +39,16 @@ extension Cucumber: XCTestObservation {
         }
     }
 }
+
+/// Tracks the test XCTest is running. A separate observer, so that `Cucumber` gains no public methods.
+final class RunningTestCaseObserver: NSObject, XCTestObservation {
+    private(set) weak var testCase: XCTestCase?
+
+    func testCaseWillStart(_ testCase: XCTestCase) {
+        self.testCase = testCase
+    }
+
+    func testCaseDidFinish(_ testCase: XCTestCase) {
+        if self.testCase === testCase { self.testCase = nil }
+    }
+}

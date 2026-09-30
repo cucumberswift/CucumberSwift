@@ -15,6 +15,9 @@ import CucumberSwiftExpressions
 
     var features = [Feature]()
     var currentStep: Step?
+    let runningTestCaseObserver = RunningTestCaseObserver()
+    /// The test XCTest is running, so a failure can be recorded on it with a location of our choosing.
+    var runningTestCase: XCTestCase? { runningTestCaseObserver.testCase }
     var reportName: String = "CucumberTestResultsFor"
     var environment: [String: String] = ProcessInfo.processInfo.environment
 
@@ -81,6 +84,7 @@ import CucumberSwiftExpressions
     override public init() {
         super.init()
         XCTestObservationCenter.shared.addTestObserver(self)
+        XCTestObservationCenter.shared.addTestObserver(runningTestCaseObserver)
     }
 
     init(withString string: String) {
@@ -158,7 +162,7 @@ import CucumberSwiftExpressions
            let lastScenarioStep = scenario.steps.last,
            lastScenarioStep === step {
             Cucumber.shared.afterScenarioHooks.forEach { $0.hook(scenario) }
-            let result: Reporter.Result = (scenario.steps.contains { $0.result == .failed }) ? .failed : .passed
+            let result: Reporter.Result = (scenario.steps.contains { $0.result == .failed || $0.result == .ambiguous }) ? .failed : .passed
             reporters.forEach { $0.didFinish(scenario: scenario,
                                              result: result,
                                              duration: Measurement(value: Date().timeIntervalSince(scenario.startDate),
@@ -169,7 +173,7 @@ import CucumberSwiftExpressions
            let lastStep = feature.scenarios.last(where: { !$0.steps.isEmpty })?.steps.last,
            lastStep === step {
             Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
-            let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed } }) ? .failed : .passed
+            let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
             reporters.forEach { $0.didFinish(feature: feature,
                                              result: result,
                                              duration: Measurement(value: Date().timeIntervalSince(feature.startDate),
@@ -185,22 +189,26 @@ import CucumberSwiftExpressions
     }
 
     func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) {
-        let firstMatchingStep = features
-            .flatMap { $0.scenarios.flatMap { $0.steps } }
-            .first {step -> Bool in
-                if  let k = keyword,
-                    step.keyword.contains(k) {
-                    return step.matchesExpression?(matching) == true
-                } else if keyword == nil {
-                    return step.matchesExpression?(matching) == true
+        // Every step definition that matches the text, from every step it could run on, each counted once,
+        // with the first such step.
+        var matches = [(definition: Step.Definition, step: Step)]()
+        let steps = features.flatMap { $0.scenarios.flatMap { $0.steps } }
+        for step in steps where keyword.map({ step.keyword.contains($0) }) ?? true {
+            for definition in step.matchingDefinitions where definition.matches(matching) {
+                if !matches.contains(where: { $0.definition === definition }) {
+                    matches.append((definition: definition, step: step))
                 }
-                return false
             }
+        }
 
-        if let firstMatchingStep = firstMatchingStep {
-            XCTAssertNoThrow(try firstMatchingStep.execute?(matching, firstMatchingStep))
-        } else {
+        guard let (definition, step) = matches.first else {
             XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
+            return
+        }
+        if matches.count > 1 {
+            XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
+        } else {
+            XCTAssertNoThrow(try definition.execute?(matching, step))
         }
     }
 
@@ -211,6 +219,7 @@ import CucumberSwiftExpressions
                                       file: StaticString,
                                       executeSelector: Selector? = nil,
                                       executeClass: AnyClass? = nil) {
+        let definition = Step.Definition(file: file, line: line, matches: matchesExpression, execute: execute)
         features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
             .filter { step -> Bool in
@@ -223,6 +232,7 @@ import CucumberSwiftExpressions
                 return false
             }
             .forEach { step in
+                step.matchingDefinitions.append(definition)
                 step.result = .undefined
                 step.execute = execute
                 step.matchesExpression = matchesExpression
@@ -239,6 +249,7 @@ import CucumberSwiftExpressions
                               line: Int,
                               file: StaticString) {
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
+        DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(match.matches(for: regex), step) },
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
@@ -257,6 +268,7 @@ import CucumberSwiftExpressions
             RegularExpression.errors.append(.init(message: invalid.description, file: String(file), line: line))
             return
         }
+        DuplicateStepDefinition.register(pattern: expression.regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(try XCTUnwrap(expression.match(in: match)), step) },
                              matchesExpression: { str in expression.match(in: str) != nil },
@@ -286,6 +298,7 @@ import CucumberSwiftExpressions
                               line: Int,
                               file: StaticString) {
         guard RegularExpression.validate(regex, file: file, line: line) else { return }
+        DuplicateStepDefinition.register(pattern: regex, keyword: keyword, file: file, line: line)
         attachClosureToSteps(keyword: keyword,
                              matchesExpression: { str in !str.matches(for: regex).isEmpty },
                              line: line,

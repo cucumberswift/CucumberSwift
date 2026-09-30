@@ -21,7 +21,15 @@ class CucumberSwiftTests: XCTestCase {
     }
 
     func testStepsGetCallbacksAttachedCorrectly() {
-        Cucumber.shared.readFromFeaturesFolder(in: Cucumber.shared.bundle)
+        // Each section loads the features again, so each checks one step definition on its own. Without
+        // this, earlier definitions stay attached and a later one that matches the same step makes it
+        // ambiguous (#37).
+        func loadFeatures() {
+            Cucumber.shared.features.removeAll()
+            Cucumber.shared.readFromFeaturesFolder(in: Cucumber.shared.bundle)
+        }
+
+        loadFeatures()
         var givenCalled = false
         Given("S(.)mE (?:precondition)") { matches, _  in
             givenCalled = true
@@ -31,6 +39,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(givenCalled)
 
+        loadFeatures()
         var whenCalled = false
         When("(.*?)") { matches, _ in
             whenCalled = true
@@ -39,6 +48,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(whenCalled)
 
+        loadFeatures()
         var thenCalled = false
         Then("(.*?)") { matches, _ in
             thenCalled = true
@@ -47,6 +57,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(thenCalled)
 
+        loadFeatures()
         var andCalled = false
         And("(.*?)") { matches, _ in
             andCalled = true
@@ -55,6 +66,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(andCalled)
 
+        loadFeatures()
         var butCalled = false
         But("(.*?)") { matches, _ in
             butCalled = true
@@ -63,6 +75,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertFalse(butCalled)
 
+        loadFeatures()
         var matchAllCalled = false
         MatchAll("(.*?)") { matches, _ in
             matchAllCalled = true
@@ -91,7 +104,13 @@ class CucumberSwiftTests: XCTestCase {
              Then some testable outcome is achieved
         """
 
-        Cucumber.shared.parseIntoFeatures(featureFile)
+        // Each section loads the feature again, so each checks one step definition on its own (#37).
+        func loadFeature() {
+            Cucumber.shared.features.removeAll()
+            Cucumber.shared.parseIntoFeatures(featureFile)
+        }
+
+        loadFeature()
         var givenCalled = false
         Given(#/^S(.)mE (?:precondition)$/#.ignoresCase()) { match, _  in
             givenCalled = true
@@ -100,6 +119,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(givenCalled)
 
+        loadFeature()
         var whenCalled = false
         When(#/^some (\w+) by the actor$/#) { match, _ in
             whenCalled = true
@@ -108,6 +128,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(whenCalled)
 
+        loadFeature()
         var thenCalled = false
         Then(#/^some (\w+) outcome is achieved$/#) { match, _ in
             thenCalled = true
@@ -116,6 +137,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(thenCalled)
 
+        loadFeature()
         var andCalled = false
         Given(#/^some (\w+) precondition$/#) { match, _ in
             andCalled = true
@@ -124,6 +146,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(andCalled)
 
+        loadFeature()
         var matchAllCalled = false
         MatchAll(#/(.*?)/#) { _, _ in
             matchAllCalled = true
@@ -364,7 +387,13 @@ class CucumberSwiftTests: XCTestCase {
              Then some testable outcome is achieved
         """
 
-        Cucumber.shared.parseIntoFeatures(featureFile)
+        // Each section loads the feature again, so each checks one step definition on its own (#37).
+        func loadFeature() {
+            Cucumber.shared.features.removeAll()
+            Cucumber.shared.parseIntoFeatures(featureFile)
+        }
+
+        loadFeature()
         var givenCalled = false
         Given("some {word}" as CucumberExpression) { match, _  in
             givenCalled = true
@@ -373,6 +402,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(givenCalled)
 
+        loadFeature()
         var whenCalled = false
         When("some {word} by the actor" as CucumberExpression) { match, _ in
             whenCalled = true
@@ -381,6 +411,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(whenCalled)
 
+        loadFeature()
         var thenCalled = false
         Then("some {word} outcome is achieved" as CucumberExpression) { match, _ in
             thenCalled = true
@@ -389,6 +420,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(thenCalled)
 
+        loadFeature()
         var andCalled = false
         Given("some {word} precondition" as CucumberExpression) { match, _ in
             andCalled = true
@@ -397,6 +429,7 @@ class CucumberSwiftTests: XCTestCase {
         Cucumber.shared.executeFeatures()
         XCTAssertTrue(andCalled)
 
+        loadFeature()
         var matchAllCalled = false
         MatchAll("{}" as CucumberExpression) { _, _ in
             matchAllCalled = true

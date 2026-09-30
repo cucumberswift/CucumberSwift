@@ -33,6 +33,7 @@ open class CucumberTest: XCTestCase {
         }
 
         Cucumber.shared.features.removeAll()
+        DuplicateStepDefinition.reset()
         let bundle = (Cucumber.shared as? StepImplementation)?.bundle
         if let bundle = bundle {
             Cucumber.shared.readFromFeaturesFolder(in: bundle)
@@ -166,6 +167,7 @@ open class CucumberTest: XCTestCase {
         }
 
         Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
+        Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
@@ -201,9 +203,43 @@ open class CucumberTest: XCTestCase {
         return "No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, its regular expression may not compile: see \(list). Otherwise, try adding \(suggestion)" // swiftlint:disable:this line_length
     }
 
-    /// Records one failure for each regular expression that will not compile. A pattern from a step
-    /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
-    /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
+    /// The failure for a step that more than one step definition matches. None of them runs, because
+    /// CucumberSwift cannot tell which one the step means; the message says where each one is.
+    static func ambiguousStepMessage(for step: Step) -> String {
+        ambiguousStepMessage(step: "\(step.keyword.toString()) \(step.match)", definitions: step.matchingDefinitions)
+    }
+
+    static func ambiguousStepMessage(step: String, definitions: [Step.Definition]) -> String {
+        let locations = definitions.map { "\(URL(fileURLWithPath: String($0.file)).lastPathComponent):\($0.line)" }
+        let list = locations.count < 2 ? locations.joined() : locations.dropLast().joined(separator: ", ") + " and " + (locations.last ?? "")
+        return "Ambiguous step '\(step)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
+    }
+
+    /// Records an ambiguous step's failure at the step in its feature file, as for a step with no step definition.
+    static func ambiguousStepIssue(for step: Step) -> XCTIssue {
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: ambiguousStepMessage(for: step),
+                        detailedDescription: nil,
+                        sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
+                        associatedError: nil,
+                        attachments: [])
+    }
+
+    /// Fails an ambiguous step on the test XCTest is running, at the step in its feature file. With no
+    /// running test known, it fails whatever test is current, without the feature-file location.
+    static func recordAmbiguousStep(_ step: Step, on runningTestCase: XCTestCase?) {
+        guard let runningTestCase = runningTestCase else {
+            XCTFail(ambiguousStepMessage(for: step))
+            return
+        }
+        runningTestCase.record(ambiguousStepIssue(for: step))
+    }
+
+    /// Records one failure for each problem found in the step definitions, such as a regular expression
+    /// that will not compile or a duplicate step definition. A problem from a step definition fails at
+    /// that step definition, so Xcode marks the consumer's own line. One with no step definition, such
+    /// as a `CUCUMBER_TAGS` filter, fails here.
     static func reportInvalidRegularExpressions(_ problems: [RegularExpression.Problem],
                                                 file: StaticString = #filePath,
                                                 line: Int = #line,
@@ -272,6 +308,13 @@ extension Step {
     }
 
     fileprivate func run() throws {
+        if isAmbiguous {
+            // Record first: a recorded failure sets the step's result to failed, and this one is ambiguous.
+            CucumberTest.recordAmbiguousStep(self, on: Cucumber.shared.runningTestCase)
+            errorMessage = CucumberTest.ambiguousStepMessage(for: self)
+            result = .ambiguous
+            return
+        }
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()
             if let instance = executeInstance,

@@ -119,3 +119,18 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 > Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 The step definitions CucumberSwift suggests for undefined steps use `#/…/#`. Return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle` to get `/…/` instead.
+
+## When more than one step definition matches a step
+Each step should match exactly one step definition. A step that more than one step definition matches is *ambiguous*, as in other Cucumber implementations: CucumberSwift runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
+
+A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step and any `And` or `But` step that follows one, and ``MatchAll`` fits every step. So:
+
+```swift
+Given("some precondition") { _, _ in }
+When("some precondition") { _, _ in }      // not ambiguous for "Given some precondition": When never fits a Given step
+MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: both fit "Given some precondition"
+```
+
+Two step definitions with the *same* pattern are a mistake even when no step uses them, as in Cucumber for Java. The test run fails at the second one, and the failure names both, if their keywords can match the same steps: the same keyword, ``MatchAll`` with any keyword, or ``And`` or ``But`` with ``Given``, ``When`` or ``Then``. `Given("x")` and `When("x")` are not duplicates. Two patterns count as the same when they are the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, cannot be compared, so only the ambiguity check applies to them.
+
+Earlier versions reported neither: the step definition registered last silently replaced the others, so a step ran whichever came last. To fix an ambiguous step or a duplicate, remove all but one of the step definitions, or make their patterns more specific so that each step matches only one.
