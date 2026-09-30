@@ -170,7 +170,7 @@ class AsyncStepTests: XCTestCase {
             await Task.yield()
             executionOrder.append("async no priority")
         }
-        Given("some precondition") { _, _ in }
+        Given("some precondition") { _, _ in /* The test is about the hooks around this step. */ }
 
         Cucumber.shared.executeFeatures()
 
@@ -411,7 +411,7 @@ class AsyncStepTests: XCTestCase {
         Task { @MainActor in
             defer { done.fulfill() }
             do {
-                try AsyncStepRunner.run { }
+                try AsyncStepRunner.run { /* Never runs: starting it from inside a task throws. */ }
             } catch {
                 caught = error
             }
@@ -432,7 +432,7 @@ class AsyncStepTests: XCTestCase {
         let firstLine = #line + 1
         Given("some precondition") { _, _ in await Task.yield() }
         let secondLine = #line + 1
-        MatchAll("some precondition") { _, _ in }
+        MatchAll("some precondition") { _, _ in /* Only here to make the step ambiguous. */ }
 
         let step = try XCTUnwrap(Cucumber.shared.features.first?.scenarios.first?.steps.first)
         XCTAssertTrue(step.isAmbiguous)
@@ -615,7 +615,7 @@ class AsyncStepTests: XCTestCase {
             await Task.yield()
             asyncInTask = isInsideTask()
         }
-        Given("some precondition") { _, _ in }
+        Given("some precondition") { _, _ in /* The test is about the hooks around this step. */ }
 
         Cucumber.shared.executeFeatures()
 
