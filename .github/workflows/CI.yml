@@ -200,11 +200,10 @@ jobs:
           grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' catalyst-test.log | head -30
           exit $status
 
-  # `swift test`, as CONTRIBUTING.md gives it. SwiftPM links all of a package's test
-  # targets into one test bundle, and each consumer test target declares its own
-  # `extension Cucumber: StepImplementation`, so each consumer test folder is a
-  # package of its own and runs separately. The root package skips the CucumberTest
-  # feature run, as the Xcode test plan does for CucumberSwiftTests.
+  # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
+  # SwiftPM links all of a package's test targets into one test bundle, and each
+  # consumer test target declares its own `extension Cucumber: StepImplementation`,
+  # so each consumer test folder is a package of its own and runs separately.
   swift_test:
     name: SwiftPM tests
     runs-on: macos-15
@@ -217,8 +216,8 @@ jobs:
           persist-credentials: false
       - name: Show the toolchain
         run: swift --version
-      - name: Run the unit tests
-        run: swift test --skip 'CucumberSwift\.CucumberTest'
+      - name: Run the root package's tests
+        run: swift test
       - name: Run the consumer tests
         run: swift test --package-path Tests/CucumberSwiftConsumerTests
       - name: Run the DSL consumer tests

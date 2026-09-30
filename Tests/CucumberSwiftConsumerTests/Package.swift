@@ -11,6 +11,9 @@ let package = Package(
     name: "CucumberSwiftConsumerTests",
     platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13)],
     dependencies: [
+        // Keep `name:`. Without it, SwiftPM names a path dependency after its folder,
+        // which is not "CucumberSwift" in a worktree or a renamed clone, and the
+        // "CucumberSwift" dependency below would no longer resolve.
         .package(name: "CucumberSwift", path: "../..")
     ],
     targets: [

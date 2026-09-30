@@ -235,6 +235,29 @@ class CucumberTests: XCTestCase {
             }
     }
 
+    func testNoFeaturesSuiteHoldsOneFailingTestInsteadOfStopping() {
+        let suite = CucumberTest.noFeaturesSuite(bundle: Bundle(for: CucumberTests.self))
+
+        XCTAssertEqual(suite.tests.count, 1)
+        XCTAssertTrue(suite.tests.first?.name.contains("FoundNoFeatures") == true, "Unexpected test name: \(suite.tests.first?.name ?? "none")")
+    }
+
+    func testNoFeaturesMessageNamesTheBundleAndTheSwiftPMSetup() {
+        let bundle = Bundle(for: CucumberTests.self)
+        let message = CucumberTest.noFeaturesMessage(bundle: bundle)
+
+        XCTAssertTrue(message.contains(bundle.bundleURL.path))
+        XCTAssertTrue(message.contains("resources: [.copy(\"Features\")]"))
+        XCTAssertTrue(message.contains("Bundle.module"))
+        XCTAssertTrue(message.contains("setupSteps()"))
+    }
+
+    func testNoFeaturesMessageWithoutAStepImplementation() {
+        let message = CucumberTest.noFeaturesMessage(bundle: nil)
+
+        XCTAssertTrue(message.contains("extension Cucumber: StepImplementation"))
+    }
+
     func testStepsRunInFeatureFileOrderWhenTestsAreSortedByName() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Purchase history

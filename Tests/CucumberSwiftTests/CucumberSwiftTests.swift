@@ -5,7 +5,7 @@
 //  Created by Tyler Thompson on 4/7/18.
 //  Copyright © 2018 Tyler Thompson. All rights reserved.
 //
-// swiftlint:disable function_body_length type_body_length file_length
+// swiftlint:disable type_body_length file_length
 
 import XCTest
 import CucumberSwiftExpressions
