@@ -1,7 +1,7 @@
 ![Build Status](https://github.com/cucumberswift/CucumberSwift/actions/workflows/CI.yml/badge.svg?branch=main)
 [![Latest version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcucumberswift.org%2FCucumberSwift%2Fversions.json&query=%24.version&label=latest%20version&color=brightgreen)](https://github.com/cucumberswift/CucumberSwift/releases/latest)
 [![codecov](https://codecov.io/gh/cucumberswift/CucumberSwift/graph/badge.svg?token=ARIPC8Q7H1)](https://codecov.io/gh/cucumberswift/CucumberSwift)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/c29b0bf4883b4387a41ac1d090773f65)](https://www.codacy.com/gh/cucumberswift/CucumberSwift/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=cucumberswift/CucumberSwift&amp;utm_campaign=Badge_Grade)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=cucumberswift_CucumberSwift&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=cucumberswift_CucumberSwift)
 
 ### Welcome to CucumberSwift
 CucumberSwift is a lightweight Swift only Cucumber implementation for iOS, tvOS, and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
