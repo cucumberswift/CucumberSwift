@@ -9,6 +9,7 @@ lcov file, such as the one `llvm-cov export -format=lcov` writes for Codecov.
 Only files under --root are kept, and their paths are written relative to it,
 so the report can be read by a job with its checkout somewhere else. Each
 --include (relative to --root) narrows that to files under one of those folders.
+The input and output files must be under --root too.
 
 The same file is used by CucumberSwift and CucumberSwiftExpressions; keep the
 two copies identical.
@@ -62,6 +63,14 @@ def under(folder, path):
     return os.path.commonpath([folder, path]) == folder
 
 
+def inside(root, path, name):
+    """The absolute path of a file argument, which must be under root."""
+    full = os.path.realpath(path)
+    if not under(root, full):
+        fail(f"{name} {path} is not under --root")
+    return full
+
+
 def relative_to_root(coverage, root, include=()):
     """Keep files under root (and under an include, if any), keyed relative to root."""
     root = os.path.realpath(root)
@@ -93,22 +102,26 @@ def main(argv=None):
     parser.add_argument("--include", action="append", default=[])
     parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
+    root = os.path.realpath(args.root)
+    output = inside(root, args.output, "--output")
 
     if args.xcresult:
+        # An absolute path, so xccov can never read it as an option.
+        xcresult = inside(root, args.xcresult, "--xcresult")
         result = subprocess.run(
-            ["xcrun", "xccov", "view", "--archive", "--json", args.xcresult],
+            ["xcrun", "xccov", "view", "--archive", "--json", xcresult],
             capture_output=True, text=True, check=False)
         if result.returncode != 0:
             fail(f"xccov could not read {args.xcresult}: {result.stderr.strip()}")
         coverage = from_xccov(json.loads(result.stdout))
     else:
-        with open(args.lcov, encoding="utf-8") as handle:
+        with open(inside(root, args.lcov, "--lcov"), encoding="utf-8") as handle:
             coverage = from_lcov(handle.read())
 
-    coverage = relative_to_root(coverage, args.root, args.include)
+    coverage = relative_to_root(coverage, root, args.include)
     if not coverage:
         fail(f"no covered files under {args.root} {' '.join(args.include)}".rstrip())
-    with open(args.output, "w", encoding="utf-8") as handle:
+    with open(output, "w", encoding="utf-8") as handle:
         handle.write(to_xml(coverage))
     lines = sum(len(lines) for lines in coverage.values())
     print(f"Wrote coverage for {len(coverage)} files ({lines} lines) to {args.output}")

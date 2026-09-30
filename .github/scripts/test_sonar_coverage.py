@@ -123,12 +123,14 @@ class MainTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = os.path.join(tmp, "Sources", "A.swift")
             output = os.path.join(tmp, "out.xml")
+            bundle = os.path.join(tmp, "T.xcresult")
             report = {source: [{"line": 7, "isExecutable": True, "executionCount": 1}]}
             done = subprocess.CompletedProcess([], 0, stdout=json.dumps(report), stderr="")
             with mock.patch.object(sonar_coverage.subprocess, "run", return_value=done) as run:
-                self.run_main("--xcresult", "T.xcresult", "--root", tmp, "--output", output)
+                self.run_main("--xcresult", bundle, "--root", tmp, "--output", output)
             self.assertEqual(run.call_args.args[0],
-                             ["xcrun", "xccov", "view", "--archive", "--json", "T.xcresult"])
+                             ["xcrun", "xccov", "view", "--archive", "--json",
+                              os.path.realpath(bundle)])
             with open(output, encoding="utf-8") as handle:
                 self.assertEqual(lines_of(handle.read()),
                                  {os.path.join("Sources", "A.swift"): {7: True}})
@@ -145,11 +147,26 @@ class MainTests(unittest.TestCase):
             lcov = os.path.join(tmp, "info.lcov")
             with open(lcov, "w", encoding="utf-8") as handle:
                 handle.write("SF:/nowhere/A.swift\nDA:1,1\nend_of_record\n")
+            output = os.path.join(tmp, "out.xml")
             with self.assertRaises(SystemExit) as raised:
-                self.run_main("--lcov", lcov, "--root", tmp,
-                              "--output", os.path.join(tmp, "out.xml"))
+                self.run_main("--lcov", lcov, "--root", tmp, "--output", output)
             self.assertEqual(raised.exception.code, 1)
-            self.assertFalse(os.path.exists(os.path.join(tmp, "out.xml")))
+            self.assertFalse(os.path.exists(output))
+
+    def test_fails_when_a_file_argument_is_outside_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = os.path.join(tmp, "repo")
+            inside = os.path.join(root, "out.xml")
+            outside = os.path.join(tmp, "elsewhere.xml")
+            for args in (["--lcov", outside, "--output", inside],
+                         ["--lcov", inside, "--output", outside],
+                         ["--xcresult=-evil", "--output", inside]):
+                with self.subTest(args=args):
+                    with mock.patch.object(sonar_coverage.subprocess, "run") as run:
+                        with self.assertRaises(SystemExit) as raised:
+                            self.run_main(*args, "--root", root)
+                    self.assertEqual(raised.exception.code, 1)
+                    run.assert_not_called()
 
 
 if __name__ == "__main__":
