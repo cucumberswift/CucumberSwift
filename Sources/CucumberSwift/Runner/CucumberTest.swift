@@ -176,9 +176,13 @@ open class CucumberTest: XCTestCase {
     /// The failure for a step that more than one step definition matches. None of them runs, because
     /// CucumberSwift cannot tell which one the step means; the message says where each one is.
     static func ambiguousStepMessage(for step: Step) -> String {
-        let locations = step.matchingDefinitions.map { "\(URL(fileURLWithPath: String($0.file)).lastPathComponent):\($0.line)" }
+        ambiguousStepMessage(step: "\(step.keyword.toString()) \(step.match)", definitions: step.matchingDefinitions)
+    }
+
+    static func ambiguousStepMessage(step: String, definitions: [Step.Definition]) -> String {
+        let locations = definitions.map { "\(URL(fileURLWithPath: String($0.file)).lastPathComponent):\($0.line)" }
         let list = locations.count < 2 ? locations.joined() : locations.dropLast().joined(separator: ", ") + " and " + (locations.last ?? "")
-        return "Ambiguous step '\(step.keyword.toString()) \(step.match)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
+        return "Ambiguous step '\(step)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
     }
 
     /// Records an ambiguous step's failure at the step in its feature file, as for a step with no step definition.

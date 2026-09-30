@@ -20,14 +20,6 @@ extension Cucumber: XCTestObservation {
         }
     }
 
-    public func testCaseWillStart(_ testCase: XCTestCase) {
-        runningTestCase = testCase
-    }
-
-    public func testCaseDidFinish(_ testCase: XCTestCase) {
-        if runningTestCase === testCase { runningTestCase = nil }
-    }
-
     public func testCase(_ testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: Int) {
         Cucumber.shared.currentStep?.result = .failed(description)
         Cucumber.shared.currentStep?.errorMessage = description
@@ -45,5 +37,18 @@ extension Cucumber: XCTestObservation {
                 step.result = .skipped
             }
         }
+    }
+}
+
+/// Tracks the test XCTest is running. A separate observer, so that `Cucumber` gains no public methods.
+final class RunningTestCaseObserver: NSObject, XCTestObservation {
+    private(set) weak var testCase: XCTestCase?
+
+    func testCaseWillStart(_ testCase: XCTestCase) {
+        self.testCase = testCase
+    }
+
+    func testCaseDidFinish(_ testCase: XCTestCase) {
+        if self.testCase === testCase { self.testCase = nil }
     }
 }

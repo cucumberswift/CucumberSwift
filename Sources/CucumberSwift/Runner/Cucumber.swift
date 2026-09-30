@@ -15,8 +15,9 @@ import CucumberSwiftExpressions
 
     var features = [Feature]()
     var currentStep: Step?
+    let runningTestCaseObserver = RunningTestCaseObserver()
     /// The test XCTest is running, so a failure can be recorded on it with a location of our choosing.
-    weak var runningTestCase: XCTestCase?
+    var runningTestCase: XCTestCase? { runningTestCaseObserver.testCase }
     var reportName: String = "CucumberTestResultsFor"
     var environment: [String: String] = ProcessInfo.processInfo.environment
 
@@ -83,6 +84,7 @@ import CucumberSwiftExpressions
     override public init() {
         super.init()
         XCTestObservationCenter.shared.addTestObserver(self)
+        XCTestObservationCenter.shared.addTestObserver(runningTestCaseObserver)
     }
 
     init(withString string: String) {
@@ -187,24 +189,22 @@ import CucumberSwiftExpressions
     }
 
     func executeFirstStep(keyword: Step.Keyword? = nil, matching: String) {
-        let firstMatchingStep = features
+        // The first step that a step definition matching the text is attached to, and every such definition.
+        let firstMatch = features
+            .lazy
             .flatMap { $0.scenarios.flatMap { $0.steps } }
-            .first {step -> Bool in
-                if  let k = keyword,
-                    step.keyword.contains(k) {
-                    return step.matchesExpression?(matching) == true
-                } else if keyword == nil {
-                    return step.matchesExpression?(matching) == true
-                }
-                return false
-            }
+            .filter { step in keyword.map { step.keyword.contains($0) } ?? true }
+            .map { step in (step: step, definitions: step.matchingDefinitions.filter { $0.matches(matching) }) }
+            .first { !$0.definitions.isEmpty }
 
-        if let firstMatchingStep = firstMatchingStep, firstMatchingStep.isAmbiguous {
-            XCTFail(CucumberTest.ambiguousStepMessage(for: firstMatchingStep))
-        } else if let firstMatchingStep = firstMatchingStep {
-            XCTAssertNoThrow(try firstMatchingStep.execute?(matching, firstMatchingStep))
-        } else {
+        guard let (step, definitions) = firstMatch else {
             XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
+            return
+        }
+        if definitions.count > 1 {
+            XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: definitions))
+        } else {
+            XCTAssertNoThrow(try definitions.first?.execute?(matching, step))
         }
     }
 
@@ -227,7 +227,7 @@ import CucumberSwiftExpressions
                 return false
             }
             .forEach { step in
-                step.matchingDefinitions.append((file: file, line: line))
+                step.matchingDefinitions.append(.init(file: file, line: line, matches: matchesExpression, execute: execute))
                 step.result = .undefined
                 step.execute = execute
                 step.matchesExpression = matchesExpression
