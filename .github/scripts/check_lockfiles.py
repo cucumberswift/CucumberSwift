@@ -48,6 +48,8 @@ REQUIREMENT = re.compile(
     r'|\.(?:upToNextMajor|upToNextMinor)\s*\(\s*from\s*:\s*"([^"]+)"'
     r'|\.exact\s*\(\s*"([^"]+)"'
     r'|"([^"]+)"\s*\.\.[.<]')
+# The start of a string literal: a `"`, after any `#`s of a raw string's delimiter.
+STRING_START = re.compile(r'#*"')
 URL = re.compile(r'\burl\s*:\s*"([^"]+)"')
 # A pbxproj value is either quoted or a bare word. The two forms are separate
 # alternatives so that the pattern cannot backtrack between them.
@@ -77,14 +79,18 @@ def same_repository(first, second):
 
 
 def string_end(text, index):
-    """The index just after the string literal that starts at `index`, which is a `"`.
-    Handles escapes and multiline (triple-quoted) strings; an unterminated string runs
-    to the end."""
-    quote = '"""' if text.startswith('"""', index) else '"'
+    """The index just after the string literal that starts at `index`: a `"`, or `#`s
+    and a `"` for a raw string such as `#"C:\"#`, which only `"#` ends. Handles
+    escapes (`\\` followed by as many `#`s) and multiline (triple-quoted) strings; an
+    unterminated string runs to the end."""
+    hashes = STRING_START.match(text, index).end() - 1 - index
+    index += hashes
+    quote = '"' * 3 if text.startswith('"' * 3, index) else '"'
+    close, escape = quote + "#" * hashes, "\\" + "#" * hashes
     index += len(quote)
-    while index < len(text) and not text.startswith(quote, index):
-        index += 2 if text[index] == "\\" else 1
-    return min(index + len(quote), len(text))
+    while index < len(text) and not text.startswith(close, index):
+        index += len(escape) + 1 if text.startswith(escape, index) else 1
+    return min(index + len(close), len(text))
 
 
 def block_comment_end(text, index):
@@ -109,7 +115,7 @@ def strip_comments(text):
             newline = text.find("\n", index)
             index = len(text) if newline < 0 else newline
         else:
-            end = string_end(text, index) if text[index] == '"' else index + 1
+            end = string_end(text, index) if STRING_START.match(text, index) else index + 1
             out.append(text[index:end])
             index = end
     return "".join(out)
@@ -120,7 +126,7 @@ def call_end(text, index):
     Parentheses inside a string literal do not count."""
     depth = 1
     while index < len(text):
-        if text[index] == '"':
+        if STRING_START.match(text, index):
             index = string_end(text, index)
             continue
         depth += {"(": 1, ")": -1}.get(text[index], 0)

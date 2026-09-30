@@ -285,6 +285,14 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(check_lockfiles.parse_package_swift(text),
                          {"foo": ("https://example.com/Foo.git", "1.0.0")})
 
+    def test_a_raw_string_before_a_dependency_does_not_hide_it(self):
+        # `#"C:\"#` ends at `"#`; the `\"` inside it is not an escape.
+        for declaration in ['let path = #"C:\\"#', 'let path = ##"a "# b"##', 'let path = #"a \\#"q"#']:
+            with self.subTest(declaration):
+                text = declaration + '\n.package(url: "https://example.com/Foo.git", from: "1.0.0")'
+                self.assertEqual(check_lockfiles.parse_package_swift(text),
+                                 {"foo": ("https://example.com/Foo.git", "1.0.0")})
+
     def test_a_parenthesis_inside_a_string_does_not_end_the_call(self):
         text = '.package(name: "Odd)Name", url: "https://example.com/Foo.git", from: "1.0.0")'
         self.assertEqual(check_lockfiles.parse_package_swift(text),
