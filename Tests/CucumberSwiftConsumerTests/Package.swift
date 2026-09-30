@@ -1,4 +1,6 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.8
+// 5.8 for enableUpcomingFeature below. Only contributors build this package, so its tools
+// version doesn't change what projects that use CucumberSwift need.
 // Runs CucumberSwiftConsumerTests with `swift test`, as a consumer of CucumberSwift would.
 // It is a separate package because SwiftPM links every test target of a package
 // into one test bundle, and each consumer test target declares its own
@@ -24,6 +26,11 @@ let package = Package(
             exclude: ["Info.plist", "Package.swift"],
             resources: [
                 .copy("Features")
+            ],
+            // Xcode turns bare slash regex literals on by default, so the Xcode target compiles
+            // GeneratedBareSlashStepDefinitions.swift without this.
+            swiftSettings: [
+                .enableUpcomingFeature("BareSlashRegexLiterals")
             ])
     ]
 )

@@ -52,6 +52,10 @@ SwiftPM links all of a package's test targets into one test bundle, and a bundle
 
 Put all of a package's step definitions behind one `StepImplementation`. If you need separate ones, for example for two apps, give each its own package: a folder with a `Package.swift` whose test target depends on your main package by path.
 
+### Don't run in parallel
+
+`swift test --parallel` runs each test that `swift test list` shows in a process of its own. Scenarios are not in that list, so none of them run, and the run still passes. Run CucumberSwift tests without `--parallel`.
+
 ### Choose scenarios with tags
 
 CucumberSwift creates a test for each scenario when the suite runs. `swift test list` does not show them, and `swift test --filter` with a scenario's name runs no tests and still passes. To run some scenarios, tag them and set `CUCUMBER_TAGS`:
@@ -65,3 +69,27 @@ CUCUMBER_TAGS=smoke swift test
 - `swift test` builds and runs your tests on macOS. To test on iOS or tvOS, use Xcode or `xcodebuild` with a destination.
 - CucumberSwift uses the Objective-C runtime, so it runs on Apple platforms only.
 - Regex literals need macOS 13 or later at runtime, and the `/…/` form needs a compiler setting in the Swift 5 language mode. See <doc:Matching-Steps>.
+
+### Paste generated step definitions
+
+For each step with no step definition, CucumberSwift reports a failure with the Swift code for one. That code writes its regular expression as `#/^…$/#`, which compiles in any test target. To have it written as `/^…$/` instead, your test target needs bare slash regex literals: the Swift 6 language mode, or this setting in the Swift 5 language mode (tools version 5.8 or later):
+
+```swift
+swiftSettings: [
+    .enableUpcomingFeature("BareSlashRegexLiterals")
+]
+```
+
+Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. To follow the target's setting automatically, check it in your own code, where the compiler knows it:
+
+```swift
+public var regexLiteralStyle: RegexLiteralStyle {
+    #if compiler(>=5.8) && hasFeature(BareSlashRegexLiterals)
+    return .bareSlash
+    #else
+    return .extendedDelimiter
+    #endif
+}
+```
+
+CucumberSwift can't make this check itself: it's compiled with its own settings, not your target's.

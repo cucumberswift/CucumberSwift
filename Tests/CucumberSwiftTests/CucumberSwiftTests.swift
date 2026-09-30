@@ -481,4 +481,7 @@ extension Cucumber: StepImplementation {
 
     public static var overrideReverseOrderForAfterHooks = false
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
+
+    public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
+    public var regexLiteralStyle: RegexLiteralStyle { Cucumber.overrideRegexLiteralStyle }
 }

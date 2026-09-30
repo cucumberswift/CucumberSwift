@@ -99,7 +99,9 @@ Also worth knowing:
 - **The consumer packages have no committed `Package.resolved`** (it's in `.gitignore`). They resolve CucumberSwiftExpressions within `Package.swift`'s range, as a project that uses CucumberSwift does.
 - **Keep `name: "CucumberSwift"`** in the consumer packages' `.package(name:path:)`. Without it, SwiftPM names the dependency after the checkout's folder, and the build fails in a worktree or a renamed clone.
 - **`swift test --filter` can't select a scenario.** Scenarios become tests only when the suite runs, so `swift test list` shows none of them, and a filter for one runs nothing, successfully. Select scenarios by tag instead, for example `CUCUMBER_TAGS=smoke swift test`.
+- **Don't use `swift test --parallel`.** It runs only the tests `swift test list` shows, so no scenario runs, and it still passes.
 - **SwiftPM builds for macOS only.** iOS and Mac Catalyst behaviour still needs `xcodebuild`.
+- **The generated step definitions are compiled.** `GeneratedStepDefinitions.swift` (in `CucumberSwiftTests`) and `GeneratedBareSlashStepDefinitions.swift` (in `CucumberSwiftConsumerTests`, which turns on bare slash regex literals) hold the stub generator's output for both regex literal styles. `GeneratedStepDefinitionTests` fails when the generator's output changes and prints the new output to paste in.
 - **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
 
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.

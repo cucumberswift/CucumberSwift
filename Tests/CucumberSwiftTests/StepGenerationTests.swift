@@ -18,6 +18,70 @@ class StepGenerationTests: XCTestCase {
 
     override func tearDownWithError() throws {
         Cucumber.shared.reset()
+        Cucumber.overrideRegexLiteralStyle = .extendedDelimiter
+    }
+
+    func testGeneratedRegexUsesBareSlashesWhenAsked() {
+        let cucumber = Cucumber(withString: """
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given I login as "Dave"
+        """)
+        let actual = StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .bareSlash)
+            .map(\.generatedSwift)
+            .joined(separator: "\n")
+        let expected = #"""
+        Given(/^I login as \"(.*?)\"$/) { matches, _ in
+            let string = matches.1
+        }
+        """#
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testGeneratedRegexReadsTheStyleFromTheStepImplementation() {
+        let cucumber = Cucumber(withString: """
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given Some precondition
+        """)
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
+                       ["Given(#/^Some precondition$/#) { _, _ in\n\n}"])
+
+        Cucumber.overrideRegexLiteralStyle = .bareSlash
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
+                       ["Given(/^Some precondition$/) { _, _ in\n\n}"])
+    }
+
+    func testGeneratedRegexEscapesSlashesInBothStyles() {
+        let cucumber = Cucumber(withString: """
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given I open a/b and c/d
+        """)
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .extendedDelimiter).map(\.generatedSwift),
+                       [#"Given(#/^I open a\/b and c\/d$/#) { _, _ in"# + "\n\n}"])
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .bareSlash).map(\.generatedSwift),
+                       [#"Given(/^I open a\/b and c\/d$/) { _, _ in"# + "\n\n}"])
+    }
+
+    func testGeneratedCapturesAreNumberedInTheOrderOfTheStep() {
+        let cucumber = Cucumber(withString: """
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given I pay 5 to "Sue" and 6 to "Bob"
+        """)
+        let actual = StubGenerator.getStubs(for: cucumber.features)
+            .map(\.generatedSwift)
+            .joined(separator: "\n")
+        let expected = #"""
+        Given(#/^I pay (\d+) to \"(.*?)\" and (\d+) to \"(.*?)\"$/#) { matches, _ in
+            let integer = matches.1
+            let string = matches.2
+            let integerTwo = matches.3
+            let stringTwo = matches.4
+        }
+        """#
+        XCTAssertEqual(actual, expected)
     }
 
     func testGeneratedRegexWithGivenKeyword() {
@@ -30,7 +94,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^Some precondition$/) { _, _ in
+        Given(#/^Some precondition$/#) { _, _ in
 
         }
         """#
@@ -47,7 +111,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        When(/^Some precondition$/) { _, _ in
+        When(#/^Some precondition$/#) { _, _ in
 
         }
         """#
@@ -64,7 +128,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        When(/^A totally different string match$/) { _, _ in
+        When(#/^A totally different string match$/#) { _, _ in
 
         }
         """#
@@ -81,7 +145,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^A user with an idea\(ish\)$/) { _, _ in
+        Given(#/^A user with an idea\(ish\)$/#) { _, _ in
 
         }
         """#
@@ -101,12 +165,12 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^A PO with two$/) { _, _ in
+        Given(#/^A PO with two$/#) { _, _ in
 
         }
         """#
         let notExpected = #"""
-        Given(/^A user with an idea$/) { _, _ in
+        Given(#/^A user with an idea$/#) { _, _ in
 
         }
         """#
@@ -126,8 +190,8 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I login as \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
+        Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -144,9 +208,9 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I login as \"(.*?)\" with a password of \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
-            let stringTwo = matches[2]
+        Given(#/^I login as \"(.*?)\" with a password of \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
+            let stringTwo = matches.2
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -163,8 +227,8 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I login (\d+) time$/) { matches, _ in
-            let integer = matches[1]
+        Given(#/^I login (\d+) time$/#) { matches, _ in
+            let integer = matches.1
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -181,9 +245,9 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I enter (\d+) then (\d+)$/) { matches, _ in
-            let integer = matches[1]
-            let integerTwo = matches[2]
+        Given(#/^I enter (\d+) then (\d+)$/#) { matches, _ in
+            let integer = matches.1
+            let integerTwo = matches.2
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -203,8 +267,8 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        MatchAll(/^I login as \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
+        MatchAll(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -225,11 +289,11 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I login as \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
+        Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
         }
-        When(/^I login as \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
+        When(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -250,8 +314,8 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         //FIXME: WARNING: This will overwite your implementation for the step(s):
         //                Given I login as "Robert Downey Jr"
-        Given(/^I login as \"(.*?)\"$/) { matches, _ in
-            let string = matches[1]
+        Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -270,7 +334,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I have some data table that is not implemented$/) { _, step in
+        Given(#/^I have some data table that is not implemented$/#) { _, step in
             let dataTable = step.dataTable
         }
         """#
@@ -293,7 +357,7 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^a DocString of some kind that is not implemented$/) { _, step in
+        Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
             let docString = step.docString
         }
         """#
@@ -319,14 +383,14 @@ class StepGenerationTests: XCTestCase {
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
-        Given(/^I have some data table that is not implemented and some string \"(.*?)\" and some other string \"(.*?)\"$/) { matches, step in
-            let string = matches[1]
-            let stringTwo = matches[2]
+        Given(#/^I have some data table that is not implemented and some string \"(.*?)\" and some other string \"(.*?)\"$/#) { matches, step in
+            let string = matches.1
+            let stringTwo = matches.2
             let dataTable = step.dataTable
         }
-        Given(/^a DocString with the number (\d+) and another number (\d+)$/) { matches, step in
-            let integer = matches[1]
-            let integerTwo = matches[2]
+        Given(#/^a DocString with the number (\d+) and another number (\d+)$/#) { matches, step in
+            let integer = matches.1
+            let integerTwo = matches.2
             let docString = step.docString
         }
         """#
