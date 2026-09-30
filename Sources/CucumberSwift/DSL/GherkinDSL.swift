@@ -159,8 +159,9 @@ extension GherkinDSL {
 }
 
 // Async steps take a closure or a function rather than an autoclosure, which cannot be async here:
-// `Given(I: signIn)` or `Given(I: { try await signIn(as: .testUser) })`. Each runs on the main actor, the
-// next step starts only once it has finished, and a thrown error fails the step.
+// `Given(I: signIn)` or `Given(I: { try await signIn(as: .testUser) })`. A closure runs on the main actor;
+// a function keeps its own isolation, so mark it `@MainActor` if it needs the main actor. The next step
+// starts only once it has finished, and a thrown error fails the step.
 extension GherkinDSL {
     @discardableResult public init(_ handler: @escaping @MainActor () async throws -> Void,
                                    line: UInt = #line,

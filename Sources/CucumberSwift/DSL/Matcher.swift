@@ -54,7 +54,8 @@ extension Matcher {
         Cucumber.shared.attachClosureToSteps(keyword: keyword, expression: expression, callback: callback, line: line, file: file)
     }
 
-    /// An async step definition. It runs on the main actor, and the next step starts only once it has finished.
+    /// An async step definition. A closure runs on the main actor; a function passed in keeps its own isolation.
+    /// Either way, the next step starts only once it has finished.
     @discardableResult public init(_ expression: CucumberExpression,
                                    callback: @escaping @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void,
                                    line: Int = #line,

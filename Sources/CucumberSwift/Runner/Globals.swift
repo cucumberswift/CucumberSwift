@@ -28,7 +28,7 @@ public func AfterStep(priority: UInt? = nil, closure: @escaping ((Step) -> Void)
     Cucumber.shared.afterStepHooks.append(.init(priority: priority, hook: closure))
 }
 // MARK: Async hooks
-// Each runs on the main actor, and CucumberSwift waits for it to finish before going on. A thrown error fails the test.
+// A closure runs on the main actor, and CucumberSwift waits for it to finish before going on. A thrown error fails the test.
 public func BeforeFeature(priority: UInt? = nil,
                           file: StaticString = #filePath,
                           line: UInt = #line,

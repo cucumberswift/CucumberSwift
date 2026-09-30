@@ -35,7 +35,7 @@ enum AsyncStepRunner {
         }
     }
 
-    /// Only touched on the main thread: by the body, which runs on the main actor, and by `wait`, which
+    /// Only touched on the main thread: by the task, which runs on the main actor, and by `wait`, which
     /// runs there too and lets the body in only while `XCTWaiter` turns the run loop.
     private final class State {
         var error: Error?

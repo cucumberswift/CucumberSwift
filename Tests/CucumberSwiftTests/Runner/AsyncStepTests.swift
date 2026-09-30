@@ -207,6 +207,39 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(backgroundResult, 42)
     }
 
+    func testAClosureRunsOnTheMainActorAndAPassedFunctionKeepsItsOwnIsolation() {
+        var executionOrder = [String]()
+        @MainActor func mainActorStep() async {
+            await Task.yield()
+            executionOrder.append("@MainActor function on main: \(isOnMainThread())")
+        }
+        func nonisolatedStep() async {
+            await Task.yield()
+            executionOrder.append("plain function on main: \(isOnMainThread())")
+        }
+
+        let scenario = Scenario("Some determinable business situation") {
+            Given(I: mainActorStep)
+            When(I: nonisolatedStep)
+            // swiftlint:disable:next trailing_closure
+            Then(the: {
+                await Task.yield()
+                executionOrder.append("closure on main: \(isOnMainThread())")
+            })
+        }
+        Feature("Some terse yet descriptive text of what is desired") {
+            scenario
+        }
+
+        Cucumber.shared.executeFeatures()
+
+        XCTAssertEqual(executionOrder, [
+            "@MainActor function on main: true",
+            "plain function on main: false",
+            "closure on main: true"
+        ])
+    }
+
     // MARK: ExecuteFirstStep
 
     func testAwaitExecuteFirstStepRunsAsyncAndSyncStepsFromAnAsyncStep() {

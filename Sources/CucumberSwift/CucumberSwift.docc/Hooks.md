@@ -54,7 +54,7 @@ BeforeScenario { scenario in
 }
 ```
 
-Async hooks run on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
+An async hook's closure runs on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
 
 ### Execution Order
 If you never specify anything hooks will just execute in whatever order they appear in the code. However if you need specific control you can add a `priority` to hooks. The lower the priority, the earlier it executes. So a priority 1 executes before a priority 2.

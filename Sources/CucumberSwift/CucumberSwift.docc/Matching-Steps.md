@@ -38,7 +38,7 @@ Given("the user has signed in") { _, _ in
 
 A closure without `await` is an ordinary synchronous step definition, exactly as before. This works with Cucumber expressions, string patterns and regex literals alike.
 
-Steps still run one at a time, in the order the feature file declares them. An async step runs on the main actor, and the next step starts only once it has finished, so nothing in a scenario ever runs in parallel. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
+Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
 
 - **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. With `continueTestingAfterFailure` off (the default), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
 - **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
@@ -51,11 +51,14 @@ Steps still run one at a time, in the order the feature file declares them. An a
   ```
 
   Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
+- **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
 - **Running another step.** From inside an async step, use `await ExecuteFirstStep(matching:)`. The synchronous `ExecuteFirstStep(matching:)` works from synchronous steps, including when the step it runs is async.
 
 With the Swift DSL, pass an async function or closure rather than a call:
 
 ```swift
+@MainActor func signIn() async throws { /* ... */ }
+
 Feature("Sign in") {
     Scenario("A returning user") {
         Given(I: signIn)                                  // an async function
