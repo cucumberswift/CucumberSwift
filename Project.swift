@@ -317,7 +317,7 @@ let project = Project(
     packages: [
         .remote(
             url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
-            requirement: .upToNextMajor(from: "1.0.0")
+            requirement: .upToNextMajor(from: "1.2.0")
         ),
         .remote(
             url: "https://github.com/kylef/JSONSchema.swift",

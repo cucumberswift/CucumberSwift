@@ -251,6 +251,12 @@ import CucumberSwiftExpressions
                               callback: @escaping ((CucumberSwiftExpressions.Match, Step) throws -> Void),
                               line: Int,
                               file: StaticString) {
+        // An anchored or slash-delimited expression is a regular expression. If it will not compile it
+        // can never match, and matching it would trap, so report it at the step definition instead.
+        if let invalid = expression.invalidRegularExpression {
+            RegularExpression.errors.append(.init(message: invalid.description, file: String(file), line: line))
+            return
+        }
         attachClosureToSteps(keyword: keyword,
                              execute: { match, step in try callback(try XCTUnwrap(expression.match(in: match)), step) },
                              matchesExpression: { str in expression.match(in: str) != nil },
