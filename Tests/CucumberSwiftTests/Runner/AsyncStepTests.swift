@@ -488,7 +488,9 @@ class AsyncStepTests: XCTestCase {
     }
 
     func testAnAsyncCucumberExpressionDefinitionCanDuplicateASyncOne() {
-        Given("there are {int} flights") { _, _ in }
+        Given("there are {int} flights") { _, _ in
+            // Only its pattern matters: the async definition below repeats it.
+        }
         let secondLine = #line + 1
         Given("there are {int} flights") { _, _ in await Task.yield() }
 
@@ -497,7 +499,9 @@ class AsyncStepTests: XCTestCase {
 
     @available(*, deprecated, message: "Exercises the deprecated regular expression String API")
     func testAnAsyncRegexStringDefinitionCanDuplicateASyncOne() {
-        Given("^there are (\\d+) flights$") { (_: [String], _) in }
+        Given("^there are (\\d+) flights$") { (_: [String], _) in
+            // Only its pattern matters: the async definition below repeats it.
+        }
         let secondLine = #line + 1
         Given("^there are (\\d+) flights$") { (_: [String], _) in await Task.yield() }
 
