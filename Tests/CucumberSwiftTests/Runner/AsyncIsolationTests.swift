@@ -78,31 +78,31 @@ private func expectedOrder(_ labels: [String]) -> [String] {
 private var log = ThreadLog()
 
 @MainActor
-private func mainActorExpressionStep(_ match: CucumberSwiftExpressions.Match, _ step: Step) async throws {
+private func mainActorExpressionStep(_: CucumberSwiftExpressions.Match, _: Step) async throws {
     log.check("@MainActor function")
     await backgroundWork()
     log.finish("@MainActor function")
 }
 
-private func nonisolatedExpressionStep(_ match: CucumberSwiftExpressions.Match, _ step: Step) async throws {
+private func nonisolatedExpressionStep(_: CucumberSwiftExpressions.Match, _: Step) async throws {
     log.check("plain async function")
     await backgroundWork()
     log.finish("plain async function")
 }
 
-private func syncExpressionStep(_ match: CucumberSwiftExpressions.Match, _ step: Step) throws {
+private func syncExpressionStep(_: CucumberSwiftExpressions.Match, _: Step) throws {
     log.record("sync function", isOnMainThread())
     log.ran("sync function")
 }
 
 @MainActor
-private func mainActorHook(_ scenario: Scenario) async throws {
+private func mainActorHook(_: Scenario) async throws {
     log.check("@MainActor hook function")
     await backgroundWork()
     log.finish("@MainActor hook function")
 }
 
-private func nonisolatedHook(_ scenario: Scenario) async throws {
+private func nonisolatedHook(_: Scenario) async throws {
     log.check("plain async hook function")
     await backgroundWork()
     log.finish("plain async hook function")
