@@ -74,6 +74,17 @@ class RootTests(unittest.TestCase):
             self.assertEqual(sonar_coverage.relative_to_root(coverage, root),
                              {os.path.join("Sources", "My File.swift"): {1: True}})
 
+    def test_include_keeps_only_files_under_those_folders(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            coverage = {
+                os.path.join(tmp, "Sources", "A.swift"): {1: True},
+                os.path.join(tmp, "SourcesOld", "B.swift"): {1: True},
+                os.path.join(tmp, "Tests", "C.swift"): {1: True},
+                os.path.join(tmp, ".build", "runner.swift"): {1: False},
+            }
+            self.assertEqual(sonar_coverage.relative_to_root(coverage, tmp, ["Sources"]),
+                             {os.path.join("Sources", "A.swift"): {1: True}})
+
 
 class XmlTests(unittest.TestCase):
     def test_writes_generic_coverage(self):
@@ -101,7 +112,8 @@ class MainTests(unittest.TestCase):
             output = os.path.join(tmp, "out.xml")
             with open(lcov, "w", encoding="utf-8") as handle:
                 handle.write(f"SF:{source}\nDA:1,1\nDA:2,0\nend_of_record\n")
-            printed = self.run_main("--lcov", lcov, "--root", tmp, "--output", output)
+            printed = self.run_main("--lcov", lcov, "--root", tmp, "--include", "Sources",
+                                    "--output", output)
             with open(output, encoding="utf-8") as handle:
                 self.assertEqual(lines_of(handle.read()),
                                  {os.path.join("Sources", "A.swift"): {1: True, 2: False}})

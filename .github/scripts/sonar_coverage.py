@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Convert test coverage into SonarQube's generic coverage format.
 
-  sonar_coverage.py --xcresult PATH --root DIR --output FILE
-  sonar_coverage.py --lcov PATH --root DIR --output FILE
+  sonar_coverage.py --xcresult PATH --root DIR [--include DIR ...] --output FILE
+  sonar_coverage.py --lcov PATH --root DIR [--include DIR ...] --output FILE
 
 --xcresult reads an Xcode result bundle through `xcrun xccov`. --lcov reads an
 lcov file, such as the one `llvm-cov export -format=lcov` writes for Codecov.
 Only files under --root are kept, and their paths are written relative to it,
-so the report can be read by a job with its checkout somewhere else.
+so the report can be read by a job with its checkout somewhere else. Each
+--include (relative to --root) narrows that to files under one of those folders.
 
 The same file is used by CucumberSwift and CucumberSwiftExpressions; keep the
 two copies identical.
@@ -57,15 +58,19 @@ def from_lcov(text):
     return coverage
 
 
-def relative_to_root(coverage, root):
-    """Keep files under root, keyed by their path relative to it."""
+def under(folder, path):
+    return os.path.commonpath([folder, path]) == folder
+
+
+def relative_to_root(coverage, root, include=()):
+    """Keep files under root (and under an include, if any), keyed relative to root."""
     root = os.path.realpath(root)
+    folders = [os.path.realpath(os.path.join(root, folder)) for folder in include] or [root]
     kept = {}
     for path, lines in coverage.items():
         full = os.path.realpath(path)
-        if os.path.commonpath([root, full]) != root:
-            continue
-        kept[os.path.relpath(full, root)] = lines
+        if under(root, full) and any(under(folder, full) for folder in folders):
+            kept[os.path.relpath(full, root)] = lines
     return kept
 
 
@@ -85,6 +90,7 @@ def main(argv=None):
     source.add_argument("--xcresult")
     source.add_argument("--lcov")
     parser.add_argument("--root", required=True)
+    parser.add_argument("--include", action="append", default=[])
     parser.add_argument("--output", required=True)
     args = parser.parse_args(argv)
 
@@ -99,9 +105,9 @@ def main(argv=None):
         with open(args.lcov, encoding="utf-8") as handle:
             coverage = from_lcov(handle.read())
 
-    coverage = relative_to_root(coverage, args.root)
+    coverage = relative_to_root(coverage, args.root, args.include)
     if not coverage:
-        fail(f"no covered files under {args.root}")
+        fail(f"no covered files under {args.root} {' '.join(args.include)}".rstrip())
     with open(args.output, "w", encoding="utf-8") as handle:
         handle.write(to_xml(coverage))
     lines = sum(len(lines) for lines in coverage.values())
