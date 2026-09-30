@@ -69,18 +69,20 @@ Feature("Sign in") {
 ```
 
 ### Swift 6 language mode
-In a test target that builds in Swift 6 language mode, declare your step implementation on the main actor:
+In a test target that builds in Swift 6 language mode, mark the conformance `@retroactive`, because both `Cucumber` and `StepImplementation` come from CucumberSwift:
 
 ```swift
-@MainActor extension Cucumber: @retroactive @preconcurrency StepImplementation {
+extension Cucumber: @retroactive StepImplementation {
     public var bundle: Bundle { /* ... */ }
     public func setupSteps() { /* ... */ }
 }
 ```
 
-Without it, the compiler rejects an async step that changes a variable it shares with other steps, such as a `var` declared in `setupSteps()`, because the async step runs on the main actor and `setupSteps()` does not. It also rejects synchronous steps, hooks and DSL calls that use main-actor code. CucumberSwift calls `setupSteps()` and runs every step on the main thread, so this declaration only tells the compiler what already happens.
+The same goes for `extension Cucumber: @retroactive CucumberTestObservable` when you add a reporter (see <doc:Generating-Reports>).
 
-A custom reporter that uses main-actor code needs the same: `@MainActor final class MyReporter: @preconcurrency CucumberTestObserver`.
+`StepImplementation` and `CucumberTestObserver` are main-actor protocols, so `setupSteps()`, the steps, hooks and DSL steps declared in it, and a custom reporter's methods can all use main-actor code, such as `XCUIApplication`. An async step can also change a variable it shares with other steps, such as a `var` declared in `setupSteps()`. CucumberSwift calls all of them on the main thread.
+
+In Swift 5 language mode nothing changes: the protocols are marked `@preconcurrency`, so code written for earlier versions of CucumberSwift compiles as before.
 
 ## Matching with Cucumber Expressions
 Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.

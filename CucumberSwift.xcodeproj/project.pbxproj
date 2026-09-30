@@ -103,6 +103,7 @@
 		C9A0F37C694F1F371DFE84CD /* CucumberTestObservable.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC88E34B244FC44552A16C0 /* CucumberTestObservable.swift */; };
 		CB0BFBDFF865E5AF86116AB6 /* ASTRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E69AB7C3EADA654EE7DBA45 /* ASTRule.swift */; };
 		D02C4AB8F9CF4473CBFDCD01 /* Taggable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 889AD6A99BE7F115DF7FAF53 /* Taggable.swift */; };
+		D2ABB8C03D687F2610679F88 /* SendableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82B747D40F36E5268D8E82DD /* SendableTests.swift */; };
 		D783D9A9F70363D452924E13 /* Feature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1866F6F1EFF7584E8F3A0A54 /* Feature.swift */; };
 		D9EFB2266A4CA52E1F763B65 /* AmbiguousStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B76CF44C2A8ACE0C03F295 /* AmbiguousStepTests.swift */; };
 		E00263D7C34A872002540F26 /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
@@ -252,6 +253,7 @@
 		7DC264A5553551E1D8FBB53B /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		7E6A4ED0E3F31B73FC4A0EEF /* CucumberSwift.docc */ = {isa = PBXFileReference; lastKnownFileType = folder.documentationcatalog; path = CucumberSwift.docc; sourceTree = "<group>"; };
 		81C1E001FC5CE0030885CF60 /* ErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorTests.swift; sourceTree = "<group>"; };
+		82B747D40F36E5268D8E82DD /* SendableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SendableTests.swift; sourceTree = "<group>"; };
 		8518876DB648DEA578B83F08 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		885A533EDAA54BB3AE5BB05B /* Step.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step.swift; sourceTree = "<group>"; };
 		889AD6A99BE7F115DF7FAF53 /* Taggable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Taggable.swift; sourceTree = "<group>"; };
@@ -539,6 +541,7 @@
 				D479A7518B1E5990DFC8BEAE /* Features */,
 				00A3288C94AE05DFE8A5D543 /* Info.plist */,
 				C81A88E41DDD343049CA6970 /* MightEqualOperatorTests.swift */,
+				82B747D40F36E5268D8E82DD /* SendableTests.swift */,
 				3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */,
 				DB817496F330098529E21B73 /* StringReaderTests.swift */,
 				3F53BE18F40D6DEA79C22475 /* testdata */,
@@ -922,6 +925,7 @@
 				9A7176D0074FE65676AF7EB3 /* DuplicateStepDefinitionTests.swift in Sources */,
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
+				D2ABB8C03D687F2610679F88 /* SendableTests.swift in Sources */,
 				BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */,
 				009975E6661DCE17B129C7F0 /* StringReaderTests.swift in Sources */,
 				64B9C1211D231BEA471125E9 /* GeneratedStepDefinitionTests.swift in Sources */,
