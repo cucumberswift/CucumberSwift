@@ -20,6 +20,14 @@ extension Cucumber: XCTestObservation {
         }
     }
 
+    public func testCaseWillStart(_ testCase: XCTestCase) {
+        runningTestCase = testCase
+    }
+
+    public func testCaseDidFinish(_ testCase: XCTestCase) {
+        if runningTestCase === testCase { runningTestCase = nil }
+    }
+
     public func testCase(_ testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: Int) {
         Cucumber.shared.currentStep?.result = .failed(description)
         Cucumber.shared.currentStep?.errorMessage = description

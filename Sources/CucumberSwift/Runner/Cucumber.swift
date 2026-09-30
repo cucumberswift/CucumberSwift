@@ -15,6 +15,8 @@ import CucumberSwiftExpressions
 
     var features = [Feature]()
     var currentStep: Step?
+    /// The test XCTest is running, so a failure can be recorded on it with a location of our choosing.
+    weak var runningTestCase: XCTestCase?
     var reportName: String = "CucumberTestResultsFor"
     var environment: [String: String] = ProcessInfo.processInfo.environment
 
@@ -158,7 +160,7 @@ import CucumberSwiftExpressions
            let lastScenarioStep = scenario.steps.last,
            lastScenarioStep === step {
             Cucumber.shared.afterScenarioHooks.forEach { $0.hook(scenario) }
-            let result: Reporter.Result = (scenario.steps.contains { $0.result == .failed }) ? .failed : .passed
+            let result: Reporter.Result = (scenario.steps.contains { $0.result == .failed || $0.result == .ambiguous }) ? .failed : .passed
             reporters.forEach { $0.didFinish(scenario: scenario,
                                              result: result,
                                              duration: Measurement(value: Date().timeIntervalSince(scenario.startDate),
@@ -169,7 +171,7 @@ import CucumberSwiftExpressions
            let lastStep = feature.scenarios.last(where: { !$0.steps.isEmpty })?.steps.last,
            lastStep === step {
             Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
-            let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed } }) ? .failed : .passed
+            let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
             reporters.forEach { $0.didFinish(feature: feature,
                                              result: result,
                                              duration: Measurement(value: Date().timeIntervalSince(feature.startDate),
@@ -197,7 +199,9 @@ import CucumberSwiftExpressions
                 return false
             }
 
-        if let firstMatchingStep = firstMatchingStep {
+        if let firstMatchingStep = firstMatchingStep, firstMatchingStep.isAmbiguous {
+            XCTFail(CucumberTest.ambiguousStepMessage(for: firstMatchingStep))
+        } else if let firstMatchingStep = firstMatchingStep {
             XCTAssertNoThrow(try firstMatchingStep.execute?(matching, firstMatchingStep))
         } else {
             XCTFail("No CucumberSwift expression found that matches step '\(matching)'")
@@ -223,6 +227,7 @@ import CucumberSwiftExpressions
                 return false
             }
             .forEach { step in
+                step.matchingDefinitions.append((file: file, line: line))
                 step.result = .undefined
                 step.execute = execute
                 step.matchesExpression = matchesExpression

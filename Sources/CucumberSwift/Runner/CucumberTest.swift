@@ -173,6 +173,25 @@ open class CucumberTest: XCTestCase {
         return "No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, its regular expression may not compile: see \(list). Otherwise, try adding \(suggestion)" // swiftlint:disable:this line_length
     }
 
+    /// The failure for a step that more than one step definition matches. None of them runs, because
+    /// CucumberSwift cannot tell which one the step means; the message says where each one is.
+    static func ambiguousStepMessage(for step: Step) -> String {
+        let locations = step.matchingDefinitions.map { "\(URL(fileURLWithPath: String($0.file)).lastPathComponent):\($0.line)" }
+        let list = locations.count < 2 ? locations.joined() : locations.dropLast().joined(separator: ", ") + " and " + (locations.last ?? "")
+        return "Ambiguous step '\(step.keyword.toString()) \(step.match)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
+    }
+
+    /// Records an ambiguous step's failure at the step in its feature file, as for a step with no step definition.
+    static func ambiguousStepIssue(for step: Step) -> XCTIssue {
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: ambiguousStepMessage(for: step),
+                        detailedDescription: nil,
+                        sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
+                        associatedError: nil,
+                        attachments: [])
+    }
+
     /// Records one failure for each regular expression that will not compile. A pattern from a step
     /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
     /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
@@ -244,6 +263,17 @@ extension Step {
     }
 
     fileprivate func run() throws {
+        if isAmbiguous {
+            // Record first: a recorded failure sets the step's result to failed, and this one is ambiguous.
+            if let runningTestCase = Cucumber.shared.runningTestCase {
+                runningTestCase.record(CucumberTest.ambiguousStepIssue(for: self))
+            } else {
+                XCTFail(CucumberTest.ambiguousStepMessage(for: self))
+            }
+            errorMessage = CucumberTest.ambiguousStepMessage(for: self)
+            result = .ambiguous
+            return
+        }
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()
             if let instance = executeInstance,

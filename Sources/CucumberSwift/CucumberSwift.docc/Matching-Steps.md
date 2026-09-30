@@ -110,3 +110,16 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 > NOTE: You can use regex builders in Swift to transform into concrete types. It's a little verbose, but is supported by CucumberSwift.
 
 > Important: Regex literals need Xcode 14 (Swift 5.7) or later, and iOS 16, macOS 13 or tvOS 16. The `/…/` form above also needs Swift 6 language mode or the `BareSlashRegexLiterals` upcoming feature; `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
+
+## When more than one step definition matches a step
+Each step should match exactly one step definition. A step that more than one step definition matches is *ambiguous*, as in other Cucumber implementations: CucumberSwift runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
+
+A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step and any `And` or `But` step that follows one, and ``MatchAll`` fits every step. So:
+
+```swift
+Given("some precondition") { _, _ in }
+When("some precondition") { _, _ in }      // not ambiguous for "Given some precondition": When never fits a Given step
+MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: both fit "Given some precondition"
+```
+
+Earlier versions did not report this: the step definition registered last silently replaced the others, so the step ran whichever came last. To fix an ambiguous step, remove all but one of its step definitions, or make their patterns more specific so that each step matches only one.
