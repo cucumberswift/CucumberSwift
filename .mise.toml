@@ -36,4 +36,5 @@ run = [
   "swift test",
   "swift test --package-path Tests/CucumberSwiftConsumerTests",
   "swift test --package-path Tests/CucumberSwiftDSLConsumerTests",
+  "swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests",
 ]
