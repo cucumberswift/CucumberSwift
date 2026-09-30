@@ -263,6 +263,36 @@ class CucumberTests: XCTestCase {
         XCTAssertEqual(stepTests.count, 3)
         XCTAssertEqual(executed, ["Given", "When", "Then"])
     }
+
+    func testRepeatedStepsInAScenarioEachRunWithTheirOwnDataTable() {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Shopping cart
+           Scenario: Adding the same product twice
+             When I add these products:
+               | product |
+               | apple   |
+             And I add these products:
+               | product |
+               | pear    |
+        """)
+        XCTAssertEqual(Gherkin.errors, [])
+
+        var tables = [[DataTable.Row]]()
+        When("I add these products:") { _, step in tables.append(step.dataTable?.rows ?? []) }
+
+        let suite = XCTestSuite(name: "Dummy")
+        CucumberTest.generateAlltests(suite)
+        let stepTests = suite.tests
+            .compactMap { $0 as? XCTestSuite }
+            .filter { $0.name.hasPrefix("ShoppingCart") }
+            .flatMap(\.tests)
+            .compactMap { $0 as? XCTestCase }
+
+        stepTests.forEach { $0.invokeTest() }
+
+        XCTAssertEqual(stepTests.count, 2)
+        XCTAssertEqual(tables, [[["product"], ["apple"]], [["product"], ["pear"]]])
+    }
 }
 
 extension Bundle {
