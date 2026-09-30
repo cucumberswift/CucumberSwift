@@ -59,6 +59,25 @@ public class Step: CustomStringConvertible {
     var tokens = [Lexer.Token]()
     var sourceLine: Int?
     var sourceFile: StaticString?
+    /// A step definition that matches this step: where it was registered, and what it matches and runs.
+    /// One instance per registration, shared by every step it matches, so it can be counted once.
+    final class Definition {
+        let file: StaticString
+        let line: Int
+        let matches: MatchesExpression
+        let execute: Execute?
+
+        init(file: StaticString, line: Int, matches: @escaping MatchesExpression, execute: Execute?) {
+            self.file = file
+            self.line = line
+            self.matches = matches
+            self.execute = execute
+        }
+    }
+    /// Every step definition that matches this step. A step that more than one step definition
+    /// matches is ambiguous: it fails and runs none of them.
+    var matchingDefinitions = [Definition]()
+    var isAmbiguous: Bool { matchingDefinitions.count > 1 }
 
     init(with node: AST.StepNode) {
         location = node.tokens.first { $0.isKeyword() }?.position ?? .start

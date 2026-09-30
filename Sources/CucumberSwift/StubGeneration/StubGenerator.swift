@@ -8,6 +8,10 @@
 
 import Foundation
 enum StubGenerator {
+    static var implementorRegexLiteralStyle: RegexLiteralStyle {
+        (Cucumber.shared as? StepImplementation)?.regexLiteralStyle ?? .extendedDelimiter
+    }
+
     private static func regexForTokens(_ tokens: [Token]) -> String {
         var regex = ""
         for token in tokens {
@@ -23,7 +27,8 @@ enum StubGenerator {
         return regex.trimmingCharacters(in: .whitespaces)
     }
 
-    static func getStubs(for features: [Feature]) -> [(step: Step, generatedSwift: String)] {
+    static func getStubs(for features: [Feature],
+                         regexLiteralStyle: RegexLiteralStyle = implementorRegexLiteralStyle) -> [(step: Step, generatedSwift: String)] {
         var lookup = [String: Method]()
         let executableSteps = features
             .taggedElements(askImplementor: false)
@@ -39,12 +44,14 @@ enum StubGenerator {
             .reduce(into: [(step: Step, method: Method)]()) {
                 let tokens = StubGenerator.Lexer($1.match).lex()
                 let regex = regexForTokens(tokens)
-                let stringCount = tokens.filter { $0.isString() }.count
-                let integerCount = tokens.filter { $0.isInteger() }.count
-                let matchesParameter = (stringCount > 0 || integerCount > 0) ? "matches" : "_"
+                // In the order the regular expression captures them.
+                let captures = tokens.compactMap { token -> String? in
+                    if token.isString() { return "string" }
+                    if token.isInteger() { return "integer" }
+                    return nil
+                }
+                let matchesParameter = captures.isEmpty ? "_" : "matches"
                 let variables = [
-                    (type: "string", count: stringCount),
-                    (type: "integer", count: integerCount),
                     (type: "dataTable", count: $1.dataTable != nil ? 1 : 0),
                     (type: "docString", count: $1.docString != nil ? 1 : 0)
                 ]
@@ -53,7 +60,7 @@ enum StubGenerator {
                    !m.keyword.contains($1.keyword) {
                     m.insertKeyword($1.keyword)
                 } else {
-                    let method = Method(keyword: $1.keyword, regex: regex, matchesParameter: matchesParameter, variables: variables)
+                    let method = Method(keyword: $1.keyword, regex: regex, matchesParameter: matchesParameter, captures: captures, variables: variables)
                     $0.append(($1, method))
                     lookup[regex] = method
                 }
@@ -67,7 +74,7 @@ enum StubGenerator {
                 method.comment += overwrittenSteps.map { "//                \($0.keyword.toString()) \($0.match)" }.joined(separator: "\n")
                 method.comment += "\n"
             }
-            return (step, method.generateSwift(matchAllAllowed: canMatchAll))
+            return (step, method.generateSwift(matchAllAllowed: canMatchAll, regexLiteralStyle: regexLiteralStyle))
         }
     }
 }

@@ -33,16 +33,45 @@ open class CucumberTest: XCTestCase {
         }
 
         Cucumber.shared.features.removeAll()
-        if let bundle = (Cucumber.shared as? StepImplementation)?.bundle {
+        DuplicateStepDefinition.reset()
+        let bundle = (Cucumber.shared as? StepImplementation)?.bundle
+        if let bundle = bundle {
             Cucumber.shared.readFromFeaturesFolder(in: bundle)
         }
         (Cucumber.shared as? StepImplementation)?.setupSteps()
-        assert(!Cucumber.shared.features.isEmpty, "CucumberSwift found no features to run. Check out our documentation for instructions on including you Features folder. Be aware it's a case sensitive search. If you're using the DSL, make sure your features are defined in the `setupSteps()` method.") // swiftlint:disable:this line_length
+
+        hasBeenBuilt = true
+        // Report a missing Features folder as a failing test rather than stopping the
+        // process, so every other test in the bundle still runs and the reason is shown.
+        guard !Cucumber.shared.features.isEmpty else {
+            return noFeaturesSuite(bundle: bundle)
+        }
 
         let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
         generateAlltests(suite)
-        hasBeenBuilt = true
         return suite
+    }
+
+    static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
+        let suite = XCTestSuite(name: String(describing: CucumberTest.self))
+        let message = noFeaturesMessage(bundle: bundle)
+        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwift",
+                                                                            method: TestCaseMethod(withName: "FoundNoFeatures", closure: { reportFailure(message) })) {
+            objc_registerClassPair(testCaseClass)
+            suite.addTest(testCaseClass.init(selector: methodSelector))
+        }
+        return suite
+    }
+
+    static func noFeaturesMessage(bundle: Bundle?) -> String {
+        guard let bundle = bundle else {
+            return "CucumberSwift found no features to run, because Cucumber does not conform to StepImplementation in this test bundle. "
+                + "Add `extension Cucumber: StepImplementation` with a `bundle` and a `setupSteps()`."
+        }
+        return "CucumberSwift found no features to run. It looks for a folder named Features (case sensitive) in \(bundle.bundleURL.path), "
+            + "the bundle your StepImplementation's `bundle` returns. "
+            + "With Swift Package Manager, add `resources: [.copy(\"Features\")]` to your test target and return `Bundle.module`. "
+            + "If you use the DSL, define your features in `setupSteps()`."
     }
 
     static func generateAlltests(_ rootSuite: XCTestSuite) {
@@ -138,6 +167,7 @@ open class CucumberTest: XCTestCase {
         }
 
         Self.reportInvalidRegularExpressions(RegularExpression.errors) { [self] in failStep($0) }
+        Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
@@ -173,9 +203,43 @@ open class CucumberTest: XCTestCase {
         return "No CucumberSwift expression found that matches this step. If you already wrote a step definition for it, its regular expression may not compile: see \(list). Otherwise, try adding \(suggestion)" // swiftlint:disable:this line_length
     }
 
-    /// Records one failure for each regular expression that will not compile. A pattern from a step
-    /// definition fails at that step definition, so Xcode marks the consumer's own line. One with no
-    /// step definition, such as a `CUCUMBER_TAGS` filter, fails here.
+    /// The failure for a step that more than one step definition matches. None of them runs, because
+    /// CucumberSwift cannot tell which one the step means; the message says where each one is.
+    static func ambiguousStepMessage(for step: Step) -> String {
+        ambiguousStepMessage(step: "\(step.keyword.toString()) \(step.match)", definitions: step.matchingDefinitions)
+    }
+
+    static func ambiguousStepMessage(step: String, definitions: [Step.Definition]) -> String {
+        let locations = definitions.map { "\(URL(fileURLWithPath: String($0.file)).lastPathComponent):\($0.line)" }
+        let list = locations.count < 2 ? locations.joined() : locations.dropLast().joined(separator: ", ") + " and " + (locations.last ?? "")
+        return "Ambiguous step '\(step)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
+    }
+
+    /// Records an ambiguous step's failure at the step in its feature file, as for a step with no step definition.
+    static func ambiguousStepIssue(for step: Step) -> XCTIssue {
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: ambiguousStepMessage(for: step),
+                        detailedDescription: nil,
+                        sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
+                        associatedError: nil,
+                        attachments: [])
+    }
+
+    /// Fails an ambiguous step on the test XCTest is running, at the step in its feature file. With no
+    /// running test known, it fails whatever test is current, without the feature-file location.
+    static func recordAmbiguousStep(_ step: Step, on runningTestCase: XCTestCase?) {
+        guard let runningTestCase = runningTestCase else {
+            XCTFail(ambiguousStepMessage(for: step))
+            return
+        }
+        runningTestCase.record(ambiguousStepIssue(for: step))
+    }
+
+    /// Records one failure for each problem found in the step definitions, such as a regular expression
+    /// that will not compile or a duplicate step definition. A problem from a step definition fails at
+    /// that step definition, so Xcode marks the consumer's own line. One with no step definition, such
+    /// as a `CUCUMBER_TAGS` filter, fails here.
     static func reportInvalidRegularExpressions(_ problems: [RegularExpression.Problem],
                                                 file: StaticString = #filePath,
                                                 line: Int = #line,
@@ -244,6 +308,13 @@ extension Step {
     }
 
     fileprivate func run() throws {
+        if isAmbiguous {
+            // Record first: a recorded failure sets the step's result to failed, and this one is ambiguous.
+            CucumberTest.recordAmbiguousStep(self, on: Cucumber.shared.runningTestCase)
+            errorMessage = CucumberTest.ambiguousStepMessage(for: self)
+            result = .ambiguous
+            return
+        }
         if let `class` = executeClass, let selector = executeSelector {
             executeInstance = (`class` as? NSObject.Type)?.init()
             if let instance = executeInstance,
