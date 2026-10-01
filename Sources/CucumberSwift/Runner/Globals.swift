@@ -82,7 +82,14 @@ public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) asy
 /// where there is no `XCTestCase` to call `add(_:)` on. Set `lifetime` to `.keepAlways` to keep the
 /// attachment when the test passes.
 public func Attach(_ attachment: XCTAttachment) {
-    XCTContext.runActivity(named: attachment.name ?? "Attachment") { activity in
+    attach(attachment) { name, block in
+        XCTContext.runActivity(named: name, block: block)
+    }
+}
+
+/// `runActivity` is a parameter so a test can see what gets attached.
+func attach(_ attachment: XCTAttachment, runActivity: (String, (XCTActivity) -> Void) -> Void) {
+    runActivity(attachment.name ?? "Attachment") { activity in
         activity.add(attachment)
     }
 }
