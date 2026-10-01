@@ -101,7 +101,7 @@ open class CucumberTest: XCTestCase {
         guard !stubs.isEmpty else { return }
         if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "Generated Steps", method: TestCaseMethod(withName: "GenerateStepsStubsIfNecessary", closure: {
             XCTContext.runActivity(named: "Pending Steps") { activity in
-                let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
+                let attachment = XCTAttachment(uniformTypeIdentifier: "public.swift-source",
                                                name: "GENERATED_Unimplemented_Step_Definitions.swift",
                                                payload: generatedSwift.data(using: .utf8),
                                                userInfo: nil)
@@ -173,7 +173,7 @@ open class CucumberTest: XCTestCase {
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
-            let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
+            let attachment = XCTAttachment(uniformTypeIdentifier: "public.swift-source",
                                            name: Self.stubAttachmentName(sourceFile: sourceFile, line: $0.step.location.line),
                                            payload: $0.generatedSwift.data(using: .utf8),
                                            userInfo: nil)
