@@ -292,6 +292,22 @@ class StepTest: XCTestCase {
         XCTAssertEqual(name, "Login.feature:7")
     }
 
+    func testAStubAttachmentNameNeverExceedsTheFileNameLimit() {
+        let fits = String(repeating: "a", count: 253)
+        let tooLong = String(repeating: "a", count: 254)
+        let multibyte = String(repeating: "é", count: 200)
+
+        let fitting = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: fits), line: 7)
+        let capped = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: tooLong), line: 7)
+        let cappedMultibyte = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: multibyte), line: 7)
+
+        XCTAssertEqual(fitting, fits + ":7")
+        XCTAssertEqual(capped, fits + ":7")
+        XCTAssertEqual(capped.utf8.count, 255)
+        XCTAssertLessThanOrEqual(cappedMultibyte.utf8.count, 255)
+        XCTAssertTrue(cappedMultibyte.hasSuffix(":7"))
+    }
+
     /// #220: a Cucumber Expression that is treated as a regular expression but will not compile is
     /// reported at the step definition too, instead of crashing the run.
     func testAnExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {

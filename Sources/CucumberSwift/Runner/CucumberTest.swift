@@ -190,9 +190,15 @@ open class CucumberTest: XCTestCase {
 
     /// The attachment name for a missing step's stub. Xcode saves each attachment as a file named after it,
     /// so the feature file's full path would overflow the 255-byte file name limit in a deep checkout and
-    /// Xcode would drop the attachment. The file's own name and the line locate the step just as well.
-    static func stubAttachmentName(sourceFile: URL, line: some CustomStringConvertible) -> String {
-        "\(sourceFile.lastPathComponent):\(line)"
+    /// Xcode would drop the attachment. The file's own name and the line locate the step just as well, and
+    /// the file's name is shortened, if need be, so the whole name stays within the limit.
+    static func stubAttachmentName<Line: CustomStringConvertible>(sourceFile: URL, line: Line) -> String {
+        let suffix = ":\(line)"
+        var name = sourceFile.lastPathComponent
+        while name.utf8.count + suffix.utf8.count > 255 {
+            name.removeLast()
+        }
+        return name + suffix
     }
 
     /// The failure for a step that no step definition matches. A step definition whose regular expression
