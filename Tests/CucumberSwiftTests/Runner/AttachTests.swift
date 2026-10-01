@@ -80,8 +80,8 @@ class AttachTests: XCTestCase {
         XCTAssertTrue(record(attachment).attachments.first === attachment)
     }
 
-    func testAttachDeliversDataWithATypeIdentifier() throws {
-        let data = try XCTUnwrap(#"{"scenario":"Attach"}"#.data(using: .utf8))
+    func testAttachDeliversDataWithATypeIdentifier() {
+        let data = Data(#"{"scenario":"Attach"}"#.utf8)
         let attachment = XCTAttachment(uniformTypeIdentifier: "public.json", name: "state.json", payload: data, userInfo: nil)
 
         let recorded = record(attachment)
@@ -149,7 +149,7 @@ class AttachTests: XCTestCase {
         Feature: Attachments
            Scenario: Attach from a step
               Given a step that attaches
-        """, uri: "file:///Features/Attach.feature")
+        """)
         var attached = false
         Given("a step that attaches") { _, _ in
             Attach(XCTAttachment(string: "evidence"))
