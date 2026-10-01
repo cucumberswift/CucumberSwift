@@ -282,9 +282,10 @@ class StepTest: XCTestCase {
 
     /// #100: Xcode saves an attachment as a file named after it, so a deep feature file path must not be in the name.
     func testAStubAttachmentIsNamedAfterTheFeatureFileNotItsFullPath() {
-        let deepFile = (0..<30).reduce(FileManager.default.temporaryDirectory) { url, _ in
+        let deepDirectory = (0..<30).reduce(FileManager.default.temporaryDirectory) { url, _ in
             url.appendingPathComponent("deeply", isDirectory: true)
-        }.appendingPathComponent("Login.feature")
+        }
+        let deepFile = deepDirectory.appendingPathComponent("Login.feature")
 
         let name = CucumberTest.stubAttachmentName(sourceFile: deepFile, line: 7)
 
