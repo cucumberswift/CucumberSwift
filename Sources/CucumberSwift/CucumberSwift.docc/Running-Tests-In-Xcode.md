@@ -6,13 +6,38 @@ Find your scenarios in Xcode's test navigator, go from a failure to its step, an
 
 CucumberSwift reads your feature files when the test bundle starts and creates the tests then, so Xcode's test navigator shows them only after the first run. Each scenario becomes a test class named after its feature and scenario, such as `Checkout|PayWithAGiftCard`, and each of its steps becomes a test in that class, such as `Step002_ThenTheOrderTotalIs99`. The steps are numbered so that they run in the order of the feature file. The test navigator lists a class's failed tests first, and then the most recently run first, so read the numbers for the order.
 
+### Choose a test per step or one test per scenario
+
+CucumberSwift can lay out a scenario's tests in two ways. You choose; a test per step is the default.
+
+| | A test per step (default) | One test per scenario |
+|---|---|---|
+| In the test navigator | A class per scenario, such as `Checkout\|PayWithAGiftCard`, with a test for each step | One test per scenario, such as `Checkout\|PayWithAGiftCard`, in the class `CucumberScenarioTest` |
+| A step's result | Each step has its own result: passed, failed or skipped | The scenario has one result; its steps show as activities in the test report |
+| Run one scenario from the test navigator | No (see <doc:Running-Tests-In-Xcode#Run-one-scenario>) | Yes, with the scenario's run button |
+| A failing step | Opens its line in the feature file | Opens its line in the feature file |
+| Steps after a failure, or after a step that throws `XCTSkip` | Skipped | Skipped activities |
+
+To have one test per scenario, return `true` from your `StepImplementation`'s `oneTestPerScenario`:
+
+```swift
+extension Cucumber: StepImplementation {
+    public var oneTestPerScenario: Bool { true }
+    // …
+}
+```
+
+To switch without changing code, set the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` or `NO` in a scheme or test plan. It overrides `oneTestPerScenario`. For example, keep a test per step in your default test plan, and add a test plan that sets `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` for when you want to run scenarios one at a time.
+
+Your step definitions, hooks and feature files don't change between the two. The tests' names do, so test plans that select or skip tests by name, and test history in CI, see different tests when you switch.
+
 ### Go from a failure to its step
 
 A step that fails is reported at its line in the feature file. Click the failure in the issue navigator or the test report, and Xcode opens the feature file at that step and marks it there. The failure's call stack still leads to the line in your step definition that failed.
 
 This holds for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than one step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
 
-Once a step fails, the rest of its scenario's steps don't run, and Xcode shows them as skipped.
+Once a step fails, the rest of its scenario's steps don't run, and Xcode shows them as skipped, or with one test per scenario, as skipped activities.
 
 ### Tell Scenario Outline examples apart
 
@@ -65,27 +90,15 @@ A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular exp
 
 ### Run one scenario
 
-By default, each step is a test, and Xcode's test navigator can't run one scenario on its own: the test classes exist only while the bundle runs, so Xcode can't find the one it's asked for, runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run one scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, as above.
+With a test per step, the default, Xcode's test navigator can't run one scenario on its own: the test classes exist only while the bundle runs, so Xcode can't find the one it's asked for, runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run one scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, as above, or switch to one test per scenario.
 
-If you'd rather run scenarios from the test navigator, make each scenario one test, by returning `true` from your `StepImplementation`'s `oneTestPerScenario`:
-
-```swift
-extension Cucumber: StepImplementation {
-    public var readableTestNames: Bool { true }
-    public var oneTestPerScenario: Bool { true }
-    // …
-}
-```
-
-To switch it per scheme or test plan without changing code, set the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` or `NO`, which overrides `oneTestPerScenario`.
-
-Each scenario is then a test of `CucumberScenarioTest`, such as `Checkout › Pay with a gift card`, and its run button runs just that scenario. From the command line, name it with `-only-testing:`:
+With one test per scenario, a scenario's run button in the test navigator runs just that scenario. From the command line, name its test with `-only-testing:`:
 
 ```bash
-xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:'MyAppTests/CucumberScenarioTest/Checkout › Pay with a gift card'
+xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:'MyAppTests/CucumberScenarioTest/Checkout|PayWithAGiftCard'
 ```
 
-The scenario's steps run in order within its test, and the test report shows each one as an activity. A step that fails is still reported at its line in the feature file, and the steps after it show as skipped. The test navigator shows a result for each scenario rather than for each step.
+The test's name is its feature's and its scenario's, as the test navigator shows it. A scenario whose name repeats another's in the same feature gets a number, as in `Checkout|Pay 2`.
 
 ### Skip a scenario
 
