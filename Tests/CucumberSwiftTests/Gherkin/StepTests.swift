@@ -308,6 +308,14 @@ class StepTest: XCTestCase {
         XCTAssertTrue(cappedMultibyte.hasSuffix(":7"))
     }
 
+    /// #100: Xcode can only preview and open a stub attachment whose type is Swift source.
+    func testAStubAttachmentIsSwiftSourceWithItsNameAndCode() throws {
+        let attachment = CucumberTest.stubAttachment(named: "Login.feature:3", generatedSwift: "Given(\"a step\") { _, _ in }")
+
+        XCTAssertEqual(attachment.uniformTypeIdentifier, "public.swift-source")
+        XCTAssertEqual(attachment.name, "Login.feature:3")
+    }
+
     /// #220: a Cucumber Expression that is treated as a regular expression but will not compile is
     /// reported at the step definition too, instead of crashing the run.
     func testAnExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
