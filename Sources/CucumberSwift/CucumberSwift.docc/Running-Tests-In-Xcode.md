@@ -62,6 +62,25 @@ By default, tests are named with the text of your features, scenarios and steps 
 
 Test names then contain spaces and punctuation. If a tool in your build parses the output of `xcodebuild` and expects test names without spaces, turn readable names off with `Cucumber.readableTestNames = false` in `setupSteps()`, or set `CUCUMBER_READABLE_TEST_NAMES` to `NO`. Tests are then named in camel case, as in earlier versions: `Checkout|PayWithAGiftCard` and `Step002_ThenTheOrderTotalIs99`.
 
+### Keep secrets out of feature files
+
+Your step text, scenario names and Scenario Outline example values become test names, whether or not readable names are on. Test names appear in the output of `xcodebuild`, in CI logs, in `.xcresult` bundles and in test reports, and these often reach more people, and are kept longer, than your feature files. CI services hide only the secrets you register with them, not text from a feature file.
+
+So don't write passwords, tokens or other secrets in a feature file. Name who or what the step uses, and have the step definition read the secret, for example from an environment variable that CI sets, or that a scheme you don't share sets:
+
+```gherkin
+When I sign in as the admin user
+```
+
+```swift
+When("I sign in as the admin user") { _, _ in
+    let password = ProcessInfo.processInfo.environment["ADMIN_PASSWORD"] ?? ""
+    // Sign in with the password
+}
+```
+
+Shared schemes and test plans are usually committed, so a secret set in one ends up in your repository too. A configuration file that isn't committed, or the Keychain, works as well.
+
 ### Choose scenarios with a test plan
 
 To run some scenarios rather than all of them, tag them in your feature files:
