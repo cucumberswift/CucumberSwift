@@ -144,9 +144,7 @@ open class CucumberTest: XCTestCase {
                     step.endTime = Date()
                 }
                 step.continueAfterFailure ?= (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure ?? testCase.continueAfterFailure
-                (testCase as? StepTestCase)?.skipReason = { [weak scenario] in
-                    Cucumber.shared.failedScenarios.contains { $0 === scenario } ? StepTestCase.skippedAfterFailureMessage : nil
-                }
+                (testCase as? StepTestCase)?.skipReason = { [weak scenario] in StepTestCase.skipReason(for: scenario) }
                 step.testCase = testCase
                 testCase.continueAfterFailure = step.continueAfterFailure
                 tests.append(testCase)

@@ -10,11 +10,10 @@ final class StepTestCaseTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
         Cucumber.shared.failedScenarios.removeAll()
-    }
-
-    override func tearDownWithError() throws {
-        Cucumber.shared.reset()
-        Cucumber.shared.failedScenarios.removeAll()
+        addTeardownBlock {
+            Cucumber.shared.reset()
+            Cucumber.shared.failedScenarios.removeAll()
+        }
     }
 
     private final class Probe: StepTestCase {
