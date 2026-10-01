@@ -301,7 +301,8 @@ class VersionTests(PlanTestCase):
         self.assertEqual(self.plan_fails("prerelease"), "bump must be patch, minor or major.")
 
     def test_an_unexpected_branch_is_refused(self):
-        for branch in ("feature/x", "support/5", "support/05.x", "support/5.x; true", "Main"):
+        for branch in ("feature/x", "support/5", "support/05.x", "support/5.x; true", "Main",
+                       "main\n", "support/5.x\n"):
             with self.subTest(branch=branch):
                 self.assertEqual(self.plan_fails("patch", branch), "Unexpected branch.")
 
@@ -736,6 +737,7 @@ class NotesTests(PlanTestCase):
             ({"login": "someapp[bot]", "type": "User"}, "someapp[bot]"),
             ({"login": "<b>x</b>", "type": "User"}, ""),
             ({"login": "a b", "type": "User"}, ""),
+            ({"login": "alice\n", "type": "User"}, ""),
             ({"type": "User"}, ""),
             (None, ""),
         ]
@@ -1137,7 +1139,7 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(self.fake.processes, [])
 
     def test_unexpected_inputs_are_refused(self):
-        for env in ({"VERSION": "5.0.11; true"}, {"VERSION": "v5.0.11"}, {"VERSION": "05.0.11"},
+        for env in ({"VERSION": "5.0.11; true"}, {"VERSION": "v5.0.11"}, {"VERSION": "05.0.11"}, {"VERSION": "5.0.11\n"},
                     {"LATEST": "yes"}, {"BRANCH": "feature/x"}):
             with self.subTest(**env):
                 os.environ.update(VERSION="5.0.11", LATEST="true", BRANCH="main")
