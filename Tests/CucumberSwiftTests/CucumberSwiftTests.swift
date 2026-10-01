@@ -519,9 +519,12 @@ extension Cucumber: StepImplementation {
     public var reverseOrderForAfterHooks: Bool { Cucumber.overrideReverseOrderForAfterHooks }
     public var regexLiteralStyle: RegexLiteralStyle { Cucumber.overrideRegexLiteralStyle }
 
-    public static var overrideReadableTestNames = false
-    public var readableTestNames: Bool { Cucumber.overrideReadableTestNames }
-
     public static var overrideAsyncStepTimeout: TimeInterval?
     public var asyncStepTimeout: TimeInterval { Cucumber.overrideAsyncStepTimeout ?? AsyncStepRunner.defaultTimeout }
+}
+
+// Lets a test turn on StepImplementation's readableTestNames for the test bundle's Cucumber.
+extension Cucumber {
+    public static var overrideReadableTestNames = false
+    @objc public var readableTestNames: Bool { Cucumber.overrideReadableTestNames }
 }
