@@ -1,0 +1,115 @@
+//
+//  ReadableTestNameTests.swift
+//  CucumberSwiftTests
+//
+//  With readable test names, the default, generated tests are named with the Gherkin text as written, so Xcode's
+//  test navigator reads like the feature file (#59).
+//
+import Foundation
+import XCTest
+@testable import CucumberSwift
+
+class ReadableTestNameTests: XCTestCase {
+    private static func generatedTestNames(readable: Bool) -> [String] {
+        Cucumber.shared.reset()
+        Cucumber.readableTestNames = readable
+        defer {
+            Cucumber.readableTestNames = nil
+            Cucumber.shared.reset()
+        }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Readable names \(readable)
+           Scenario: Pay with a gift card
+             Given a cart
+             And a gift card
+        """)
+        let suite = XCTestSuite(name: "Readable names")
+        CucumberTest.generateAlltests(suite)
+        return suite.tests.filter { $0.name != "GeneratedSteps" }.flatMap { scenario in
+            [scenario.name] + ((scenario as? XCTestSuite)?.tests.map(\.name) ?? [])
+        }
+    }
+
+    func testByDefaultANameIsCamelCased() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob@x.com)", readable: false), "SignInEmailBobXCom")
+    }
+
+    func testAReadableNameKeepsTheTextAsWritten() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob)", readable: true), "Sign in (email: bob)")
+    }
+
+    // XCTest separates a test's class from its method with "/".
+    func testAReadableNameHasNoSlash() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Pay 1/2 now", readable: true), "Pay 1-2 now")
+    }
+
+    // Xcode would show only "com)" for a class named "Sign in (email: bob@x.com)".
+    func testAReadableNameHasNoFullStop() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob@x.com)", readable: true), "Sign in (email: bob@x\u{2024}com)")
+    }
+
+    func testAReadableNameHasNoNewlinesOrSurroundingSpaces() {
+        XCTAssertEqual(CucumberTest.generatedTestName("  Given a doc string\n", readable: true), "Given a doc string")
+    }
+
+    func testByDefaultAStepIsNamedWithItsZeroPaddedIndex() {
+        XCTAssertEqual(Step.methodName(for: "Then the total is 99", at: 2, of: 3, readable: false), "Step002_ThenTheTotalIs99")
+    }
+
+    func testAReadableStepNameStartsWithItsPosition() {
+        XCTAssertEqual(Step.methodName(for: "Then the total is 99", at: 2, of: 3, readable: true), "3 \u{203A} Then the total is 99")
+    }
+
+    // XCTest may sort a class's tests by name (#209), so step 10 must not sort before step 2.
+    func testReadableStepNamesSortInFeatureFileOrder() {
+        let names = (0..<12).map { Step.methodName(for: "Given step \($0)", at: $0, of: 12, readable: true) }
+        XCTAssertEqual(names.first, "01 \u{203A} Given step 0")
+        XCTAssertEqual(names.sorted(), names)
+    }
+
+    func testAReadableScenarioNameSeparatesItsFeatureWithAnAngleQuote() {
+        XCTAssertEqual(CucumberTest.featureScenarioDelimiter(configured: nil, readable: true), " \u{203A} ")
+        XCTAssertEqual(CucumberTest.featureScenarioDelimiter(configured: nil, readable: false), "|")
+    }
+
+    func testAConfiguredDelimiterWinsOverTheReadableOne() {
+        XCTAssertEqual(CucumberTest.featureScenarioDelimiter(configured: "_", readable: true), "_")
+    }
+
+    // A step written with And or But keeps that keyword in its name, rather than the one it continues.
+    func testAStepKeepsTheKeywordItWasWrittenWith() throws {
+        Cucumber.shared.reset()
+        defer { Cucumber.shared.reset() }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Cart
+           Scenario: Add products
+             Given an empty cart
+             And a product
+             Then the cart has 1 item
+             But the cart has no discount
+        """)
+        let steps = try XCTUnwrap(Cucumber.shared.features.first?.scenarios.first?.steps)
+        XCTAssertEqual(steps.map(\.writtenKeyword), ["Given", "And", "Then", "But"])
+        XCTAssertEqual(steps[1].keyword, [.given, .and])
+    }
+
+    // Cucumber.readableTestNames, not just the helpers, decides how generated tests are named.
+    func testTheSettingNamesTheGeneratedScenarioAndStepsAsWritten() throws {
+        let delimiter = CucumberTest.featureScenarioDelimiter(configured: Cucumber.shared.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
+                                                              readable: true)
+        let names = Self.generatedTestNames(readable: true)
+        XCTAssertEqual(names.first, "Readable names true\(delimiter)Pay with a gift card")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" 1 \u{203A} Given a cart]") }, "\(names)")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" 2 \u{203A} And a gift card]") }, "\(names)")
+    }
+
+    func testWithoutTheSettingTheGeneratedNamesAreCamelCased() {
+        let names = Self.generatedTestNames(readable: false)
+        XCTAssertTrue(names.contains { $0.hasSuffix(" Step000_GivenACart]") }, "\(names)")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" Step001_GivenAGiftCard]") }, "\(names)")
+    }
+
+    func testReadableNamesAreTheDefault() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Pay with a gift card"), "Pay with a gift card")
+    }
+}

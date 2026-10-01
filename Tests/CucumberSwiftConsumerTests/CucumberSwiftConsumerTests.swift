@@ -57,6 +57,15 @@ extension CucumberTest {
     }
 }
 
+// The superclass of the generated step tests is an Objective-C class in its own SwiftPM target, which
+// CucumberSwift finds by name. A consumer's test bundle must still contain it, or every step would run
+// on a plain XCTestCase: named with "()", and with its failures at the Swift line, not the feature file.
+class CucumberStepTestLinkTests: XCTestCase {
+    func testTheObjectiveCStepTestIsLinkedIntoTheConsumer() {
+        XCTAssertNotNil(NSClassFromString("CucumberStepTest"))
+    }
+}
+
 // Z prefix ensures this runs after XCTest has already executed the CucumberTest suite
 class ZCucumberTestCacheTests: XCTestCase {
     func testDefaultTestSuiteReturnsEmptyOnSubsequentCalls() {

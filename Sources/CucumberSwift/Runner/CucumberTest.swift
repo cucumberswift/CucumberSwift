@@ -13,10 +13,12 @@ open class CucumberTest: XCTestCase {
     static var didRun = false
 
     private static var hasBeenBuilt = false
+    static var featuresLoaded = false
 
     #if DEBUG
     static func resetSetUp() {
         hasBeenBuilt = false
+        featuresLoaded = false
     }
     #endif
 
@@ -32,13 +34,8 @@ open class CucumberTest: XCTestCase {
             return XCTestSuite(name: String(describing: CucumberTest.self))
         }
 
-        Cucumber.shared.features.removeAll()
-        DuplicateStepDefinition.reset()
         let bundle = (Cucumber.shared as? StepImplementation)?.bundle
-        if let bundle = bundle {
-            Cucumber.shared.readFromFeaturesFolder(in: bundle)
-        }
-        (Cucumber.shared as? StepImplementation)?.setupSteps()
+        loadFeaturesIfNeeded()
 
         hasBeenBuilt = true
         // Report a missing Features folder as a failing test rather than stopping the
@@ -81,11 +78,16 @@ open class CucumberTest: XCTestCase {
         stubTests.forEach { stubsSuite.addTest($0) }
         rootSuite.addTest(stubsSuite)
 
+        if FeatureFlags.isOneTestPerScenario {
+            addScenarioTests(to: rootSuite)
+            return
+        }
+
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
-            let className = feature.title.toClassString() + readFeatureScenarioDelimiter()
+            let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter()
 
             for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                let childSuite = XCTestSuite(name: className + scenario.title.toClassString())
+                let childSuite = XCTestSuite(name: className + generatedTestName(scenario.title))
                 var tests = [XCTestCase]()
                 createTestCaseFor(className: className, scenario: scenario, tests: &tests)
                 tests.forEach { childSuite.addTest($0) }
@@ -113,20 +115,18 @@ open class CucumberTest: XCTestCase {
     }
 
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
-        let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()), superclass: StepTestCase.self)
+        let testCase = TestCaseGenerator.makeClass(className: className.appending(generatedTestName(scenario.title)),
+                                                   superclass: StepTestCase.superclass)
         if let testCase = testCase {
             objc_registerClassPair(testCase)
         }
-        // XCTest may order a class's test methods by name, so each name starts with the step's
-        // zero-padded position to keep that order the same as the feature file's.
-        let indexWidth = max(3, String(scenario.steps.count - 1).count)
         scenario
             .steps
             .enumerated()
             .lazy
             .compactMap { index, step -> (step: Step, XCTestCase.Type, Selector)? in // swiftlint:disable:this large_tuple
                 if let testCase = testCase,
-                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, width: indexWidth)) {
+                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, of: scenario.steps.count)) {
                     return (step, testCase, methodSelector)
                 }
                 return nil
@@ -142,8 +142,8 @@ open class CucumberTest: XCTestCase {
                     step.endTime = Date()
                 }
                 step.continueAfterFailure ?= (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure ?? testCase.continueAfterFailure
-                (testCase as? StepTestCase)?.skipReason = { [weak scenario] in StepTestCase.skipReason(for: scenario) }
                 step.testCase = testCase
+                StepTestCase.setStep(step, of: testCase)
                 testCase.continueAfterFailure = step.continueAfterFailure
                 tests.append(testCase)
             }
@@ -289,20 +289,14 @@ open class CucumberTest: XCTestCase {
     }
 }
 
-extension CucumberTest {
-    private static let defaultDelimiter = "|"
-
-    private static func readFeatureScenarioDelimiter() -> String {
-        guard let testBundle = (Cucumber.shared as? StepImplementation)?.bundle else { return defaultDelimiter }
-        return (testBundle.infoDictionary?["FeatureScenarioDelimiter"] as? String) ?? defaultDelimiter
-    }
-}
-
 extension Step {
-    fileprivate func method(at index: Int, width: Int) -> TestCaseMethod? {
-        let position = String(format: "%0*d", width, index)
-        return TestCaseMethod(withName: "Step\(position)_" + "\(keyword.toString()) \(match)".toClassString()) {
-            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }) else { return }
+    func method(at index: Int, of count: Int) -> TestCaseMethod? {
+        let readable = FeatureFlags.isReadableTestNames
+        // Readable names show the keyword as written; camel-case names keep the ones tests already have.
+        let text = "\(readable ? writtenKeyword : keyword.toString()) \(match)"
+        return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
+            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }),
+                  !StepTestCase.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }
             let startTime = Date()
             self.startTime = startTime
             Cucumber.shared.currentStep = self
@@ -311,20 +305,46 @@ extension Step {
 
             func runAndReport() {
                 Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
-                XCTAssertNoThrow(try self.run())
+                self.runSkippingScenarioOnXCTSkip()
                 self.endTime = Date()
                 Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
             }
 
             #if compiler(>=5)
-            XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
+            XCTContext.runActivity(named: "\(self.writtenKeyword) \(self.match)") { _ in
                 runAndReport()
             }
             #else
-            _ = XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
+            _ = XCTContext.runActivity(named: "\(self.writtenKeyword) \(self.match)") { _ in
                 runAndReport()
             }
             #endif
+        }
+    }
+
+    /// Runs the step. One that throws `XCTSkip` skips its scenario: it and the steps after it don't run.
+    fileprivate func runSkippingScenarioOnXCTSkip() {
+        var skip: XCTSkip?
+        XCTAssertNoThrow(try {
+            do {
+                try self.run()
+            } catch let thrown as XCTSkip {
+                skip = thrown
+            }
+        }())
+        if let skip = skip {
+            recordSkip(skip)
+        }
+    }
+
+    /// Records that the step threw `XCTSkip`, so the rest of its scenario doesn't run. A step that
+    /// already failed stays failed, so the scenario is still reported as failed.
+    func recordSkip(_ skip: XCTSkip) {
+        if result != .failed && result != .ambiguous {
+            result = .skipped
+        }
+        if let scenario = scenario {
+            StepTestCase.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
         }
     }
 
@@ -349,17 +369,5 @@ extension Step {
         if execute != nil && result != .failed {
             result = .passed
         }
-    }
-}
-
-extension String {
-    fileprivate func toClassString() -> String {
-        camelCasingString()
-            .lazy
-            .drop { !$0.isLetter }
-            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
-            .map(String.init)
-            .joined()
-            .capitalizingFirstLetter()
     }
 }

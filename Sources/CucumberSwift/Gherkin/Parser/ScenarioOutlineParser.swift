@@ -9,6 +9,20 @@
 import Foundation
 
 enum ScenarioOutlineParser {
+    /// What every example of one Scenario Outline shares.
+    private struct Outline {
+        let titleLine: [Lexer.Token]?
+        let tags: [String]
+        let stepNodes: [AST.StepNode]
+        let backgroundStepNodes: [AST.StepNode]
+        let description: String
+        let uri: String
+    }
+
+    /// The longest the example's values may make its title, in characters. The title names the test
+    /// Xcode runs, and Xcode cannot save an attachment whose file name that makes too long (#100).
+    static let maximumValuesLength = 60
+
     /**
      Extracts the description text for a scenario outline by processing its tokens.
      
@@ -72,19 +86,16 @@ enum ScenarioOutlineParser {
             return nil
         })
         let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
-        let outlineDescription = extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes)
+        let outline = Outline(titleLine: scenarioOutlineNode.tokens.groupedByLine().first,
+                              tags: tags,
+                              stepNodes: stepNodes,
+                              backgroundStepNodes: backgroundStepNodes,
+                              description: extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes),
+                              uri: uri)
+        // Shared by every Examples block, so no two examples of the outline get the same title.
+        var usedTitles = Set<String>()
         return getExamplesFrom(scenarioOutlineNode)
-            .flatMap { parseExample(titleLine: scenarioOutlineNode
-                                            .tokens
-                                            .groupedByLine()
-                                            .first,
-                                    tokens: $0,
-                                    outlineTags: tags,
-                                    stepNodes: stepNodes,
-                                    backgroundStepNodes: backgroundStepNodes,
-                                    description: outlineDescription,
-                                    uri: uri)
-            }
+            .flatMap { parseExample($0, of: outline, usedTitles: &usedTitles) }
     }
 
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
@@ -98,22 +109,24 @@ enum ScenarioOutlineParser {
         }
     }
 
-    private static func parseExample(titleLine: [Lexer.Token]?,
-                                     tokens: [Lexer.Token],
-                                     outlineTags: [String],
-                                     stepNodes: [AST.StepNode],
-                                     backgroundStepNodes: [AST.StepNode],
-                                     description: String,
-                                     uri: String) -> [Scenario] {
+    private static func parseExample(_ tokens: [Lexer.Token], of outline: Outline, usedTitles: inout Set<String>) -> [Scenario] {
+        let titleLine = outline.titleLine
         var scenarios = [Scenario]()
         let lines = tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
-        validateTable(lines, uri: uri)
+        validateTable(lines, uri: outline.uri)
         let headerLookup: [String: Int]? = lines.first?.enumerated().reduce(into: [:]) {
             if case Lexer.Token.tableCell(_, let headerText) = $1.element {
                 $0?[headerText.valueDescription] = $1.offset
             }
         }
-        let tags = outlineTags
+        let headers = lines.first?.compactMap { token -> String? in
+            guard case Lexer.Token.tableCell(_, let headerText) = token else { return nil }
+            return headerText.valueDescription
+        } ?? []
+        let headersInTitle = Set(titleLine?.compactMap { token -> String? in
+            guard case Lexer.Token.tableHeader(_, let headerText) = token else { return nil }
+            return headerText
+        } ?? [])
         for (index, line) in lines.dropFirst().enumerated() {
             let title = titleLine?.reduce(into: "") {
                 if case Lexer.Token.tableHeader(_, let headerText) = $1 {
@@ -127,14 +140,48 @@ enum ScenarioOutlineParser {
                     $0? += titleText
                 }
             } ?? ""
-            var steps = backgroundStepNodes.map { Step(with: $0) }
-            for stepNode in stepNodes {
+            var steps = outline.backgroundStepNodes.map { Step(with: $0) }
+            for stepNode in outline.stepNodes {
                 steps.append(getStepFromLine(line, lookup: headerLookup, stepNode: stepNode))
             }
-            let exampleNumber = index + 1
-            scenarios.append(Scenario(with: steps, title: "\(title) (example \(exampleNumber))", description: description, tags: tags, position: line.first?.position ?? .start))
+            let values = zip(headers, line).compactMap { header, cell -> String? in
+                guard !headersInTitle.contains(header), case Lexer.Token.tableCell(_, let cellText) = cell else { return nil }
+                return "\(header): \(cellText.valueDescription)"
+            }
+            let exampleTitle = exampleTitle(title, values: values, exampleNumber: index + 1, usedTitles: &usedTitles)
+            scenarios.append(Scenario(with: steps, title: exampleTitle, description: outline.description, tags: outline.tags, position: line.first?.position ?? .start))
         }
         return scenarios
+    }
+
+    /// An example's title: the outline's title followed by the example's values for the columns the
+    /// title does not already use, as in `Sign in (email: bob@x.com, role: admin)`. Values that would
+    /// pass ``maximumValuesLength`` are left out, and an ellipsis shows that some are. An example whose
+    /// title would repeat an earlier one's, in any of the outline's Examples blocks, also gets its
+    /// number, and a further count if that is taken too, so every example has its own name.
+    static func exampleTitle(_ title: String, values: [String], exampleNumber: Int, usedTitles: inout Set<String>) -> String {
+        var valueList = ""
+        for value in values {
+            let next = valueList.isEmpty ? value : "\(valueList), \(value)"
+            guard next.count <= maximumValuesLength else {
+                valueList = valueList.isEmpty ? String(value.prefix(maximumValuesLength - 1)) + "…" : "\(valueList), …"
+                break
+            }
+            valueList = next
+        }
+        var exampleTitle = valueList.isEmpty ? title : "\(title) (\(valueList))"
+        if valueList.isEmpty || usedTitles.contains(exampleTitle) {
+            exampleTitle = valueList.isEmpty ? "\(title) (example \(exampleNumber))" : "\(title) (\(valueList), example \(exampleNumber))"
+        }
+        // A cell can itself read like the number, as in "a, example 3", so count on until the title is new.
+        let numbered = exampleTitle
+        var attempt = 1
+        while usedTitles.contains(exampleTitle) {
+            attempt += 1
+            exampleTitle = "\(numbered) \(attempt)"
+        }
+        usedTitles.insert(exampleTitle)
+        return exampleTitle
     }
 
     private static func getStepFromLine(_ line: [Lexer.Token], lookup: [String: Int]?, stepNode: AST.StepNode) -> Step {

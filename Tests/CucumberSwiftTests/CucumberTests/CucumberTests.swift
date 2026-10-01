@@ -298,7 +298,7 @@ class CucumberTests: XCTestCase {
         CucumberTest.generateAlltests(suite)
         let stepTests = suite.tests
             .compactMap { $0 as? XCTestSuite }
-            .filter { $0.name.hasPrefix("PurchaseHistory") }
+            .filter { $0.name.hasPrefix("Purchase history") }
             .flatMap(\.tests)
             .compactMap { $0 as? XCTestCase }
 
@@ -329,7 +329,7 @@ class CucumberTests: XCTestCase {
         CucumberTest.generateAlltests(suite)
         let stepTests = suite.tests
             .compactMap { $0 as? XCTestSuite }
-            .filter { $0.name.hasPrefix("ShoppingCart") }
+            .filter { $0.name.hasPrefix("Shopping cart") }
             .flatMap(\.tests)
             .compactMap { $0 as? XCTestCase }
 

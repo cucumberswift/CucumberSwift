@@ -322,9 +322,9 @@ class ParserTests: XCTestCase {
         let scenarios = feature?.scenarios ?? []
         XCTAssertEqual(scenarios.count, 2)
 
-        // Titles expanded with example index
-        XCTAssertEqual(scenarios[safe: 0]?.title, "Outline with description (example 1)")
-        XCTAssertEqual(scenarios[safe: 1]?.title, "Outline with description (example 2)")
+        // Titles expanded with the example's values
+        XCTAssertEqual(scenarios[safe: 0]?.title, "Outline with description (start: 12, eat: 5, left: 7)")
+        XCTAssertEqual(scenarios[safe: 1]?.title, "Outline with description (start: 20, eat: 5, left: 15)")
 
         // Description propagated from Scenario Outline to each expanded Scenario
         XCTAssertEqual(scenarios[safe: 0]?.desc, "This is outline description.\nAnother line.\n")
