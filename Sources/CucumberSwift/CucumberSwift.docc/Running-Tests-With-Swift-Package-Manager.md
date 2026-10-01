@@ -64,6 +64,8 @@ CucumberSwift creates a test for each scenario when the suite runs. `swift test 
 CUCUMBER_TAGS=smoke swift test
 ```
 
+To see which steps ran and how each scenario ended, turn on verbose output: `CUCUMBER_VERBOSE=1 swift test`. See <doc:Verbose-Output>.
+
 ### Know what swift test covers
 
 - `swift test` builds and runs your tests on macOS. To test on iOS or tvOS, use Xcode or `xcodebuild` with a destination.

@@ -25,6 +25,9 @@ else
 fi
 ```
 
+## Verbose Output
+To print each feature, scenario and step to the test log as it runs, see <doc:Verbose-Output>.
+
 ### Custom Reporters
 If you'd like to be notified about what the Cucumber runner saw during execution there are 2 steps needed.
 

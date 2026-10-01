@@ -18,5 +18,6 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Matching-Steps>
 - <doc:Generating-Reports>
+- <doc:Verbose-Output>
 - <doc:Hooks>
 - <doc:CucumberSwift+UIUTest>
