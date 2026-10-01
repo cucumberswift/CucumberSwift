@@ -497,6 +497,7 @@ class CucumberSwiftTests: XCTestCase {
 }
 
 extension Cucumber: StepImplementation {
+    // swiftlint:disable:next type_contents_order
     public var verbose: Bool { Cucumber.implementationVerbose }
     public var bundle: Bundle {
         if let bundle = Cucumber.overrideBundle { return bundle }
