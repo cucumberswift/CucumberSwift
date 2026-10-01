@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import XCTest
 
 // MARK: Hooks
 public func BeforeFeature(priority: UInt? = nil, closure: @escaping ((Feature) -> Void)) {
@@ -74,4 +75,14 @@ public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) {
 @MainActor
 public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) async {
     await Cucumber.shared.executeFirstStep(keyword: keyword, matching: matching)
+}
+
+// MARK: Attachments
+/// Adds an attachment, such as a screenshot, to the test that is running. Call it from a hook or a step,
+/// where there is no `XCTestCase` to call `add(_:)` on. Set `lifetime` to `.keepAlways` to keep the
+/// attachment when the test passes.
+public func Attach(_ attachment: XCTAttachment) {
+    XCTContext.runActivity(named: attachment.name ?? "Attachment") { activity in
+        activity.add(attachment)
+    }
 }
