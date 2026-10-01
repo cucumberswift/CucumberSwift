@@ -13,7 +13,14 @@ import XCTest
 class ScenarioTestTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
-        addTeardownBlock { Cucumber.shared.reset() }
+        // The features under test are parsed here, so loading the bundle's own must not replace them.
+        let featuresLoaded = CucumberTest.featuresLoaded
+        CucumberTest.featuresLoaded = true
+        addTeardownBlock {
+            Cucumber.shared.reset()
+            Cucumber.oneTestPerScenario = nil
+            CucumberTest.featuresLoaded = featuresLoaded
+        }
     }
 
     func testEachScenarioIsNamedAfterItsFeatureAndItself() {
@@ -63,5 +70,79 @@ class ScenarioTestTests: XCTestCase {
         let support: AnyObject = try XCTUnwrap(NSClassFromString("CucumberTestSupport"))
         XCTAssertTrue(support.responds(to: NSSelectorFromString("resolveScenarioTestNamed:")))
         XCTAssertTrue(support.responds(to: NSSelectorFromString("locateIssue:")))
+    }
+
+    func testWithOneTestPerScenarioTheSuiteHasATestPerScenario() throws {
+        Cucumber.oneTestPerScenario = true
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Generated suite
+           Scenario: First
+             Given a cart
+           Scenario: Second
+             Given a cart
+        """)
+        let testClass = try XCTUnwrap(CucumberTest.scenarioTestClass)
+
+        let suite = XCTestSuite(name: "Generated suite")
+        CucumberTest.generateAlltests(suite)
+        let scenarioTests = suite.tests.filter { type(of: $0) == testClass }
+
+        XCTAssertEqual(scenarioTests.count, 2)
+        XCTAssertTrue(scenarioTests.first?.name.contains("First") ?? false, "\(scenarioTests.map(\.name))")
+    }
+
+    // Xcode's test navigator runs one scenario by asking XCTest for its test by name, before anything
+    // has added it. Asking the Objective-C class goes through its +resolveInstanceMethod:.
+    func testAScenarioTestIsFoundByName() throws {
+        Cucumber.oneTestPerScenario = true
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Found by name
+           Scenario: First
+             Given a cart
+           Scenario: Second
+             Given a cart
+        """)
+        let names = CucumberTest.scenarioTests().map(\.name)
+        let testClass = try XCTUnwrap(CucumberTest.scenarioTestClass)
+
+        XCTAssertTrue(CucumberTest.resolveScenarioTest(named: names[0] + "AndReturnError:"))
+        XCTAssertTrue(testClass.instancesRespond(to: NSSelectorFromString(names[1] + "AndReturnError:")))
+    }
+
+    func testNoScenarioTestIsFoundWithoutOneTestPerScenario() {
+        Cucumber.oneTestPerScenario = false
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Not found
+           Scenario: First
+             Given a cart
+        """)
+        let name = CucumberTest.scenarioTests().map(\.name)[0]
+
+        XCTAssertFalse(CucumberTest.resolveScenarioTest(named: name + "AndReturnError:"))
+    }
+
+    func testNoScenarioTestIsFoundForAnUnknownNameOrAnotherSelector() {
+        Cucumber.oneTestPerScenario = true
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Unknown
+           Scenario: First
+             Given a cart
+        """)
+        let name = CucumberTest.scenarioTests().map(\.name)[0]
+
+        XCTAssertFalse(CucumberTest.resolveScenarioTest(named: "Unknown scenarioAndReturnError:"))
+        XCTAssertFalse(CucumberTest.resolveScenarioTest(named: name))
+    }
+
+    // Outside a scenario's run, a failure is recorded where it happened.
+    func testAnIssueOutsideAScenarioRunKeepsItsLocation() {
+        let issue = XCTIssue(type: .assertionFailure,
+                             compactDescription: "failed",
+                             detailedDescription: nil,
+                             sourceCodeContext: XCTSourceCodeContext(location: XCTSourceCodeLocation(filePath: "Steps.swift", lineNumber: 7)),
+                             associatedError: nil,
+                             attachments: [])
+
+        XCTAssertEqual(CucumberTestSupport.locateIssue(issue).sourceCodeContext.location?.lineNumber, 7)
     }
 }
