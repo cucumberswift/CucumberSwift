@@ -78,8 +78,16 @@ import CucumberSwiftExpressions
     var hookedScenarios      = [Scenario]()
     var failedScenarios      = [Scenario]()
     lazy var reporters: [CucumberTestObserver] = {
-        ([CucumberJSONReporter()] + ((self as? CucumberTestObservable)?.observers ?? [])).compactMap { $0 }
+        var observers: [CucumberTestObserver?] = [CucumberJSONReporter()]
+        if isVerbose { observers.append(VerboseReporter()) }
+        observers += (self as? CucumberTestObservable)?.observers ?? []
+        return observers.compactMap { $0 }
     }()
+
+    /// Whether to print each feature, scenario and step as it runs.
+    private var isVerbose: Bool {
+        VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
+    }
 
     override public init() {
         super.init()
