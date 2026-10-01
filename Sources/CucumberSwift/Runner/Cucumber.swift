@@ -18,7 +18,7 @@ import CucumberSwiftExpressions
     /// Set to `true` to print each feature, scenario and step, with its result and duration, as it
     /// runs. Set it before the tests start, for example in `setupSteps()`. The `CUCUMBER_VERBOSE`
     /// environment variable and ``StepImplementation/verbose`` turn it on too.
-    public static var verbose: Bool {
+    public static var verboseOutput: Bool {
         get { verboseFlag.snapshot }
         set { verboseFlag.withLock { $0 = newValue } }
     }
@@ -96,7 +96,7 @@ import CucumberSwiftExpressions
 
     /// Whether to print each feature, scenario and step as it runs.
     private var isVerbose: Bool {
-        Cucumber.verbose || VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
+        Cucumber.verboseOutput || VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
     }
 
     override public init() {

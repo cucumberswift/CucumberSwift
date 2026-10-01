@@ -12,6 +12,20 @@ import XCTest
 
 @MainActor
 final class VerboseReporterTests: XCTestCase {
+    private var originalVerbose = false
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        originalVerbose = Cucumber.verboseOutput
+        Cucumber.verboseOutput = false
+    }
+
+    override func tearDownWithError() throws {
+        Cucumber.verboseOutput = originalVerbose
+        Cucumber.implementationVerbose = false
+        try super.tearDownWithError()
+    }
+
     func testIsEnabledOnlyForOneOrTrue() {
         let key = VerboseReporter.environmentKey
         XCTAssertTrue(VerboseReporter.isEnabled(in: [key: "1"]))
@@ -65,8 +79,15 @@ final class VerboseReporterTests: XCTestCase {
     }
 
     func testCucumberInstallsTheReporterWhenTheStaticFlagIsSet() {
-        Cucumber.verbose = true
-        defer { Cucumber.verbose = false }
+        Cucumber.verboseOutput = true
+        let verbose = Cucumber()
+        verbose.environment = [:]
+        XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
+        verbose.reporters = []
+    }
+
+    func testCucumberInstallsTheReporterWhenStepImplementationAsksForIt() {
+        Cucumber.implementationVerbose = true
         let verbose = Cucumber()
         verbose.environment = [:]
         XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })

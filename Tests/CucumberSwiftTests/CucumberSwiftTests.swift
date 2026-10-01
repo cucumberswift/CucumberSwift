@@ -509,6 +509,8 @@ extension Cucumber: StepImplementation {
     }
     static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
     public static var overrideBundle: Bundle?
+    static var implementationVerbose = false
+    public var verbose: Bool { Cucumber.implementationVerbose }
     public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
     public func setupSteps() { }
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
