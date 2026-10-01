@@ -107,6 +107,19 @@ Also worth knowing:
 - **The generated step definitions are compiled.** `GeneratedStepDefinitions.swift` (in `CucumberSwiftTests`) and `GeneratedBareSlashStepDefinitions.swift` (in `CucumberSwiftConsumerTests`, which turns on bare slash regex literals) hold the stub generator's output for both regex literal styles. `GeneratedStepDefinitionTests` fails when the generator's output changes and prints the new output to paste in.
 - **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
 
+### With Bazel
+
+CucumberSwift is also a Bazel module (`MODULE.bazel`, `BUILD.bazel`). CI's `Bazel tests` job runs `CucumberSwiftConsumerTests` with Bazel, on macOS and on an iOS simulator, as a project that builds with Bazel would. With [Bazelisk](https://github.com/bazelbuild/bazelisk) installed (`brew install bazelisk`), which runs the Bazel version in `.bazelversion`:
+
+```bash
+bazelisk test //Tests:CucumberSwiftConsumerTests
+bazelisk test //Tests:CucumberSwiftConsumerTests_iOS
+```
+
+- **A new source file needs no change**: `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
+- **Keep the CucumberSwiftExpressions versions in step.** CI fails if `MODULE.bazel`'s `bazel_dep` is older than the version `Package.swift` starts from.
+- **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).
+
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 
 ## The Xcode project

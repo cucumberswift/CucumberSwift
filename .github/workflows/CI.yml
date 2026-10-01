@@ -219,7 +219,7 @@ jobs:
         # three test bundles run today (304 + 60 + 28): raise it when you add tests.
         # Count from the log, not the .xcresult, which merges suites that share a name.
         env:
-          MIN_TESTS: 469
+          MIN_TESTS: 470
         run: |
           set +e
           xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1
@@ -271,3 +271,44 @@ jobs:
         run: swift test --package-path Tests/CucumberSwiftDSLConsumerTests
       - name: Run the Swift 6 language mode consumer tests
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
+
+  bazel:
+    name: Bazel tests
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      # The tests CucumberSwiftConsumerTests runs, on each platform. A run with no
+      # features still passes, so this catches a Features folder Bazel left out.
+      MIN_TESTS: 61
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The runner's `bazel` is Bazelisk, which runs the version in .bazelversion.
+      - name: Show the Bazel version
+        run: bazel version
+      - name: Check MODULE.bazel's CucumberSwiftExpressions is at least Package.swift's
+        run: |
+          spm=$(sed -n 's/.*CucumberSwiftExpressions.git", from: "\([0-9.]*\)".*/\1/p' Package.swift)
+          bzl=$(sed -n 's/.*bazel_dep(name = "cucumberswift_expressions", version = "\([0-9.]*\)".*/\1/p' MODULE.bazel)
+          echo "Package.swift: from $spm, MODULE.bazel: $bzl"
+          if [ -z "$spm" ] || [ -z "$bzl" ] || [ "$(printf '%s\n%s\n' "$spm" "$bzl" | sort -V | head -1)" != "$spm" ]; then
+            echo "::error::MODULE.bazel must depend on CucumberSwiftExpressions $spm or later, the version Package.swift starts from."
+            exit 1
+          fi
+      - name: Run the consumer tests on macOS and iOS
+        run: bazel test //Tests:CucumberSwiftConsumerTests //Tests:CucumberSwiftConsumerTests_iOS --test_output=errors
+      - name: Check every feature ran
+        run: |
+          status=0
+          for t in CucumberSwiftConsumerTests CucumberSwiftConsumerTests_iOS; do
+            n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/Tests/$t/test.log" | tail -1 | grep -Eo '[0-9]+')
+            echo "$t: ${n:-0} tests (at least $MIN_TESTS expected)"
+            if [ "${n:-0}" -lt "$MIN_TESTS" ]; then
+              echo "::error::Only ${n:-0} tests ran in $t. If you removed tests on purpose, lower MIN_TESTS in CI.yml."
+              status=1
+            fi
+          done
+          exit $status

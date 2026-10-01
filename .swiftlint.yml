@@ -79,6 +79,8 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Tests/*/.build/
   - Tests/*/.swiftpm/
   - Tests/*/Package.swift
+  # Bazel's output symlinks, which hold copies of the sources.
+  - bazel-*
   - .swiftlint.yml
   - Sources/CucumberSwift/Generated
   - Sources/CucumberSwift/CucumberSwift.docc

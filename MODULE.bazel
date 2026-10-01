@@ -1,0 +1,11 @@
+module(name = "cucumberswift")
+
+bazel_dep(name = "apple_support", version = "2.9.1")
+bazel_dep(name = "rules_cc", version = "0.2.25")
+bazel_dep(name = "rules_swift", version = "4.1.2")
+# At least the version Package.swift starts from (CI checks this).
+bazel_dep(name = "cucumberswift_expressions", version = "1.2.0")
+
+# Only for running CucumberSwift's own tests with Bazel.
+bazel_dep(name = "rules_apple", version = "5.2.0", dev_dependency = True)
+

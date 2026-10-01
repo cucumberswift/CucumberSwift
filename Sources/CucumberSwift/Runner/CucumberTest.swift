@@ -68,6 +68,8 @@ open class CucumberTest: XCTestCase {
         return "CucumberSwift found no features to run. It looks for a folder named Features (case sensitive) in \(bundle.bundleURL.path), "
             + "the bundle your StepImplementation's `bundle` returns. "
             + "With Swift Package Manager, add `resources: [.copy(\"Features\")]` to your test target and return `Bundle.module`. "
+            + "With Bazel, add the folder as `structured_resources` of an `apple_resource_group`, "
+            + "with `strip_structured_resources_prefixes` set so that it lands at the bundle's root as Features. "
             + "If you use the DSL, define your features in `setupSteps()`."
     }
 
