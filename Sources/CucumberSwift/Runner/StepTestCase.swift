@@ -5,6 +5,9 @@
 
 import Foundation
 import XCTest
+#if canImport(CucumberSwiftObjC)
+import CucumberSwiftObjC
+#endif
 
 /// What `CucumberStepTest`, in Objective-C, asks of CucumberSwift. It finds this class by name, since
 /// the Objective-C target can't import this module, which depends on it.
@@ -37,7 +40,14 @@ enum StepTestCase {
 
     /// The superclass of the class made for each scenario.
     static var superclass: XCTestCase.Type {
-        NSClassFromString("CucumberStepTest") as? XCTestCase.Type ?? XCTestCase.self
+        #if canImport(CucumberSwiftObjC)
+        // SwiftPM builds the Objective-C class as a target of its own. Naming it here makes the linker
+        // keep it in a consumer's test bundle, which a lookup by name alone would not.
+        return CucumberStepTest.self
+        #else
+        // In the Xcode project the class is compiled into this framework, which can't import it.
+        return NSClassFromString("CucumberStepTest") as? XCTestCase.Type ?? XCTestCase.self
+        #endif
     }
 
     /// The step a generated test runs.

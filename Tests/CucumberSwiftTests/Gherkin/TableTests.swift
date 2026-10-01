@@ -228,6 +228,45 @@ class TableTests: XCTestCase {
                        ["Sign in (email: amy@x.com)", "Sign in (email: amy@x.com, example 2)"])
     }
 
+    // Examples blocks share the outline's titles, so no two of its examples get the same name.
+    func testExamplesInDifferentBlocksGetDifferentTitles() {
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in as <role>
+        Given a user <email> with role <role>
+
+            Examples:
+              | email | role     |
+              | bob   | customer |
+              | amy   | admin    |
+
+            Examples:
+              | email | role  |
+              | amy   | admin |
+    """)
+        let titles = cucumber.features.first?.scenarios.map(\.title) ?? []
+        XCTAssertEqual(titles.count, 3)
+        XCTAssertEqual(Set(titles).count, 3, "\(titles)")
+    }
+
+    // A cell that reads like the number suffix must not make two examples share a title.
+    func testAValueThatReadsLikeTheNumberStillGivesEachExampleItsOwnTitle() {
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in
+        Given a user <email>
+
+            Examples:
+              | email        |
+              | a, example 3 |
+              | a            |
+              | a            |
+    """)
+        let titles = cucumber.features.first?.scenarios.map(\.title) ?? []
+        XCTAssertEqual(titles.count, 3)
+        XCTAssertEqual(Set(titles).count, 3, "\(titles)")
+    }
+
     func testALongExampleValueIsCutShort() {
         let long = String(repeating: "x", count: 100)
         let cucumber = Cucumber(withString: """

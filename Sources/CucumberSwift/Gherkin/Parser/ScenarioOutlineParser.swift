@@ -77,6 +77,8 @@ enum ScenarioOutlineParser {
         })
         let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
         let outlineDescription = extractOutlineDescription(scenarioOutlineNode, stepNodes: stepNodes)
+        // Shared by every Examples block, so no two examples of the outline get the same title.
+        var usedTitles = Set<String>()
         return getExamplesFrom(scenarioOutlineNode)
             .flatMap { parseExample(titleLine: scenarioOutlineNode
                                             .tokens
@@ -87,7 +89,8 @@ enum ScenarioOutlineParser {
                                     stepNodes: stepNodes,
                                     backgroundStepNodes: backgroundStepNodes,
                                     description: outlineDescription,
-                                    uri: uri)
+                                    uri: uri,
+                                    usedTitles: &usedTitles)
             }
     }
 
@@ -108,7 +111,8 @@ enum ScenarioOutlineParser {
                                      stepNodes: [AST.StepNode],
                                      backgroundStepNodes: [AST.StepNode],
                                      description: String,
-                                     uri: String) -> [Scenario] {
+                                     uri: String,
+                                     usedTitles: inout Set<String>) -> [Scenario] {
         var scenarios = [Scenario]()
         let lines = tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
         validateTable(lines, uri: uri)
@@ -126,7 +130,6 @@ enum ScenarioOutlineParser {
             guard case Lexer.Token.tableHeader(_, let headerText) = token else { return nil }
             return headerText
         } ?? [])
-        var usedTitles = Set<String>()
         for (index, line) in lines.dropFirst().enumerated() {
             let title = titleLine?.reduce(into: "") {
                 if case Lexer.Token.tableHeader(_, let headerText) = $1 {
@@ -157,8 +160,8 @@ enum ScenarioOutlineParser {
     /// An example's title: the outline's title followed by the example's values for the columns the
     /// title does not already use, as in `Sign in (email: bob@x.com, role: admin)`. Values that would
     /// pass ``maximumValuesLength`` are left out, and an ellipsis shows that some are. An example whose
-    /// title would repeat an earlier one's, such as a repeated row, also gets its number, so every
-    /// example has its own name.
+    /// title would repeat an earlier one's, in any of the outline's Examples blocks, also gets its
+    /// number, and a further count if that is taken too, so every example has its own name.
     static func exampleTitle(_ title: String, values: [String], exampleNumber: Int, usedTitles: inout Set<String>) -> String {
         var valueList = ""
         for value in values {
@@ -172,6 +175,13 @@ enum ScenarioOutlineParser {
         var exampleTitle = valueList.isEmpty ? title : "\(title) (\(valueList))"
         if valueList.isEmpty || usedTitles.contains(exampleTitle) {
             exampleTitle = valueList.isEmpty ? "\(title) (example \(exampleNumber))" : "\(title) (\(valueList), example \(exampleNumber))"
+        }
+        // A cell can itself read like the number, as in "a, example 3", so count on until the title is new.
+        let numbered = exampleTitle
+        var attempt = 1
+        while usedTitles.contains(exampleTitle) {
+            attempt += 1
+            exampleTitle = "\(numbered) \(attempt)"
         }
         usedTitles.insert(exampleTitle)
         return exampleTitle

@@ -312,8 +312,18 @@ extension Step {
                 skip = thrown
             }
         }())
-        if let skip = skip, let scenario = scenario {
+        if let skip = skip {
+            recordSkip(skip)
+        }
+    }
+
+    /// Records that the step threw `XCTSkip`, so the rest of its scenario doesn't run. A step that
+    /// already failed stays failed, so the scenario is still reported as failed.
+    func recordSkip(_ skip: XCTSkip) {
+        if result != .failed && result != .ambiguous {
             result = .skipped
+        }
+        if let scenario = scenario {
             StepTestCase.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
         }
     }

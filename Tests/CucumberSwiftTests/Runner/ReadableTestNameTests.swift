@@ -10,6 +10,26 @@ import XCTest
 @testable import CucumberSwift
 
 class ReadableTestNameTests: XCTestCase {
+    private static func generatedTestNames(readable: Bool) -> [String] {
+        Cucumber.shared.reset()
+        Cucumber.overrideReadableTestNames = readable
+        defer {
+            Cucumber.overrideReadableTestNames = false
+            Cucumber.shared.reset()
+        }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Readable names \(readable)
+           Scenario: Pay with a gift card
+             Given a cart
+             And a gift card
+        """)
+        let suite = XCTestSuite(name: "Readable names")
+        CucumberTest.generateAlltests(suite)
+        return suite.tests.filter { $0.name != "GeneratedSteps" }.flatMap { scenario in
+            [scenario.name] + ((scenario as? XCTestSuite)?.tests.map(\.name) ?? [])
+        }
+    }
+
     func testByDefaultANameIsCamelCased() {
         XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob@x.com)", readable: false), "SignInEmailBobXCom")
     }
@@ -71,6 +91,22 @@ class ReadableTestNameTests: XCTestCase {
         let steps = try XCTUnwrap(Cucumber.shared.features.first?.scenarios.first?.steps)
         XCTAssertEqual(steps.map(\.writtenKeyword), ["Given", "And", "Then", "But"])
         XCTAssertEqual(steps[1].keyword, [.given, .and])
+    }
+
+    // The StepImplementation's readableTestNames, not just the helpers, decides how generated tests are named.
+    func testTheSettingNamesTheGeneratedScenarioAndStepsAsWritten() throws {
+        let delimiter = CucumberTest.featureScenarioDelimiter(configured: Cucumber.shared.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
+                                                              readable: true)
+        let names = Self.generatedTestNames(readable: true)
+        XCTAssertEqual(names.first, "Readable names true\(delimiter)Pay with a gift card")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" 1 \u{203A} Given a cart]") }, "\(names)")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" 2 \u{203A} And a gift card]") }, "\(names)")
+    }
+
+    func testWithoutTheSettingTheGeneratedNamesAreCamelCased() {
+        let names = Self.generatedTestNames(readable: false)
+        XCTAssertTrue(names.contains { $0.hasSuffix(" Step000_GivenACart]") }, "\(names)")
+        XCTAssertTrue(names.contains { $0.hasSuffix(" Step001_GivenAGiftCard]") }, "\(names)")
     }
 
     func testTheSettingIsOffWhenTheStepImplementationDoesNotSayOtherwise() {

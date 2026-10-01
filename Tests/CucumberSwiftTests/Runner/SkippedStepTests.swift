@@ -46,6 +46,23 @@ class SkippedStepTests: XCTestCase {
         XCTAssertNil(StepTestCase.skipReason(for: steps[2]))
     }
 
+    // A step that records a failure and then throws XCTSkip must still be reported as failed.
+    func testAFailedStepThatThenSkipsStaysFailed() throws {
+        let steps = steps()
+        steps[0].result = .failed("XCTAssertEqual failed")
+        steps[0].recordSkip(XCTSkip("Not today"))
+
+        XCTAssertEqual(steps[0].result, .failed)
+        XCTAssertEqual(StepTestCase.skipReason(for: steps[1]), "Skipped: Not today")
+    }
+
+    func testAStepThatSkipsIsReportedAsSkipped() {
+        let steps = steps()
+        steps[0].recordSkip(XCTSkip("Not today"))
+
+        XCTAssertEqual(steps[0].result, .skipped)
+    }
+
     func testAFailureSkipsTheStepsAfterItInItsScenarioOnly() throws {
         let steps = steps()
         Cucumber.shared.failedScenarios.append(try XCTUnwrap(steps.first?.scenario))
