@@ -1,0 +1,23 @@
+//
+//  StepTestCase.swift
+//  CucumberSwift
+//
+
+import Foundation
+import XCTest
+
+/// The superclass of the test case generated for each step. A step that follows a failed step does not
+/// run, and throwing `XCTSkip` before it starts makes Xcode report it as skipped, not as a pass.
+class StepTestCase: XCTestCase {
+    static let skippedAfterFailureMessage = "Skipped: an earlier step in this scenario failed."
+
+    /// Returns why the step must not run, or `nil` when it should.
+    var skipReason: (() -> String?)?
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        if let reason = skipReason?() {
+            throw XCTSkip(reason)
+        }
+    }
+}

@@ -21,7 +21,7 @@ enum TestCaseGenerator {
         return nil
     }
 
-    static func makeClass(className: String) -> XCTestCase.Type? {
+    static func makeClass(className: String, superclass: XCTestCase.Type = XCTestCase.self) -> XCTestCase.Type? {
         let uniqueName = { () -> String in
             var count = 0
             var name = className
@@ -35,7 +35,7 @@ enum TestCaseGenerator {
         // swiftlint:disable:next legacy_objc_type
         guard let className = (uniqueName as NSString).utf8String else { return nil }
 
-        if let testCase = objc_allocateClassPair(XCTestCase.self, className, 0) as? XCTestCase.Type {
+        if let testCase = objc_allocateClassPair(superclass, className, 0) as? XCTestCase.Type {
             return testCase
         }
 
