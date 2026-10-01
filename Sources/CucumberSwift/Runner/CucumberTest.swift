@@ -82,10 +82,10 @@ open class CucumberTest: XCTestCase {
         rootSuite.addTest(stubsSuite)
 
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
-            let className = feature.title.toClassString() + readFeatureScenarioDelimiter()
+            let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter()
 
             for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                let childSuite = XCTestSuite(name: className + scenario.title.toClassString())
+                let childSuite = XCTestSuite(name: className + generatedTestName(scenario.title))
                 var tests = [XCTestCase]()
                 createTestCaseFor(className: className, scenario: scenario, tests: &tests)
                 tests.forEach { childSuite.addTest($0) }
@@ -115,20 +115,18 @@ open class CucumberTest: XCTestCase {
     }
 
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
-        let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()), superclass: StepTestCase.self)
+        let testCase = TestCaseGenerator.makeClass(className: className.appending(generatedTestName(scenario.title)),
+                                                   superclass: StepTestCase.superclass)
         if let testCase = testCase {
             objc_registerClassPair(testCase)
         }
-        // XCTest may order a class's test methods by name, so each name starts with the step's
-        // zero-padded position to keep that order the same as the feature file's.
-        let indexWidth = max(3, String(scenario.steps.count - 1).count)
         scenario
             .steps
             .enumerated()
             .lazy
             .compactMap { index, step -> (step: Step, XCTestCase.Type, Selector)? in // swiftlint:disable:this large_tuple
                 if let testCase = testCase,
-                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, width: indexWidth)) {
+                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, of: scenario.steps.count)) {
                     return (step, testCase, methodSelector)
                 }
                 return nil
@@ -144,8 +142,8 @@ open class CucumberTest: XCTestCase {
                     step.endTime = Date()
                 }
                 step.continueAfterFailure ?= (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure ?? testCase.continueAfterFailure
-                (testCase as? StepTestCase)?.skipReason = { [weak scenario] in StepTestCase.skipReason(for: scenario) }
                 step.testCase = testCase
+                StepTestCase.setStep(step, of: testCase)
                 testCase.continueAfterFailure = step.continueAfterFailure
                 tests.append(testCase)
             }
@@ -274,17 +272,44 @@ open class CucumberTest: XCTestCase {
 extension CucumberTest {
     private static let defaultDelimiter = "|"
 
-    private static func readFeatureScenarioDelimiter() -> String {
-        guard let testBundle = (Cucumber.shared as? StepImplementation)?.bundle else { return defaultDelimiter }
-        return (testBundle.infoDictionary?["FeatureScenarioDelimiter"] as? String) ?? defaultDelimiter
+    /// A feature's, scenario's or step's text as it appears in the name of a generated test.
+    static func generatedTestName(_ text: String) -> String {
+        generatedTestName(text, readable: (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false)
+    }
+
+    static func generatedTestName(_ text: String, readable: Bool) -> String {
+        guard readable else { return text.toClassString() }
+        // XCTest separates a test's class from its method with "/", and Xcode shows only what follows
+        // the last "." of a class name, as it would for a module, so a name can contain neither.
+        // A one dot leader (U+2024) looks like a full stop.
+        return String(text.map { $0 == "/" ? "-" : $0 == "." ? "\u{2024}" : $0 }.filter { !$0.isNewline })
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    /// With readable test names, a scenario's test reads `Checkout › Pay with a gift card`.
+    private static let readableDelimiter = " \u{203A} "
+
+    static func readFeatureScenarioDelimiter() -> String {
+        let implementor = Cucumber.shared as? StepImplementation
+        return featureScenarioDelimiter(configured: implementor?.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
+                                        readable: implementor?.readableTestNames ?? false)
+    }
+
+    /// The Info.plist's `FeatureScenarioDelimiter` when there is one, and otherwise `|`, or ` › ` with
+    /// readable test names.
+    static func featureScenarioDelimiter(configured: String?, readable: Bool) -> String {
+        configured ?? (readable ? readableDelimiter : defaultDelimiter)
     }
 }
 
 extension Step {
-    fileprivate func method(at index: Int, width: Int) -> TestCaseMethod? {
-        let position = String(format: "%0*d", width, index)
-        return TestCaseMethod(withName: "Step\(position)_" + "\(keyword.toString()) \(match)".toClassString()) {
-            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }) else { return }
+    func method(at index: Int, of count: Int) -> TestCaseMethod? {
+        let readable = (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false
+        // Readable names show the keyword as written; camel-case names keep the ones tests already have.
+        let text = "\(readable ? writtenKeyword : keyword.toString()) \(match)"
+        return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
+            guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }),
+                  !Cucumber.shared.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }
             let startTime = Date()
             self.startTime = startTime
             Cucumber.shared.currentStep = self
@@ -293,21 +318,46 @@ extension Step {
 
             func runAndReport() {
                 Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
-                XCTAssertNoThrow(try self.run())
+                // A step that throws XCTSkip skips its scenario: it and the steps after it don't run.
+                var skip: XCTSkip?
+                XCTAssertNoThrow(try {
+                    do {
+                        try self.run()
+                    } catch let thrown as XCTSkip {
+                        skip = thrown
+                    }
+                }())
+                if let skip = skip, let scenario = self.scenario {
+                    self.result = .skipped
+                    Cucumber.shared.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
+                }
                 self.endTime = Date()
                 Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
             }
 
             #if compiler(>=5)
-            XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
+            XCTContext.runActivity(named: "\(self.writtenKeyword) \(self.match)") { _ in
                 runAndReport()
             }
             #else
-            _ = XCTContext.runActivity(named: "\(self.keyword.toString()) \(self.match)") { _ in
+            _ = XCTContext.runActivity(named: "\(self.writtenKeyword) \(self.match)") { _ in
                 runAndReport()
             }
             #endif
         }
+    }
+
+    /// The name of the test for the step at `index` of a scenario's `count` steps. XCTest may order a
+    /// class's tests by name, so the name starts with the step's zero-padded position to keep that
+    /// order the same as the feature file's: `Step002_ThenTheTotalIs99`, or with readable test names,
+    /// `3 › Then the total is 99`.
+    static func methodName(for text: String, at index: Int, of count: Int, readable: Bool) -> String {
+        guard readable else {
+            let position = String(format: "%0*d", max(3, String(count - 1).count), index)
+            return "Step\(position)_" + CucumberTest.generatedTestName(text, readable: false)
+        }
+        let position = String(format: "%0*d", String(count).count, index + 1)
+        return "\(position) \u{203A} " + CucumberTest.generatedTestName(text, readable: true)
     }
 
     fileprivate func run() throws {

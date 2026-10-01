@@ -114,6 +114,15 @@ enum ScenarioOutlineParser {
             }
         }
         let tags = outlineTags
+        let headers = lines.first?.compactMap { token -> String? in
+            guard case Lexer.Token.tableCell(_, let headerText) = token else { return nil }
+            return headerText.valueDescription
+        } ?? []
+        let headersInTitle = Set(titleLine?.compactMap { token -> String? in
+            guard case Lexer.Token.tableHeader(_, let headerText) = token else { return nil }
+            return headerText
+        } ?? [])
+        var usedTitles = Set<String>()
         for (index, line) in lines.dropFirst().enumerated() {
             let title = titleLine?.reduce(into: "") {
                 if case Lexer.Token.tableHeader(_, let headerText) = $1 {
@@ -131,10 +140,41 @@ enum ScenarioOutlineParser {
             for stepNode in stepNodes {
                 steps.append(getStepFromLine(line, lookup: headerLookup, stepNode: stepNode))
             }
-            let exampleNumber = index + 1
-            scenarios.append(Scenario(with: steps, title: "\(title) (example \(exampleNumber))", description: description, tags: tags, position: line.first?.position ?? .start))
+            let values = zip(headers, line).compactMap { header, cell -> String? in
+                guard !headersInTitle.contains(header), case Lexer.Token.tableCell(_, let cellText) = cell else { return nil }
+                return "\(header): \(cellText.valueDescription)"
+            }
+            let exampleTitle = exampleTitle(title, values: values, exampleNumber: index + 1, usedTitles: &usedTitles)
+            scenarios.append(Scenario(with: steps, title: exampleTitle, description: description, tags: tags, position: line.first?.position ?? .start))
         }
         return scenarios
+    }
+
+    /// The longest the example's values may make its title, in characters. The title names the test
+    /// Xcode runs, and Xcode cannot save an attachment whose file name that makes too long (#100).
+    static let maximumValuesLength = 60
+
+    /// An example's title: the outline's title followed by the example's values for the columns the
+    /// title does not already use, as in `Sign in (email: bob@x.com, role: admin)`. Values that would
+    /// pass ``maximumValuesLength`` are left out, and an ellipsis shows that some are. An example whose
+    /// title would repeat an earlier one's, such as a repeated row, also gets its number, so every
+    /// example has its own name.
+    static func exampleTitle(_ title: String, values: [String], exampleNumber: Int, usedTitles: inout Set<String>) -> String {
+        var valueList = ""
+        for value in values {
+            let next = valueList.isEmpty ? value : "\(valueList), \(value)"
+            guard next.count <= maximumValuesLength else {
+                valueList = valueList.isEmpty ? String(value.prefix(maximumValuesLength - 1)) + "…" : "\(valueList), …"
+                break
+            }
+            valueList = next
+        }
+        var exampleTitle = valueList.isEmpty ? title : "\(title) (\(valueList))"
+        if valueList.isEmpty || usedTitles.contains(exampleTitle) {
+            exampleTitle = valueList.isEmpty ? "\(title) (example \(exampleNumber))" : "\(title) (\(valueList), example \(exampleNumber))"
+        }
+        usedTitles.insert(exampleTitle)
+        return exampleTitle
     }
 
     private static func getStepFromLine(_ line: [Lexer.Token], lookup: [String: Int]?, stepNode: AST.StepNode) -> Step {

@@ -84,6 +84,13 @@ public class Step: CustomStringConvertible {
     /// matches is ambiguous: it fails and runs none of them.
     var matchingDefinitions = [Definition]()
     var isAmbiguous: Bool { matchingDefinitions.count > 1 }
+    /// The step's keyword as written in its feature file: `And` or `But` rather than the keyword it
+    /// continues, which ``keyword`` also holds.
+    var writtenKeyword: String {
+        if keyword.contains(.and) { return Scope.language.and }
+        if keyword.contains(.but) { return Scope.language.but }
+        return keyword.toString()
+    }
 
     init(with node: AST.StepNode) {
         location = node.tokens.first { $0.isKeyword() }?.position ?? .start

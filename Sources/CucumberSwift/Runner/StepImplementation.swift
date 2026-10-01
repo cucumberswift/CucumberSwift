@@ -35,4 +35,10 @@ import Foundation
     /// How the step definitions CucumberSwift generates for undefined steps write their regular
     /// expressions. The default, ``RegexLiteralStyle/extendedDelimiter``, compiles in any test target.
     @objc optional var regexLiteralStyle: RegexLiteralStyle { get }
+    /// Whether the tests CucumberSwift generates are named with the feature, scenario and step text
+    /// as written, such as `Checkout|Pay with a gift card` and `Step002_Then the total is 99`, rather
+    /// than in camel case, such as `Checkout|PayWithAGiftCard` and `Step002_ThenTheTotalIs99`.
+    /// Defaults to `false`, because tools that parse `xcodebuild`'s output may expect test names
+    /// without spaces.
+    @objc optional var readableTestNames: Bool { get }
 }

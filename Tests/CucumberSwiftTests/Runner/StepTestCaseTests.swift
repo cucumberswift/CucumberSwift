@@ -7,10 +7,6 @@ import XCTest
 @testable import CucumberSwift
 
 final class StepTestCaseTests: XCTestCase {
-    private final class Probe: StepTestCase {
-        func testProbe() {}
-    }
-
     private static func allTests(in suite: XCTestSuite) -> [XCTest] {
         suite.tests.flatMap { ($0 as? XCTestSuite).map(allTests(in:)) ?? [$0] }
     }
@@ -24,25 +20,10 @@ final class StepTestCaseTests: XCTestCase {
         }
     }
 
-    func testAStepAfterAFailedStepIsSkippedNotPassed() {
-        let probe = Probe(selector: #selector(Probe.testProbe))
-        probe.skipReason = { StepTestCase.skippedAfterFailureMessage }
-
-        XCTAssertThrowsError(try probe.setUpWithError()) { error in
-            XCTAssert(error is XCTSkip)
-        }
-    }
-
-    func testAStepRunsWhenNothingFailedBeforeIt() throws {
-        let probe = Probe(selector: #selector(Probe.testProbe))
-        probe.skipReason = { nil }
-
-        XCTAssertNoThrow(try probe.setUpWithError())
-    }
-
-    func testGeneratedStepTestCasesAreStepTestCases() throws {
-        let generated = try XCTUnwrap(TestCaseGenerator.makeClass(className: "StepTestCaseTestsGenerated", superclass: StepTestCase.self))
-        XCTAssert(generated.isSubclass(of: StepTestCase.self))
+    func testGeneratedStepTestCasesSubclassTheObjectiveCStepTest() throws {
+        let base = try XCTUnwrap(NSClassFromString("CucumberStepTest"))
+        let generated = try XCTUnwrap(TestCaseGenerator.makeClass(className: "StepTestCaseTestsGenerated", superclass: StepTestCase.superclass))
+        XCTAssert(generated.isSubclass(of: base))
     }
 
     func testGeneratedStepsSkipOnlyWhenTheirOwnScenarioFailed() throws {
@@ -59,7 +40,7 @@ final class StepTestCaseTests: XCTestCase {
 
         let suite = XCTestSuite(name: "Dummy")
         CucumberTest.generateAlltests(suite)
-        let stepTests = Self.allTests(in: suite).compactMap { $0 as? StepTestCase }
+        let stepTests = Self.allTests(in: suite).compactMap { $0 as? XCTestCase }.filter { StepTestCase.step(of: $0) != nil }
         let scenarios = try XCTUnwrap(Cucumber.shared.features.first?.scenarios)
         XCTAssertEqual(stepTests.count, 3)
 

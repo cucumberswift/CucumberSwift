@@ -120,7 +120,9 @@ let cucumberSwift = Target.target(
             "Sources/CucumberSwift/**/*.swift",
             excluding: ["Sources/CucumberSwift/CucumberSwift.docc/**"]
         ),
-        "Sources/CucumberSwift/CucumberSwift.docc"
+        "Sources/CucumberSwift/CucumberSwift.docc",
+        // SwiftPM builds this as a target of its own; here it is part of the framework.
+        "Sources/CucumberSwiftObjC/**/*.m"
     ],
     resources: [".swiftlint.yml"],
     scripts: [lintScript],

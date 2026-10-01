@@ -48,8 +48,8 @@ class TableTests: XCTestCase {
         XCTAssertEqual(feature?.scenarios.count, 2)
         XCTAssertEqual(firstScenario?.steps.count, 4)
         XCTAssertEqual(secondScenario?.steps.count, 4)
-        XCTAssertEqual(firstScenario?.title, "Some determinable business situation (example 1)")
-        XCTAssertEqual(secondScenario?.title, "Some determinable business situation (example 2)")
+        XCTAssertEqual(firstScenario?.title, "Some determinable business situation (precondition: first, other precondition: second, actor: Bob, …)")
+        XCTAssertEqual(secondScenario?.title, "Some determinable business situation (precondition: third, other precondition: fourth, …)")
         if (firstScenario?.steps.count ?? 0) == 4 {
             let steps = firstScenario?.steps
             XCTAssertEqual(steps?[0].keyword, .given)
@@ -98,8 +98,8 @@ class TableTests: XCTestCase {
         let feature = cucumber.features.first
         XCTAssertEqual(feature?.scenarios.count, 2)
         feature?.scenarios.enumerated().forEach({ (index, scenario) in
-            let exampleNumber = index + 1
-            XCTAssertEqual(scenario.title, "Some determinable business situation (example \(exampleNumber))")
+            XCTAssertEqual(scenario.title, ["Some determinable business situation (precondition: first, other precondition: second, actor: Bob, …)",
+                                            "Some determinable business situation (precondition: third, other precondition: fourth, …)"][index])
             XCTAssertEqual(scenario.steps.count, 5)
         })
     }
@@ -129,8 +129,8 @@ class TableTests: XCTestCase {
         let feature = cucumber.features.first
         XCTAssertEqual(feature?.scenarios.count, 2)
         feature?.scenarios.enumerated().forEach({ (index, scenario) in
-            let exampleNumber = index + 1
-            XCTAssertEqual(scenario.title, "Some determinable business situation (example \(exampleNumber))")
+            XCTAssertEqual(scenario.title, ["Some determinable business situation (precondition: first, other precondition: second, actor: Bob, …)",
+                                            "Some determinable business situation (precondition: third, other precondition: fourth, …)"][index])
             XCTAssertEqual(scenario.steps.count, 5)
             XCTAssert(scenario.containsTag("outline"))
         })
@@ -149,8 +149,8 @@ class TableTests: XCTestCase {
     """)
         let firstScenario = cucumber.features.first?.scenarios.first
         let secondScenario = cucumber.features.first?.scenarios.last
-        XCTAssertEqual(firstScenario?.title, "the un (example 1)")
-        XCTAssertEqual(secondScenario?.title, "the uno (example 2)")
+        XCTAssertEqual(firstScenario?.title, "the un (two: deux, three: trois, four: quatre, five: cinq)")
+        XCTAssertEqual(secondScenario?.title, "the uno (two: dos, three: tres, four: quatro, five: cinco)")
     }
 
     func testTableCellWithEscapeCharacter() {
@@ -164,7 +164,7 @@ class TableTests: XCTestCase {
               | u\\|o | dos  |
     """)
         let firstScenario = cucumber.features.first?.scenarios.first
-        XCTAssertEqual(firstScenario?.title, "the u|o (example 1)")
+        XCTAssertEqual(firstScenario?.title, "the u|o (two: dos)")
     }
 
     func testTableCellInQuotes() {
@@ -178,8 +178,69 @@ class TableTests: XCTestCase {
               | u\\|o | dos  |
     """)
         let firstScenario = cucumber.features.first?.scenarios.first
-        XCTAssertEqual(firstScenario?.title, "the \"u|o\" (example 1)")
+        XCTAssertEqual(firstScenario?.title, "the \"u|o\" (two: dos)")
         XCTAssertEqual(firstScenario?.steps.first?.match, "the \"dos\"")
+    }
+
+    // #59: an example is named after its values, so the test navigator tells examples apart.
+    func testExampleTitleUsesTheColumnsTheTitleDoesNotAlreadyUse() {
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in as <role>
+        Given a user <email> with role <role>
+
+            Examples:
+              | email     | role     |
+              | bob@x.com | admin    |
+              | amy@x.com | customer |
+    """)
+        XCTAssertEqual(cucumber.features.first?.scenarios.map(\.title),
+                       ["Sign in as admin (email: bob@x.com)", "Sign in as customer (email: amy@x.com)"])
+    }
+
+    func testExampleTitleKeepsItsNumberWhenTheTitleUsesEveryColumn() {
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in as <role>
+        Given a user with role <role>
+
+            Examples:
+              | role     |
+              | admin    |
+              | customer |
+    """)
+        XCTAssertEqual(cucumber.features.first?.scenarios.map(\.title),
+                       ["Sign in as admin (example 1)", "Sign in as customer (example 2)"])
+    }
+
+    func testRepeatedExampleRowsStillGetTheirOwnTitles() {
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in
+        Given a user <email>
+
+            Examples:
+              | email     |
+              | amy@x.com |
+              | amy@x.com |
+    """)
+        XCTAssertEqual(cucumber.features.first?.scenarios.map(\.title),
+                       ["Sign in (email: amy@x.com)", "Sign in (email: amy@x.com, example 2)"])
+    }
+
+    func testALongExampleValueIsCutShort() {
+        let long = String(repeating: "x", count: 100)
+        let cucumber = Cucumber(withString: """
+    Feature: Sign in
+      Scenario Outline: Sign in
+        Given a user <email>
+
+            Examples:
+              | email |
+              | \(long) |
+    """)
+        let title = try? XCTUnwrap(cucumber.features.first?.scenarios.first?.title)
+        XCTAssertEqual(title, "Sign in (email: " + String(repeating: "x", count: ScenarioOutlineParser.maximumValuesLength - 8) + "…)")
     }
 
     func testTableGetAttachedToSteps() {
