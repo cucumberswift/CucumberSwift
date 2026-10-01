@@ -33,6 +33,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(/^I login as \"(.*?)\"$/) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -45,11 +46,11 @@ class StepGenerationTests: XCTestCase {
              Given Some precondition
         """)
         XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
-                       ["Given(#/^Some precondition$/#) { _, _ in\n\n}"])
+                       ["Given(#/^Some precondition$/#) { _, _ in\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
 
         Cucumber.overrideRegexLiteralStyle = .bareSlash
         XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
-                       ["Given(/^Some precondition$/) { _, _ in\n\n}"])
+                       ["Given(/^Some precondition$/) { _, _ in\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
     }
 
     func testGeneratedRegexEscapesSlashesInBothStyles() {
@@ -59,9 +60,9 @@ class StepGenerationTests: XCTestCase {
              Given I open a/b and c/d
         """)
         XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .extendedDelimiter).map(\.generatedSwift),
-                       [#"Given(#/^I open a\/b and c\/d$/#) { _, _ in"# + "\n\n}"])
+                       [#"Given(#/^I open a\/b and c\/d$/#) { _, _ in"# + "\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
         XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .bareSlash).map(\.generatedSwift),
-                       [#"Given(/^I open a\/b and c\/d$/) { _, _ in"# + "\n\n}"])
+                       [#"Given(/^I open a\/b and c\/d$/) { _, _ in"# + "\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
     }
 
     func testGeneratedRegexKeepsAnEscapedSlashBeforeAHash() {
@@ -72,7 +73,7 @@ class StepGenerationTests: XCTestCase {
              Given I open a/\#1
         """##)
         XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features).map(\.generatedSwift),
-                       [#"Given(#/^I open a\/#(\d+)$/#) { matches, _ in"# + "\n    let integer = matches.1\n}"])
+                       [#"Given(#/^I open a\/#(\d+)$/#) { matches, _ in"# + "\n    let integer = matches.1\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
     }
 
     func testGeneratedCapturesAreNumberedInTheOrderOfTheStep() {
@@ -90,6 +91,7 @@ class StepGenerationTests: XCTestCase {
             let string = matches.2
             let integerTwo = matches.3
             let stringTwo = matches.4
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -106,7 +108,7 @@ class StepGenerationTests: XCTestCase {
             .joined(separator: "\n")
         let expected = #"""
         Given(#/^Some precondition$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -123,7 +125,7 @@ class StepGenerationTests: XCTestCase {
             .joined(separator: "\n")
         let expected = #"""
         When(#/^Some precondition$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -140,7 +142,7 @@ class StepGenerationTests: XCTestCase {
             .joined(separator: "\n")
         let expected = #"""
         When(#/^A totally different string match$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -157,7 +159,7 @@ class StepGenerationTests: XCTestCase {
             .joined(separator: "\n")
         let expected = #"""
         Given(#/^A user with an idea\(ish\)$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -177,12 +179,12 @@ class StepGenerationTests: XCTestCase {
             .joined(separator: "\n")
         let expected = #"""
         Given(#/^A PO with two$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         let notExpected = #"""
         Given(#/^A user with an idea$/#) { _, _ in
-
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
 
@@ -203,6 +205,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -222,6 +225,7 @@ class StepGenerationTests: XCTestCase {
         Given(#/^I login as \"(.*?)\" with a password of \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
             let stringTwo = matches.2
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -240,6 +244,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(#/^I login (\d+) time$/#) { matches, _ in
             let integer = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -259,6 +264,7 @@ class StepGenerationTests: XCTestCase {
         Given(#/^I enter (\d+) then (\d+)$/#) { matches, _ in
             let integer = matches.1
             let integerTwo = matches.2
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssert(actual.contains(expected), "\"\(actual)\" does not contain \"\(expected)\"")
@@ -280,6 +286,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         MatchAll(#/^I login as \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -302,9 +309,11 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         When(#/^I login as \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -327,6 +336,7 @@ class StepGenerationTests: XCTestCase {
         //                Given I login as "Robert Downey Jr"
         Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
             let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -347,6 +357,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(#/^I have some data table that is not implemented$/#) { _, step in
             let dataTable = step.dataTable
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -370,6 +381,7 @@ class StepGenerationTests: XCTestCase {
         let expected = #"""
         Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
             let docString = step.docString
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
@@ -398,11 +410,13 @@ class StepGenerationTests: XCTestCase {
             let string = matches.1
             let stringTwo = matches.2
             let dataTable = step.dataTable
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         Given(#/^a DocString with the number (\d+) and another number (\d+)$/#) { matches, step in
             let integer = matches.1
             let integerTwo = matches.2
             let docString = step.docString
+            XCTFail("Step not implemented: replace this line with your test code")
         }
         """#
         XCTAssertEqual(actual, expected)
