@@ -88,14 +88,15 @@ import CucumberSwiftExpressions
     var hookedScenarios      = [Scenario]()
     var failedScenarios      = [Scenario]()
     lazy var reporters: [CucumberTestObserver] = {
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter()]
-        if isVerbose { observers.append(VerboseReporter()) }
+        // Always installed, because the reporters are built before `setupSteps()` can set
+        // `Cucumber.verboseOutput`. It asks on every line whether it should print.
+        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
         observers += (self as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
     }()
 
     /// Whether to print each feature, scenario and step as it runs.
-    private var isVerbose: Bool {
+    var isVerbose: Bool {
         Cucumber.verboseOutput || VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
     }
 

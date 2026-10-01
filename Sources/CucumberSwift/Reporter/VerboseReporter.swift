@@ -20,10 +20,18 @@ final class VerboseReporter: CucumberTestObserver {
         return value == "1" || value == "true"
     }
 
-    private let write: (String) -> Void
+    private let isEnabled: () -> Bool
+    private let output: (String) -> Void
 
-    init(write: @escaping (String) -> Void = { print($0); fflush(stdout) }) {
-        self.write = write
+    /// - Parameter isEnabled: Asked before every line, because the setting can change after the
+    ///   reporter exists: `setupSteps()` runs after CucumberSwift has built its reporters.
+    init(isEnabled: @escaping () -> Bool = { true }, write: @escaping (String) -> Void = { print($0); fflush(stdout) }) {
+        self.isEnabled = isEnabled
+        self.output = write
+    }
+
+    private func write(_ line: String) {
+        if isEnabled() { output(line) }
     }
 
     func testSuiteStarted(at _: Date) { write("[CucumberSwift] Test suite started") }

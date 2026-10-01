@@ -67,30 +67,39 @@ final class VerboseReporterTests: XCTestCase {
         ])
     }
 
-    func testCucumberInstallsTheReporterOnlyWhenAsked() {
-        let quiet = Cucumber()
-        quiet.environment = [:]
-        XCTAssertFalse(quiet.reporters.contains { $0 is VerboseReporter })
+    func testStaysQuietUntilEnabled() throws {
+        var enabled = false
+        var lines = [String]()
+        let reporter = VerboseReporter(isEnabled: { enabled }, write: { lines.append($0) })
 
-        let verbose = Cucumber()
-        verbose.environment = [VerboseReporter.environmentKey: "1"]
-        XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
-        verbose.reporters = [] // the instance stays registered with XCTest, so keep it from printing
+        reporter.testSuiteStarted(at: Date())
+        XCTAssertTrue(lines.isEmpty)
+        enabled = true // as `setupSteps()` does, after the reporter exists
+        reporter.testSuiteFinished(at: Date())
+        XCTAssertEqual(lines, ["[CucumberSwift] Test suite finished"])
     }
 
-    func testCucumberInstallsTheReporterWhenTheStaticFlagIsSet() {
+    func testCucumberIsVerboseOnlyWhenAsked() {
+        let cucumber = Cucumber()
+        cucumber.environment = [:]
+        XCTAssertFalse(cucumber.isVerbose)
+
+        cucumber.environment = [VerboseReporter.environmentKey: "1"]
+        XCTAssertTrue(cucumber.isVerbose)
+
+        cucumber.environment = [:]
         Cucumber.verboseOutput = true
-        let verbose = Cucumber()
-        verbose.environment = [:]
-        XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
-        verbose.reporters = []
+        XCTAssertTrue(cucumber.isVerbose)
+
+        Cucumber.verboseOutput = false
+        Cucumber.implementationVerbose = true
+        XCTAssertTrue(cucumber.isVerbose)
+        cucumber.reporters = []
     }
 
-    func testCucumberInstallsTheReporterWhenStepImplementationAsksForIt() {
-        Cucumber.implementationVerbose = true
-        let verbose = Cucumber()
-        verbose.environment = [:]
-        XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
-        verbose.reporters = []
+    func testCucumberAlwaysHasTheReporterSoALateSettingTakesEffect() {
+        let cucumber = Cucumber()
+        XCTAssertTrue(cucumber.reporters.contains { $0 is VerboseReporter })
+        cucumber.reporters = []
     }
 }
