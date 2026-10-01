@@ -7,6 +7,16 @@ import XCTest
 @testable import CucumberSwift
 
 final class StepTestCaseTests: XCTestCase {
+    override func setUpWithError() throws {
+        Cucumber.shared.reset()
+        Cucumber.shared.failedScenarios.removeAll()
+    }
+
+    override func tearDownWithError() throws {
+        Cucumber.shared.reset()
+        Cucumber.shared.failedScenarios.removeAll()
+    }
+
     private final class Probe: StepTestCase {
         func testProbe() {}
     }
@@ -30,5 +40,36 @@ final class StepTestCaseTests: XCTestCase {
     func testGeneratedStepTestCasesAreStepTestCases() throws {
         let generated = try XCTUnwrap(TestCaseGenerator.makeClass(className: "StepTestCaseTestsGenerated", superclass: StepTestCase.self))
         XCTAssert(generated.isSubclass(of: StepTestCase.self))
+    }
+
+    private static func allTests(in suite: XCTestSuite) -> [XCTest] {
+        suite.tests.flatMap { ($0 as? XCTestSuite).map(allTests(in:)) ?? [$0] }
+    }
+
+    func testGeneratedStepsSkipOnlyWhenTheirOwnScenarioFailed() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some text
+           Scenario: First scenario
+             Given a first step
+             When a second step
+           Scenario: Other scenario
+             Given a first step
+        """)
+        Given("a first step") { _, _ in }
+        When("a second step") { _, _ in }
+
+        let suite = XCTestSuite(name: "Dummy")
+        CucumberTest.generateAlltests(suite)
+        let stepTests = Self.allTests(in: suite).compactMap { $0 as? StepTestCase }
+        let scenarios = try XCTUnwrap(Cucumber.shared.features.first?.scenarios)
+        XCTAssertEqual(stepTests.count, 3)
+
+        XCTAssertNoThrow(try stepTests.forEach { try $0.setUpWithError() })
+
+        Cucumber.shared.failedScenarios.append(scenarios[0])
+
+        XCTAssertThrowsError(try stepTests[0].setUpWithError()) { XCTAssert($0 is XCTSkip) }
+        XCTAssertThrowsError(try stepTests[1].setUpWithError()) { XCTAssert($0 is XCTSkip) }
+        XCTAssertNoThrow(try stepTests[2].setUpWithError())
     }
 }
