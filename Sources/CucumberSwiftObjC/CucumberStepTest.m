@@ -21,9 +21,6 @@ static Class<CucumberStepTestSupport> _Nullable CucumberStepTestSupport(void) {
 /// Skips the step when an earlier step in its scenario failed or threw `XCTSkip`, so Xcode shows it as
 /// skipped rather than passed.
 - (BOOL)setUpWithError:(NSError * _Nullable __autoreleasing *)error {
-    if (![super setUpWithError:error]) {
-        return NO;
-    }
     NSError *skip = [CucumberStepTestSupport() skipErrorForStepTest:self];
     if (skip) {
         if (error) {
@@ -31,7 +28,7 @@ static Class<CucumberStepTestSupport> _Nullable CucumberStepTestSupport(void) {
         }
         return NO;
     }
-    return YES;
+    return [super setUpWithError:error];
 }
 
 /// A failure while the step runs is recorded at the step's line in its feature file.

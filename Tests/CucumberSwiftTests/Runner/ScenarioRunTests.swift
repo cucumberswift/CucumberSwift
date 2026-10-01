@@ -170,4 +170,27 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertEqual(recordedIssues.first?.sourceCodeContext.location?.lineNumber, 4)
         XCTAssertEqual(events, ["Given"])
     }
+
+    // While a scenario's step runs, a failure in its step definition is located at the step's line.
+    func testAFailureDuringAStepIsLocatedAtTheStepsLine() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Checkout
+           Scenario: Pay
+             Given a cart
+        """, uri: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Located.feature").absoluteString)
+        var line: Int?
+        Given("a cart") { _, _ in
+            let issue = XCTIssue(type: .assertionFailure,
+                                 compactDescription: "failed",
+                                 detailedDescription: nil,
+                                 sourceCodeContext: XCTSourceCodeContext(location: XCTSourceCodeLocation(filePath: "Steps.swift", lineNumber: 7)),
+                                 associatedError: nil,
+                                 attachments: [])
+            line = CucumberTestSupport.locateIssue(issue).sourceCodeContext.location?.lineNumber
+        }
+
+        _ = try runFirstScenario()
+
+        XCTAssertEqual(line, 3)
+    }
 }

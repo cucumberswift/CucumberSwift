@@ -145,4 +145,32 @@ class ScenarioTestTests: XCTestCase {
 
         XCTAssertEqual(CucumberTestSupport.locateIssue(issue).sourceCodeContext.location?.lineNumber, 7)
     }
+
+    // XCTest calls a scenario's test method, which returns false with the skip when a step skipped it.
+    // Called here directly, on this running test.
+    func testAScenarioTestMethodReportsSuccessOrItsSkip() throws {
+        Cucumber.oneTestPerScenario = true
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Method body
+           Scenario: Passes
+             Given a cart
+           Scenario: Skips
+             Given the card terminal is offline
+        """)
+        Given("a cart") { _, _ in }
+        Given("the card terminal is offline") { _, _ in throw XCTSkip("Offline") }
+        let testClass = try XCTUnwrap(CucumberTest.scenarioTestClass)
+        typealias Body = @convention(c) (AnyObject, Selector, AutoreleasingUnsafeMutablePointer<NSError?>?) -> Bool
+        let selectors = try CucumberTest.scenarioTests().map {
+            try XCTUnwrap(CucumberTest.addScenarioMethod(named: $0.name, running: $0.scenario))
+        }
+        let bodies = selectors.map { unsafeBitCast(class_getMethodImplementation(testClass, $0), to: Body.self) }
+
+        var error: NSError?
+        XCTAssertTrue(bodies[0](self, selectors[0], &error))
+        XCTAssertNil(error)
+        XCTAssertFalse(bodies[1](self, selectors[1], &error))
+        XCTAssertNotNil(error)
+        continueAfterFailure = true
+    }
 }

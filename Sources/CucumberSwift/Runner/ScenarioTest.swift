@@ -15,6 +15,12 @@ import XCTest
 import CucumberSwiftObjC
 #endif
 
+/// Only its method's type encoding is read: that of a throwing method that takes no arguments, which is
+/// what a scenario's test is.
+@objc private protocol ScenarioTestSignature {
+    func scenarioTest() throws
+}
+
 extension CucumberTest {
     /// How far a scenario's test got, for the teardown that finishes the steps it didn't.
     private final class Progress {
@@ -91,8 +97,8 @@ extension CucumberTest {
             error?.pointee = skip as NSError
             return false
         }
-        guard let template = class_getInstanceMethod(CucumberTest.self, #selector(scenarioTestTemplate)),
-              class_addMethod(testClass, selector, imp_implementationWithBlock(body), method_getTypeEncoding(template))
+        let signature = protocol_getMethodDescription(ScenarioTestSignature.self, #selector(ScenarioTestSignature.scenarioTest), true, true)
+        guard class_addMethod(testClass, selector, imp_implementationWithBlock(body), signature.types)
                 || testClass.instancesRespond(to: selector) else { return nil }
         return selector
     }
@@ -170,10 +176,5 @@ extension CucumberTest {
                              sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
                              associatedError: nil,
                              attachments: []))
-    }
-
-    /// Only its type encoding is used: that of a throwing method that takes no arguments.
-    @objc private func scenarioTestTemplate() throws {
-        // Empty on purpose: it is never called, and only its type encoding is read.
     }
 }
