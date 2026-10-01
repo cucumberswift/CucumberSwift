@@ -137,7 +137,9 @@ extension CucumberTest {
         for (index, step) in scenario.steps.enumerated() {
             step.testCase = test
             if StepTestCase.skipReason(for: step) != nil {
-                XCTContext.runActivity(named: "Skipped: \(step.writtenKeyword) \(step.match)") { _ in }
+                XCTContext.runActivity(named: "Skipped: \(step.writtenKeyword) \(step.match)") { _ in
+                    // Empty on purpose: the activity only shows in the test report that the step didn't run.
+                }
             } else {
                 step.method(at: index, of: scenario.steps.count)?.closure()
             }
@@ -150,5 +152,7 @@ extension CucumberTest {
     }
 
     /// Only its type encoding is used: that of a throwing method that takes no arguments.
-    @objc private func scenarioTestTemplate() throws {}
+    @objc private func scenarioTestTemplate() throws {
+        // Empty on purpose: it is never called, and only its type encoding is read.
+    }
 }
