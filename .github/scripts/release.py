@@ -18,8 +18,8 @@ import re
 import subprocess
 import sys
 
-SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
-BRANCH = re.compile(r"^(main|support/(0|[1-9][0-9]*)\.x)$")
+SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
+BRANCH = re.compile(r"^(main|support/(0|[1-9][0-9]*)\.x)\Z")
 RANK = {"patch": 1, "minor": 2, "major": 3}
 # Version commits made by this workflow, and by the automation it replaced.
 VERSION_COMMIT = re.compile(r"^(chore: set version |\[ci skip\] Apply automatic changes)")
@@ -323,7 +323,7 @@ def changes(repo, branch, last_tag, sha):
     return issues, lone_pulls, direct, authors
 
 
-LOGIN = re.compile(r"^[A-Za-z0-9-]+(\[bot\])?$")
+LOGIN = re.compile(r"^[A-Za-z0-9-]+(\[bot\])?\Z")
 
 
 def author(user):
