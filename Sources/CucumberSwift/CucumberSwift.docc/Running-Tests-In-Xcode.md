@@ -65,7 +65,27 @@ A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular exp
 
 ### Run one scenario
 
-Xcode's test navigator can't run one scenario on its own: the test classes exist only while the bundle runs, so Xcode can't find the one it's asked for, runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run one scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, as above.
+By default, each step is a test, and Xcode's test navigator can't run one scenario on its own: the test classes exist only while the bundle runs, so Xcode can't find the one it's asked for, runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run one scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, as above.
+
+If you'd rather run scenarios from the test navigator, make each scenario one test, by returning `true` from your `StepImplementation`'s `oneTestPerScenario`:
+
+```swift
+extension Cucumber: StepImplementation {
+    public var readableTestNames: Bool { true }
+    public var oneTestPerScenario: Bool { true }
+    // …
+}
+```
+
+To switch it per scheme or test plan without changing code, set the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` or `NO`, which overrides `oneTestPerScenario`.
+
+Each scenario is then a test of `CucumberScenarioTest`, such as `Checkout › Pay with a gift card`, and its run button runs just that scenario. From the command line, name it with `-only-testing:`:
+
+```bash
+xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:'MyAppTests/CucumberScenarioTest/Checkout › Pay with a gift card'
+```
+
+The scenario's steps run in order within its test, and the test report shows each one as an activity. A step that fails is still reported at its line in the feature file, and the steps after it show as skipped. The test navigator shows a result for each scenario rather than for each step.
 
 ### Skip a scenario
 
@@ -77,4 +97,4 @@ Given("the card terminal is offline") { _, _ in
 }
 ```
 
-The rest of the scenario doesn't run, and Xcode shows the steps after that one as skipped, with your reason.
+The rest of the scenario doesn't run, and Xcode shows the steps after that one as skipped, with your reason. With `oneTestPerScenario`, the scenario's test is skipped.

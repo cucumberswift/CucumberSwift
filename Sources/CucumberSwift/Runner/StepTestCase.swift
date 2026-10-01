@@ -9,27 +9,10 @@ import XCTest
 import CucumberSwiftObjC
 #endif
 
-/// What `CucumberStepTest`, in Objective-C, asks of CucumberSwift. It finds this class by name, since
-/// the Objective-C target can't import this module, which depends on it.
-@objc(CucumberStepTestSupport)
-final class StepTestSupport: NSObject {
-    // The names must match the protocol in CucumberStepTest.m.
-    @objc(skipErrorForStepTest:)
-    static func skipError(forStepTest test: XCTestCase) -> NSError? {
-        guard let step = StepTestCase.step(of: test), let reason = StepTestCase.skipReason(for: step) else { return nil }
-        return XCTSkip(reason) as NSError
-    }
-
-    @objc(locateIssue:inStepTest:)
-    static func locateIssue(_ issue: XCTIssue, inStepTest test: XCTestCase) -> XCTIssue {
-        StepTestCase.step(of: test).map { StepTestCase.issue(issue, locatedAt: $0) } ?? issue
-    }
-}
-
 /// What the tests CucumberSwift generates for each step do beyond running it. A step after one that
 /// failed or threw `XCTSkip` does not run, and Xcode reports it as skipped, not as a pass. Their
 /// class's superclass is `CucumberStepTest`, in Objective-C, so that Xcode names them without "()";
-/// it asks `StepTestSupport` for this. A failure recorded while a step runs moves to the step's line in its
+/// it asks `CucumberTestSupport` for this. A failure recorded while a step runs moves to the step's line in its
 /// feature file, so the failure opens the Gherkin, and Xcode marks the step there. The failure's call
 /// stack is kept, so the step definition's line is still one click away.
 enum StepTestCase {

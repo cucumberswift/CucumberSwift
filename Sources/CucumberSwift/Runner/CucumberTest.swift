@@ -13,10 +13,12 @@ open class CucumberTest: XCTestCase {
     static var didRun = false
 
     private static var hasBeenBuilt = false
+    static var featuresLoaded = false
 
     #if DEBUG
     static func resetSetUp() {
         hasBeenBuilt = false
+        featuresLoaded = false
     }
     #endif
 
@@ -32,13 +34,8 @@ open class CucumberTest: XCTestCase {
             return XCTestSuite(name: String(describing: CucumberTest.self))
         }
 
-        Cucumber.shared.features.removeAll()
-        DuplicateStepDefinition.reset()
         let bundle = (Cucumber.shared as? StepImplementation)?.bundle
-        if let bundle = bundle {
-            Cucumber.shared.readFromFeaturesFolder(in: bundle)
-        }
-        (Cucumber.shared as? StepImplementation)?.setupSteps()
+        loadFeaturesIfNeeded()
 
         hasBeenBuilt = true
         // Report a missing Features folder as a failing test rather than stopping the
@@ -80,6 +77,11 @@ open class CucumberTest: XCTestCase {
         createTestCaseForStubs(&stubTests)
         stubTests.forEach { stubsSuite.addTest($0) }
         rootSuite.addTest(stubsSuite)
+
+        if isOneTestPerScenario {
+            addScenarioTests(to: rootSuite)
+            return
+        }
 
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter()

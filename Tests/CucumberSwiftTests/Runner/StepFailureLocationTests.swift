@@ -81,10 +81,10 @@ class StepFailureLocationTests: XCTestCase {
         XCTAssertEqual(located.sourceCodeContext.location?.lineNumber, 42)
     }
 
-    // CucumberStepTest.m and StepTestSupport find each other by name, so a typo in either compiles
+    // CucumberStepTest.m and CucumberTestSupport find each other by name, so a typo in either compiles
     // and only shows when a step is skipped or fails.
     func testTheSupportClassAnswersWhatTheObjectiveCClassAsks() throws {
-        let support: AnyObject = try XCTUnwrap(NSClassFromString("CucumberStepTestSupport"))
+        let support: AnyObject = try XCTUnwrap(NSClassFromString("CucumberTestSupport"))
         XCTAssertTrue(support.responds(to: NSSelectorFromString("skipErrorForStepTest:")))
         XCTAssertTrue(support.responds(to: NSSelectorFromString("locateIssue:inStepTest:")))
     }

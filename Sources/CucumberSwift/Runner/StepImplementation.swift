@@ -41,4 +41,9 @@ import Foundation
     /// Defaults to `false`, because tools that parse `xcodebuild`'s output may expect test names
     /// without spaces.
     @objc optional var readableTestNames: Bool { get }
+    /// Whether each scenario is one test, named after its feature and scenario, whose steps run in
+    /// order within it, rather than a test class with a test for each step. Xcode's test navigator can
+    /// then run a single scenario. Defaults to `false`: a test for each step. The environment variable
+    /// `CUCUMBER_ONE_TEST_PER_SCENARIO`, set to `YES` or `NO` in a scheme or test plan, overrides it.
+    @objc optional var oneTestPerScenario: Bool { get }
 }

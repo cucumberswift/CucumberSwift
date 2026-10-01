@@ -5,7 +5,7 @@
 
 #import "include/CucumberStepTest.h"
 
-/// Implemented in Swift by CucumberSwift's `StepTestSupport`. This target can't import the Swift
+/// Implemented in Swift by CucumberSwift's `CucumberTestSupport`. This target can't import the Swift
 /// module, which depends on it, so it finds the class by name.
 @protocol CucumberStepTestSupport
 + (nullable NSError *)skipErrorForStepTest:(XCTestCase *)test;
@@ -13,7 +13,7 @@
 @end
 
 static Class<CucumberStepTestSupport> _Nullable CucumberStepTestSupport(void) {
-    return NSClassFromString(@"CucumberStepTestSupport");
+    return NSClassFromString(@"CucumberTestSupport");
 }
 
 @implementation CucumberStepTest
