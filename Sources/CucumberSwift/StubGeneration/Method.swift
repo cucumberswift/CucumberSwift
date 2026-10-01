@@ -75,9 +75,8 @@ class Method {
             for variable in variablesOnStepObject {
                 methodString += "    let \(Self.variableName(type: variable.type, number: 1)) = step.\(variable.type)\n"
             }
-            if captures.isEmpty && variablesOnStepObject.isEmpty {
-                methodString += "\n"
-            }
+            // An empty step would pass, so the stub fails until it is filled in.
+            methodString += "    XCTFail(\"Step not implemented: replace this line with your test code\")\n"
             methodString += "}"
             methodStrings.append(methodString)
         }
