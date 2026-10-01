@@ -522,9 +522,3 @@ extension Cucumber: StepImplementation {
     public static var overrideAsyncStepTimeout: TimeInterval?
     public var asyncStepTimeout: TimeInterval { Cucumber.overrideAsyncStepTimeout ?? AsyncStepRunner.defaultTimeout }
 }
-
-// Lets a test turn on StepImplementation's readableTestNames for the test bundle's Cucumber.
-extension Cucumber {
-    public static var overrideReadableTestNames = false
-    @objc public var readableTestNames: Bool { Cucumber.overrideReadableTestNames }
-}

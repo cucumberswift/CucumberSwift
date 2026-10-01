@@ -14,7 +14,7 @@ extension CucumberTest {
 
     /// A feature's, scenario's or step's text as it appears in the name of a generated test.
     static func generatedTestName(_ text: String) -> String {
-        generatedTestName(text, readable: (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false)
+        generatedTestName(text, readable: FeatureFlags.isReadableTestNames)
     }
 
     static func generatedTestName(_ text: String, readable: Bool) -> String {
@@ -34,9 +34,9 @@ extension CucumberTest {
     }
 
     static func readFeatureScenarioDelimiter() -> String {
-        let implementor = Cucumber.shared as? StepImplementation
-        return featureScenarioDelimiter(configured: implementor?.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
-                                        readable: implementor?.readableTestNames ?? false)
+        let bundle = (Cucumber.shared as? StepImplementation)?.bundle
+        return featureScenarioDelimiter(configured: bundle?.infoDictionary?["FeatureScenarioDelimiter"] as? String,
+                                        readable: FeatureFlags.isReadableTestNames)
     }
 
     /// The Info.plist's `FeatureScenarioDelimiter` when there is one, and otherwise `|`, or ` › ` with

@@ -2,7 +2,7 @@
 //  ScenarioTest.swift
 //  CucumberSwift
 //
-//  With `oneTestPerScenario`, each scenario is one test of `CucumberScenarioTest`, an Objective-C
+//  With `Cucumber.oneTestPerScenario`, each scenario is one test of `CucumberScenarioTest`, an Objective-C
 //  class in the CucumberSwiftObjC target, rather than a test class with a test for each step. Xcode's
 //  test navigator can then run a single scenario: it asks XCTest for `CucumberScenarioTest/<the test's
 //  name>`, which XCTest can find, because that class is compiled into the bundle, unlike the classes
@@ -32,23 +32,6 @@ extension CucumberTest {
         #else
         return NSClassFromString("CucumberScenarioTest") as? XCTestCase.Type
         #endif
-    }
-
-    /// Whether each scenario is one test: `CUCUMBER_ONE_TEST_PER_SCENARIO` when the scheme or test plan
-    /// sets it, and otherwise the `StepImplementation`'s `oneTestPerScenario`. Off by default.
-    static var isOneTestPerScenario: Bool {
-        oneTestPerScenario(environment: Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"],
-                           implementor: (Cucumber.shared as? StepImplementation)?.oneTestPerScenario)
-    }
-
-    /// `YES`, `TRUE` or `1` turns it on and `NO`, `FALSE` or `0` off, in any case. Any other value, or
-    /// none, leaves it to the `StepImplementation`.
-    static func oneTestPerScenario(environment value: String?, implementor: Bool?) -> Bool {
-        switch value?.trimmingCharacters(in: .whitespaces).uppercased() {
-            case "YES", "TRUE", "1": return true
-            case "NO", "FALSE", "0": return false
-            default: return implementor ?? false
-        }
     }
 
     /// Reads the feature files and sets up the steps, once. Running one scenario from Xcode's test
@@ -111,9 +94,11 @@ extension CucumberTest {
 
     /// Adds the test for a scenario when XCTest asks for one by name before anything has added it.
     static func resolveScenarioTest(named selectorName: String) -> Bool {
-        guard selectorName.hasSuffix(errorSuffix), isOneTestPerScenario else { return false }
-        let name = String(selectorName.dropLast(errorSuffix.count))
+        guard selectorName.hasSuffix(errorSuffix) else { return false }
+        // The flag can be set in setupSteps(), so the features and steps are loaded first.
         loadFeaturesIfNeeded()
+        guard FeatureFlags.isOneTestPerScenario else { return false }
+        let name = String(selectorName.dropLast(errorSuffix.count))
         guard let scenario = scenarioTests().first(where: { $0.name == name })?.scenario else { return false }
         return addScenarioMethod(named: name, running: scenario) != nil
     }

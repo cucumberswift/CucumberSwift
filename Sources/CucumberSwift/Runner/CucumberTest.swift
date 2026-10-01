@@ -78,7 +78,7 @@ open class CucumberTest: XCTestCase {
         stubTests.forEach { stubsSuite.addTest($0) }
         rootSuite.addTest(stubsSuite)
 
-        if isOneTestPerScenario {
+        if FeatureFlags.isOneTestPerScenario {
             addScenarioTests(to: rootSuite)
             return
         }
@@ -273,7 +273,7 @@ open class CucumberTest: XCTestCase {
 
 extension Step {
     func method(at index: Int, of count: Int) -> TestCaseMethod? {
-        let readable = (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false
+        let readable = FeatureFlags.isReadableTestNames
         // Readable names show the keyword as written; camel-case names keep the ones tests already have.
         let text = "\(readable ? writtenKeyword : keyword.toString()) \(match)"
         return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {

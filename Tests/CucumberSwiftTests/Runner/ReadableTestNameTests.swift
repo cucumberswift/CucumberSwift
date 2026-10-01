@@ -2,7 +2,7 @@
 //  ReadableTestNameTests.swift
 //  CucumberSwiftTests
 //
-//  With `readableTestNames`, generated tests are named with the Gherkin text as written, so Xcode's
+//  With readable test names, the default, generated tests are named with the Gherkin text as written, so Xcode's
 //  test navigator reads like the feature file (#59).
 //
 import Foundation
@@ -12,9 +12,9 @@ import XCTest
 class ReadableTestNameTests: XCTestCase {
     private static func generatedTestNames(readable: Bool) -> [String] {
         Cucumber.shared.reset()
-        Cucumber.overrideReadableTestNames = readable
+        Cucumber.readableTestNames = readable
         defer {
-            Cucumber.overrideReadableTestNames = false
+            Cucumber.readableTestNames = nil
             Cucumber.shared.reset()
         }
         Cucumber.shared.parseIntoFeatures("""
@@ -93,7 +93,7 @@ class ReadableTestNameTests: XCTestCase {
         XCTAssertEqual(steps[1].keyword, [.given, .and])
     }
 
-    // The StepImplementation's readableTestNames, not just the helpers, decides how generated tests are named.
+    // Cucumber.readableTestNames, not just the helpers, decides how generated tests are named.
     func testTheSettingNamesTheGeneratedScenarioAndStepsAsWritten() throws {
         let delimiter = CucumberTest.featureScenarioDelimiter(configured: Cucumber.shared.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
                                                               readable: true)
@@ -109,7 +109,7 @@ class ReadableTestNameTests: XCTestCase {
         XCTAssertTrue(names.contains { $0.hasSuffix(" Step001_GivenAGiftCard]") }, "\(names)")
     }
 
-    func testTheSettingIsOffWhenTheStepImplementationDoesNotSayOtherwise() {
-        XCTAssertEqual(CucumberTest.generatedTestName("Pay with a gift card"), "PayWithAGiftCard")
+    func testReadableNamesAreTheDefault() {
+        XCTAssertEqual(CucumberTest.generatedTestName("Pay with a gift card"), "Pay with a gift card")
     }
 }

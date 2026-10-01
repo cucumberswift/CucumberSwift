@@ -2,7 +2,7 @@
 //  ScenarioTestTests.swift
 //  CucumberSwiftTests
 //
-//  With `oneTestPerScenario`, each scenario is one test of CucumberScenarioTest, named after its
+//  With `Cucumber.oneTestPerScenario`, each scenario is one test of CucumberScenarioTest, named after its
 //  feature and scenario, so Xcode's test navigator can ask XCTest for it by name (#59).
 //
 
@@ -26,7 +26,7 @@ class ScenarioTestTests: XCTestCase {
         """)
         let delimiter = CucumberTest.readFeatureScenarioDelimiter()
         XCTAssertEqual(CucumberTest.scenarioTests().map(\.name),
-                       ["Checkout\(delimiter)PayWithAGiftCard", "Checkout\(delimiter)PayWithASavedCard"])
+                       ["Checkout\(delimiter)Pay with a gift card", "Checkout\(delimiter)Pay with a saved card"])
     }
 
     // Two scenarios with one name would be one test, so the second gets a number.
@@ -51,23 +51,6 @@ class ScenarioTestTests: XCTestCase {
              Given a cart
         """)
         XCTAssertEqual(CucumberTest.scenarioTests().map { $0.scenario.title }, ["Zebra", "Apple"])
-    }
-
-    func testByDefaultEachStepIsATest() {
-        XCTAssertFalse(CucumberTest.oneTestPerScenario(environment: nil, implementor: nil))
-    }
-
-    func testTheEnvironmentVariableOverridesTheStepImplementation() {
-        XCTAssertTrue(CucumberTest.oneTestPerScenario(environment: "YES", implementor: false))
-        XCTAssertTrue(CucumberTest.oneTestPerScenario(environment: "true", implementor: nil))
-        XCTAssertTrue(CucumberTest.oneTestPerScenario(environment: "1", implementor: false))
-        XCTAssertFalse(CucumberTest.oneTestPerScenario(environment: "NO", implementor: true))
-        XCTAssertFalse(CucumberTest.oneTestPerScenario(environment: "0", implementor: true))
-    }
-
-    func testWithoutTheEnvironmentVariableTheStepImplementationDecides() {
-        XCTAssertTrue(CucumberTest.oneTestPerScenario(environment: nil, implementor: true))
-        XCTAssertTrue(CucumberTest.oneTestPerScenario(environment: "maybe", implementor: true))
     }
 
     // CucumberScenarioTest.m and CucumberTestSupport find each other by name, so a typo in either
