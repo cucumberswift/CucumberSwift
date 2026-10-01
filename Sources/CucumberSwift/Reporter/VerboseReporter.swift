@@ -26,18 +26,18 @@ final class VerboseReporter: CucumberTestObserver {
         self.write = write
     }
 
-    func testSuiteStarted(at: Date) { write("[CucumberSwift] Test suite started") }
-    func testSuiteFinished(at: Date) { write("[CucumberSwift] Test suite finished") }
+    func testSuiteStarted(at _: Date) { write("[CucumberSwift] Test suite started") }
+    func testSuiteFinished(at _: Date) { write("[CucumberSwift] Test suite finished") }
 
-    func didStart(feature: Feature, at date: Date) {
+    func didStart(feature: Feature, at _: Date) {
         write("[CucumberSwift] Feature: \(feature.title)")
     }
 
-    func didStart(scenario: Scenario, at date: Date) {
+    func didStart(scenario: Scenario, at _: Date) {
         write("[CucumberSwift]   Scenario: \(scenario.title)")
     }
 
-    func didStart(step: Step, at date: Date) {
+    func didStart(step: Step, at _: Date) {
         write("[CucumberSwift]     \(step.keyword.toString()) \(step.match)")
     }
 
@@ -49,7 +49,7 @@ final class VerboseReporter: CucumberTestObserver {
         write("[CucumberSwift]   Scenario \"\(scenario.title)\" \(describe(result)) \(format(duration))")
     }
 
-    func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+    func didFinish(step _: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
         write("[CucumberSwift]       -> \(describe(result)) \(format(duration))")
     }
 
