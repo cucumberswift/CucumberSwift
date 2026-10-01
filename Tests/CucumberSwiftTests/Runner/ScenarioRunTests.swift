@@ -193,4 +193,24 @@ class ScenarioRunTests: XCTestCase {
 
         XCTAssertEqual(line, 3)
     }
+
+    // Both Objective-C test classes ask CucumberSwift where to record an issue, then record it. On a test
+    // that isn't running, XCTest passes the issue to the running one, this test, which keeps it.
+    func testTheObjectiveCTestClassesPassTheirIssuesOn() throws {
+        let stepClass = try XCTUnwrap(TestCaseGenerator.makeClass(className: "ScenarioRunTestsRecord", superclass: StepTestCase.superclass))
+        let scenarioClass = try XCTUnwrap(CucumberTest.scenarioTestClass)
+        let issue = XCTIssue(type: .assertionFailure,
+                             compactDescription: "failed",
+                             detailedDescription: nil,
+                             sourceCodeContext: XCTSourceCodeContext(),
+                             associatedError: nil,
+                             attachments: [])
+
+        capturing = true
+        stepClass.init().record(issue)
+        scenarioClass.init().record(issue)
+        capturing = false
+
+        XCTAssertEqual(recordedIssues.count, 2)
+    }
 }
