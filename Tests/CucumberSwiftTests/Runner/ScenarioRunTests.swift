@@ -157,7 +157,7 @@ class ScenarioRunTests: XCTestCase {
              Given a cart
              When nothing matches this step
              Then I get a receipt
-        """, uri: "file:///Features/Checkout.feature")
+        """, uri: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Checkout.feature").absoluteString)
         var events = [String]()
         Given("a cart") { _, _ in events.append("Given") }
         Then("I get a receipt") { _, _ in events.append("Then") }
