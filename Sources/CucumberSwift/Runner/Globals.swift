@@ -78,9 +78,12 @@ public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) asy
 }
 
 // MARK: Attachments
-/// Adds an attachment, such as a screenshot, to the test that is running. Call it from a hook or a step,
-/// where there is no `XCTestCase` to call `add(_:)` on. Set `lifetime` to `.keepAlways` to keep the
-/// attachment when the test passes.
+/// Adds an attachment, such as a screenshot, a log or a file, to the test that is running.
+///
+/// Call it from any hook or step, where there is no `XCTestCase` to call `add(_:)` on. Set `lifetime` to
+/// `.keepAlways` to keep the attachment when the test passes, and `name` to label it. The attachment appears
+/// under an "Attachment" activity on the current step's test, so one added in `AfterScenario` is on the
+/// scenario's last step.
 public func Attach(_ attachment: XCTAttachment) {
     attach(attachment) { name, block in
         XCTContext.runActivity(named: name, block: block)
