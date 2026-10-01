@@ -103,10 +103,8 @@ open class CucumberTest: XCTestCase {
         guard !stubs.isEmpty else { return }
         if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "Generated Steps", method: TestCaseMethod(withName: "GenerateStepsStubsIfNecessary", closure: {
             XCTContext.runActivity(named: "Pending Steps") { activity in
-                let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
-                                               name: "GENERATED_Unimplemented_Step_Definitions.swift",
-                                               payload: generatedSwift.data(using: .utf8),
-                                               userInfo: nil)
+                let attachment = stubAttachment(named: "GENERATED_Unimplemented_Step_Definitions.swift",
+                                                generatedSwift: generatedSwift)
                 attachment.lifetime = .keepAlways
                 activity.add(attachment)
             }
@@ -174,10 +172,8 @@ open class CucumberTest: XCTestCase {
 
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
-            let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
-                                           name: "\(sourceFile):\($0.step.location.line)",
-                                           payload: $0.generatedSwift.data(using: .utf8),
-                                           userInfo: nil)
+            let attachment = Self.stubAttachment(named: Self.stubAttachmentName(sourceFile: sourceFile, line: $0.step.location.line),
+                                                 generatedSwift: $0.generatedSwift)
 
             failStep(XCTIssue(type: .assertionFailure,
                               compactDescription: Self.missingStepDefinitionMessage(generatedSwift: $0.generatedSwift,
@@ -187,6 +183,28 @@ open class CucumberTest: XCTestCase {
                               associatedError: nil,
                               attachments: [attachment]))
         }
+    }
+
+    /// A generated step definition as an attachment. The type must be Swift source, not the bare extension
+    /// "swift", which is not a type identifier: Xcode then cannot preview the attachment or open it.
+    static func stubAttachment(named name: String, generatedSwift: String) -> XCTAttachment {
+        XCTAttachment(uniformTypeIdentifier: "public.swift-source",
+                      name: name,
+                      payload: generatedSwift.data(using: .utf8),
+                      userInfo: nil)
+    }
+
+    /// The attachment name for a missing step's stub. Xcode saves each attachment as a file named after it,
+    /// so the feature file's full path would overflow the 255-byte file name limit in a deep checkout and
+    /// Xcode would drop the attachment. The file's own name and the line locate the step just as well, and
+    /// the file's name is shortened, if need be, so the whole name stays within the limit.
+    static func stubAttachmentName<Line: CustomStringConvertible>(sourceFile: URL, line: Line) -> String {
+        let suffix = ":\(line)"
+        var name = sourceFile.lastPathComponent
+        while name.utf8.count + suffix.utf8.count > 255 {
+            name.removeLast()
+        }
+        return name + suffix
     }
 
     /// The failure for a step that no step definition matches. A step definition whose regular expression

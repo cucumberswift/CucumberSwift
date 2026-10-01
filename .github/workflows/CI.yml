@@ -2,9 +2,11 @@ name: CI
 
 # Pull requests run CI from the pull_request event, so pushes run it only on the
 # long-lived branches: main and the support/N.x release lines. Any other branch
-# runs CI only through a pull request.
+# runs CI only through a pull request. The merge queue runs it on the merge_group
+# event, on a temporary branch holding the pull request on top of main.
 on:
   pull_request:
+  merge_group:
   push:
     branches:
       - main

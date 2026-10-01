@@ -280,6 +280,42 @@ class StepTest: XCTestCase {
         """)
     }
 
+    /// #100: Xcode saves an attachment as a file named after it, so a deep feature file path must not be in the name.
+    func testAStubAttachmentIsNamedAfterTheFeatureFileNotItsFullPath() {
+        let deepDirectory = (0..<30).reduce(FileManager.default.temporaryDirectory) { url, _ in
+            url.appendingPathComponent("deeply", isDirectory: true)
+        }
+        let deepFile = deepDirectory.appendingPathComponent("Login.feature")
+
+        let name = CucumberTest.stubAttachmentName(sourceFile: deepFile, line: 7)
+
+        XCTAssertEqual(name, "Login.feature:7")
+    }
+
+    func testAStubAttachmentNameNeverExceedsTheFileNameLimit() {
+        let fits = String(repeating: "a", count: 253)
+        let tooLong = String(repeating: "a", count: 254)
+        let multibyte = String(repeating: "é", count: 200)
+
+        let fitting = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: fits), line: 7)
+        let capped = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: tooLong), line: 7)
+        let cappedMultibyte = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: multibyte), line: 7)
+
+        XCTAssertEqual(fitting, fits + ":7")
+        XCTAssertEqual(capped, fits + ":7")
+        XCTAssertEqual(capped.utf8.count, 255)
+        XCTAssertLessThanOrEqual(cappedMultibyte.utf8.count, 255)
+        XCTAssertTrue(cappedMultibyte.hasSuffix(":7"))
+    }
+
+    /// #100: Xcode can only preview and open a stub attachment whose type is Swift source.
+    func testAStubAttachmentIsSwiftSourceWithItsNameAndCode() throws {
+        let attachment = CucumberTest.stubAttachment(named: "Login.feature:3", generatedSwift: "Given(\"a step\") { _, _ in }")
+
+        XCTAssertEqual(attachment.uniformTypeIdentifier, "public.swift-source")
+        XCTAssertEqual(attachment.name, "Login.feature:3")
+    }
+
     /// #220: a Cucumber Expression that is treated as a regular expression but will not compile is
     /// reported at the step definition too, instead of crashing the run.
     func testAnExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
