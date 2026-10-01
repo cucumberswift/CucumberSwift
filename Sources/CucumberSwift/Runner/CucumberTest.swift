@@ -113,7 +113,7 @@ open class CucumberTest: XCTestCase {
     }
 
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
-        let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()))
+        let testCase = TestCaseGenerator.makeClass(className: className.appending(scenario.title.toClassString()), superclass: StepTestCase.self)
         if let testCase = testCase {
             objc_registerClassPair(testCase)
         }
@@ -142,6 +142,7 @@ open class CucumberTest: XCTestCase {
                     step.endTime = Date()
                 }
                 step.continueAfterFailure ?= (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure ?? testCase.continueAfterFailure
+                (testCase as? StepTestCase)?.skipReason = { [weak scenario] in StepTestCase.skipReason(for: scenario) }
                 step.testCase = testCase
                 testCase.continueAfterFailure = step.continueAfterFailure
                 tests.append(testCase)
