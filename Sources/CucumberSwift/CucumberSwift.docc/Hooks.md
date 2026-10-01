@@ -56,6 +56,47 @@ BeforeScenario { scenario in
 
 An async hook's closure runs on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
 
+### Attachments
+Hooks and steps are not `XCTestCase` methods, so there is no `add(_:)` to attach a screenshot, a log or a file with. Call `Attach(_:)` instead. It works in any hook and in any step, and takes any `XCTAttachment`.
+
+Set `lifetime` to `.keepAlways`, because Xcode deletes an attachment when the test passes unless you do. Set `name` to label it.
+
+**In a UI test target**, attach a screenshot of the screen:
+
+```swift
+AfterScenario { scenario in
+    let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+    screenshot.name = scenario.title
+    screenshot.lifetime = .keepAlways
+    Attach(screenshot)
+}
+```
+
+`XCUIScreen` only works in a UI test target. In a unit test bundle, `screenshot()` fails the test with "Not authorized for performing UI testing actions".
+
+**In a unit test bundle** (for example with UIUTest), attach a view you render yourself, or text or data:
+
+```swift
+AfterScenario { scenario in
+    let image = UIGraphicsImageRenderer(bounds: view.bounds).image { context in
+        view.layer.render(in: context.cgContext)
+    }
+    let snapshot = XCTAttachment(image: image)
+    snapshot.name = scenario.title
+    snapshot.lifetime = .keepAlways
+    Attach(snapshot)
+}
+
+AfterStep { step in
+    Attach(XCTAttachment(string: "Ran: \(step.match)"))
+}
+```
+
+#### Where to find an attachment
+An attachment is added to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step, so its attachment is on that last step's test. An `AfterStep` attachment is on its own step.
+
+In Xcode, open the **Report navigator**, choose the test run, expand the scenario and select the step's test. The attachment is listed under an **Attachment** activity, named after the attachment's `name`.
+
 ### Execution Order
 If you never specify anything hooks will just execute in whatever order they appear in the code. However if you need specific control you can add a `priority` to hooks. The lower the priority, the earlier it executes. So a priority 1 executes before a priority 2.
 
