@@ -13,6 +13,16 @@ import CucumberSwiftExpressions
 @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
     @objc public static let shared = Cucumber()
 
+    private static let verboseFlag = Locked(false)
+
+    /// Set to `true` to print each feature, scenario and step, with its result and duration, as it
+    /// runs. Set it before the tests start, for example in `setupSteps()`. The `CUCUMBER_VERBOSE`
+    /// environment variable and ``StepImplementation/verbose`` turn it on too.
+    public static var verbose: Bool {
+        get { verboseFlag.snapshot }
+        set { verboseFlag.withLock { $0 = newValue } }
+    }
+
     var features = [Feature]()
     var currentStep: Step?
     let runningTestCaseObserver = RunningTestCaseObserver()
@@ -86,7 +96,7 @@ import CucumberSwiftExpressions
 
     /// Whether to print each feature, scenario and step as it runs.
     private var isVerbose: Bool {
-        VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
+        Cucumber.verbose || VerboseReporter.isEnabled(in: environment) || ((Cucumber.shared as? StepImplementation)?.verbose ?? false)
     }
 
     override public init() {

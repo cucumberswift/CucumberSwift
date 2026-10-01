@@ -26,7 +26,7 @@ fi
 ```
 
 ## Verbose Output
-To see each feature, scenario and step as it runs, with its result and duration, set the `CUCUMBER_VERBOSE` environment variable to `1` or `true` (in your scheme's Run → Arguments, or on the command line: `CUCUMBER_VERBOSE=1 swift test`). To turn it on from code, return `true` from `verbose` in your `StepImplementation`:
+To see each feature, scenario and step as it runs, with its result and duration, set the `CUCUMBER_VERBOSE` environment variable to `1` or `true` (in your scheme's Run → Arguments, or on the command line: `CUCUMBER_VERBOSE=1 swift test`). To turn it on from code, set `Cucumber.verbose = true` before the tests start, or return `true` from `verbose` in your `StepImplementation`:
 
 ```swift
 extension Cucumber: @retroactive StepImplementation {

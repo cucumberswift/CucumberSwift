@@ -63,4 +63,13 @@ final class VerboseReporterTests: XCTestCase {
         XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
         verbose.reporters = [] // the instance stays registered with XCTest, so keep it from printing
     }
+
+    func testCucumberInstallsTheReporterWhenTheStaticFlagIsSet() {
+        Cucumber.verbose = true
+        defer { Cucumber.verbose = false }
+        let verbose = Cucumber()
+        verbose.environment = [:]
+        XCTAssertTrue(verbose.reporters.contains { $0 is VerboseReporter })
+        verbose.reporters = []
+    }
 }
