@@ -174,7 +174,7 @@ open class CucumberTest: XCTestCase {
         StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
             guard let sourceFile = $0.step.location.uri else { return }
             let attachment = XCTAttachment(uniformTypeIdentifier: "swift",
-                                           name: "\(sourceFile):\($0.step.location.line)",
+                                           name: Self.stubAttachmentName(sourceFile: sourceFile, line: $0.step.location.line),
                                            payload: $0.generatedSwift.data(using: .utf8),
                                            userInfo: nil)
 
@@ -186,6 +186,13 @@ open class CucumberTest: XCTestCase {
                               associatedError: nil,
                               attachments: [attachment]))
         }
+    }
+
+    /// The attachment name for a missing step's stub. Xcode saves each attachment as a file named after it,
+    /// so the feature file's full path would overflow the 255-byte file name limit in a deep checkout and
+    /// Xcode would drop the attachment. The file's own name and the line locate the step just as well.
+    static func stubAttachmentName(sourceFile: URL, line: some CustomStringConvertible) -> String {
+        "\(sourceFile.lastPathComponent):\(line)"
     }
 
     /// The failure for a step that no step definition matches. A step definition whose regular expression

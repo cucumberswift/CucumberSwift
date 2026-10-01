@@ -280,6 +280,15 @@ class StepTest: XCTestCase {
         """)
     }
 
+    /// #100: Xcode saves an attachment as a file named after it, so a deep feature file path must not be in the name.
+    func testAStubAttachmentIsNamedAfterTheFeatureFileNotItsFullPath() {
+        let deepPath = "/" + String(repeating: "deeply/nested/", count: 30) + "Login.feature"
+
+        let name = CucumberTest.stubAttachmentName(sourceFile: URL(fileURLWithPath: deepPath), line: 7)
+
+        XCTAssertEqual(name, "Login.feature:7")
+    }
+
     /// #220: a Cucumber Expression that is treated as a regular expression but will not compile is
     /// reported at the step definition too, instead of crashing the run.
     func testAnExpressionRegexThatWillNotCompileIsRecordedAtItsStepDefinition() {
