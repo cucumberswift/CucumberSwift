@@ -497,6 +497,7 @@ class CucumberSwiftTests: XCTestCase {
 }
 
 extension Cucumber: StepImplementation {
+    public var verbose: Bool { Cucumber.implementationVerbose }
     public var bundle: Bundle {
         if let bundle = Cucumber.overrideBundle { return bundle }
         // SwiftPM copies the Features folder into a separate resource bundle,
@@ -510,7 +511,6 @@ extension Cucumber: StepImplementation {
     static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
     public static var overrideBundle: Bundle?
     static var implementationVerbose = false
-    public var verbose: Bool { Cucumber.implementationVerbose }
     public static var overrideRegexLiteralStyle = RegexLiteralStyle.extendedDelimiter
     public func setupSteps() { }
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {

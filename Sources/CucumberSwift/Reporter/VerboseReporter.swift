@@ -14,12 +14,6 @@ import Foundation
 final class VerboseReporter: CucumberTestObserver {
     static let environmentKey = "CUCUMBER_VERBOSE"
 
-    /// Whether the environment asks for verbose output.
-    static func isEnabled(in environment: [String: String]) -> Bool {
-        guard let value = environment[environmentKey]?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
-        return value == "1" || value == "true"
-    }
-
     private let isEnabled: () -> Bool
     private let output: (String) -> Void
 
@@ -28,6 +22,12 @@ final class VerboseReporter: CucumberTestObserver {
     init(isEnabled: @escaping () -> Bool = { true }, write: @escaping (String) -> Void = { print($0); fflush(stdout) }) {
         self.isEnabled = isEnabled
         self.output = write
+    }
+
+    /// Whether the environment asks for verbose output.
+    static func isEnabled(in environment: [String: String]) -> Bool {
+        guard let value = environment[environmentKey]?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
+        return value == "1" || value == "true"
     }
 
     private func write(_ line: String) {

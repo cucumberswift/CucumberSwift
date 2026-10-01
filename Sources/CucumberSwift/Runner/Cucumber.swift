@@ -11,6 +11,12 @@ import XCTest
 import CucumberSwiftExpressions
 
 @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
+    /// A step definition's body: synchronous, or async and run to completion by `AsyncStepRunner`.
+    private enum StepBody {
+        case sync(Step.Execute)
+        case async(Step.AsyncExecute)
+    }
+
     @objc public static let shared = Cucumber()
 
     private static let verboseFlag = Locked(false)
@@ -90,6 +96,7 @@ import CucumberSwiftExpressions
     lazy var reporters: [CucumberTestObserver] = {
         // Always installed, because the reporters are built before `setupSteps()` can set
         // `Cucumber.verboseOutput`. It asks on every line whether it should print.
+        // swiftlint:disable:next trailing_closure
         var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
         observers += (self as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
@@ -256,12 +263,6 @@ import CucumberSwiftExpressions
         } catch {
             XCTFail("ExecuteFirstStep threw error \"\(error)\"")
         }
-    }
-
-    /// A step definition's body: synchronous, or async and run to completion by `AsyncStepRunner`.
-    private enum StepBody {
-        case sync(Step.Execute)
-        case async(Step.AsyncExecute)
     }
 
     private func attachClosureToSteps(keyword: Step.Keyword?,
