@@ -11,13 +11,13 @@ import XCTest
 class StepTestCase: XCTestCase {
     static let skippedAfterFailureMessage = "Skipped: an earlier step in this scenario failed."
 
+    /// Returns why the step must not run, or `nil` when it should.
+    var skipReason: (() -> String?)?
+
     /// Why a step of `scenario` must not run, or `nil` when it should: an earlier step in the scenario failed.
     static func skipReason(for scenario: Scenario?) -> String? {
         Cucumber.shared.failedScenarios.contains { $0 === scenario } ? skippedAfterFailureMessage : nil
     }
-
-    /// Returns why the step must not run, or `nil` when it should.
-    var skipReason: (() -> String?)?
 
     override func setUpWithError() throws {
         try super.setUpWithError()

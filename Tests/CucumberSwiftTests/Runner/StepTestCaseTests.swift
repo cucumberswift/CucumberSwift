@@ -7,6 +7,14 @@ import XCTest
 @testable import CucumberSwift
 
 final class StepTestCaseTests: XCTestCase {
+    private final class Probe: StepTestCase {
+        func testProbe() {}
+    }
+
+    private static func allTests(in suite: XCTestSuite) -> [XCTest] {
+        suite.tests.flatMap { ($0 as? XCTestSuite).map(allTests(in:)) ?? [$0] }
+    }
+
     override func setUpWithError() throws {
         Cucumber.shared.reset()
         Cucumber.shared.failedScenarios.removeAll()
@@ -14,10 +22,6 @@ final class StepTestCaseTests: XCTestCase {
             Cucumber.shared.reset()
             Cucumber.shared.failedScenarios.removeAll()
         }
-    }
-
-    private final class Probe: StepTestCase {
-        func testProbe() {}
     }
 
     func testAStepAfterAFailedStepIsSkippedNotPassed() {
@@ -39,10 +43,6 @@ final class StepTestCaseTests: XCTestCase {
     func testGeneratedStepTestCasesAreStepTestCases() throws {
         let generated = try XCTUnwrap(TestCaseGenerator.makeClass(className: "StepTestCaseTestsGenerated", superclass: StepTestCase.self))
         XCTAssert(generated.isSubclass(of: StepTestCase.self))
-    }
-
-    private static func allTests(in suite: XCTestSuite) -> [XCTest] {
-        suite.tests.flatMap { ($0 as? XCTestSuite).map(allTests(in:)) ?? [$0] }
     }
 
     func testGeneratedStepsSkipOnlyWhenTheirOwnScenarioFailed() throws {
