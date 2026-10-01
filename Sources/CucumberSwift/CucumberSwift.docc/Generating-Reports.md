@@ -26,15 +26,7 @@ fi
 ```
 
 ## Verbose Output
-To see each feature, scenario and step as it runs, with its result and duration, set the `CUCUMBER_VERBOSE` environment variable to `1` or `true` (in your scheme's Run → Arguments, or on the command line: `CUCUMBER_VERBOSE=1 swift test`). To turn it on from code, set `Cucumber.verboseOutput = true` before the tests start, or return `true` from `verbose` in your `StepImplementation`:
-
-```swift
-extension Cucumber: @retroactive StepImplementation {
-    public var verbose: Bool { true }
-}
-```
-
-Each line starts with `[CucumberSwift]`, and a failed step shows its message.
+To print each feature, scenario and step to the test log as it runs, see <doc:Verbose-Output>.
 
 ### Custom Reporters
 If you'd like to be notified about what the Cucumber runner saw during execution there are 2 steps needed.
