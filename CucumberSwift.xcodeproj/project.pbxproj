@@ -25,6 +25,7 @@
 		257B2D6903568991E78FBD23 /* Lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15022B66C52BA042F6CA7B0F /* Lexer.swift */; };
 		2674A2F1A834F2B693D9D9D1 /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D9CF0803D60B5788FE598E2 /* Position.swift */; };
 		28FB25B5039ED3B80CDC0CF7 /* StringReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30B316ECBDD6989AFB2949B /* StringReader.swift */; };
+		2D04AA4CC43AB8E84033A468 /* GeneratedTestNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */; };
 		32C4C84232F88EA5C33C0BFA /* DSLScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDC4212509FAA0191193789 /* DSLScenarioTests.swift */; };
 		33CB569EC9FC3E5075203F80 /* ErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C1E001FC5CE0030885CF60 /* ErrorTests.swift */; };
 		344EE67C43D7A89FE3233699 /* StubGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E84199B26F53AA7B1C99323 /* StubGenerator.swift */; };
@@ -310,6 +311,7 @@
 		DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CucumberStepTest.m; sourceTree = "<group>"; };
 		DEA059D8DEDD462293ADB60B /* RuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleTests.swift; sourceTree = "<group>"; };
 		DF8143BEABD12EB2F83CF388 /* CucumberSwiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberSwiftTests.swift; sourceTree = "<group>"; };
+		E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedTestNames.swift; sourceTree = "<group>"; };
 		E8EE8DF3A065A5AC4AC8AA5E /* DSLScenarioOutline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLScenarioOutline.swift; sourceTree = "<group>"; };
 		EA17FB3C914F0338057D582D /* GeneratedBareSlashStepDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedBareSlashStepDefinitions.swift; sourceTree = "<group>"; };
 		EA454CA88F99BB9AC7E04124 /* Hook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hook.swift; sourceTree = "<group>"; };
@@ -669,6 +671,7 @@
 				6FA91D7A5477B4504A32B958 /* Cucumber.swift */,
 				F7186AE45E7F0E5C115CB318 /* CucumberTest.swift */,
 				5F0C284D7333521C49F93910 /* DuplicateStepDefinition.swift */,
+				E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */,
 				C70AED670EF8F80C94174E51 /* Globals.swift */,
 				C22C7E99FE79D21B6087E54D /* Locked.swift */,
 				9BB5321E29869AEB96319604 /* StepImplementation.swift */,
@@ -1021,6 +1024,7 @@
 				8AB2A0AAEC88B8B0D25E3F13 /* Cucumber.swift in Sources */,
 				3524BEC3BD4E5B0D21560C43 /* CucumberTest.swift in Sources */,
 				E1E1A294B890F9C5FB25FDB9 /* DuplicateStepDefinition.swift in Sources */,
+				2D04AA4CC43AB8E84033A468 /* GeneratedTestNames.swift in Sources */,
 				936A5DB84EBAC76CEB389A40 /* Globals.swift in Sources */,
 				68FCBCEDED212050FCCF77E9 /* FeatureHook.swift in Sources */,
 				95186D42C4735C46EE593D41 /* Hook.swift in Sources */,

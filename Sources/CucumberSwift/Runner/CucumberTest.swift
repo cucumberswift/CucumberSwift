@@ -269,39 +269,6 @@ open class CucumberTest: XCTestCase {
     }
 }
 
-extension CucumberTest {
-    private static let defaultDelimiter = "|"
-
-    /// A feature's, scenario's or step's text as it appears in the name of a generated test.
-    static func generatedTestName(_ text: String) -> String {
-        generatedTestName(text, readable: (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false)
-    }
-
-    static func generatedTestName(_ text: String, readable: Bool) -> String {
-        guard readable else { return text.toClassString() }
-        // XCTest separates a test's class from its method with "/", and Xcode shows only what follows
-        // the last "." of a class name, as it would for a module, so a name can contain neither.
-        // A one dot leader (U+2024) looks like a full stop.
-        return String(text.map { $0 == "/" ? "-" : $0 == "." ? "\u{2024}" : $0 }.filter { !$0.isNewline })
-            .trimmingCharacters(in: .whitespaces)
-    }
-
-    /// With readable test names, a scenario's test reads `Checkout › Pay with a gift card`.
-    private static let readableDelimiter = " \u{203A} "
-
-    static func readFeatureScenarioDelimiter() -> String {
-        let implementor = Cucumber.shared as? StepImplementation
-        return featureScenarioDelimiter(configured: implementor?.bundle.infoDictionary?["FeatureScenarioDelimiter"] as? String,
-                                        readable: implementor?.readableTestNames ?? false)
-    }
-
-    /// The Info.plist's `FeatureScenarioDelimiter` when there is one, and otherwise `|`, or ` › ` with
-    /// readable test names.
-    static func featureScenarioDelimiter(configured: String?, readable: Bool) -> String {
-        configured ?? (readable ? readableDelimiter : defaultDelimiter)
-    }
-}
-
 extension Step {
     func method(at index: Int, of count: Int) -> TestCaseMethod? {
         let readable = (Cucumber.shared as? StepImplementation)?.readableTestNames ?? false
@@ -309,7 +276,7 @@ extension Step {
         let text = "\(readable ? writtenKeyword : keyword.toString()) \(match)"
         return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
             guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }),
-                  !Cucumber.shared.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }
+                  !StepTestCase.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }
             let startTime = Date()
             self.startTime = startTime
             Cucumber.shared.currentStep = self
@@ -318,19 +285,7 @@ extension Step {
 
             func runAndReport() {
                 Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
-                // A step that throws XCTSkip skips its scenario: it and the steps after it don't run.
-                var skip: XCTSkip?
-                XCTAssertNoThrow(try {
-                    do {
-                        try self.run()
-                    } catch let thrown as XCTSkip {
-                        skip = thrown
-                    }
-                }())
-                if let skip = skip, let scenario = self.scenario {
-                    self.result = .skipped
-                    Cucumber.shared.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
-                }
+                self.runSkippingScenarioOnXCTSkip()
                 self.endTime = Date()
                 Cucumber.shared.reporters.forEach { $0.didFinish(step: self, result: self.result, duration: self.executionDuration) }
             }
@@ -347,17 +302,20 @@ extension Step {
         }
     }
 
-    /// The name of the test for the step at `index` of a scenario's `count` steps. XCTest may order a
-    /// class's tests by name, so the name starts with the step's zero-padded position to keep that
-    /// order the same as the feature file's: `Step002_ThenTheTotalIs99`, or with readable test names,
-    /// `3 › Then the total is 99`.
-    static func methodName(for text: String, at index: Int, of count: Int, readable: Bool) -> String {
-        guard readable else {
-            let position = String(format: "%0*d", max(3, String(count - 1).count), index)
-            return "Step\(position)_" + CucumberTest.generatedTestName(text, readable: false)
+    /// Runs the step. One that throws `XCTSkip` skips its scenario: it and the steps after it don't run.
+    fileprivate func runSkippingScenarioOnXCTSkip() {
+        var skip: XCTSkip?
+        XCTAssertNoThrow(try {
+            do {
+                try self.run()
+            } catch let thrown as XCTSkip {
+                skip = thrown
+            }
+        }())
+        if let skip = skip, let scenario = scenario {
+            result = .skipped
+            StepTestCase.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
         }
-        let position = String(format: "%0*d", String(count).count, index + 1)
-        return "\(position) \u{203A} " + CucumberTest.generatedTestName(text, readable: true)
     }
 
     fileprivate func run() throws {
@@ -381,17 +339,5 @@ extension Step {
         if execute != nil && result != .failed {
             result = .passed
         }
-    }
-}
-
-extension String {
-    fileprivate func toClassString() -> String {
-        camelCasingString()
-            .lazy
-            .drop { !$0.isLetter }
-            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
-            .map(String.init)
-            .joined()
-            .capitalizingFirstLetter()
     }
 }

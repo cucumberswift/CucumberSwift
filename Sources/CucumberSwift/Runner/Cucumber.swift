@@ -77,8 +77,6 @@ import CucumberSwiftExpressions
     var hookedFeatures       = [Feature]()
     var hookedScenarios      = [Scenario]()
     var failedScenarios      = [Scenario]()
-    /// Scenarios a step skipped by throwing `XCTSkip`, with the reason it gave.
-    var skippedScenarios     = [(scenario: Scenario, reason: String)]()
     lazy var reporters: [CucumberTestObserver] = {
         ([CucumberJSONReporter()] + ((self as? CucumberTestObservable)?.observers ?? [])).compactMap { $0 }
     }()

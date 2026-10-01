@@ -5,23 +5,20 @@
 //  A step that throws XCTSkip skips the rest of its scenario, so Xcode shows those steps as skipped (#59),
 //  and so does a step that fails (#87).
 //
-// swiftlint:disable all
-
 import Foundation
 import XCTest
 @testable import CucumberSwift
 
 class SkippedStepTests: XCTestCase {
-    override func setUpWithError() throws {
+    private static func resetCucumber() {
         Cucumber.shared.reset()
         Cucumber.shared.failedScenarios.removeAll()
-        Cucumber.shared.skippedScenarios.removeAll()
+        StepTestCase.skippedScenarios.removeAll()
     }
 
-    override func tearDownWithError() throws {
-        Cucumber.shared.reset()
-        Cucumber.shared.failedScenarios.removeAll()
-        Cucumber.shared.skippedScenarios.removeAll()
+    override func setUpWithError() throws {
+        Self.resetCucumber()
+        addTeardownBlock { Self.resetCucumber() }
     }
 
     private func steps() -> [Step] {
@@ -43,7 +40,7 @@ class SkippedStepTests: XCTestCase {
     // A step that throws XCTSkip skips the rest of its scenario, and says why.
     func testAStepIsSkippedWithTheReasonAnEarlierStepSkippedItsScenarioFor() throws {
         let steps = steps()
-        Cucumber.shared.skippedScenarios.append((try XCTUnwrap(steps.first?.scenario), "The card terminal is offline"))
+        StepTestCase.skippedScenarios.append((try XCTUnwrap(steps.first?.scenario), "The card terminal is offline"))
 
         XCTAssertEqual(StepTestCase.skipReason(for: steps[1]), "Skipped: The card terminal is offline")
         XCTAssertNil(StepTestCase.skipReason(for: steps[2]))

@@ -5,14 +5,14 @@
 //  A failure recorded while a step runs is moved to the step's line in its feature file, so that
 //  clicking it in Xcode opens the Gherkin and Xcode marks the step there (#59).
 //
-// swiftlint:disable all
-
 import Foundation
 import XCTest
 @testable import CucumberSwift
 
 class StepFailureLocationTests: XCTestCase {
-    private static let featureURI = "file:///Features/Located.feature"
+    private static let directory = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+    private static let featureURI = directory.appendingPathComponent("Located.feature").absoluteString
+    private static let stepDefinitions = directory.appendingPathComponent("StepDefinitions.swift").path
 
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -43,7 +43,7 @@ class StepFailureLocationTests: XCTestCase {
 
     func testAFailureInAStepDefinitionMovesToTheStepInItsFeatureFile() throws {
         let step = try firstStep(uri: Self.featureURI)
-        let located = StepTestCase.issue(issue(at: "/Steps/StepDefinitions.swift", line: 42), locatedAt: step)
+        let located = StepTestCase.issue(issue(at: Self.stepDefinitions, line: 42), locatedAt: step)
 
         XCTAssertEqual(located.sourceCodeContext.location?.fileURL, URL(string: Self.featureURI))
         XCTAssertEqual(located.sourceCodeContext.location?.lineNumber, 4)
@@ -52,7 +52,7 @@ class StepFailureLocationTests: XCTestCase {
     // The reporters and the issue navigator see the same failure as before: only its location changes.
     func testTheFailureKeepsItsDescriptionAndType() throws {
         let step = try firstStep(uri: Self.featureURI)
-        let original = issue(at: "/Steps/StepDefinitions.swift", line: 42)
+        let original = issue(at: Self.stepDefinitions, line: 42)
         let located = StepTestCase.issue(original, locatedAt: step)
 
         XCTAssertEqual(located.compactDescription, original.compactDescription)
@@ -75,9 +75,9 @@ class StepFailureLocationTests: XCTestCase {
     // A step with no feature file, such as one from the DSL, keeps the step definition's location.
     func testAStepWithNoFeatureFileKeepsTheOriginalLocation() throws {
         let step = try firstStep(uri: "")
-        let located = StepTestCase.issue(issue(at: "/Steps/StepDefinitions.swift", line: 42), locatedAt: step)
+        let located = StepTestCase.issue(issue(at: Self.stepDefinitions, line: 42), locatedAt: step)
 
-        XCTAssertEqual(located.sourceCodeContext.location?.fileURL.path, "/Steps/StepDefinitions.swift")
+        XCTAssertEqual(located.sourceCodeContext.location?.fileURL.path, Self.stepDefinitions)
         XCTAssertEqual(located.sourceCodeContext.location?.lineNumber, 42)
     }
 

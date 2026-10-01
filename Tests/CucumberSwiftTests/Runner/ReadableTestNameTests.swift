@@ -5,8 +5,6 @@
 //  With `readableTestNames`, generated tests are named with the Gherkin text as written, so Xcode's
 //  test navigator reads like the feature file (#59).
 //
-// swiftlint:disable all
-
 import Foundation
 import XCTest
 @testable import CucumberSwift

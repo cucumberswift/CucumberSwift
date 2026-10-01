@@ -9,6 +9,10 @@
 import Foundation
 
 enum ScenarioOutlineParser {
+    /// The longest the example's values may make its title, in characters. The title names the test
+    /// Xcode runs, and Xcode cannot save an attachment whose file name that makes too long (#100).
+    static let maximumValuesLength = 60
+
     /**
      Extracts the description text for a scenario outline by processing its tokens.
      
@@ -149,10 +153,6 @@ enum ScenarioOutlineParser {
         }
         return scenarios
     }
-
-    /// The longest the example's values may make its title, in characters. The title names the test
-    /// Xcode runs, and Xcode cannot save an attachment whose file name that makes too long (#100).
-    static let maximumValuesLength = 60
 
     /// An example's title: the outline's title followed by the example's values for the columns the
     /// title does not already use, as in `Sign in (email: bob@x.com, role: admin)`. Values that would
