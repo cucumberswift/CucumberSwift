@@ -16,6 +16,11 @@ import CucumberSwiftObjC
 #endif
 
 extension CucumberTest {
+    /// How far a scenario's test got, for the teardown that finishes the steps it didn't.
+    private final class Progress {
+        var finished = 0
+    }
+
     /// A scenario's test is a throwing method, as Swift's `func test() throws` is to Objective-C, so a
     /// step that throws `XCTSkip` can skip the whole test.
     private static let errorSuffix = "AndReturnError:"
@@ -112,28 +117,59 @@ extension CucumberTest {
     }
 
     /// Runs the scenario's steps in order, each as an activity, with the same hooks as a test per step.
-    /// Once a step fails or throws `XCTSkip`, the rest don't run, and each shows as a skipped activity.
-    /// Returns the skip when a step skipped the scenario.
+    /// Once a step fails, has no step definition, or throws `XCTSkip`, the rest don't run, and each shows
+    /// as a skipped activity. Returns the skip when a step skipped the scenario and none failed.
     static func run(_ scenario: Scenario, on test: XCTestCase) -> XCTSkip? {
         scenarioUnderTest = scenario
         defer { scenarioUnderTest = nil }
-        // A failing step must not stop the test: the steps after it still need their hooks.
-        test.continueAfterFailure = true
+        // As with a test per step: when the StepImplementation says not to continue after a failure,
+        // XCTest stops the test at the failed assertion. The teardown then gives the steps that didn't
+        // finish their hooks, so After hooks still run.
+        test.continueAfterFailure = (Cucumber.shared as? StepImplementation)?.continueTestingAfterFailure ?? true
+        let progress = Progress()
+        test.addTeardownBlock {
+            scenario.steps.dropFirst(progress.finished).forEach(finish)
+        }
         for (index, step) in scenario.steps.enumerated() {
             step.testCase = test
             if StepTestCase.skipReason(for: step) != nil {
                 XCTContext.runActivity(named: "Skipped: \(step.writtenKeyword) \(step.match)") { _ in
                     // Empty on purpose: the activity only shows in the test report that the step didn't run.
                 }
+            } else if !step.canExecute && !step.isAmbiguous {
+                recordMissingStepDefinition(for: step, on: test)
             } else {
                 step.method(at: index, of: scenario.steps.count)?.closure()
             }
-            (step.executeInstance as? XCTestCase)?.tearDown()
-            Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
-            Cucumber.shared.setupAfterHooksFor(step)
-            step.endTime = Date()
+            finish(step)
+            progress.finished = index + 1
         }
+        guard !Cucumber.shared.failedScenarios.contains(where: { $0 === scenario }) else { return nil }
         return StepTestCase.skippedScenarios.first { $0.scenario === scenario }.map { XCTSkip($0.reason) }
+    }
+
+    /// A step's hooks and cleanup after it ran or was skipped.
+    private static func finish(_ step: Step) {
+        (step.executeInstance as? XCTestCase)?.tearDown()
+        Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
+        Cucumber.shared.setupAfterHooksFor(step)
+        step.endTime = Date()
+    }
+
+    /// Fails a step that no step definition matches, at its line in the feature file. A full run reports
+    /// it in testGherkin too, but a scenario run on its own from the test navigator doesn't run that.
+    private static func recordMissingStepDefinition(for step: Step, on test: XCTestCase) {
+        Cucumber.shared.currentStep = step
+        let stub = StubGenerator.getStubs(for: Cucumber.shared.features).first { $0.step.match == step.match }?.generatedSwift
+        let message = missingStepDefinitionMessage(generatedSwift: stub ?? "",
+                                                   invalidRegularExpressions: RegularExpression.errors.snapshot)
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        test.record(XCTIssue(type: .assertionFailure,
+                             compactDescription: message,
+                             detailedDescription: nil,
+                             sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
+                             associatedError: nil,
+                             attachments: []))
     }
 
     /// Only its type encoding is used: that of a throwing method that takes no arguments.

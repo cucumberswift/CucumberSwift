@@ -77,6 +77,7 @@
 		82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */; };
 		839EC3796E4B571B50B33E7F /* Locked.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22C7E99FE79D21B6087E54D /* Locked.swift */; };
 		8516266936C3D4A5F25EEBD1 /* WaitUntil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AB3A7392FB1651B0C69F5F /* WaitUntil.swift */; };
+		8658A6C302380BC1DACFCAFA /* ScenarioRunTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD09C92DD03AFD4765446E70 /* ScenarioRunTests.swift */; };
 		8728D3532389DBE9A17F74D1 /* StepFailureLocationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E75F552A5CAD45258EC3909 /* StepFailureLocationTests.swift */; };
 		87D45B5DE00C3DC4F9247BDC /* ParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4653CC61B70D4024CE614C44 /* ParserTests.swift */; };
 		88F314E8090C164E5B972A74 /* Scenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A5C50E6EFEF58ED875D57 /* Scenario.swift */; };
@@ -319,6 +320,7 @@
 		D833E9E9B18E8C450136D037 /* StepDSL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepDSL.swift; sourceTree = "<group>"; };
 		D98291716D314DF937216669 /* ScenarioTestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioTestTests.swift; sourceTree = "<group>"; };
 		DB817496F330098529E21B73 /* StringReaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringReaderTests.swift; sourceTree = "<group>"; };
+		DD09C92DD03AFD4765446E70 /* ScenarioRunTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioRunTests.swift; sourceTree = "<group>"; };
 		DDC88E34B244FC44552A16C0 /* CucumberTestObservable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTestObservable.swift; sourceTree = "<group>"; };
 		DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CucumberStepTest.m; sourceTree = "<group>"; };
 		DEA059D8DEDD462293ADB60B /* RuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleTests.swift; sourceTree = "<group>"; };
@@ -710,6 +712,7 @@
 				086CE04A08240D7473E13F9E /* LockedTests.swift */,
 				9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
+				DD09C92DD03AFD4765446E70 /* ScenarioRunTests.swift */,
 				D98291716D314DF937216669 /* ScenarioTestTests.swift */,
 				41A562D88BBACC53D2D23CD0 /* SkippedStepTests.swift */,
 				5E75F552A5CAD45258EC3909 /* StepFailureLocationTests.swift */,
@@ -981,6 +984,7 @@
 				AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */,
 				82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
+				8658A6C302380BC1DACFCAFA /* ScenarioRunTests.swift in Sources */,
 				4818A2F9F1AD2DDDCD131871 /* ScenarioTestTests.swift in Sources */,
 				747CAE60AED2F131F9B3CAA4 /* SkippedStepTests.swift in Sources */,
 				8728D3532389DBE9A17F74D1 /* StepFailureLocationTests.swift in Sources */,

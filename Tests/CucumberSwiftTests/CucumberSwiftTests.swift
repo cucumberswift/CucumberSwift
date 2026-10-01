@@ -522,3 +522,10 @@ extension Cucumber: StepImplementation {
     public static var overrideAsyncStepTimeout: TimeInterval?
     public var asyncStepTimeout: TimeInterval { Cucumber.overrideAsyncStepTimeout ?? AsyncStepRunner.defaultTimeout }
 }
+
+// Lets a test turn off continueTestingAfterFailure for the test bundle's Cucumber. XCTest's own default
+// is to continue, so leaving it nil changes nothing.
+extension Cucumber {
+    public static var overrideContinueTestingAfterFailure: Bool?
+    @objc public var continueTestingAfterFailure: Bool { Cucumber.overrideContinueTestingAfterFailure ?? true }
+}
