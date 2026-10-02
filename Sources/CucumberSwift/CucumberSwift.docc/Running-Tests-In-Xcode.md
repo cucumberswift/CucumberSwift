@@ -165,3 +165,5 @@ To remove them, run the script with `uninstall`, then quit and reopen Xcode:
 ```bash
 CucumberSwift/Tools/Xcode/gherkin-highlighting.sh uninstall
 ```
+
+To write feature files in another editor beside Xcode, Visual Studio Code with the official [Cucumber extension](https://marketplace.visualstudio.com/items?itemName=CucumberOpen.cucumber-official) highlights and formats them and shows their outline. Its step-aware features, such as autocomplete, going to a step's definition and marking undefined steps, don't work with CucumberSwift, because the extension doesn't read step definitions written in Swift.
