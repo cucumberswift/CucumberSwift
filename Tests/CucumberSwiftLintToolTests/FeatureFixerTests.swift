@@ -34,17 +34,19 @@ final class FeatureFixerTests: LintTestCase {
         Feature: F
           Scenario: S
             Gvien a step
+            Then another step
         """)
         XCTAssertEqual(result.changes, ["3: Gvien a step → Given a step"])
     }
 
     func testAKeywordInTheWrongCaseIsFixed() throws {
         let result = try fix("""
-        Feature: F
+        feature: F
           Scenario: S
-            given a step
+            Given a step
+            then another step
         """)
-        XCTAssertEqual(result.changes, ["3: given a step → Given a step"])
+        XCTAssertEqual(result.changes, ["1: feature: F → Feature: F", "4: then another step → Then another step"])
     }
 
     func testAHeaderWithoutItsColonIsFixed() throws {
@@ -119,12 +121,34 @@ final class FeatureFixerTests: LintTestCase {
 
     func testOnlyTheFixedWordChanges() throws {
         let file = directory.appendingPathComponent("Test.feature")
-        let original = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tThne a step  \r\n".utf8)
+        let original = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tGiven a step\r\n\tThne a step  \r\n".utf8)
         try original.write(to: file)
 
         XCTAssertEqual(FeatureFixer.fix(file: file.path).map(\.after), ["Then a step"])
-        let expected = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tThen a step  \r\n".utf8)
+        let expected = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tGiven a step\r\n\tThen a step  \r\n".utf8)
         XCTAssertEqual(try Data(contentsOf: file), expected)
+    }
+
+    func testDescriptionsAreNotChanged() throws {
+        // Each line could be a mistake, but text after a header and before a step is a description.
+        let feature = """
+        Feature: F
+          feature descriptions explain the goal
+          Background information is below
+          Features include signing in
+          Scenario where the user is offline
+          Example of a login
+
+          Scenario: S
+            and this is what it is about
+            Given a step
+
+          Scenario: T
+            Gvien a step on its own
+        """
+        let result = try fix(feature)
+        XCTAssertEqual(result.changes, [])
+        XCTAssertEqual(result.text, feature)
     }
 
     func testDocStringsAndOtherLanguagesAreNotChanged() throws {
@@ -152,6 +176,7 @@ final class FeatureFixerTests: LintTestCase {
     // MARK: Agreement with the build plugin
 
     func testEveryFixIsAWarningsSuggestion() throws {
+        // A suggestion for a line that could be a description is still reported, but not fixed.
         let diagnostics = try check("""
         Feature: F
           Scenario S
@@ -164,8 +189,8 @@ final class FeatureFixerTests: LintTestCase {
         """, steps: nil)
         let fixes = diagnostics.filter { $0.fix != nil }
         XCTAssertEqual(fixes.map(\.line), [2, 3, 7])
-        for diagnostic in diagnostics {
-            XCTAssertEqual(diagnostic.fix != nil, diagnostic.message.contains("Did you mean"), diagnostic.message)
+        for diagnostic in fixes {
+            XCTAssertTrue(diagnostic.message.contains("Did you mean"), diagnostic.message)
         }
         XCTAssertEqual(fixes.compactMap(\.fix), [
             .init(text: "Scenario", replacement: "Scenario:"),
