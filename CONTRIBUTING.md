@@ -73,6 +73,14 @@ xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac C
 
 This is the reference run. It builds every test target through the Xcode project that CI and Carthage use, on Mac Catalyst.
 
+Experimental parallel testing has a test target of its own, `CucumberSwiftParallelConsumerTests`, which runs only with Xcode's parallel testing on. Its scheme turns parallel testing on, and it is not in the `CucumberSwift` test plan, whose CI job fails a bundle that runs in parallel:
+
+```bash
+xcodebuild test -scheme CucumberSwiftParallelConsumerTests -destination 'platform=macOS,variant=Mac Catalyst' -parallel-testing-worker-count 3 CODE_SIGNING_ALLOWED=NO
+```
+
+Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` job also checks across the workers that every scenario ran exactly once and that more than one worker ran them. To check that locally, set `TEST_RUNNER_PARALLEL_TEST_RECORDS` to an empty folder: each scenario writes a file there named after the scenario and its worker's process. It has no Swift package, because `swift test` can't run scenarios in parallel.
+
 ### With Swift Package Manager
 
 CI also runs every test target with SwiftPM. Run all four packages:
@@ -163,7 +171,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 ### Things to keep in mind
 
-- **Three scheme names are load bearing.** `fastlane unit_test` and the CI workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`.
+- **The scheme names are load bearing.** `fastlane unit_test` and the CI workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests`, `CucumberSwiftDSLConsumerTests` or `CucumberSwiftParallelConsumerTests`.
 - **`project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is a lockfile for Carthage users.** It pins the CucumberSwiftExpressions version they get. Regenerating leaves it alone. If your diff changes it anyway, put it back unless updating that dependency is what your change is for.
 - **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve`, run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, or when the two lockfiles pin a package differently, and its error says which file to fix.
 

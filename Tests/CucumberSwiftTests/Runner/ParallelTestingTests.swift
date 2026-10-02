@@ -12,16 +12,16 @@ import XCTest
 @testable import CucumberSwift
 
 class ParallelTestingTests: XCTestCase {
-    override func setUpWithError() throws {
-        Self.reset()
-        addTeardownBlock { Self.reset() }
-    }
-
     private static func reset() {
         Cucumber.experimentalParallelTesting = nil
         Cucumber.oneTestPerScenario = nil
         Cucumber.shared.reset()
         CucumberTest.resetSetUp()
+    }
+
+    override func setUpWithError() throws {
+        Self.reset()
+        addTeardownBlock { Self.reset() }
     }
 
     /// Parses a feature with a title of its own, so that no earlier test has taken its classes' names. The

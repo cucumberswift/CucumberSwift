@@ -247,6 +247,83 @@ jobs:
           fi
           exit $status
 
+  # Experimental parallel testing (#31). Runs a consumer bundle with Xcode's parallel
+  # testing on, on Mac Catalyst and on clones of an iOS Simulator, and fails unless every
+  # scenario ran exactly once and more than one worker ran them. Each scenario records
+  # itself in PARALLEL_TEST_RECORDS, named after the scenario and its worker's process:
+  # xcodebuild's log can't show this, because it interleaves its own output with the
+  # workers' and cuts test lines short.
+  parallel_test:
+    name: Parallel tests (${{ matrix.platform }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+        platform: [Mac Catalyst, iOS Simulator]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: xcodebuild -version
+      - name: Choose the destination
+        id: destination
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          if [ "$PLATFORM" = "Mac Catalyst" ]; then
+            echo "destination=platform=macOS,variant=Mac Catalyst" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The newest iOS runtime's first iPhone, so the job doesn't depend on a device name.
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          runtimes = sorted((r for r in devices if ".SimRuntime.iOS-" in r),
+                            key=lambda r: [int(n) for n in r.rsplit("iOS-", 1)[1].split("-")], reverse=True)
+          print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith("iPhone")), ""))
+          ')
+          if [ -z "$udid" ]; then
+            echo "::error::No iPhone simulator is available on this runner."
+            exit 1
+          fi
+          echo "destination=platform=iOS Simulator,id=$udid" >> "$GITHUB_OUTPUT"
+      - name: Run the parallel consumer tests
+        env:
+          DESTINATION: ${{ steps.destination.outputs.destination }}
+          # The scenarios in Tests/CucumberSwiftParallelConsumerTests/Features.
+          EXPECTED_SCENARIOS: 10
+        run: |
+          set +e
+          records="$RUNNER_TEMP/parallel-test-records"
+          mkdir -p "$records"
+          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -scheme CucumberSwiftParallelConsumerTests -destination "$DESTINATION" -parallel-testing-worker-count 3 CODE_SIGNING_ALLOWED=NO > parallel-test.log 2>&1
+          status=$?
+          grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Tests/||' | sort -u | head -20
+          grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
+          total=$(ls "$records" | wc -l | tr -d ' ')
+          scenarios=$(ls "$records" | sed -E 's/\.[0-9]+$//' | sort -u | wc -l | tr -d ' ')
+          workers=$(ls "$records" | grep -oE '[0-9]+$' | sort -u | wc -l | tr -d ' ')
+          echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
+          ls "$records" | sed -E 's/\.[0-9]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
+          if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
+            echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixture's features, update EXPECTED_SCENARIOS in CI.yml."
+            status=1
+          fi
+          if [ "$total" -ne "$scenarios" ]; then
+            echo "::error::Some scenarios ran in more than one worker."
+            status=1
+          fi
+          if [ "$workers" -lt 2 ]; then
+            echo "::error::Only $workers worker ran the scenarios, so they did not run in parallel."
+            status=1
+          fi
+          exit $status
+
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
   # SwiftPM links all of a package's test targets into one test bundle, and each
   # consumer test target declares its own `extension Cucumber: StepImplementation`,

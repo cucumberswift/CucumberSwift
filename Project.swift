@@ -269,11 +269,40 @@ let cucumberSwiftDSLConsumerTests = Target.target(
     )
 )
 
+// Runs only with Xcode's parallel testing on, in a CI job of its own, to check experimental parallel
+// testing (#31). It is not in CucumberSwift.xctestplan, whose CI job fails a bundle that runs in parallel.
+let cucumberSwiftParallelConsumerTests = Target.target(
+    name: "CucumberSwiftParallelConsumerTests",
+    destinations: [.iPhone, .iPad, .macCatalyst],
+    product: .unitTests,
+    bundleId: "TylerThompson.CucumberSwiftParallelConsumerTests",
+    deploymentTargets: .iOS("13.0"),
+    infoPlist: .file(path: "Tests/CucumberSwiftParallelConsumerTests/Info.plist"),
+    sources: ["Tests/CucumberSwiftParallelConsumerTests/**/*.swift"],
+    resources: [.folderReference(path: "Tests/CucumberSwiftParallelConsumerTests/Features")],
+    dependencies: [
+        .target(name: "CucumberSwift"),
+        .package(product: "CucumberSwiftExpressions")
+    ],
+    settings: .settings(
+        base: [
+            "CODE_SIGN_STYLE": "Automatic",
+            "DEVELOPMENT_TEAM": .string(developmentTeam),
+            "LD_RUNPATH_SEARCH_PATHS": runpathSearchPaths,
+            "PRODUCT_NAME": "$(TARGET_NAME)",
+            "SWIFT_VERSION": "5.0",
+            "TARGETED_DEVICE_FAMILY": "1,2"
+        ],
+        defaultSettings: .none
+    )
+)
+
 // MARK: - Schemes
 //
-// These three names are load bearing. `fastlane unit_test` runs the CucumberSwift
-// scheme and CI runs fastlane, so the names must not drift. Automatic scheme
-// generation is switched off in Project.options so no fourth scheme appears.
+// These names are load bearing. `fastlane unit_test` runs the CucumberSwift
+// scheme and CI runs fastlane and each consumer scheme, so the names must not
+// drift. Automatic scheme generation is switched off in Project.options so no
+// other scheme appears.
 //
 // `shared: true` is not decoration. Carthage clones this repository and builds
 // only the schemes shared from the .xcodeproj, so a scheme written to xcuserdata
@@ -323,6 +352,20 @@ let dslConsumerTestsScheme = Scheme.scheme(
     analyzeAction: .analyzeAction(configuration: .debug)
 )
 
+let parallelConsumerTestsScheme = Scheme.scheme(
+    name: "CucumberSwiftParallelConsumerTests",
+    shared: true,
+    buildAction: .buildAction(targets: ["CucumberSwiftParallelConsumerTests"]),
+    testAction: .targets(
+        [.testableTarget(target: "CucumberSwiftParallelConsumerTests", parallelization: .enabled)],
+        configuration: .debug
+    ),
+    runAction: .runAction(configuration: .debug),
+    archiveAction: .archiveAction(configuration: .release),
+    profileAction: .profileAction(configuration: .release),
+    analyzeAction: .analyzeAction(configuration: .debug)
+)
+
 // MARK: - Project
 
 let project = Project(
@@ -355,11 +398,13 @@ let project = Project(
         cucumberSwift,
         cucumberSwiftTests,
         cucumberSwiftConsumerTests,
-        cucumberSwiftDSLConsumerTests
+        cucumberSwiftDSLConsumerTests,
+        cucumberSwiftParallelConsumerTests
     ],
     schemes: [
         cucumberSwiftScheme,
         consumerTestsScheme,
-        dslConsumerTestsScheme
+        dslConsumerTestsScheme,
+        parallelConsumerTestsScheme
     ]
 )
