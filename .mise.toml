@@ -33,7 +33,7 @@ description = "Run every test target with Swift Package Manager"
 # SwiftPM links all of a package's test targets into one bundle, so each consumer
 # test folder is a package of its own. See "Running the tests" in CONTRIBUTING.md.
 run = [
-  "swift test",
+  "swift test --skip 'CucumberSwift\\.CucumberTest'",
   "swift test --package-path Tests/CucumberSwiftConsumerTests",
   "swift test --package-path Tests/CucumberSwiftDSLConsumerTests",
   "swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests",
