@@ -141,7 +141,8 @@ final class FeatureChecker {
         let step = PendingStep(line: line, column: column, text: text.trimmingCharacters(in: .whitespaces))
         if section == .scenario || section == .outline {
             pendingSteps.append(step)
-        } else {
+        } else if section == .background {
+            // A misplaced step has been reported already, and has no examples to fill it in.
             checkDefined(step, examples: [])
         }
         sawStep = true

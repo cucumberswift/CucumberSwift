@@ -79,6 +79,23 @@ final class StepDefinitionCheckTests: LintTestCase {
         XCTAssertEqual(messages, [])
     }
 
+    func testEachExamplesBlockFillsInStepsWithItsOwnHeader() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outline: S
+            Given a user named <name> aged <age>
+
+            Examples: adults
+              | name  | age |
+              | Alice | 30  |
+
+            Examples: children, with the columns the other way round
+              | age | name |
+              | 7   | Bob  |
+        """, steps: #"Given("a user named {word} aged {int}") { _, _ in }"#)
+        XCTAssertEqual(messages, [])
+    }
+
     func testAnUndefinedOutlineStepIsReportedWithItsFirstExample() throws {
         let messages = try lint("""
         Feature: F

@@ -92,6 +92,19 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["2:3 A step must be inside a Scenario or Background"])
     }
 
+    func testAStepAfterExamplesIsReportedOnlyOnce() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outline: S
+            Given a user named <name>
+            Examples:
+              | name  |
+              | Alice |
+            Then the user is <name>
+        """, steps: #"Given("a user named {word}") { _, _ in }"#)
+        XCTAssertEqual(messages, ["7:5 A step can't follow Examples; start a new Scenario"])
+    }
+
     func testExamplesUnderABackgroundAreReported() throws {
         let messages = try lint("""
         Feature: F
@@ -128,6 +141,12 @@ final class GherkinCheckTests: LintTestCase {
     }
 
     // MARK: Command line
+
+    func testAFileWhosePathStartsWithDashesIsStillAFile() {
+        let arguments = Arguments(["--features", "--draft.feature", "b.feature", "--step-definitions", "Steps.swift"])
+        XCTAssertEqual(arguments.features, ["--draft.feature", "b.feature"])
+        XCTAssertEqual(arguments.swiftFiles, ["Steps.swift"])
+    }
 
     func testArgumentsAreReadByOption() {
         let arguments = Arguments([
