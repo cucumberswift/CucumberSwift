@@ -47,8 +47,8 @@ enum StubGenerator {
     }
 
     /// The generated step definition for a step that no step definition matches: the step's own, or else
-    /// the one `getStubs` lists for a step with the same pattern, preferring one that also has a data table
-    /// or doc string when this step does, so the definition binds `step` to read it.
+    /// one `getStubs` lists for a step with the same pattern that the step's keyword can use, preferring one
+    /// that also has a data table or doc string when this step does, so the definition binds `step` to read it.
     static func stub(for step: Step,
                      in features: [Feature],
                      style: Style = implementorStyle) -> String? {
@@ -57,7 +57,11 @@ enum StubGenerator {
             return own.generatedSwift
         }
         let regex = regexForTokens(Lexer(step.match).lex())
-        let samePattern = stubs.filter { regexForTokens(Lexer($0.step.match).lex()) == regex }
+        let keyword = step.keyword.primaryKeywords.toString().capitalizingFirstLetter()
+        let samePattern = stubs.filter { stub in
+            regexForTokens(Lexer(stub.step.match).lex()) == regex
+                && stub.generatedSwift.components(separatedBy: "\n").contains { $0.hasPrefix("\(keyword)(") || $0.hasPrefix("MatchAll(") }
+        }
         let sameShape = samePattern.first {
             ($0.step.dataTable != nil) == (step.dataTable != nil) && ($0.step.docString != nil) == (step.docString != nil)
         }

@@ -138,6 +138,25 @@ class UndefinedStepTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(StubGenerator.stub(for: copy, in: features)).contains("let dataTable = step.dataTable"))
     }
 
+    // A step from features read again since gets no step definition for another keyword, but the one its
+    // own feature generates.
+    func testACopyOfAStepGetsAStepDefinitionForItsOwnKeyword() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Calculator
+           Scenario: Wait
+             Given I wait
+        """, uri: Self.featureURI)
+        let copy = try XCTUnwrap(Cucumber(withString: """
+        Feature: Calculator
+           Scenario: Wait
+             When I wait
+        """).features.first?.scenarios.first?.steps.first)
+
+        XCTAssertNil(StubGenerator.stub(for: copy, in: Cucumber.shared.features))
+        let message = CucumberTest.missingStepDefinitionIssue(for: copy).compactDescription
+        XCTAssertTrue(message.contains(#"When("I wait")"#), message)
+    }
+
     // A step in a scenario that its tags leave out has no generated step definition, so its failure has none.
     func testAStepWithNoGeneratedStepDefinitionFailsWithoutOne() throws {
         Cucumber.shared.parseIntoFeatures("""
