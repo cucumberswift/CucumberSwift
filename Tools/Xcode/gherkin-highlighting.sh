@@ -69,13 +69,13 @@ install() {
 uninstall() {
     local removed=0 item
     while read -r item; do
-        if [ -e "$item" ]; then
+        if [[ -e "$item" ]]; then
             rm -rf "$item"
             echo "Removed $item"
             removed=1
         fi
     done < <(installed_items)
-    if [ "$removed" -eq 0 ]; then
+    if [[ "$removed" -eq 0 ]]; then
         echo "Gherkin highlighting is not installed."
         return
     fi
@@ -85,7 +85,7 @@ uninstall() {
 status() {
     local item
     while read -r item; do
-        if [ -e "$item" ]; then
+        if [[ -e "$item" ]]; then
             echo "Installed:     $item"
         else
             echo "Not installed: $item"
