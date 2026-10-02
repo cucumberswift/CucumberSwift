@@ -46,6 +46,28 @@ enum StubGenerator {
         return regex.trimmingCharacters(in: .whitespaces)
     }
 
+    /// The generated step definition for a step that no step definition matches: the step's own, or else
+    /// one `getStubs` lists for a step with the same pattern that the step's keyword can use, preferring one
+    /// that also has a data table or doc string when this step does, so the definition binds `step` to read it.
+    static func stub(for step: Step,
+                     in features: [Feature],
+                     style: Style = implementorStyle) -> String? {
+        let stubs = getStubs(for: features, style: style)
+        if let own = stubs.first(where: { $0.step === step }) {
+            return own.generatedSwift
+        }
+        let regex = regexForTokens(Lexer(step.match).lex())
+        let keyword = step.keyword.primaryKeywords.toString().capitalizingFirstLetter()
+        let samePattern = stubs.filter { stub in
+            regexForTokens(Lexer(stub.step.match).lex()) == regex
+                && stub.generatedSwift.components(separatedBy: "\n").contains { $0.hasPrefix("\(keyword)(") || $0.hasPrefix("MatchAll(") }
+        }
+        let sameShape = samePattern.first {
+            ($0.step.dataTable != nil) == (step.dataTable != nil) && ($0.step.docString != nil) == (step.docString != nil)
+        }
+        return (sameShape ?? samePattern.first)?.generatedSwift
+    }
+
     /// Reads `5.25` as one number, and a `-` straight before a number, after a space or at the start, as its sign.
     private static func expressionTokens(_ tokens: [Token]) -> [Token] {
         var result = [Token]()

@@ -28,6 +28,8 @@ extension Cucumber {
         hookedScenarios.removeAll()
     }
 
+    /// Runs every step's test. Many of these tests define only the steps they look at, so a step with no
+    /// step definition, which fails its own test (#262), is an expected failure here, and nothing else is.
     func executeFeatures(callDefaultTestSuite: Bool = false) {
         if callDefaultTestSuite { _ = CucumberTest.defaultTestSuite }
         let suite = XCTestSuite(name: "Dummy")
@@ -35,7 +37,16 @@ extension Cucumber {
 
         var tests = [XCTestCase]()
         Cucumber.enumerateTestsCases(&tests, suite)
-        tests.forEach { $0.invokeTest() }
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else {
+            tests.forEach { $0.invokeTest() }
+            return
+        }
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        options.issueMatcher = { $0.compactDescription.hasPrefix("No CucumberSwift expression found that matches this step.") }
+        XCTExpectFailure("A step with no step definition", options: options) {
+            tests.forEach { $0.invokeTest() }
+        }
     }
 
     private static func enumerateTestsCases(_ tests: inout [XCTestCase], _ suite: XCTestSuite) {

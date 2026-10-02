@@ -148,8 +148,8 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertFalse(continueAfterFailure)
     }
 
-    // A scenario run on its own from the test navigator doesn't run testGherkin, which reports steps
-    // with no step definition, so its own test fails, at the step's line, instead of passing.
+    // A step with no step definition fails its scenario's test, at the step's line, with the step
+    // definition to add, and the steps after it don't run (#262).
     func testAScenarioWithAnUndefinedStepFails() throws {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Checkout
@@ -167,6 +167,7 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertNil(skip)
         XCTAssertEqual(recordedIssues.count, 1)
         XCTAssertTrue(recordedIssues.first?.compactDescription.hasPrefix("No CucumberSwift expression found") ?? false)
+        XCTAssertTrue(recordedIssues.first?.compactDescription.contains(#"When("nothing matches this step")"#) ?? false)
         XCTAssertEqual(recordedIssues.first?.sourceCodeContext.location?.lineNumber, 4)
         XCTAssertEqual(events, ["Given"])
     }

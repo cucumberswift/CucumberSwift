@@ -54,6 +54,8 @@ This holds for a failed assertion in a step definition, for a step that no step 
 
 Once a step fails, the rest of its scenario's steps don't run, and Xcode shows them as skipped, or with one test per scenario, as skipped activities.
 
+A step that no step definition matches fails its own test, or with one test per scenario, its scenario's test. The failure message contains the step definition CucumberSwift generated for it. A step like that after a step that failed is skipped too, and its generated step definition is in the file attached to the `GenerateStepsStubsIfNecessary` test.
+
 ### Tell Scenario Outline examples apart
 
 Each example of a Scenario Outline is a scenario of its own, named after the outline and the example's values, such as `Sign in (email: bob@x.com, role: admin)`. Columns that the outline's title already uses, as in `Scenario Outline: Sign in as <role>`, are left out. To keep test names short, the values stop at 60 characters, followed by `…`. An example whose name would repeat another's gets its number too, as in `Sign in (email: amy@x.com, example 3)`.
