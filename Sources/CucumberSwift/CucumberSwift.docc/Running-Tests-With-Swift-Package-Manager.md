@@ -31,8 +31,8 @@ extension Cucumber: StepImplementation {
         #if SWIFT_PACKAGE
         return Bundle.module
         #else
-        class TestExplorer: CucumberTest { }
-        return Bundle(for: TestExplorer.self)
+        class ThisBundle {}
+        return Bundle(for: ThisBundle.self)
         #endif
     }
 
