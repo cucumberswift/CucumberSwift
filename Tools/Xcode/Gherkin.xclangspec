@@ -1,35 +1,19 @@
-// Gherkin language specs
+// Gherkin syntax coloring for Xcode.
+//
+// Xcode reads this from ~/Library/Developer/Xcode/Specifications when it starts.
+// The format is undocumented; Xcode's own grammars, in
+// $(xcode-select -p)/../SharedFrameworks/SourceModel.framework/Versions/A/Resources/LanguageSpecifications,
+// are the reference. Rules are tried in the order IncludeRules lists them, and the
+// first that matches wins. StartAtBOL means the first token on a line, after any
+// indentation.
+//
+// Only English keywords are colored.
 (
 
 /****************************************************************************/
-// MARK: Keywords
+// MARK: Gherkin
 /****************************************************************************/
-    
-    {
-        Identifier = "xcode.lang.gherkin.keyword";
-        Syntax = {
-            StartChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-            StartAtBOL = YES;
-            Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
-            Words = (
-                "Feature",
-                "Scenario",
-                "Given",
-                "When",
-                "Then",
-                "And",
-                "Or",
-                "But",
-            );
-            Type = "xcode.syntax.keyword";
-            AltType = "xcode.syntax.identifier";    // non-keywords are identifiers
-        };
-    },
-    
-/****************************************************************************/
-// MARK: Simple Syntax Coloring
-/****************************************************************************/
-    
+
     {
         Identifier = "xcode.lang.gherkin";
         Description = "Gherkin Coloring";
@@ -37,22 +21,174 @@
         IncludeInMenu = YES;
         Name = "Gherkin";
         Syntax = {
-            IncludeRules = (        // processed in order
+            IncludeRules = (
+                "xcode.lang.gherkin.language",
                 "xcode.lang.gherkin.comment",
+                "xcode.lang.gherkin.docstring",
+                "xcode.lang.gherkin.docstring.backticks",
+                "xcode.lang.string",
+                "xcode.lang.gherkin.tag",
+                "xcode.lang.gherkin.placeholder",
+                "xcode.lang.gherkin.table.escape",
+                "xcode.lang.gherkin.table.separator",
+                "xcode.lang.gherkin.keyword.header",
+                "xcode.lang.gherkin.keyword.step",
+                "xcode.lang.gherkin.keyword.step.asterisk",
                 "xcode.lang.number",
-                "xcode.lang.gherkin.keyword",
+            );
+            Type = "xcode.syntax.plain";
+        };
+    },
+
+/****************************************************************************/
+// MARK: Comments
+/****************************************************************************/
+
+    // "# language: fr" on the first line chooses the feature's language.
+    {
+        Identifier = "xcode.lang.gherkin.language";
+        Syntax = {
+            StartAtBOL = YES;
+            StartChars = "#";
+            Match = (
+                "^#[ \t]*language[ \t]*:[^\n]*",
+            );
+            Type = "xcode.syntax.preprocessor";
+        };
+    },
+
+    // Gherkin comments take a whole line; a # later in a line is text.
+    {
+        Identifier = "xcode.lang.gherkin.comment";
+        Syntax = {
+            StartAtBOL = YES;
+            Start = "#";
+            End = "\n";
+            IncludeRules = ( "xcode.lang.url", "xcode.lang.url.mail", "xcode.lang.comment.mark" );
+            Type = "xcode.syntax.comment";
+        };
+    },
+
+/****************************************************************************/
+// MARK: Doc strings
+/****************************************************************************/
+
+    {
+        Identifier = "xcode.lang.gherkin.docstring";
+        Syntax = {
+            StartAtBOL = YES;
+            Start = "\"\"\"";
+            End = "\"\"\"";
+            Foldable = YES;
+            Type = "xcode.syntax.string";
+        };
+    },
+    {
+        Identifier = "xcode.lang.gherkin.docstring.backticks";
+        Syntax = {
+            StartAtBOL = YES;
+            Start = "```";
+            End = "```";
+            Foldable = YES;
+            Type = "xcode.syntax.string";
+        };
+    },
+
+/****************************************************************************/
+// MARK: Tags, placeholders and tables
+/****************************************************************************/
+
+    {
+        Identifier = "xcode.lang.gherkin.tag";
+        Syntax = {
+            StartChars = "@";
+            Match = (
+                "^@[^ \t\n@#]+",
+            );
+            Type = "xcode.syntax.attribute";
+        };
+    },
+
+    // <name> in a Scenario Outline, filled in from its Examples.
+    {
+        Identifier = "xcode.lang.gherkin.placeholder";
+        Syntax = {
+            StartChars = "<";
+            Match = (
+                "^<[^<> \t\n][^<>\n]*>",
+            );
+            Type = "xcode.syntax.identifier.variable";
+        };
+    },
+
+    // \| and \\ in a table cell are text, not cell separators.
+    {
+        Identifier = "xcode.lang.gherkin.table.escape";
+        Syntax = {
+            StartChars = "\\";
+            Match = (
+                "^\\\\[|\\\\n]",
             );
             Type = "xcode.syntax.plain";
         };
     },
     {
-        Identifier = "xcode.lang.gherkin.comment";
+        Identifier = "xcode.lang.gherkin.table.separator";
         Syntax = {
-            Start = "#";
-            End = "\n";
-            Foldable = YES;
-            IncludeRules = ( "xcode.lang.url", "xcode.lang.url.mail", "xcode.lang.comment.mark" );
-            Type = "xcode.syntax.comment";
+            StartChars = "|";
+            Match = (
+                "^\\|",
+            );
+            Type = "xcode.syntax.declaration.other";
+        };
+    },
+
+/****************************************************************************/
+// MARK: Keywords
+/****************************************************************************/
+
+    // Keywords that end with a colon. Longer keywords come first, so that
+    // "Scenario Outline:" is not read as "Scenario" followed by text.
+    {
+        Identifier = "xcode.lang.gherkin.keyword.header";
+        Syntax = {
+            StartAtBOL = YES;
+            StartChars = "ABEFRS";
+            Match = (
+                "^(Feature|Business Need|Ability|Rule|Background|Scenario Outline|Scenario Template|Scenarios|Scenario|Examples|Example)[ \t]*:",
+            );
+            Type = "xcode.syntax.keyword";
+        };
+    },
+
+    // Step keywords count only as the first word of a line, so an "and" or
+    // "then" inside a step's text stays plain.
+    {
+        Identifier = "xcode.lang.gherkin.keyword.step";
+        Syntax = {
+            StartAtBOL = YES;
+            StartChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+            Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+            Words = (
+                "Given",
+                "When",
+                "Then",
+                "And",
+                "But",
+            );
+            Type = "xcode.syntax.keyword";
+            AltType = "xcode.syntax.plain";
+        };
+    },
+    {
+        Identifier = "xcode.lang.gherkin.keyword.step.asterisk";
+        Syntax = {
+            StartAtBOL = YES;
+            StartChars = "*";
+            Match = (
+                "^\\*(?=[ \t])",
+            );
+            Type = "xcode.syntax.keyword";
         };
     },
 )
