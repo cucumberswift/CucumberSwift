@@ -1,0 +1,58 @@
+// Gherkin language specs
+(
+
+/****************************************************************************/
+// MARK: Keywords
+/****************************************************************************/
+    
+    {
+        Identifier = "xcode.lang.gherkin.keyword";
+        Syntax = {
+            StartChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+            StartAtBOL = YES;
+            Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+            Words = (
+                "Feature",
+                "Scenario",
+                "Given",
+                "When",
+                "Then",
+                "And",
+                "Or",
+                "But",
+            );
+            Type = "xcode.syntax.keyword";
+            AltType = "xcode.syntax.identifier";    // non-keywords are identifiers
+        };
+    },
+    
+/****************************************************************************/
+// MARK: Simple Syntax Coloring
+/****************************************************************************/
+    
+    {
+        Identifier = "xcode.lang.gherkin";
+        Description = "Gherkin Coloring";
+        BasedOn = "xcode.lang.simpleColoring";
+        IncludeInMenu = YES;
+        Name = "Gherkin";
+        Syntax = {
+            IncludeRules = (        // processed in order
+                "xcode.lang.gherkin.comment",
+                "xcode.lang.number",
+                "xcode.lang.gherkin.keyword",
+            );
+            Type = "xcode.syntax.plain";
+        };
+    },
+    {
+        Identifier = "xcode.lang.gherkin.comment";
+        Syntax = {
+            Start = "#";
+            End = "\n";
+            Foldable = YES;
+            IncludeRules = ( "xcode.lang.url", "xcode.lang.url.mail", "xcode.lang.comment.mark" );
+            Type = "xcode.syntax.comment";
+        };
+    },
+)
