@@ -137,3 +137,34 @@ Given("the card terminal is offline") { _, _ in
 ```
 
 The rest of the scenario doesn't run, and Xcode shows the steps after that one as skipped, with your reason. With one test per scenario, the scenario's test is skipped.
+
+### Highlight feature files
+
+Xcode shows `.feature` files as plain text. CucumberSwift comes with a Gherkin grammar for Xcode that colors keywords, tags, comments, strings, doc strings, `<placeholders>`, table separators and numbers. Only English keywords are colored. It also comes with code snippets for a feature, a scenario and a scenario outline. You install both with a script you run once. They are not part of the library, and the script changes nothing in Xcode itself: it copies files into your home folder.
+
+It relies on how Xcode loads grammars and plug-ins, which Apple doesn't document, so a future version of Xcode could stop highlighting your feature files. Your tests are not affected either way.
+
+To install it, run the script from a copy of the CucumberSwift repository:
+
+```bash
+git clone --depth 1 https://github.com/cucumberswift/CucumberSwift.git
+CucumberSwift/Tools/Xcode/gherkin-highlighting.sh install
+```
+
+Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle, the Gherkin plug-in, which contains only data and no code; choose **Load Bundle**. Xcode asks again after each Xcode update.
+
+Feature files then open as Gherkin: in the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file Xcode has already opened before keeps the type it had, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
+
+To add a snippet, open the Library in a feature file (View ▸ Show Library, or ⇧⌘L), search for `Gherkin`, and double-click the snippet or drag it into the file. Press Tab to move between its placeholders. Xcode doesn't offer code completion in feature files, so the snippets' completion shortcuts don't work there.
+
+The script installs these items:
+
+- `~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin`, which tells Xcode that `.feature` files are Gherkin
+- `~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec`, the grammar
+- three snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
+
+To remove them, run the script with `uninstall`, then quit and reopen Xcode:
+
+```bash
+CucumberSwift/Tools/Xcode/gherkin-highlighting.sh uninstall
+```
