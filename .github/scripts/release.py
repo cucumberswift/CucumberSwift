@@ -3,7 +3,8 @@
 
   plan     Compute the version from the last release and the chosen bump, check
            it, and write the release notes.
-  publish  Commit the version files, create the tag and create the release.
+  publish  Commit the version files, build the source archive, create the tag
+           and create the release.
 
 Inputs come from environment variables that the workflow's first step has
 already checked. Branch names, issue titles and pull request titles are
@@ -11,12 +12,14 @@ untrusted text: they are handled as data here and never pass through a shell.
 """
 import base64
 import difflib
+import hashlib
 import html
 import json
 import os
 import re
 import subprocess
 import sys
+import tarfile
 
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 BRANCH = re.compile(r"^(main|support/(0|[1-9][0-9]*)\.x)\Z")
@@ -471,6 +474,40 @@ def set_version(path, content, version):
     return content
 
 
+def source_archive(repo, version, commit):
+    """Build the release's source archive from `commit` with git archive, check
+    it, and return its file name. Bazel registry entries pin its checksum, which
+    GitHub's on-demand tag archives do not keep stable."""
+    name = f"{repo.split('/')[1]}-{version}"
+    path = f"{name}.tar.gz"
+    # The version commit, if there is one, was made through the API.
+    if not succeeds("git", "cat-file", "-e", f"{commit}^{{commit}}"):
+        run("git", "fetch", "--no-tags", "--depth=1", "origin", commit)
+    run("git", "archive", "--format=tar.gz", f"--prefix={name}/", "-o", path, commit)
+    # git archive records the commit in the global pax header, as git get-tar-commit-id reads it.
+    with tarfile.open(path, "r:gz") as archive:
+        built_from = archive.pax_headers.get("comment")
+        members = {member.name: member for member in archive.getmembers()}
+    if built_from != commit:
+        fail(f"{path} was not built from {commit}.")
+    if any(n.split("/")[0] != name or ".." in n.split("/") for n in members):
+        fail(f"{path} has files outside {name}/.")
+
+    # A path ending in / must be a directory, any other a regular file. A symlink does not count.
+    def usable(required):
+        member = members.get(f"{name}/{required.rstrip('/')}")
+        return member is not None and (member.isdir() if required.endswith("/") else member.isfile())
+
+    missing = [p for p in os.environ.get("ARCHIVE_REQUIRES", "").split() if not usable(p)]
+    if missing:
+        fail(f"{path} is missing {', '.join(missing)}, or has them as another kind of file.")
+    with open(path, "rb") as handle:
+        digest = hashlib.sha256(handle.read()).digest()
+    append("GITHUB_STEP_SUMMARY", f"Source archive {path}: integrity sha256-{base64.b64encode(digest).decode()}, "
+                                  f"strip_prefix {name}.\n")
+    return path
+
+
 def publish():
     """Safe to run again after a partial failure: it reuses the version commit and
     the tag that an earlier attempt of the same run created, and never replaces a
@@ -525,6 +562,9 @@ def publish():
                    {"sha": commit, "force": False}, allow=(422,)) is None:
                 fail(f"{branch} moved during the run. Nothing was tagged or released. Start a new run.")
 
+    # Built before the tag, so a bad archive leaves no tag behind.
+    archive = source_archive(repo, version, commit)
+
     # The tag: reuse it only if it points to exactly this commit.
     ref = api(f"repos/{repo}/git/ref/tags/{version}", allow=(404,))
     if ref is None:
@@ -540,11 +580,12 @@ def publish():
         print(f"Reusing the tag {version} from an earlier attempt.")
 
     # The release: create it once. An existing release is never replaced or edited.
-    # The docs are attached as it is created, so a release never exists without them.
+    # The docs and the source archive are attached as it is created, so a release
+    # never exists without them.
     if api(f"repos/{repo}/releases/tags/{version}", allow=(404,)) is None:
         subprocess.run(["gh", "release", "create", version, "--verify-tag", "--title", f"Release {version}",
                         "--notes-file", "notes.md", f"--latest={latest}",
-                        "docs-major.zip", "docs-root.zip"], check=True)
+                        "docs-major.zip", "docs-root.zip", archive], check=True)
     else:
         print(f"The release {version} already exists. Nothing to do.")
     append("GITHUB_STEP_SUMMARY", f"Released {version} at {commit}.\n")

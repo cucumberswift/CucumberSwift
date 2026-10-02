@@ -10,11 +10,13 @@ network access or git history. Only the standard library is used.
 import base64
 import copy
 import difflib
+import hashlib
 import io
 import json
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -58,6 +60,8 @@ class Fake:
         self.graphql = {}     # pull request number -> pullRequest node
         self.runs = []        # every run() call
         self.processes = []   # every subprocess.run() call
+        self.local = {SHA}    # commits in the local clone
+        self.archive = None   # (entries, commit id) git archive writes; None: the repository's, from the commit
 
     # release.api
     def api(self, path, method="GET", body=None, allow=(), paginate=False, token=None):
@@ -92,6 +96,11 @@ class Fake:
             return "".join(f"{sha}\n" for sha, _ in self.commits)
         if args[:4] == ("git", "log", "-1", "--format=%s"):
             return dict(self.commits)[args[4]] + "\n"
+        if args[:5] == ("git", "fetch", "--no-tags", "--depth=1", "origin"):
+            self.local.add(args[5])
+            return ""
+        if args[:2] == ("git", "archive"):
+            return self.git_archive(*args[2:])
         if args[:3] == ("gh", "api", "graphql"):
             number = int(next(a for a in args if a.startswith("number="))[len("number="):])
             return json.dumps({"data": {"repository": {"pullRequest": self.graphql[number]}}})
@@ -100,6 +109,8 @@ class Fake:
     # release.succeeds
     def succeeds(self, *args):
         remote = "refs/remotes/origin/"
+        if args[:3] == ("git", "cat-file", "-e"):
+            return args[3].endswith("^{commit}") and args[3][:-len("^{commit}")] in self.local
         if args[:4] == ("git", "rev-parse", "--verify", "-q"):
             return args[4].startswith(remote) and args[4][len(remote):] in self.support
         if args[:3] == ("git", "merge-base", "--is-ancestor"):
@@ -107,6 +118,30 @@ class Fake:
             return (tag.startswith("refs/tags/") and branch.startswith(remote)
                     and tag[len("refs/tags/"):] in self.support.get(branch[len(remote):], ()))
         raise AssertionError(f"unexpected command: {args}")
+
+    def git_archive(self, fmt, prefix, flag, path, commit):
+        if (fmt, flag) != ("--format=tar.gz", "-o") or not prefix.startswith("--prefix="):
+            raise AssertionError(f"unexpected git archive: {fmt} {prefix} {flag}")
+        if commit not in self.local:
+            raise AssertionError(f"git archive of {commit}, which is not in the local clone")
+        entries, comment = self.archive or (ARCHIVE_FILES, commit)
+        prefix = prefix[len("--prefix="):]
+        with tarfile.open(path, "w:gz", format=tarfile.PAX_FORMAT,
+                          pax_headers={"comment": comment} if comment else {}) as archive:
+            for entry in [""] + list(entries):
+                # A TarInfo is written as it is, with its full name; a string is a path inside the prefix.
+                if isinstance(entry, tarfile.TarInfo):
+                    archive.addfile(entry)
+                    continue
+                info = tarfile.TarInfo((prefix + entry).rstrip("/"))
+                if not entry or entry.endswith("/"):
+                    info.type = tarfile.DIRTYPE
+                    archive.addfile(info)
+                else:
+                    data = entry.encode()
+                    info.size = len(data)
+                    archive.addfile(info, io.BytesIO(data))
+        return ""
 
     # subprocess.run, used directly only for `gh release create`
     def process(self, args, **kwargs):
@@ -939,6 +974,16 @@ PLIST_TEXT = """<?xml version="1.0" encoding="UTF-8"?>
 """
 COMMIT = "c" * 40
 TAG_OBJECT = "7" * 40
+# Paths inside the archive's prefix, as git archive lists them. A trailing / is a directory.
+ARCHIVE_FILES = ("BUILD.bazel", "MODULE.bazel", "REPO.bazel", "Tests/", "Tests/MODULE.bazel")
+ARCHIVE = "CucumberSwift-5.0.11.tar.gz"
+
+
+def member(name, kind=tarfile.REGTYPE, target=""):
+    """An archive entry with its full name, for Fake.git_archive."""
+    info = tarfile.TarInfo(name)
+    info.type, info.linkname = kind, target
+    return info
 
 
 def encoded(text):
@@ -948,7 +993,8 @@ def encoded(text):
 class PublishTests(ReleaseTestCase):
     def setUp(self):
         super().setUp()
-        os.environ.update(BRANCH="main", VERSION="5.0.11", LATEST="true", PLIST=PLIST)
+        os.environ.update(BRANCH="main", VERSION="5.0.11", LATEST="true", PLIST=PLIST,
+                          ARCHIVE_REQUIRES="MODULE.bazel BUILD.bazel REPO.bazel Tests/")
         r = self.fake.responses
         r[("GET", f"repos/{REPO}/git/ref/heads/main")] = {"object": {"sha": SHA}}
         r[("GET", f"repos/{REPO}/contents/{PLIST}?ref={SHA}")] = encoded(PLIST_TEXT)
@@ -997,9 +1043,75 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(self.body("POST", "git/refs"), {"ref": "refs/tags/5.0.11", "sha": TAG_OBJECT})
         self.assertEqual(self.fake.processes, [[
             "gh", "release", "create", "5.0.11", "--verify-tag", "--title", "Release 5.0.11",
-            "--notes-file", "notes.md", "--latest=true", "docs-major.zip", "docs-root.zip"]])
-        self.assertEqual(self.read(self.summary), f"Released 5.0.11 at {COMMIT}.\n")
+            "--notes-file", "notes.md", "--latest=true", "docs-major.zip", "docs-root.zip", ARCHIVE]])
+        self.assertEqual(self.read(self.summary), self.archive_summary() + f"Released 5.0.11 at {COMMIT}.\n")
         self.assertEqual(out, "")
+
+    def archive_summary(self):
+        with open(ARCHIVE, "rb") as handle:
+            digest = base64.b64encode(hashlib.sha256(handle.read()).digest()).decode()
+        return f"Source archive {ARCHIVE}: integrity sha256-{digest}, strip_prefix CucumberSwift-5.0.11.\n"
+
+    def archives(self):
+        return [r for r in self.fake.runs if r[:2] == ("git", "archive")]
+
+    def test_the_source_archive_is_built_from_the_version_commit(self):
+        self.call(release.publish)
+        self.assertIn(("git", "fetch", "--no-tags", "--depth=1", "origin", COMMIT), self.fake.runs)
+        self.assertEqual(self.archives(), [("git", "archive", "--format=tar.gz", "--prefix=CucumberSwift-5.0.11/",
+                                            "-o", ARCHIVE, COMMIT)])
+        with tarfile.open(ARCHIVE, "r:gz") as archive:
+            self.assertEqual(archive.pax_headers["comment"], COMMIT)
+            self.assertIn("CucumberSwift-5.0.11/Tests/MODULE.bazel", archive.getnames())
+
+    def test_without_a_version_commit_the_archive_needs_no_fetch(self):
+        del os.environ["PLIST"]
+        self.call(release.publish)
+        self.assertFalse([r for r in self.fake.runs if r[:2] == ("git", "fetch")])
+        self.assertEqual(self.archives()[0][-1], SHA)
+        self.assertEqual(self.fake.processes[0][-1], ARCHIVE)
+
+    def test_the_archive_is_named_after_the_repository(self):
+        os.environ["GITHUB_REPOSITORY"] = OTHER_REPO
+        for key in list(self.fake.responses):
+            self.fake.responses[(key[0], key[1].replace(REPO, OTHER_REPO))] = self.fake.responses.pop(key)
+        del os.environ["PLIST"]
+        self.call(release.publish)
+        self.assertEqual(self.archives()[0][3], "--prefix=CucumberSwiftExpressions-5.0.11/")
+        self.assertEqual(self.fake.processes[0][-1], "CucumberSwiftExpressions-5.0.11.tar.gz")
+        self.assertIn("strip_prefix CucumberSwiftExpressions-5.0.11.", self.read(self.summary))
+
+    def test_a_bad_archive_stops_the_run_before_the_tag(self):
+        prefix = "CucumberSwift-5.0.11/"
+        outside = f"{ARCHIVE} has files outside {prefix}."
+        missing = f"{ARCHIVE} is missing REPO.bazel, Tests/, or has them as another kind of file."
+        without = tuple(f for f in ARCHIVE_FILES if f not in ("REPO.bazel", "Tests/", "Tests/MODULE.bazel"))
+        for files, comment, error in (
+                (ARCHIVE_FILES, "b" * 40, f"{ARCHIVE} was not built from {COMMIT}."),
+                (ARCHIVE_FILES, None, f"{ARCHIVE} was not built from {COMMIT}."),
+                (without, COMMIT, missing),
+                (without + (member(prefix + "REPO.bazel", tarfile.SYMTYPE, "BUILD.bazel"),
+                            member(prefix + "Tests", tarfile.SYMTYPE, "Sources")), COMMIT, missing),
+                (without + ("REPO.bazel/", "Tests"), COMMIT, missing),
+                (ARCHIVE_FILES + ("../escape",), COMMIT, outside),
+                (ARCHIVE_FILES + (member("/etc/escape"),), COMMIT, outside),
+                (ARCHIVE_FILES + (member("CucumberSwift-5.0.12/BUILD.bazel"),), COMMIT, outside),
+                (ARCHIVE_FILES + (member("CucumberSwift-5.0.11x/BUILD.bazel"),), COMMIT, outside)):
+            with self.subTest(error=error, files=files):
+                self.fake.calls.clear()
+                self.fake.processes.clear()
+                self.blobs = iter(("1" * 40,))
+                self.fake.archive = (files, comment)
+                self.assertEqual(self.fails(release.publish), error)
+                self.assertFalse(self.fake.called("POST", f"repos/{REPO}/git/tags"))
+                self.assertFalse(self.fake.called("POST", f"repos/{REPO}/git/refs"))
+                self.assertEqual(self.fake.processes, [])
+
+    def test_without_required_paths_any_archive_from_the_commit_is_accepted(self):
+        del os.environ["ARCHIVE_REQUIRES"]
+        self.fake.archive = (("README.md",), COMMIT)
+        self.call(release.publish)
+        self.assertEqual(self.fake.processes[0][-1], ARCHIVE)
 
     def test_latest_false_is_passed_on(self):
         os.environ["LATEST"] = "false"
@@ -1074,7 +1186,7 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(out, f"Reusing the version commit {COMMIT} from an earlier attempt.\n"
                               "Reusing the tag 5.0.11 from an earlier attempt.\n"
                               "The release 5.0.11 already exists. Nothing to do.\n")
-        self.assertEqual(self.read(self.summary), f"Released 5.0.11 at {COMMIT}.\n")
+        self.assertEqual(self.read(self.summary), self.archive_summary() + f"Released 5.0.11 at {COMMIT}.\n")
 
     def test_a_rerun_after_the_commit_creates_the_tag_and_the_release(self):
         self.earlier_attempt()
