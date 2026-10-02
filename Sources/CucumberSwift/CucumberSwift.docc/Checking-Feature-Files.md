@@ -41,7 +41,7 @@ The first time Xcode builds a target that uses a package plugin, it asks you to 
 
 In every feature file:
 
-- **Keywords.** Text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `Scenario` without its colon), with a suggestion.
+- **Keywords.** Text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion.
 - **Structure.** A step outside a scenario or background, a step after `Examples`, and `Examples` outside a scenario.
 - **Tables.** A row with a different number of cells from the first row of its table, and a table that doesn't follow a step or `Examples`.
 - **Doc strings.** A doc string that doesn't follow a step, or is never closed.
@@ -52,6 +52,26 @@ Against the target's step definitions:
 
 - **Undefined steps.** A step that none of the target's step definitions matches. Each step of a `Scenario Outline` is checked with the values from its `Examples` filled in.
 - **Step definitions that can never match.** A string pattern that starts with `^` or ends with `$` but isn't a valid regular expression, or a regex literal that doesn't compile. The warning is on the step definition's line.
+
+### Fix misspelt keywords
+
+When the plugin suggests a keyword, as in "'Thne' is not a Gherkin keyword. Did you mean 'Then'?", the **Fix Feature Files** command makes the change for you. It applies every such suggestion in your feature files at once, and changes nothing else.
+
+- In Xcode, right-click the project or package in the Project navigator, choose **Fix Feature Files**, and choose the targets whose feature files to fix.
+- In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only that target's feature files.
+
+The command needs permission to change files in your project or package. Xcode asks each time you run it. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
+
+It lists each line it changed, before and after:
+
+```
+Features/Login.feature:12: Thne the user is signed in → Then the user is signed in
+Fixed 1 line in 1 of 4 feature files.
+```
+
+Fixing a line can turn the lines after it into steps, which the plugin checks more closely, so the command checks each file again and applies any new suggestion until nothing is left to fix. A file with nothing to fix is left exactly as it was. Other warnings, such as an undefined step or a table row with a cell too many, are still yours to fix.
+
+The command only needs CucumberSwift added with Swift Package Manager; the build plugin doesn't have to be added to a target.
 
 ### Know its limits
 

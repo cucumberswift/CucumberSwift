@@ -23,7 +23,7 @@ final class FeatureChecker {
     let file: String
     let definitions: [StepDefinition]?
 
-    private var report: (Diagnostic) -> Void = { _ in }
+    private var report: ((Diagnostic) -> Void)?
     private var english = true
     private var section = Section.none
     private var sawStep = false
@@ -42,6 +42,11 @@ final class FeatureChecker {
 
     func check(report: @escaping (Diagnostic) -> Void) {
         guard let contents = try? String(contentsOfFile: file, encoding: .utf8) else { return }
+        check(contents: contents, report: report)
+    }
+
+    /// Checks `contents` as the text of `file`.
+    func check(contents: String, report: @escaping (Diagnostic) -> Void) {
         self.report = report
         let lines = contents.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
         for (index, raw) in lines.enumerated() {
@@ -152,18 +157,21 @@ final class FeatureChecker {
     private func checkOtherText(_ text: String, line: Int, column: Int) {
         // Examples may have a description before their table.
         tableAllowed = section == .examples && exampleHeader == nil
-        let firstWord = String(text.prefix { !$0.isWhitespace && $0 != ":" })
-        let suggestion = Self.suggestion(for: firstWord, strict: !sawStep)
+        let header = Self.headerWithoutColon(in: text)
+        let firstWord = header.map { String(text.prefix($0.count)) }
+            ?? String(text.prefix { !$0.isWhitespace && $0 != ":" })
+        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: firstWord, strict: !sawStep)
+        let fix = suggestion.flatMap { Self.fix(replacing: firstWord, in: text, with: $0) }
         if sawStep, [.background, .scenario, .outline].contains(section) {
             let hint = suggestion.map { " Did you mean '\($0)'?" } ?? ""
-            warn(line, column, "Expected a step (Given, When, Then, And, But), a table or a doc string.\(hint)")
+            warn(line, column, "Expected a step (Given, When, Then, And, But), a table or a doc string.\(hint)", fix: fix)
         } else if let suggestion = suggestion {
-            warn(line, column, "'\(firstWord)' is not a Gherkin keyword. Did you mean '\(suggestion)'?")
-            // Read a header that is only missing its colon as that header, so the lines after it
-            // aren't reported too.
-            if suggestion == firstWord + ":" {
-                checkHeader(firstWord, line: line, column: column)
-            }
+            warn(line, column, "'\(firstWord)' is not a Gherkin keyword. Did you mean '\(suggestion)'?", fix: fix)
+        }
+        // Read a header that is only missing its colon as that header, so the lines after it
+        // aren't reported too.
+        if let header = header {
+            checkHeader(header, line: line, column: column)
         }
     }
 
@@ -187,8 +195,8 @@ final class FeatureChecker {
         }
     }
 
-    private func warn(_ line: Int, _ column: Int, _ message: String) {
-        report(.init(file: file, line: line, column: column, message: message))
+    private func warn(_ line: Int, _ column: Int, _ message: String, fix: Diagnostic.Fix? = nil) {
+        report?(.init(file: file, line: line, column: column, message: message, fix: fix))
     }
 }
 
@@ -216,6 +224,26 @@ extension FeatureChecker {
             }
         }
         return cells
+    }
+
+    /// The header that `text` starts with when it is written without its colon, or in the wrong case:
+    /// `Scenario Outline Foo` or `feature: F`. Not `Rule`, which also starts sentences.
+    private static func headerWithoutColon(in text: String) -> String? {
+        headers.first { header in
+            guard header != "Rule", text.prefix(header.count).lowercased() == header.lowercased() else { return false }
+            let next = text.dropFirst(header.count).first
+            return next.map { $0 == ":" || $0.isWhitespace } ?? true
+        }
+    }
+
+    /// The fix that replaces `word`, at the start of `text`, with the keyword `suggestion`. A colon
+    /// already after the word is kept rather than doubled. Nil when there is nothing to change.
+    private static func fix(replacing word: String, in text: String, with suggestion: String) -> Diagnostic.Fix? {
+        var replacement = suggestion
+        if suggestion.hasSuffix(":"), text.dropFirst(word.count).hasPrefix(":") {
+            replacement.removeLast()
+        }
+        return replacement == word ? nil : Diagnostic.Fix(text: word, replacement: replacement)
     }
 
     /// A keyword that `word` looks like a misspelling of. Before the first step of a scenario, text

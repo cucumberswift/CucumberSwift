@@ -15,7 +15,12 @@ let package = Package(
         // Checks feature files on every build, and shows each problem as a warning in Xcode.
         .plugin(
             name: "CucumberSwiftLint",
-            targets: ["CucumberSwiftLintPlugin"])
+            targets: ["CucumberSwiftLintPlugin"]),
+        // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
+        // or Fix Feature Files on the project's or package's menu in Xcode.
+        .plugin(
+            name: "FixFeatureFiles",
+            targets: ["Fix Feature Files"])
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.2.0"),
@@ -50,6 +55,18 @@ let package = Package(
             capability: .buildTool(),
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/CucumberSwiftLintPlugin"),
+        // Named as Xcode shows it on the project's or package's menu.
+        .plugin(
+            name: "Fix Feature Files",
+            capability: .command(
+                intent: .custom(
+                    verb: "fix-feature-files",
+                    description: "Fixes the misspelt Gherkin keywords that CucumberSwiftLint reports in feature files"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Fixes misspelt Gherkin keywords in your feature files")
+                ]),
+            dependencies: ["CucumberSwiftLintTool"],
+            path: "Plugins/FixFeatureFilesPlugin"),
         .testTarget(
             name: "CucumberSwiftLintToolTests",
             dependencies: ["CucumberSwiftLintTool"]),
