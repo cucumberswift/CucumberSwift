@@ -27,15 +27,22 @@ enum StubGenerator {
         return regex.trimmingCharacters(in: .whitespaces)
     }
 
-    /// The generated step definition for a step that no step definition matches. Steps that differ only in
-    /// their arguments share one, which `getStubs` lists under the first of them.
+    /// The generated step definition for a step that no step definition matches: the step's own, or else
+    /// the one `getStubs` lists for a step with the same pattern, preferring one that also has a data table
+    /// or doc string when this step does, so the definition binds `step` to read it.
     static func stub(for step: Step,
                      in features: [Feature],
                      regexLiteralStyle: RegexLiteralStyle = implementorRegexLiteralStyle) -> String? {
+        let stubs = getStubs(for: features, regexLiteralStyle: regexLiteralStyle)
+        if let own = stubs.first(where: { $0.step === step }) {
+            return own.generatedSwift
+        }
         let regex = regexForTokens(Lexer(step.match).lex())
-        return getStubs(for: features, regexLiteralStyle: regexLiteralStyle)
-            .first { regexForTokens(Lexer($0.step.match).lex()) == regex }?
-            .generatedSwift
+        let samePattern = stubs.filter { regexForTokens(Lexer($0.step.match).lex()) == regex }
+        let sameShape = samePattern.first {
+            ($0.step.dataTable != nil) == (step.dataTable != nil) && ($0.step.docString != nil) == (step.docString != nil)
+        }
+        return (sameShape ?? samePattern.first)?.generatedSwift
     }
 
     static func getStubs(for features: [Feature],

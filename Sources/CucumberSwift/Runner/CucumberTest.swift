@@ -16,7 +16,8 @@ open class CucumberTest: XCTestCase {
     static var featuresLoaded = false
 
     /// Calls `failStep` for the steps that no step definition matches, so that a replacement of
-    /// `failStep` still sees their failures, now that each one fails in its own test.
+    /// `failStep` still sees their failures, now that each one fails in its own test. It never runs, so
+    /// what it records goes to the test that is running.
     private static let missingStepDefinitionReporter = CucumberTest()
 
     #if DEBUG
@@ -300,10 +301,16 @@ open class CucumberTest: XCTestCase {
         }
     }
 
-    /// Records a failure on the test XCTest is running, which for a step with no step definition is the
-    /// step's own test, or its scenario's.
     public dynamic func failStep(_ issue: XCTIssue) {
-        (Cucumber.shared.runningTestCase ?? self).record(issue)
+        record(issue)
+    }
+
+    override open func record(_ issue: XCTIssue) {
+        guard self === Self.missingStepDefinitionReporter, let runningTestCase = Cucumber.shared.runningTestCase else {
+            super.record(issue)
+            return
+        }
+        runningTestCase.record(issue)
     }
 }
 

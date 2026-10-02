@@ -13,6 +13,15 @@ import XCTest
 @testable import CucumberSwift
 
 class UndefinedStepTests: XCTestCase {
+    private static let sameTextWithAndWithoutADataTable = """
+    Feature: Calculator
+       Scenario: Without a table
+         Given I have entered numbers
+       Scenario: With a table
+         Given I have entered numbers
+           | 2 |
+           | 3 |
+    """
     private static let featureURI = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("Undefined.feature").absoluteString
 
     private var capturing = false
@@ -108,6 +117,25 @@ class UndefinedStepTests: XCTestCase {
         recordedIssues.forEach {
             XCTAssertTrue($0.compactDescription.contains(#"Given(#/^I have entered (\d+) into the calculator$/#)"#), $0.compactDescription)
         }
+    }
+
+    // Two steps with the same text and keyword get a step definition each, and only the one for the step with
+    // a data table binds `step` to read it.
+    func testAStepWithADataTableGetsTheStepDefinitionThatReadsIt() throws {
+        let features = Cucumber(withString: Self.sameTextWithAndWithoutADataTable).features
+        let steps = features.flatMap(\.scenarios).flatMap(\.steps)
+
+        XCTAssertFalse(try XCTUnwrap(StubGenerator.stub(for: steps[0], in: features)).contains("step.dataTable"))
+        XCTAssertTrue(try XCTUnwrap(StubGenerator.stub(for: steps[1], in: features)).contains("let dataTable = step.dataTable"))
+    }
+
+    // A step from features read again since is not in the list, so its step definition is found by its
+    // pattern and by whether it has a data table.
+    func testACopyOfAStepWithADataTableGetsTheStepDefinitionThatReadsIt() throws {
+        let features = Cucumber(withString: Self.sameTextWithAndWithoutADataTable).features
+        let copy = try XCTUnwrap(Cucumber(withString: Self.sameTextWithAndWithoutADataTable).features.last?.scenarios.last?.steps.first)
+
+        XCTAssertTrue(try XCTUnwrap(StubGenerator.stub(for: copy, in: features)).contains("let dataTable = step.dataTable"))
     }
 
     // Each undefined step fails in its own test, so testGherkin doesn't report it a second time.
