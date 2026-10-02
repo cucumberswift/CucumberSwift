@@ -153,7 +153,7 @@ CucumberSwift/Tools/Xcode/gherkin-highlighting.sh install
 
 Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle, the Gherkin plug-in, which contains only data and no code; choose **Load Bundle**. Xcode asks again after each Xcode update.
 
-Feature files then open as **Gherkin Query Document**. A feature file Xcode has already opened before keeps its type, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
+Feature files then open as Gherkin: in the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file Xcode has already opened before keeps the type it had, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
 
 The script installs these two items:
 
