@@ -138,6 +138,20 @@ class UndefinedStepTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(StubGenerator.stub(for: copy, in: features)).contains("let dataTable = step.dataTable"))
     }
 
+    // A step in a scenario that its tags leave out has no generated step definition, so its failure has none.
+    func testAStepWithNoGeneratedStepDefinitionFailsWithoutOne() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Calculator
+           Scenario: Add two numbers
+             Given I have entered 2 into the calculator
+        """, uri: Self.featureURI)
+        Cucumber.shouldRunWith = { _, _ in false }
+        let step = try XCTUnwrap(scenarios.first?.steps.first)
+
+        XCTAssertEqual(CucumberTest.missingStepDefinitionIssue(for: step).compactDescription,
+                       "No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file: \n")
+    }
+
     // Each undefined step fails in its own test, so testGherkin doesn't report it a second time.
     func testTestGherkinDoesNotReportAnUndefinedStep() throws {
         Cucumber.shared.parseIntoFeatures("""
