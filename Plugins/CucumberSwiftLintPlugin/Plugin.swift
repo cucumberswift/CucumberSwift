@@ -35,9 +35,9 @@ private func lintCommands(tool: Path, workDirectory: Path, targetName: String, f
     for file in files {
         for path in expand(file.string) {
             switch URL(fileURLWithPath: path).pathExtension {
-            case "feature": features.insert(path)
-            case "swift": swiftFiles.insert(path)
-            default: break
+                case "feature": features.insert(path)
+                case "swift": swiftFiles.insert(path)
+                default: break
             }
         }
     }
@@ -62,5 +62,5 @@ private func expand(_ path: String) -> [String] {
     guard let enumerator = FileManager.default.enumerator(atPath: path) else { return [] }
     return enumerator.compactMap { $0 as? String }
         .filter { !$0.hasPrefix(".build/") && !$0.contains("/.build/") }
-        .map { (path as NSString).appendingPathComponent($0) }
+        .map { URL(fileURLWithPath: path).appendingPathComponent($0).path }
 }
