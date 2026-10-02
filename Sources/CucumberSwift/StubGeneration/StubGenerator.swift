@@ -191,7 +191,8 @@ enum StubGenerator {
                     (type: "docString", count: $1.docString != nil ? 1 : 0)
                 ]
 
-                // Steps that differ only in their parameters, such as `5` and `-5`, share a step definition.
+                // Steps with the same pattern share a step definition. As Cucumber Expressions, steps that
+                // differ only in a number, such as `5` and `-5`, do; regular expressions keep the `-`.
                 if let m = lookup[definition.pattern],
                    !m.keyword.contains($1.keyword) {
                     m.insertKeyword($1.keyword)
