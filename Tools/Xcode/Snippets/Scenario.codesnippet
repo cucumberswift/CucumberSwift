@@ -9,17 +9,17 @@
 		<string>All</string>
 	</array>
 	<key>IDECodeSnippetContents</key>
-    <string>Scenario: &lt;#description#&gt;
-        Given &lt;#precondition#&gt;
-        When &lt;#action#&gt;
-        Then &lt;#testable result#&gt;
-    </string>
+	<string>Scenario: &lt;#title#&gt;
+  Given &lt;#precondition#&gt;
+  When &lt;#action#&gt;
+  Then &lt;#testable result#&gt;
+</string>
 	<key>IDECodeSnippetIdentifier</key>
 	<string>45ba0cb1-d6ba-4874-9bf2-878b033f5929</string>
 	<key>IDECodeSnippetLanguage</key>
 	<string>Xcode.SourceCodeLanguage.Gherkin</string>
 	<key>IDECodeSnippetSummary</key>
-	<string>Used for creating a scenario in gherkin</string>
+	<string>Used for creating a scenario in Gherkin</string>
 	<key>IDECodeSnippetTitle</key>
 	<string>Scenario</string>
 	<key>IDECodeSnippetUserSnippet</key>

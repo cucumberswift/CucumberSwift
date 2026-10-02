@@ -9,20 +9,20 @@
 		<string>All</string>
 	</array>
 	<key>IDECodeSnippetContents</key>
-    <string>Feature: &lt;#title#&gt;
-    Description: &lt;#description#&gt;
-    
-        Scenario: &lt;#title#&gt;
-            Given &lt;#precondition#&gt;
-            When &lt;#action#&gt;
-            Then &lt;#testable result#&gt;
-    </string>
+	<string>Feature: &lt;#title#&gt;
+  &lt;#description#&gt;
+
+  Scenario: &lt;#title#&gt;
+    Given &lt;#precondition#&gt;
+    When &lt;#action#&gt;
+    Then &lt;#testable result#&gt;
+</string>
 	<key>IDECodeSnippetIdentifier</key>
-    <string>61e99da6-829f-47aa-afb1-ca677e220315</string>
+	<string>61e99da6-829f-47aa-afb1-ca677e220315</string>
 	<key>IDECodeSnippetLanguage</key>
 	<string>Xcode.SourceCodeLanguage.Gherkin</string>
 	<key>IDECodeSnippetSummary</key>
-	<string>Used for creating a feature in gherkin</string>
+	<string>Used for creating a feature in Gherkin</string>
 	<key>IDECodeSnippetTitle</key>
 	<string>Feature</string>
 	<key>IDECodeSnippetUserSnippet</key>

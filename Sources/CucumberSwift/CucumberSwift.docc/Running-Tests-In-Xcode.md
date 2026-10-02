@@ -140,7 +140,7 @@ The rest of the scenario doesn't run, and Xcode shows the steps after that one a
 
 ### Highlight feature files
 
-Xcode shows `.feature` files as plain text. CucumberSwift comes with a Gherkin grammar for Xcode that colors keywords, tags, comments, strings, doc strings, `<placeholders>`, table separators and numbers. Only English keywords are colored. It is a script you run once, not part of the library, and it changes nothing in Xcode itself: it copies two items into your home folder.
+Xcode shows `.feature` files as plain text. CucumberSwift comes with a Gherkin grammar for Xcode that colors keywords, tags, comments, strings, doc strings, `<placeholders>`, table separators and numbers. Only English keywords are colored. It also comes with code snippets for a feature, a scenario and a scenario outline. You install both with a script you run once. They are not part of the library, and the script changes nothing in Xcode itself: it copies files into your home folder.
 
 It relies on how Xcode loads grammars and plug-ins, which Apple doesn't document, so a future version of Xcode could stop highlighting your feature files. Your tests are not affected either way.
 
@@ -155,10 +155,13 @@ Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle
 
 Feature files then open as Gherkin: in the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file Xcode has already opened before keeps the type it had, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
 
-The script installs these two items:
+To add a snippet, open the Library (View ▸ Show Library, or ⇧⌘L) in a feature file and choose it, or start typing its shortcut, `gherkin-feature`, `gherkin-scenario` or `gherkin-scenario-outline`, and choose it from the completions. Press Tab to move between its placeholders.
+
+The script installs these items:
 
 - `~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin`, which tells Xcode that `.feature` files are Gherkin
 - `~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec`, the grammar
+- three snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
 
 To remove them, run the script with `uninstall`, then quit and reopen Xcode:
 

@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 #
-# Installs or removes Gherkin syntax highlighting for .feature files in Xcode.
+# Installs or removes Gherkin syntax highlighting and code snippets for .feature
+# files in Xcode.
 #
 #   Tools/Xcode/gherkin-highlighting.sh install
 #   Tools/Xcode/gherkin-highlighting.sh uninstall
 #   Tools/Xcode/gherkin-highlighting.sh status
 #
-# It copies two items into your home folder and changes nothing else:
+# It copies these into your home folder and changes nothing else:
 #   ~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin   (data only, no code)
 #   ~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec
+#   ~/Library/Developer/Xcode/UserData/CodeSnippets/<id>.codesnippet, one per
+#     snippet in Snippets/, named after its IDECodeSnippetIdentifier as Xcode does
 #
 # Quit and reopen Xcode afterwards. This relies on undocumented Xcode behaviour.
 
@@ -18,6 +21,22 @@ source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 xcode_dir="$HOME/Library/Developer/Xcode"
 plugin="$xcode_dir/Plug-ins/Gherkin.ideplugin"
 grammar="$xcode_dir/Specifications/Gherkin.xclangspec"
+snippets_dir="$xcode_dir/UserData/CodeSnippets"
+
+# Prints the installed path of each snippet in Snippets/, with its source.
+snippets() {
+    local snippet id
+    for snippet in "$source_dir"/Snippets/*.codesnippet; do
+        id="$(/usr/libexec/PlistBuddy -c 'Print :IDECodeSnippetIdentifier' "$snippet")"
+        printf '%s\t%s\n' "$snippets_dir/$id.codesnippet" "$snippet"
+    done
+}
+
+installed_items() {
+    echo "$plugin"
+    echo "$grammar"
+    snippets | cut -f1
+}
 
 xcode_is_running() {
     pgrep -xq Xcode
@@ -32,27 +51,30 @@ remind_to_restart() {
 }
 
 install() {
-    mkdir -p "$xcode_dir/Plug-ins" "$xcode_dir/Specifications"
+    mkdir -p "$xcode_dir/Plug-ins" "$xcode_dir/Specifications" "$snippets_dir"
     # Remove the old copy first: copying a folder onto an existing one nests it.
     rm -rf "$plugin"
     cp -R "$source_dir/Gherkin.ideplugin" "$plugin"
     cp "$source_dir/Gherkin.xclangspec" "$grammar"
+    local target snippet
+    while IFS=$'\t' read -r target snippet; do
+        cp "$snippet" "$target"
+    done < <(snippets)
     echo "Installed:"
-    echo "  $plugin"
-    echo "  $grammar"
+    installed_items | sed 's/^/  /'
     remind_to_restart
     echo "If Xcode asks about an unexpected code bundle, choose Load Bundle."
 }
 
 uninstall() {
-    local removed=0
-    for item in "$plugin" "$grammar"; do
+    local removed=0 item
+    while read -r item; do
         if [ -e "$item" ]; then
             rm -rf "$item"
             echo "Removed $item"
             removed=1
         fi
-    done
+    done < <(installed_items)
     if [ "$removed" -eq 0 ]; then
         echo "Gherkin highlighting is not installed."
         return
@@ -61,13 +83,14 @@ uninstall() {
 }
 
 status() {
-    for item in "$plugin" "$grammar"; do
+    local item
+    while read -r item; do
         if [ -e "$item" ]; then
             echo "Installed:     $item"
         else
             echo "Not installed: $item"
         fi
-    done
+    done < <(installed_items)
 }
 
 case "${1:-}" in

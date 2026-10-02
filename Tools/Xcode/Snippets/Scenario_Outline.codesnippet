@@ -9,18 +9,21 @@
 		<string>All</string>
 	</array>
 	<key>IDECodeSnippetContents</key>
-    <string>Scenario Outline: &lt;#description#&gt;
-            &lt;#keyword#&gt; &lt;#precondition#&gt;
-                Examples:
-                | &lt;#header#&gt; | &lt;#header#&gt;  |
-                |  &lt;#cell#&gt;  |  &lt;#cell#&gt;   |
-    </string>
+	<string>Scenario Outline: &lt;#title#&gt;
+  Given &lt;#precondition#&gt;
+  When &lt;#action#&gt;
+  Then &lt;#testable result#&gt;
+
+  Examples:
+    | &lt;#header#&gt; | &lt;#header#&gt; |
+    | &lt;#value#&gt; | &lt;#value#&gt; |
+</string>
 	<key>IDECodeSnippetIdentifier</key>
 	<string>e944b9fc-7ede-47b4-b5d5-d5d7156443f9</string>
 	<key>IDECodeSnippetLanguage</key>
 	<string>Xcode.SourceCodeLanguage.Gherkin</string>
 	<key>IDECodeSnippetSummary</key>
-	<string>Used for creating a scenario in gherkin</string>
+	<string>Used for creating a scenario outline in Gherkin</string>
 	<key>IDECodeSnippetTitle</key>
 	<string>Scenario Outline</string>
 	<key>IDECodeSnippetUserSnippet</key>
