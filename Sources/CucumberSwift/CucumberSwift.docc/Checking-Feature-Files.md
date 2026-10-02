@@ -6,11 +6,7 @@ See mistakes in your feature files as warnings in Xcode, before you run a single
 
 Without it, you find a mistake in a feature file only when the tests run: a misspelt keyword, a table row with a cell too many, a doc string that never closes, or a step that no step definition matches. The `CucumberSwiftLint` build tool plugin checks every `.feature` file in a target each time you build it, and reports each problem as a warning on the line it was found on. Xcode shows the warnings in the editor and in the Issue navigator, as it does for Swift.
 
-```
-Belly.feature:8:5: warning: Undefined step: no step definition matches "my belly should rumble"
-Belly.feature:12:5: warning: Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Then'?
-Belly.feature:21:7: warning: This row has 3 cells, but the table's first row (line 19) has 2
-```
+![A feature file in Xcode with four warnings shown inline: an undefined step on line 8, the misspelt keyword "Thne" on line 12, a table row with one cell too many on line 21, and a doc string that is never closed on line 25.](CheckingFeatureFiles-Warnings.png)
 
 The plugin only reports warnings. It never fails a build, and it changes nothing about how the tests run.
 
