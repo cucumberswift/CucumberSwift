@@ -71,7 +71,7 @@ install() {
 uninstall() {
     local removed=0 item
     while read -r item; do
-        if [[ -e "$item" ]]; then
+        if [[ -e "$item" || -L "$item" ]]; then
             rm -rf "$item"
             echo "Removed $item"
             removed=1
@@ -87,7 +87,7 @@ uninstall() {
 status() {
     local item
     while read -r item; do
-        if [[ -e "$item" ]]; then
+        if [[ -e "$item" || -L "$item" ]]; then
             echo "Installed:     $item"
         else
             echo "Not installed: $item"
