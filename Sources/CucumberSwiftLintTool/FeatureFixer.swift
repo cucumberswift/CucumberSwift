@@ -13,21 +13,47 @@ enum FeatureFixer {
         var description: String { "\(file):\(line): \(before) → \(after)" }
     }
 
+    /// What fixing a set of feature files did.
+    struct Outcome {
+        let files: [String]
+        let changes: [Change]
+        let failures: [WriteError]
+    }
+
+    /// A feature file whose fixes couldn't be saved.
+    struct WriteError: Error, CustomStringConvertible {
+        let file: String
+        let reason: String
+
+        var description: String { "\(file): error: Couldn't save the fixes: \(reason)" }
+    }
+
     private static let byteOrderMark = Data([0xEF, 0xBB, 0xBF])
     // Each pass can turn a description into steps, which are checked more closely, so a file is
     // checked again after each pass. A few passes are always enough.
     private static let maximumPasses = 10
 
     /// Fixes the feature files in `paths`, each a `.feature` file or a folder to search, and
-    /// returns what it changed.
-    static func fix(paths: [String]) -> (files: [String], changes: [Change]) {
+    /// returns what it changed and which files it couldn't save.
+    static func fix(paths: [String]) -> Outcome {
         let files = featureFiles(in: paths)
-        return (files, files.flatMap { fix(file: $0) })
+        var changes = [Change]()
+        var failures = [WriteError]()
+        for file in files {
+            do {
+                changes += try fix(file: file)
+            } catch let error as WriteError {
+                failures.append(error)
+            } catch {
+                failures.append(WriteError(file: file, reason: error.localizedDescription))
+            }
+        }
+        return Outcome(files: files, changes: changes, failures: failures)
     }
 
     /// Fixes one feature file, and returns what it changed. A file with nothing to fix is not
-    /// written to.
-    static func fix(file: String) -> [Change] {
+    /// written to. Throws a `WriteError` if the fixes can't be saved.
+    static func fix(file: String) throws -> [Change] {
         guard var data = FileManager.default.contents(atPath: file) else { return [] }
         // Foundation drops a byte order mark when it decodes, so keep it to write back.
         let hasByteOrderMark = data.starts(with: byteOrderMark)
@@ -45,7 +71,11 @@ enum FeatureFixer {
         }
         guard !changes.isEmpty else { return [] }
         let fixed = (hasByteOrderMark ? byteOrderMark : Data()) + Data(contents.utf8)
-        guard FileManager.default.createFile(atPath: file, contents: fixed) else { return [] }
+        do {
+            try fixed.write(to: URL(fileURLWithPath: file))
+        } catch {
+            throw WriteError(file: file, reason: error.localizedDescription)
+        }
         return changes.values.sorted { $0.line < $1.line }
     }
 

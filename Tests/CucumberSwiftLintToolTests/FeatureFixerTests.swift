@@ -7,7 +7,7 @@ final class FeatureFixerTests: LintTestCase {
     func fix(_ feature: String) throws -> (text: String, changes: [String]) {
         let file = directory.appendingPathComponent("Test.feature")
         try feature.write(to: file, atomically: true, encoding: .utf8)
-        let changes = FeatureFixer.fix(file: file.path).map { "\($0.line): \($0.before) → \($0.after)" }
+        let changes = try FeatureFixer.fix(file: file.path).map { "\($0.line): \($0.before) → \($0.after)" }
         return (try String(contentsOf: file, encoding: .utf8), changes)
     }
 
@@ -113,7 +113,7 @@ final class FeatureFixerTests: LintTestCase {
         let past = Date(timeIntervalSince1970: 1_000_000_000)
         try FileManager.default.setAttributes([.modificationDate: past], ofItemAtPath: file.path)
 
-        XCTAssertEqual(FeatureFixer.fix(file: file.path), [])
+        XCTAssertEqual(try FeatureFixer.fix(file: file.path), [])
         XCTAssertEqual(try Data(contentsOf: file), original)
         let modified = try FileManager.default.attributesOfItem(atPath: file.path)[.modificationDate] as? Date
         XCTAssertEqual(modified, past)
@@ -124,7 +124,7 @@ final class FeatureFixerTests: LintTestCase {
         let original = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tGiven a step\r\n\tThne a step  \r\n".utf8)
         try original.write(to: file)
 
-        XCTAssertEqual(FeatureFixer.fix(file: file.path).map(\.after), ["Then a step"])
+        XCTAssertEqual(try FeatureFixer.fix(file: file.path).map(\.after), ["Then a step"])
         let expected = Data([0xEF, 0xBB, 0xBF]) + Data("Feature: F\r\n  Scenario: S\r\n\tGiven a step\r\n\tThen a step  \r\n".utf8)
         XCTAssertEqual(try Data(contentsOf: file), expected)
     }
@@ -171,6 +171,21 @@ final class FeatureFixerTests: LintTestCase {
         """
         XCTAssertEqual(try fix(french).changes, [])
         XCTAssertEqual(try fix(french).text, french)
+    }
+
+    func testAFileThatCantBeSavedIsAnError() throws {
+        let file = directory.appendingPathComponent("Test.feature")
+        try "Feature: F\n  Scenario: S\n    Given a step\n    Thne another step\n".write(to: file, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o444], ofItemAtPath: file.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path) }
+
+        XCTAssertThrowsError(try FeatureFixer.fix(file: file.path)) { error in
+            XCTAssertEqual((error as? FeatureFixer.WriteError)?.file, file.path)
+        }
+        let result = FeatureFixer.fix(paths: [directory.path])
+        XCTAssertEqual(result.changes, [])
+        XCTAssertEqual(result.failures.map(\.file), [file.standardizedFileURL.path])
+        XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("Thne"))
     }
 
     // MARK: Agreement with the build plugin
