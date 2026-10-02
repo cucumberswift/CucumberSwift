@@ -309,7 +309,7 @@ open class CucumberTest: XCTestCase {
 /// its suite has no tests, and what it records goes to the test that is running, the step's own or its
 /// scenario's.
 private final class MissingStepDefinitionReporter: CucumberTest {
-    override class var defaultTestSuite: XCTestSuite {
+    override static var defaultTestSuite: XCTestSuite {
         XCTestSuite(name: String(describing: Self.self))
     }
 
