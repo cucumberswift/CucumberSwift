@@ -18,6 +18,10 @@ class UndefinedStepTests: XCTestCase {
     private var capturing = false
     private var recordedIssues = [XCTIssue]()
 
+    private var scenarios: [Scenario] {
+        Cucumber.shared.features.flatMap(\.scenarios)
+    }
+
     private static func resetCucumber() {
         Cucumber.shared.reset()
         Cucumber.shared.failedScenarios.removeAll()
@@ -41,10 +45,6 @@ class UndefinedStepTests: XCTestCase {
     override func setUpWithError() throws {
         Self.resetCucumber()
         addTeardownBlock { Self.resetCucumber() }
-    }
-
-    private var scenarios: [Scenario] {
-        Cucumber.shared.features.flatMap(\.scenarios)
     }
 
     /// Runs each step's test in order, as a test per step does: a step that its test would skip doesn't run.

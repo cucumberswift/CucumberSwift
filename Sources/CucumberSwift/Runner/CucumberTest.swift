@@ -15,6 +15,10 @@ open class CucumberTest: XCTestCase {
     private static var hasBeenBuilt = false
     static var featuresLoaded = false
 
+    /// Calls `failStep` for the steps that no step definition matches, so that a replacement of
+    /// `failStep` still sees their failures, now that each one fails in its own test.
+    private static let missingStepDefinitionReporter = CucumberTest()
+
     #if DEBUG
     static func resetSetUp() {
         hasBeenBuilt = false
@@ -262,10 +266,6 @@ open class CucumberTest: XCTestCase {
                         associatedError: nil,
                         attachments: attachments)
     }
-
-    /// Calls `failStep` for the steps that no step definition matches, so that a replacement of
-    /// `failStep` still sees their failures, now that each one fails in its own test.
-    private static let missingStepDefinitionReporter = CucumberTest()
 
     /// Fails a step that no step definition matches on the test XCTest is running: the step's own test, or
     /// its scenario's.

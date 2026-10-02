@@ -187,8 +187,9 @@ extension Cucumber: StepImplementation {
             }
             afterFeatureHooks[feature, default: 0] += 1
             // Each step with no step definition fails in its own test, in the order the steps run (#262).
-            let issues = recordedIssues.filter { $0.sourceCodeContext.location?.fileURL.lastPathComponent == URL(string: feature.uri)?.lastPathComponent }
-            let expected = feature.uri.hasSuffix("/CucumberSwift.feature") ? unimplementedStepDefinitions : []
+            let featureFile = URL(string: feature.uri)?.lastPathComponent
+            let issues = recordedIssues.filter { $0.sourceCodeContext.location?.fileURL.lastPathComponent == featureFile }
+            let expected = featureFile == "CucumberSwift.feature" ? unimplementedStepDefinitions : []
             XCTAssertEqual(issues.count, expected.count)
             zip(issues, expected).forEach { XCTAssert($0.description.contains($1), $0.description) }
         }
