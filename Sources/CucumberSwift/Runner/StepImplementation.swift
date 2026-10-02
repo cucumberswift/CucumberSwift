@@ -36,7 +36,8 @@ import Foundation
     /// it runs. Defaults to `false`. Setting the `CUCUMBER_VERBOSE` environment variable to `1` or
     /// `true` turns it on without a code change.
     @objc optional var verbose: Bool { get }
-    /// How the step definitions CucumberSwift generates for undefined steps write their regular
-    /// expressions. The default, ``RegexLiteralStyle/extendedDelimiter``, compiles in any test target.
+    /// How the step definitions CucumberSwift generates for undefined steps write their regex literals,
+    /// when ``Cucumber/generateRegexLiterals`` asks for regex literals rather than Cucumber Expressions.
+    /// The default, ``RegexLiteralStyle/extendedDelimiter``, compiles in any test target.
     @objc optional var regexLiteralStyle: RegexLiteralStyle { get }
 }

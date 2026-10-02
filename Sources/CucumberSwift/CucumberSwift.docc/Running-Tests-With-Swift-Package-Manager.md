@@ -74,7 +74,7 @@ To see which steps ran and how each scenario ended, turn on verbose output: `CUC
 
 ### Paste generated step definitions
 
-For each step with no step definition, CucumberSwift reports a failure with the Swift code for one. That code writes its regular expression as `#/^…$/#`, which compiles in any test target. To have it written as `/^…$/` instead, your test target needs bare slash regex literals: the Swift 6 language mode, or this setting in the Swift 5 language mode (tools version 5.8 or later):
+For each step with no step definition, CucumberSwift reports a failure with the Swift code for one, a Cucumber expression that compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, that code is a regex literal instead, written as `#/^…$/#`, which also compiles in any test target. To have it written as `/^…$/`, your test target needs bare slash regex literals: the Swift 6 language mode, or this setting in the Swift 5 language mode (tools version 5.8 or later):
 
 ```swift
 swiftSettings: [
@@ -94,4 +94,4 @@ public var regexLiteralStyle: RegexLiteralStyle {
 }
 ```
 
-CucumberSwift can't make this check itself: it's compiled with its own settings, not your target's.
+CucumberSwift can't make this check itself: it's compiled with its own settings, not your target's, and a built test bundle doesn't record its target's language mode or features.

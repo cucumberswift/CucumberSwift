@@ -38,6 +38,12 @@ enum FeatureFlags {
         value(Cucumber.oneTestPerScenario, environmentVariable: "CUCUMBER_ONE_TEST_PER_SCENARIO", default: false)
     }
 
+    /// Whether the step definitions generated for undefined steps use regex literals rather than
+    /// Cucumber Expressions. Off by default.
+    static var isGenerateRegexLiterals: Bool {
+        value(Cucumber.generateRegexLiterals, environmentVariable: "CUCUMBER_GENERATE_REGEX_LITERALS", default: false)
+    }
+
     static let storage = Storage()
 
     static func value(_ staticValue: Bool?, environmentVariable name: String, default defaultValue: Bool) -> Bool {
@@ -76,5 +82,17 @@ extension Cucumber {
     public static var oneTestPerScenario: Bool? {
         get { FeatureFlags.storage["oneTestPerScenario"] }
         set { FeatureFlags.storage["oneTestPerScenario"] = newValue }
+    }
+
+    /// Whether the step definitions CucumberSwift generates for undefined steps use regex literals, such
+    /// as `Then(#/^I see (\d+) messages$/#)`, rather than Cucumber Expressions with typed parameters, such
+    /// as `Then("I see {int} messages")`. Cucumber Expressions are the default, and work on every
+    /// deployment target; regex literals need iOS 16, macOS 13 or tvOS 16. Set this to `true`, or the
+    /// environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, written as
+    /// ``StepImplementation/regexLiteralStyle`` says. This variable, when set, wins over the environment
+    /// variable. Set it in your `StepImplementation`'s `setupSteps()`, before CucumberSwift runs the tests.
+    public static var generateRegexLiterals: Bool? {
+        get { FeatureFlags.storage["generateRegexLiterals"] }
+        set { FeatureFlags.storage["generateRegexLiterals"] = newValue }
     }
 }

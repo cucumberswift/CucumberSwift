@@ -216,10 +216,10 @@ jobs:
       - name: Run the tests on Mac Catalyst
         # A test that silently stops running still reports success (#231), so the
         # step also fails when fewer tests run than this. It is the number the
-        # three test bundles run today (304 + 60 + 28): raise it when you add tests.
+        # three test bundles run today (393 + 61 + 28): raise it when you add tests.
         # Count from the log, not the .xcresult, which merges suites that share a name.
         env:
-          MIN_TESTS: 469
+          MIN_TESTS: 482
         run: |
           set +e
           xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1

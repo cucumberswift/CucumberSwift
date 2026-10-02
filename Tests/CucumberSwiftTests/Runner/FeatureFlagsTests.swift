@@ -11,11 +11,16 @@ import XCTest
 @testable import CucumberSwift
 
 class FeatureFlagsTests: XCTestCase {
-    private static let variables = ["CUCUMBER_READABLE_TEST_NAMES", "CUCUMBER_ONE_TEST_PER_SCENARIO"]
+    private static let variables = [
+        "CUCUMBER_READABLE_TEST_NAMES",
+        "CUCUMBER_ONE_TEST_PER_SCENARIO",
+        "CUCUMBER_GENERATE_REGEX_LITERALS"
+    ]
 
     private static func resetFlags() {
         Cucumber.readableTestNames = nil
         Cucumber.oneTestPerScenario = nil
+        Cucumber.generateRegexLiterals = nil
         variables.forEach { Cucumber.shared.environment[$0] = nil }
     }
 
@@ -32,30 +37,41 @@ class FeatureFlagsTests: XCTestCase {
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
     }
 
+    func testRegexLiteralStepDefinitionsAreOffByDefault() {
+        XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
+    }
+
     func testTheEnvironmentVariableOverridesTheDefault() {
         Cucumber.shared.environment["CUCUMBER_READABLE_TEST_NAMES"] = "NO"
         Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
+        Cucumber.shared.environment["CUCUMBER_GENERATE_REGEX_LITERALS"] = "YES"
 
         XCTAssertFalse(FeatureFlags.isReadableTestNames)
         XCTAssertTrue(FeatureFlags.isOneTestPerScenario)
+        XCTAssertTrue(FeatureFlags.isGenerateRegexLiterals)
     }
 
     func testTheStaticVariableOverridesTheEnvironmentVariable() {
         Cucumber.shared.environment["CUCUMBER_READABLE_TEST_NAMES"] = "NO"
         Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
+        Cucumber.shared.environment["CUCUMBER_GENERATE_REGEX_LITERALS"] = "YES"
         Cucumber.readableTestNames = true
         Cucumber.oneTestPerScenario = false
+        Cucumber.generateRegexLiterals = false
 
         XCTAssertTrue(FeatureFlags.isReadableTestNames)
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
+        XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
     }
 
     func testAnUnknownEnvironmentValueLeavesTheDefault() {
         Cucumber.shared.environment["CUCUMBER_READABLE_TEST_NAMES"] = "maybe"
         Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "maybe"
+        Cucumber.shared.environment["CUCUMBER_GENERATE_REGEX_LITERALS"] = "maybe"
 
         XCTAssertTrue(FeatureFlags.isReadableTestNames)
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
+        XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
     }
 
     func testBooleanValuesInAnyCase() {
