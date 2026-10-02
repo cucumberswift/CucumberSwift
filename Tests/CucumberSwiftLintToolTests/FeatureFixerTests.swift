@@ -180,12 +180,50 @@ final class FeatureFixerTests: LintTestCase {
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: file.path) }
 
         XCTAssertThrowsError(try FeatureFixer.fix(file: file.path)) { error in
-            XCTAssertEqual((error as? FeatureFixer.WriteError)?.file, file.path)
+            XCTAssertEqual((error as? FeatureFixer.Failure)?.file, file.path)
         }
         let result = FeatureFixer.fix(paths: [directory.path])
         XCTAssertEqual(result.changes, [])
         XCTAssertEqual(result.failures.map(\.file), [file.standardizedFileURL.path])
         XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("Thne"))
+    }
+
+    func testAFileThatCantBeCheckedIsAnError() throws {
+        let unreadable = directory.appendingPathComponent("Unreadable.feature")
+        try "Feature: F\n".write(to: unreadable, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: unreadable.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: unreadable.path) }
+        let latin1 = directory.appendingPathComponent("Latin1.feature")
+        // "Café" in Latin-1, where "é" is the single byte E9.
+        try (Data("Feature: Caf".utf8) + Data([0xE9, 0x0A])).write(to: latin1)
+
+        let failures = FeatureFixer.fix(paths: [directory.path]).failures
+        XCTAssertEqual(failures, [
+            .init(file: latin1.standardizedFileURL.path, reason: "This feature file isn't UTF-8 text, so it wasn't checked"),
+            .init(file: unreadable.standardizedFileURL.path, reason: "Couldn't read this feature file")
+        ])
+    }
+
+    func testAMissingPathIsAnError() {
+        let missing = directory.appendingPathComponent("Missing.feature").path
+        XCTAssertEqual(FeatureFixer.fix(paths: [missing]).failures, [.init(file: missing, reason: "No such feature file or folder")])
+    }
+
+    func testTheExitStatusIsOneWhenAnythingFails() throws {
+        try "Feature: F\n  Scenario: S\n    Given a step\n    Thne another step\n"
+            .write(to: directory.appendingPathComponent("A.feature"), atomically: true, encoding: .utf8)
+        var output = [String]()
+        var errors = [String]()
+        let missing = directory.appendingPathComponent("Missing.feature").path
+
+        XCTAssertEqual(FeatureFixer.run(paths: [directory.path], output: { output.append($0) }, errorOutput: { errors.append($0) }), 0)
+        XCTAssertEqual(output.last, "Fixed 1 line in 1 of 1 feature file.")
+        XCTAssertEqual(errors, [])
+
+        output = []
+        XCTAssertEqual(FeatureFixer.run(paths: [directory.path, missing], output: { output.append($0) }, errorOutput: { errors.append($0) }), 1)
+        XCTAssertEqual(output, ["Fixed nothing."])
+        XCTAssertEqual(errors, ["\(missing): error: No such feature file or folder"])
     }
 
     // MARK: Agreement with the build plugin
@@ -231,7 +269,7 @@ final class FeatureFixerTests: LintTestCase {
             try Data().write(to: file)
         }
 
-        let found = FeatureFixer.featureFiles(in: [directory.path, directory.appendingPathComponent("C.feature").path])
+        let found = FeatureFixer.featureFiles(in: [directory.path, directory.appendingPathComponent("C.feature").path]).files
         XCTAssertEqual(found.map { URL(fileURLWithPath: $0).lastPathComponent }, ["C.feature", "A.feature"])
     }
 

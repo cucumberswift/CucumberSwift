@@ -69,7 +69,7 @@ Features/Login.feature:12: Thne the user is signed in → Then the user is signe
 Fixed 1 line in 1 of 4 feature files.
 ```
 
-Fixing a line can turn the lines after it into steps, which the plugin checks more closely, so the command checks each file again and applies any new suggestion until nothing is left to fix. Text between a header and its first step is a description, where any text is allowed, so the command fixes a line there only when the line after it is a step, a table or a doc string. A line it leaves keeps its warning, for you to fix or ignore. A file with nothing to fix is left exactly as it was. If a file can't be saved, for example because it is read-only, the command names it and fails. Other warnings, such as an undefined step or a table row with a cell too many, are still yours to fix.
+Fixing a line can turn the lines after it into steps, which the plugin checks more closely, so the command checks each file again and applies any new suggestion until nothing is left to fix. Text between a header and its first step is a description, where any text is allowed, so the command fixes a line there only when the line after it is a step, a table or a doc string. A line it leaves keeps its warning, for you to fix or ignore. A file with nothing to fix is left exactly as it was. If a file can't be read or saved, for example because it is read-only, the command names it and fails. Other warnings, such as an undefined step or a table row with a cell too many, are still yours to fix.
 
 The command only needs CucumberSwift added with Swift Package Manager; the build plugin doesn't have to be added to a target.
 

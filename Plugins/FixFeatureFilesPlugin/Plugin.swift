@@ -36,6 +36,8 @@ extension FixFeatureFilesPlugin: XcodeCommandPlugin {
     func performCommand(context: XcodePluginContext, arguments: [String]) throws {
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
+        let unknown = names.filter { name in !context.xcodeProject.targets.contains { $0.displayName == name } }
+        guard unknown.isEmpty else { throw FixError.unknownTargets(unknown) }
         let targets = context.xcodeProject.targets.filter { names.isEmpty || names.contains($0.displayName) }
         try fix(tool: context.tool(named: "CucumberSwiftLintTool").path,
                 paths: targets.flatMap { $0.inputFiles.map(\.path) })

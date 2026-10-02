@@ -17,15 +17,15 @@ enum FeatureFixer {
     struct Outcome {
         let files: [String]
         let changes: [Change]
-        let failures: [WriteError]
+        let failures: [Failure]
     }
 
-    /// A feature file whose fixes couldn't be saved.
-    struct WriteError: Error, CustomStringConvertible {
+    /// A requested path or feature file that couldn't be checked or fixed.
+    struct Failure: Error, CustomStringConvertible, Equatable {
         let file: String
         let reason: String
 
-        var description: String { "\(file): error: Couldn't save the fixes: \(reason)" }
+        var description: String { "\(file): error: \(reason)" }
     }
 
     private static let byteOrderMark = Data([0xEF, 0xBB, 0xBF])
@@ -33,32 +33,55 @@ enum FeatureFixer {
     // checked again after each pass. A few passes are always enough.
     private static let maximumPasses = 10
 
+    /// Fixes the feature files in `paths`, prints each change and then a summary to `output`, and
+    /// each failure to `errorOutput`. Returns the exit status: 1 if any path or file couldn't be
+    /// checked or fixed, so that the command fails rather than report success.
+    static func run(paths: [String], output: (String) -> Void, errorOutput: (String) -> Void) -> Int32 {
+        let outcome = fix(paths: paths)
+        outcome.changes.forEach { output($0.description) }
+        outcome.failures.forEach { errorOutput($0.description) }
+        let files = outcome.files.count
+        let plural = files == 1 ? "" : "s"
+        if outcome.changes.isEmpty {
+            output(outcome.failures.isEmpty ? "Nothing to fix in \(files) feature file\(plural)." : "Fixed nothing.")
+        } else {
+            let lines = outcome.changes.count
+            let fixedFiles = Set(outcome.changes.map(\.file)).count
+            output("Fixed \(lines) line\(lines == 1 ? "" : "s") in \(fixedFiles) of \(files) feature file\(plural).")
+        }
+        return outcome.failures.isEmpty ? 0 : 1
+    }
+
     /// Fixes the feature files in `paths`, each a `.feature` file or a folder to search, and
-    /// returns what it changed and which files it couldn't save.
+    /// returns what it changed and what it couldn't check or fix.
     static func fix(paths: [String]) -> Outcome {
-        let files = featureFiles(in: paths)
+        let found = featureFiles(in: paths)
         var changes = [Change]()
-        var failures = [WriteError]()
-        for file in files {
+        var failures = found.missing.map { Failure(file: $0, reason: "No such feature file or folder") }
+        for file in found.files {
             do {
                 changes += try fix(file: file)
-            } catch let error as WriteError {
-                failures.append(error)
+            } catch let failure as Failure {
+                failures.append(failure)
             } catch {
-                failures.append(WriteError(file: file, reason: error.localizedDescription))
+                failures.append(Failure(file: file, reason: error.localizedDescription))
             }
         }
-        return Outcome(files: files, changes: changes, failures: failures)
+        return Outcome(files: found.files, changes: changes, failures: failures)
     }
 
     /// Fixes one feature file, and returns what it changed. A file with nothing to fix is not
-    /// written to. Throws a `WriteError` if the fixes can't be saved.
+    /// written to. Throws a `Failure` if the file can't be read, isn't UTF-8, or can't be saved.
     static func fix(file: String) throws -> [Change] {
-        guard var data = FileManager.default.contents(atPath: file) else { return [] }
+        guard var data = FileManager.default.contents(atPath: file) else {
+            throw Failure(file: file, reason: "Couldn't read this feature file")
+        }
         // Foundation drops a byte order mark when it decodes, so keep it to write back.
         let hasByteOrderMark = data.starts(with: byteOrderMark)
         if hasByteOrderMark { data.removeFirst(byteOrderMark.count) }
-        guard var contents = String(data: data, encoding: .utf8) else { return [] }
+        guard var contents = String(data: data, encoding: .utf8) else {
+            throw Failure(file: file, reason: "This feature file isn't UTF-8 text, so it wasn't checked")
+        }
         var changes = [Int: Change]()
         for _ in 0..<maximumPasses {
             let pass = fixOnce(contents, file: file)
@@ -74,7 +97,7 @@ enum FeatureFixer {
         do {
             try fixed.write(to: URL(fileURLWithPath: file))
         } catch {
-            throw WriteError(file: file, reason: error.localizedDescription)
+            throw Failure(file: file, reason: "Couldn't save the fixes: \(error.localizedDescription)")
         }
         return changes.values.sorted { $0.line < $1.line }
     }
@@ -113,12 +136,17 @@ enum FeatureFixer {
         line.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// The `.feature` files in `paths`, searching folders but not hidden ones such as `.build`.
-    static func featureFiles(in paths: [String]) -> [String] {
+    /// The `.feature` files in `paths`, searching folders but not hidden ones such as `.build`,
+    /// and the paths that don't exist.
+    static func featureFiles(in paths: [String]) -> (files: [String], missing: [String]) {
         var files = Set<String>()
+        var missing = [String]()
         for path in paths {
             var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else { continue }
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                missing.append(path)
+                continue
+            }
             let url = URL(fileURLWithPath: path)
             guard isDirectory.boolValue else {
                 if url.pathExtension == "feature" { files.insert(url.standardizedFileURL.path) }
@@ -129,6 +157,6 @@ enum FeatureFixer {
                 if file.pathExtension == "feature" { files.insert(file.standardizedFileURL.path) }
             }
         }
-        return files.sorted()
+        return (files.sorted(), missing)
     }
 }
