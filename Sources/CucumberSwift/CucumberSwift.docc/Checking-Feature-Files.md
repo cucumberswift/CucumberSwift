@@ -60,7 +60,7 @@ When the plugin suggests a keyword, as in "'Thne' is not a Gherkin keyword. Did 
 - In Xcode, right-click the project or package in the Project navigator, choose **Fix Feature Files**, and choose the targets whose feature files to fix.
 - In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only that target's feature files.
 
-The command needs permission to change files in your project or package. Xcode asks each time you run it. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
+The command needs permission to change files in your project or package. Xcode asks before it runs, and you can tell it not to ask again. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
 
 It lists each line it changed, before and after:
 
