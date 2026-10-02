@@ -27,6 +27,17 @@ enum StubGenerator {
         return regex.trimmingCharacters(in: .whitespaces)
     }
 
+    /// The generated step definition for a step that no step definition matches. Steps that differ only in
+    /// their arguments share one, which `getStubs` lists under the first of them.
+    static func stub(for step: Step,
+                     in features: [Feature],
+                     regexLiteralStyle: RegexLiteralStyle = implementorRegexLiteralStyle) -> String? {
+        let regex = regexForTokens(Lexer(step.match).lex())
+        return getStubs(for: features, regexLiteralStyle: regexLiteralStyle)
+            .first { regexForTokens(Lexer($0.step.match).lex()) == regex }?
+            .generatedSwift
+    }
+
     static func getStubs(for features: [Feature],
                          regexLiteralStyle: RegexLiteralStyle = implementorRegexLiteralStyle) -> [(step: Step, generatedSwift: String)] {
         var lookup = [String: Method]()

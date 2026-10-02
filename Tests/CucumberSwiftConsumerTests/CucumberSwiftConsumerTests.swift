@@ -50,6 +50,62 @@ extension Step: Hashable {
 
 var recordedIssues = [XCTIssue]()
 
+private let unimplementedStub = """
+Given(#/^I have some steps that have not been implemented$/#) { _, _ in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let lookInTheReportStub = """
+When(#/^I look in my test report$/#) { _, _ in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let seePendingStepsStub = """
+Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let copyAndPasteStub = """
+Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let accessTheDataTableStub = """
+Then(#/^I can access the data table$/#) { _, _ in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let docStringStub = """
+Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
+    let docString = step.docString
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+private let dataTableStub = """
+Given(#/^I have some data table that is not implemented$/#) { _, step in
+    let dataTable = step.dataTable
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+"""
+
+/// The step definitions CucumberSwift generates for the steps in CucumberSwift.feature that have none,
+/// in the order the steps are in the file.
+private let unimplementedStepDefinitions = [
+    unimplementedStub,
+    lookInTheReportStub,
+    seePendingStepsStub,
+    copyAndPasteStub,
+    accessTheDataTableStub,
+    docStringStub,
+    lookInTheReportStub,
+    seePendingStepsStub,
+    copyAndPasteStub,
+    dataTableStub,
+    lookInTheReportStub,
+    seePendingStepsStub,
+    copyAndPasteStub
+]
+
 extension CucumberTest {
     @_dynamicReplacement(for: failStep)
     func replacementFailStep(_ issue: XCTIssue) {
@@ -130,88 +186,11 @@ extension Cucumber: StepImplementation {
                 XCTFail("Should not have the same after hook called")
             }
             afterFeatureHooks[feature, default: 0] += 1
-            XCTAssertEqual(recordedIssues.count, 13)
-            guard recordedIssues.count == 13 else { return }
-            XCTAssert(recordedIssues[0].description.contains(
-                """
-                Given(#/^I have some steps that have not been implemented$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[1].description.contains(
-                """
-                Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
-                    let docString = step.docString
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[2].description.contains(
-                """
-                Given(#/^I have some data table that is not implemented$/#) { _, step in
-                    let dataTable = step.dataTable
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[3].description.contains(
-                """
-                When(#/^I look in my test report$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[4].description.contains(
-                """
-                When(#/^I look in my test report$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[5].description.contains(
-                """
-                When(#/^I look in my test report$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[6].description.contains(
-                """
-                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[7].description.contains(
-                """
-                Then(#/^I can access the data table$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[8].description.contains(
-                """
-                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[9].description.contains(
-                """
-                Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[10].description.contains(
-                """
-                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[11].description.contains(
-                """
-                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
-            XCTAssert(recordedIssues[12].description.contains(
-                """
-                Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
-                    XCTFail("Step not implemented: replace this line with your test code")
-                }
-                """))
+            // Each step with no step definition fails in its own test, in the order the steps run (#262).
+            let issues = recordedIssues.filter { $0.sourceCodeContext.location?.fileURL.lastPathComponent == URL(string: feature.uri)?.lastPathComponent }
+            let expected = feature.uri.hasSuffix("/CucumberSwift.feature") ? unimplementedStepDefinitions : []
+            XCTAssertEqual(issues.count, expected.count)
+            zip(issues, expected).forEach { XCTAssert($0.description.contains($1), $0.description) }
         }
         Given("I have a before feature hook") { _, _ in
             XCTAssert(true)
