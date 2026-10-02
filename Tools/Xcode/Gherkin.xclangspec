@@ -98,12 +98,15 @@
 // MARK: Tags, placeholders and tables
 /****************************************************************************/
 
+    // Tags have a line of their own, so an @ later in a line (an email
+    // address in a step) is text. The rule takes the whole line, up to a comment.
     {
         Identifier = "xcode.lang.gherkin.tag";
         Syntax = {
+            StartAtBOL = YES;
             StartChars = "@";
             Match = (
-                "^@[^ \t\n@#]+",
+                "^@[^#\n]*",
             );
             Type = "xcode.syntax.attribute";
         };

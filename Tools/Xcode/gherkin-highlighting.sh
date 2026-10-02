@@ -41,7 +41,7 @@ install() {
     echo "  $plugin"
     echo "  $grammar"
     remind_to_restart
-    echo "When Xcode asks about an unexpected code bundle, choose Load Bundle."
+    echo "If Xcode asks about an unexpected code bundle, choose Load Bundle."
 }
 
 uninstall() {
