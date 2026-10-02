@@ -49,6 +49,8 @@
                 Add `.feature` files to your folder, feel free to group them in subfolders.
                 
                 > NOTE: If you run tests you may see failures because CucumberSwift has no expressions matching statements in your `.feature` files.
+
+                > TIP: To have Xcode color the Gherkin in your `.feature` files, install CucumberSwift's syntax highlighting: see <doc:Running-Tests-In-Xcode#Highlight-feature-files>.
             }
             
             @Step {
