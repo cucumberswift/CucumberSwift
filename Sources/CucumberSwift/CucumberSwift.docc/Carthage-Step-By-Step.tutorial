@@ -92,15 +92,15 @@
             }
 
             @Step {
-                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a regular expression literal and fails until you replace its `XCTFail` line with your test code.
+                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a Cucumber Expression: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Each step fails until you replace its `XCTFail` line with your test code.
 
-                > Note: Regular expression literals need iOS 16, tvOS 16 or macOS 13. For an older deployment target, write the steps as Cucumber Expressions, as in the next step.
+                > Note: To have regular expression literals suggested instead, turn on `Cucumber.generateRegexLiterals`: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
 
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Generated.swift")
             }
 
             @Step {
-                Replace each `XCTFail` line with your test code. You can keep the regular expressions, or rewrite them as Cucumber Expressions, as here: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Run the tests again. They pass.
+                Replace each `XCTFail` line with your test code. Run the tests again. They pass.
 
                 See <doc:Matching-Steps> for every way to match a step.
 

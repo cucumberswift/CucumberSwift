@@ -14,7 +14,7 @@
 
         @Steps {
             @Step {
-                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version" from 6.3.0, and select Add Package. When Xcode asks which target to add the CucumberSwift library to, choose your unit test target, not your app.
+                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. When Xcode asks which target to add the CucumberSwift library to, choose your unit test target, not your app.
 
                 @Image(source: "SPM-Add-Package.png", alt: "The Choose Package Products sheet for CucumberSwift, with the CucumberSwift library added to the unit test target.")
             }
@@ -80,15 +80,15 @@
             }
 
             @Step {
-                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a regular expression literal and fails until you replace its `XCTFail` line with your test code.
+                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a Cucumber Expression: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Each step fails until you replace its `XCTFail` line with your test code.
 
-                > Note: Regular expression literals need macOS 13, iOS 16 or tvOS 16. For an older deployment target, write the steps as Cucumber Expressions, as in the next step.
+                > Note: To have regular expression literals suggested instead, turn on `Cucumber.generateRegexLiterals`: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
 
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Generated.swift")
             }
 
             @Step {
-                Replace each `XCTFail` line with your test code. You can keep the regular expressions, or rewrite them as Cucumber Expressions, as here: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Run the tests again. They pass.
+                Replace each `XCTFail` line with your test code. Run the tests again. They pass.
 
                 See <doc:Matching-Steps> for every way to match a step.
 

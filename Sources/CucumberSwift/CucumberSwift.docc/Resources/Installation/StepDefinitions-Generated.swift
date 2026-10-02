@@ -11,15 +11,15 @@ extension Cucumber: @retroactive StepImplementation {
     }
 
     public func setupSteps() {
-        Given(#/^I have entered (\d+) into the calculator$/#) { matches, _ in
-            let integer = matches.1
+        Given("I have entered {int} into the calculator") { match, _ in
+            let int = try match.first(\.int)
             XCTFail("Step not implemented: replace this line with your test code")
         }
-        When(#/^I press add$/#) { _, _ in
+        When("I press add") { _, _ in
             XCTFail("Step not implemented: replace this line with your test code")
         }
-        Then(#/^the result is (\d+)$/#) { matches, _ in
-            let integer = matches.1
+        Then("the result is {int}") { match, _ in
+            let int = try match.first(\.int)
             XCTFail("Step not implemented: replace this line with your test code")
         }
     }
