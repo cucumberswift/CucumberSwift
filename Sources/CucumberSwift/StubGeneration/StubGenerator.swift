@@ -16,6 +16,13 @@ enum StubGenerator {
         case regexLiteral(RegexLiteralStyle)
     }
 
+    /// A step definition's pattern as Swift source, and how its closure reads each parameter.
+    private struct Definition {
+        let pattern: String
+        let matchesParameter: String
+        let captures: [(type: String, value: String)]
+    }
+
     static var implementorRegexLiteralStyle: RegexLiteralStyle {
         (Cucumber.shared as? StepImplementation)?.regexLiteralStyle ?? .extendedDelimiter
     }
@@ -101,12 +108,6 @@ enum StubGenerator {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
         return "\"\(escaped)\""
-    }
-
-    private struct Definition {
-        let pattern: String
-        let matchesParameter: String
-        let captures: [(type: String, value: String)]
     }
 
     private static func regexLiteralDefinition(regex: String, tokens: [Token], style: RegexLiteralStyle) -> Definition {

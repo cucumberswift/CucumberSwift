@@ -13,6 +13,12 @@ import XCTest
 /// `GeneratedBareSlashStepDefinitions.swift` in CucumberSwiftConsumerTests (`/…/`), a target with
 /// bare slash regex literals turned on.
 class GeneratedStepDefinitionTests: XCTestCase {
+    private var generatedStepDefinitionsFile: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("GeneratedStepDefinitions.swift")
+    }
+
     override func setUpWithError() throws {
         Cucumber.shared.reset()
     }
@@ -21,14 +27,9 @@ class GeneratedStepDefinitionTests: XCTestCase {
         Cucumber.shared.reset()
     }
 
-    private var generatedStepDefinitionsFile: URL {
-        URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .appendingPathComponent("GeneratedStepDefinitions.swift")
-    }
-
     func testCompiledCucumberExpressionStepDefinitionsMatchTheGenerator() throws {
-        try assertGeneratedSection("GENERATED CUCUMBER EXPRESSIONS", of: generatedStepDefinitionsFile,
+        try assertGeneratedSection("GENERATED CUCUMBER EXPRESSIONS",
+                                   of: generatedStepDefinitionsFile,
                                    equalsGeneratorOutputFor: .cucumberExpression)
     }
 
@@ -50,8 +51,8 @@ class GeneratedStepDefinitionTests: XCTestCase {
         Cucumber.shared.parseIntoFeatures(GeneratedStepDefinitions.feature)
         GeneratedStepDefinitions.registerCucumberExpressions()
 
-        XCTAssertEqual(StubGenerator.getStubs(for: Cucumber.shared.features).map(\.generatedSwift), [],
-                       "Every step should have a step definition")
+        let stubs = StubGenerator.getStubs(for: Cucumber.shared.features).map(\.generatedSwift)
+        XCTAssertEqual(stubs, [], "Every step should have a step definition")
 
         let steps = Cucumber.shared.features.flatMap(\.scenarios).flatMap(\.steps)
         XCTAssertEqual(steps.count, 13)
@@ -65,9 +66,9 @@ class GeneratedStepDefinitionTests: XCTestCase {
         Cucumber.shared.parseIntoFeatures(GeneratedStepDefinitions.feature)
         GeneratedStepDefinitions.register()
 
-        XCTAssertEqual(StubGenerator.getStubs(for: Cucumber.shared.features, style: .regexLiteral(.extendedDelimiter))
-                        .map(\.generatedSwift), [],
-                       "Every step should have a step definition")
+        let stubs = StubGenerator.getStubs(for: Cucumber.shared.features, style: .regexLiteral(.extendedDelimiter))
+            .map(\.generatedSwift)
+        XCTAssertEqual(stubs, [], "Every step should have a step definition")
 
         // The steps are not executed: every generated step fails until it is filled in.
         let steps = Cucumber.shared.features.flatMap(\.scenarios).flatMap(\.steps)

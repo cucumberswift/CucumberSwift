@@ -11,8 +11,11 @@ import XCTest
 @testable import CucumberSwift
 
 class FeatureFlagsTests: XCTestCase {
-    private static let variables = ["CUCUMBER_READABLE_TEST_NAMES", "CUCUMBER_ONE_TEST_PER_SCENARIO",
-                                    "CUCUMBER_GENERATE_REGEX_LITERALS"]
+    private static let variables = [
+        "CUCUMBER_READABLE_TEST_NAMES",
+        "CUCUMBER_ONE_TEST_PER_SCENARIO",
+        "CUCUMBER_GENERATE_REGEX_LITERALS"
+    ]
 
     private static func resetFlags() {
         Cucumber.readableTestNames = nil
