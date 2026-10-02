@@ -25,6 +25,8 @@ let package = Package(
             exclude: ["Package.swift"],
             resources: [
                 .copy("Features")
-            ])
+            ],
+            // Checks the feature files on every build, as a consumer would.
+            plugins: [.plugin(name: "CucumberSwiftLint", package: "CucumberSwift")])
     ]
 )
