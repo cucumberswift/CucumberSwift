@@ -91,7 +91,7 @@ class UndefinedStepTests: XCTestCase {
         XCTAssertEqual(recordedIssues.count, 1)
         let issue = try XCTUnwrap(recordedIssues.first)
         XCTAssertTrue(issue.compactDescription.hasPrefix("No CucumberSwift expression found that matches this step."), issue.compactDescription)
-        XCTAssertTrue(issue.compactDescription.contains(#"Given(#/^the display shows \"(.*?)\"$/#)"#), issue.compactDescription)
+        XCTAssertTrue(issue.compactDescription.contains(#"Given("the display shows {string}")"#), issue.compactDescription)
         XCTAssertEqual(issue.sourceCodeContext.location?.fileURL, URL(string: Self.featureURI))
         XCTAssertEqual(issue.sourceCodeContext.location?.lineNumber, 4)
         XCTAssertEqual(issue.attachments.map(\.name), ["Undefined.feature:4"])
@@ -115,7 +115,7 @@ class UndefinedStepTests: XCTestCase {
         XCTAssertEqual(recordedIssues.count, 2)
         XCTAssertEqual(recordedIssues.map(\.sourceCodeContext.location?.lineNumber), [3, 5])
         recordedIssues.forEach {
-            XCTAssertTrue($0.compactDescription.contains(#"Given(#/^I have entered (\d+) into the calculator$/#)"#), $0.compactDescription)
+            XCTAssertTrue($0.compactDescription.contains(#"Given("I have entered {int} into the calculator")"#), $0.compactDescription)
         }
     }
 

@@ -51,38 +51,38 @@ extension Step: Hashable {
 var recordedIssues = [XCTIssue]()
 
 private let unimplementedStub = """
-Given(#/^I have some steps that have not been implemented$/#) { _, _ in
+Given("I have some steps that have not been implemented") { _, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let lookInTheReportStub = """
-When(#/^I look in my test report$/#) { _, _ in
+When("I look in my test report") { _, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let seePendingStepsStub = """
-Then(#/^I see some PENDING steps with a swift attachment$/#) { _, _ in
+Then("I see some PENDING steps with a swift attachment") { _, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let copyAndPasteStub = """
-Then(#/^I can copy and paste the swift code into my test case$/#) { _, _ in
+Then("I can copy and paste the swift code into my test case") { _, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let accessTheDataTableStub = """
-Then(#/^I can access the data table$/#) { _, _ in
+Then("I can access the data table") { _, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let docStringStub = """
-Given(#/^a DocString of some kind that is not implemented$/#) { _, step in
+Given("a DocString of some kind that is not implemented") { _, step in
     let docString = step.docString
     XCTFail("Step not implemented: replace this line with your test code")
 }
 """
 private let dataTableStub = """
-Given(#/^I have some data table that is not implemented$/#) { _, step in
+Given("I have some data table that is not implemented") { _, step in
     let dataTable = step.dataTable
     XCTFail("Step not implemented: replace this line with your test code")
 }

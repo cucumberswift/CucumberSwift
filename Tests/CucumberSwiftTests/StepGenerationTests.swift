@@ -14,11 +14,14 @@ import XCTest
 class StepGenerationTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
+        // These tests are for regex literals; CucumberExpressionStepGenerationTests has the default.
+        Cucumber.generateRegexLiterals = true
     }
 
     override func tearDownWithError() throws {
         Cucumber.shared.reset()
         Cucumber.overrideRegexLiteralStyle = .extendedDelimiter
+        Cucumber.generateRegexLiterals = nil
     }
 
     func testGeneratedRegexUsesBareSlashesWhenAsked() {
@@ -27,7 +30,7 @@ class StepGenerationTests: XCTestCase {
            Scenario: Some determinable business situation
              Given I login as "Dave"
         """)
-        let actual = StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .bareSlash)
+        let actual = StubGenerator.getStubs(for: cucumber.features, style: .regexLiteral(.bareSlash))
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let expected = #"""
@@ -59,9 +62,9 @@ class StepGenerationTests: XCTestCase {
            Scenario: Some determinable business situation
              Given I open a/b and c/d
         """)
-        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .extendedDelimiter).map(\.generatedSwift),
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, style: .regexLiteral(.extendedDelimiter)).map(\.generatedSwift),
                        [#"Given(#/^I open a\/b and c\/d$/#) { _, _ in"# + "\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
-        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, regexLiteralStyle: .bareSlash).map(\.generatedSwift),
+        XCTAssertEqual(StubGenerator.getStubs(for: cucumber.features, style: .regexLiteral(.bareSlash)).map(\.generatedSwift),
                        [#"Given(/^I open a\/b and c\/d$/) { _, _ in"# + "\n    XCTFail(\"Step not implemented: replace this line with your test code\")\n}"])
     }
 

@@ -8,12 +8,13 @@ CucumberSwift reads your feature files when the test bundle starts and creates t
 
 ### Settings
 
-Two settings change how your tests appear in Xcode. Set each one in code, with a static variable on `Cucumber`, or without changing code, with an environment variable in a scheme or test plan. When both are set, the static variable wins.
+These settings change how your tests appear in Xcode, and the step definitions CucumberSwift suggests for steps that have none. Set each one in code, with a static variable on `Cucumber`, or without changing code, with an environment variable in a scheme or test plan. When both are set, the static variable wins.
 
 | Setting | Static variable | Environment variable | Default |
 |---|---|---|---|
 | Name tests as you wrote them | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On |
 | One test per scenario | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step |
+| Suggest regex literals for undefined steps (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>) | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions |
 
 Set the static variables in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
 

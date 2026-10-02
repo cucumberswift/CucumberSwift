@@ -167,7 +167,7 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertNil(skip)
         XCTAssertEqual(recordedIssues.count, 1)
         XCTAssertTrue(recordedIssues.first?.compactDescription.hasPrefix("No CucumberSwift expression found") ?? false)
-        XCTAssertTrue(recordedIssues.first?.compactDescription.contains("When(#/^nothing matches this step$/#)") ?? false)
+        XCTAssertTrue(recordedIssues.first?.compactDescription.contains(#"When("nothing matches this step")"#) ?? false)
         XCTAssertEqual(recordedIssues.first?.sourceCodeContext.location?.lineNumber, 4)
         XCTAssertEqual(events, ["Given"])
     }

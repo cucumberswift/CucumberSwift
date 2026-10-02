@@ -11,13 +11,23 @@ class Method {
     var keyword: Step.Keyword = []
     var keywords: [Step.Keyword] = []
     var comment = ""
+    /// The step definition's pattern as Swift source, such as `"I see {int} messages"` or `#/^I see (\d+) messages$/#`.
+    private(set) var pattern = ""
+    /// A regular expression for the step, to find the implemented steps this step definition would also match.
     private(set) var regex = ""
     private(set) var matchesParameter = ""
-    private(set) var captures: [String] = []
+    /// Each parameter, in the order of the step: its variable's type name and the Swift code that reads it.
+    private(set) var captures: [(type: String, value: String)] = []
     private(set) var variables: [(type: String, count: Int)] = []
-    init(keyword: Step.Keyword, regex: String, matchesParameter: String, captures: [String], variables: [(type: String, count: Int)]) {
+    init(keyword: Step.Keyword,
+         pattern: String,
+         regex: String,
+         matchesParameter: String,
+         captures: [(type: String, value: String)],
+         variables: [(type: String, count: Int)]) {
         self.keyword = keyword
         self.keywords = [keyword]
+        self.pattern = pattern
         self.regex = regex
         self.matchesParameter = matchesParameter
         self.captures = captures
@@ -50,27 +60,19 @@ class Method {
         return keywordStrings.uniqueElements
     }
 
-    func generateSwift(matchAllAllowed: Bool = true, regexLiteralStyle: RegexLiteralStyle = .extendedDelimiter) -> String {
+    func generateSwift(matchAllAllowed: Bool = true) -> String {
         Scope.language ?= Language()
-        let pattern = "^\(regex.trimmingCharacters(in: .whitespacesAndNewlines))$"
-        // The pattern escapes every `/`, so neither delimiter can end the literal early.
-        let literal: String
-        switch regexLiteralStyle {
-            case .bareSlash: literal = "/\(pattern)/"
-            case .extendedDelimiter: literal = "#/\(pattern)/#"
-        }
         var methodStrings = [String]()
         for keywordString in getKeywordStrings(matchAllAllowed: matchAllAllowed) {
             // swiftlint:disable:next empty_count
             let variablesOnStepObject = variables.filter { $0.type == "dataTable" || $0.type == "docString" }.filter { $0.count > 0 }
             let stepParameter = (!variablesOnStepObject.isEmpty) ? "step" : "_"
-            var methodString = "\(keywordString.capitalizingFirstLetter())(\(literal)) { \(matchesParameter), \(stepParameter) in\n"
-            // A regex literal's match holds the whole match at .0 and each capture at .1, .2, …
+            var methodString = "\(keywordString.capitalizingFirstLetter())(\(pattern)) { \(matchesParameter), \(stepParameter) in\n"
             var countByType = [String: Int]()
-            for (position, type) in captures.enumerated() {
-                let count = countByType[type, default: 0] + 1
-                countByType[type] = count
-                methodString += "    let \(Self.variableName(type: type, number: count)) = \(matchesParameter).\(position + 1)\n"
+            for capture in captures {
+                let count = countByType[capture.type, default: 0] + 1
+                countByType[capture.type] = count
+                methodString += "    let \(Self.variableName(type: capture.type, number: count)) = \(capture.value)\n"
             }
             for variable in variablesOnStepObject {
                 methodString += "    let \(Self.variableName(type: variable.type, number: 1)) = step.\(variable.type)\n"

@@ -47,6 +47,17 @@ func registerGeneratedBareSlashStepDefinitions() {
         let stringTwo = matches.4
         XCTFail("Step not implemented: replace this line with your test code")
     }
+    Then(/^the temperature is -(\d+) degrees$/) { matches, _ in
+        let integer = matches.1
+        XCTFail("Step not implemented: replace this line with your test code")
+    }
+    Then(/^I owe (\d+)\$$/) { matches, _ in
+        let integer = matches.1
+        XCTFail("Step not implemented: replace this line with your test code")
+    }
+    Then(/^\^a caret and \{braces\}$/) { _, _ in
+        XCTFail("Step not implemented: replace this line with your test code")
+    }
     Then(/^I open the path a\/#b$/) { _, _ in
         XCTFail("Step not implemented: replace this line with your test code")
     }
