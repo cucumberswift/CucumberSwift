@@ -155,7 +155,7 @@ Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle
 
 Feature files then open as Gherkin: in the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file Xcode has already opened before keeps the type it had, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
 
-To add a snippet, open the Library (View ▸ Show Library, or ⇧⌘L) in a feature file and choose it, or start typing its shortcut, `gherkin-feature`, `gherkin-scenario` or `gherkin-scenario-outline`, and choose it from the completions. Press Tab to move between its placeholders.
+To add a snippet, open the Library in a feature file (View ▸ Show Library, or ⇧⌘L), search for `Gherkin`, and double-click the snippet or drag it into the file. Press Tab to move between its placeholders. Xcode doesn't offer code completion in feature files, so the snippets' completion shortcuts don't work there.
 
 The script installs these items:
 
