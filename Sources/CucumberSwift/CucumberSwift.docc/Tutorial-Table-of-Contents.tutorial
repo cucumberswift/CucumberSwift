@@ -1,10 +1,10 @@
 @Tutorials(name: "Getting Started") {
     @Intro(title: "Getting Started with CucumberSwift") {
-        This getting started series will walk you through installation and basic setup of CucumberSwift on your project.
+        This getting started series walks you through installing CucumberSwift and setting up a test target in your project. It leads to the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample).
     }
     
     @Chapter(name: "Installation") {
-        @Image(source: "CucumberSwiftSuccessfulTestRun.png", alt: "A test report showing a successful run of CucumberSwift tests")
+        @Image(source: "CucumberSwiftSuccessfulTestRun.png", alt: "Xcode's test navigator after a passing run of the Calculator feature, with the scenario and each of its steps.")
         How to install CucumberSwift and add it to your project.
         @TutorialReference(tutorial: "doc:SPM-Step-By-Step")
         @TutorialReference(tutorial: "doc:Carthage-Step-By-Step")
