@@ -13,6 +13,8 @@ extension StubGenerator {
         case match(value: String)
         case string(value: String)
         case int(value: String)
+        /// Only in Cucumber Expressions: the lexer reads `5.25` as `5`, `.` and `25`.
+        case float(value: String)
 
         func isString() -> Bool {
             if case .string = self {
