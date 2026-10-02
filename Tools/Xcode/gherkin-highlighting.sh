@@ -52,12 +52,14 @@ remind_to_restart() {
 
 install() {
     mkdir -p "$xcode_dir/Plug-ins" "$xcode_dir/Specifications" "$snippets_dir"
-    # Remove the old copy first: copying a folder onto an existing one nests it.
-    rm -rf "$plugin"
+    # Remove each old copy first: copying a folder onto an existing one nests
+    # it, and copying onto a symbolic link writes to the file it points to.
+    rm -rf "$plugin" "$grammar"
     cp -R "$source_dir/Gherkin.ideplugin" "$plugin"
     cp "$source_dir/Gherkin.xclangspec" "$grammar"
     local target snippet
     while IFS=$'\t' read -r target snippet; do
+        rm -f "$target"
         cp "$snippet" "$target"
     done < <(snippets)
     echo "Installed:"
