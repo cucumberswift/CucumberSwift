@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDECodeSnippetCompletionPrefix</key>
+	<string>gherkin-scenario</string>
+	<key>IDECodeSnippetCompletionScopes</key>
+	<array>
+		<string>All</string>
+	</array>
+	<key>IDECodeSnippetContents</key>
+    <string>Scenario: &lt;#description#&gt;
+        Given &lt;#precondition#&gt;
+        When &lt;#action#&gt;
+        Then &lt;#testable result#&gt;
+    </string>
+	<key>IDECodeSnippetIdentifier</key>
+	<string>45ba0cb1-d6ba-4874-9bf2-878b033f5929</string>
+	<key>IDECodeSnippetLanguage</key>
+	<string>Xcode.SourceCodeLanguage.Gherkin</string>
+	<key>IDECodeSnippetSummary</key>
+	<string>Used for creating a scenario in gherkin</string>
+	<key>IDECodeSnippetTitle</key>
+	<string>Scenario</string>
+	<key>IDECodeSnippetUserSnippet</key>
+	<true/>
+	<key>IDECodeSnippetVersion</key>
+	<integer>2</integer>
+</dict>
+</plist>
