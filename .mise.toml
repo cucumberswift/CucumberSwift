@@ -32,7 +32,8 @@ fi
 description = "Build and test every project in Fixtures/"
 # Each fixture is a Swift package (Package.swift), tested with `swift test`, or a Tuist project
 # (Project.swift) whose project and scheme are named after its folder. See "Fixtures" in
-# CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later.
+# CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later. A Tuist
+# fixture runs on macOS unless its xcodebuild-destination file names another destination.
 run = '''
 set -e
 for fixture in Fixtures/*/; do
@@ -41,8 +42,12 @@ for fixture in Fixtures/*/; do
     swift test --package-path "$fixture"
   fi
   if [ -f "$fixture/Project.swift" ]; then
+    destination='platform=macOS'
+    if [ -f "$fixture/xcodebuild-destination" ]; then
+      destination=$(cat "$fixture/xcodebuild-destination")
+    fi
     tuist generate --no-open --path "$fixture"
-    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination 'platform=macOS' \
+    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
       -skipMacroValidation CODE_SIGNING_ALLOWED=NO
   fi
 done

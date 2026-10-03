@@ -59,9 +59,9 @@ public final class Cucumber {
     /// the scenario's later steps don't run. A failed `#expect` fails where it is written, and the
     /// scenario goes on, as a failed XCTest assertion does with CucumberSwift.
     public func run(_ gherkinScenario: GherkinScenario) async {
-        setUpIfNeeded()
         let scenario = Scenario(gherkinScenario)
         let file = gherkinScenario.file
+        setUpIfNeeded(at: Self.sourceLocation(file, scenario.location))
         if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file) {
             for step in scenario.steps {
                 guard await run(step, in: file) else { break }
@@ -70,12 +70,14 @@ public final class Cucumber {
         await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file)
     }
 
-    /// Calls `setupSteps()` once, before the first scenario.
-    private func setUpIfNeeded() {
+    /// Calls `setupSteps()` once, before the first scenario. Without step definitions, fails at the first
+    /// scenario in its feature file.
+    private func setUpIfNeeded(at location: SourceLocation) {
         guard !isSetUp else { return }
         isSetUp = true
         guard let implementation = self as Any as? StepImplementation else {
-            Issue.record("No step definitions: add `extension Cucumber: StepImplementation` with a `setupSteps()` to the test target.")
+            Issue.record("No step definitions: add `extension Cucumber: StepImplementation` with a `setupSteps()` to the test target.",
+                         sourceLocation: location)
             return
         }
         implementation.setupSteps()

@@ -19,7 +19,7 @@ Step definitions are written as for CucumberSwift: `extension Cucumber: StepImpl
 - **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin.
 - **Unit test targets only.** Xcode doesn't allow Swift Testing in UI test targets. UI tests keep running their feature files with CucumberSwift and XCTest.
 - **`#expect` and `#require`, not `XCTAssert`.** Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass. Step definitions that this runner runs must use Swift Testing's expectations.
-- **One runner per test target.** `CucumberSwiftTesting` has its own `Cucumber`, `Given` and the rest, with the same names as CucumberSwift's, so a file can't import both.
+- **One runner per test target.** Link either `CucumberSwift` or `CucumberSwiftTesting` to a test target, not both. They have their own `Cucumber`, `Given` and the rest, with the same names, so a file can't import both. In a target that links both, each runner runs every scenario with its own step definitions, and CucumberSwift fails the test run if it isn't set up too. A project can use both, in different targets: see <doc:#Move-unit-tests-to-Swift-Testing>.
 
 ## Set up a Swift package
 
@@ -105,6 +105,24 @@ Scenarios run one at a time, as with CucumberSwift, because step definitions usu
 - A step definition, or a step hook, that throws fails on the step's line in the feature file. A scenario hook that throws fails on the scenario's line.
 
 In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A failed `#expect` is reported where you wrote it, and the scenario goes on, as a failed XCTest assertion does with CucumberSwift.
+
+## Move unit tests to Swift Testing
+
+A project can move its unit tests to Swift Testing and keep its UI tests, which can't move, on CucumberSwift and XCTest. Each test target links one runner:
+
+| Test target | Product | Runs feature files with |
+|---|---|---|
+| UI tests | `CucumberSwift` | XCTest, as before |
+| Unit tests | `CucumberSwiftTesting` and `CucumberSwiftTestingPlugin` | Swift Testing |
+
+One scheme can test both targets. To move a unit test target:
+
+1. Replace its `CucumberSwift` dependency with `CucumberSwiftTesting`, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
+2. In its step definitions, import `CucumberSwiftTesting` instead of `CucumberSwift`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use.
+3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step can't go on.
+4. Remove anything listed in <doc:#What-isnt-available>.
+
+**Sharing step definitions between the runners.** A step definition file that both targets compile needs a different `import` in each, and assertions that both runners report. Before Swift 6.4, neither runner sees the other's: Swift Testing ignores a failed `XCTAssert`, and CucumberSwift's XCTest runner ignores a failed `#expect`, so in either case the step passes. A failed `try #require` throws, and both runners fail a step that throws, on its line in the feature file. Keep the step definitions for UI tests and for unit tests apart where you can: they usually do different things.
 
 ## What isn't available
 
