@@ -403,7 +403,8 @@ jobs:
           for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
             name=${suite%%:*}; min=${suite##*:}
             for t in "$name" "${name}_iOS"; do
-              n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/$t/test.log" | tail -1 | grep -Eo '[0-9]+')
+              # A log with no count, or no log, counts as 0 rather than ending the step.
+              n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/$t/test.log" 2>/dev/null | tail -1 | grep -Eo '[0-9]+' || true)
               echo "$t: ${n:-0} tests (at least $min expected)"
               if [ "${n:-0}" -lt "$min" ]; then
                 echo "::error::Only ${n:-0} tests ran in $t. If you removed tests on purpose, lower its floor in CI.yml."
