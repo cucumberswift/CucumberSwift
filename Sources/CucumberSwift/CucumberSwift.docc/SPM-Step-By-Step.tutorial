@@ -74,6 +74,14 @@
             }
 
             @Step {
+                Turn off parallel testing for your test target. XCTest's parallel workers don't run CucumberSwift's scenarios correctly: each scenario can run once in every worker, or not at all, and the test run can still pass. Xcode turns parallel testing on for new test targets.
+
+                Choose Product → Test Plan → Edit Test Plan. Next to your test target, select Options…, and set Parallelization to Disabled. Leave "Automatically include new tests" on. If Xcode says the autocreated test plan is an in-memory document, choose Save so that the setting is kept.
+
+                @Image(source: "TestPlanParallelization.png", alt: "The test plan editor with the Options popover for CalculatorTests: Automatically include new tests is on, and Parallelization is Disabled.")
+            }
+
+            @Step {
                 Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
 
                 @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
@@ -97,8 +105,6 @@
                 Replace each `XCTFail` line with your test code. Run the tests again. They pass.
 
                 See <doc:Matching-Steps> for every way to match a step.
-
-                > Note: Leave parallel testing off for your CucumberSwift test target: the "Execute in parallel" option on that target in your scheme or test plan. XCTest's parallel workers do not run CucumberSwift's scenarios correctly. Depending on the setup, each scenario runs once in every worker, or not at all, and the test run can still pass.
 
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
             }
