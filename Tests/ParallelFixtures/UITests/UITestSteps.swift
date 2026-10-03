@@ -10,7 +10,6 @@
 import Foundation
 import XCTest
 import CucumberSwift
-import CucumberSwiftExpressions
 
 @MainActor
 enum UITestApp {
@@ -53,31 +52,37 @@ extension Cucumber: StepImplementation {
     public func setupSteps() {
         ParallelFixtureSupport.setUp()
 
-        BeforeScenario { _ async in
-            UITestApp.app.launch()
+        // Plain, synchronous hooks and steps, as XCUITest expects: its calls wait on the main run loop
+        // themselves. They run on the main thread, which MainActor.assumeIsolated tells the compiler.
+        BeforeScenario { _ in
+            MainActor.assumeIsolated { UITestApp.app.launch() }
         }
-        AfterScenario { _ async in
-            UITestApp.app.terminate()
+        AfterScenario { _ in
+            MainActor.assumeIsolated { UITestApp.app.terminate() }
         }
 
-        Given("a fresh cart" as CucumberExpression) { _, _ async throws in
-            XCTAssertEqual(UITestApp.items(), "Items: 0")
+        Given("a fresh cart") { _, _ in
+            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(), "Items: 0") }
         }
-        When("I add {int} items" as CucumberExpression) { match, _ async throws in
-            for _ in 0..<(try match.first(\.int)) {
-                UITestApp.add()
+        When("I add {int} items") { match, _ in
+            let count = try match.first(\.int)
+            MainActor.assumeIsolated {
+                for _ in 0..<count {
+                    UITestApp.add()
+                }
             }
         }
-        Then("the cart holds {int} items" as CucumberExpression) { match, _ async throws in
-            XCTAssertEqual(UITestApp.items(), "Items: \(try match.first(\.int))")
+        Then("the cart holds {int} items") { match, _ in
+            let count = try match.first(\.int)
+            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(), "Items: \(count)") }
         }
         // Long enough that Xcode hands the scenarios to more than one worker.
-        Then("the scenario takes a moment" as CucumberExpression) { _, _ async throws in
-            try await Task.sleep(nanoseconds: 500_000_000)
+        Then("the scenario takes a moment") { _, _ in
+            Thread.sleep(forTimeInterval: 0.5)
         }
         // Long enough that the two scenarios that share a name run at the same time in two workers.
-        Then("the scenario takes a while" as CucumberExpression) { _, _ async throws in
-            try await Task.sleep(nanoseconds: 4_000_000_000)
+        Then("the scenario takes a while") { _, _ in
+            Thread.sleep(forTimeInterval: 4)
         }
     }
 }

@@ -348,7 +348,7 @@ jobs:
           xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/parallel-test.xcresult" 2>/dev/null | python3 -c '
           import json, sys
           for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
-              print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:300])
+              print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
           ' || true
           # A fixture app that crashed leaves a report: show what it died of.
           for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
