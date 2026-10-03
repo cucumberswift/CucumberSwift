@@ -34,6 +34,7 @@ fixtures="Tests/ParallelFixtures/ParallelFixtures.xcodeproj Tests/ParallelFixtur
 tuist generate --path Tests/ParallelFixtures --no-open
 if ! git diff --quiet -- $fixtures || [ -n "$(git ls-files --others --exclude-standard -- $fixtures)" ]; then
   git status --short -- $fixtures
+  git diff -- $fixtures | head -60
   echo "The parallel testing fixtures' project does not match Tests/ParallelFixtures/Project.swift. Run 'mise run generate-fixtures' and commit the result."
   exit 1
 fi

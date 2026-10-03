@@ -336,8 +336,13 @@ jobs:
           TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" > parallel-test.log 2>&1
           status=$?
           echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
-          grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
+          grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
           grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
+          # A fixture app that crashed leaves a report: show what it died of.
+          for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
+            echo "Crash report $(basename "$report"):"
+            grep -E '"(exception|termination|asi)"' "$report" | head -5
+          done
           grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
           total=$(ls "$records" | wc -l | tr -d ' ')
           # Each record is <scenario>.<worker's process>.<UUID>.

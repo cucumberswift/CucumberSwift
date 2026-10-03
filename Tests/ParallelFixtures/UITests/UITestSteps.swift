@@ -16,10 +16,12 @@ import CucumberSwiftExpressions
 enum UITestApp {
     static let app = XCUIApplication()
 
+    /// The item count the app shows. Found by its identifier whatever kind of element the platform makes of
+    /// the text, and waited for, since the first launch on a new simulator clone can be slow.
     static func items() -> String {
-        let label = app.staticTexts["items"]
-        XCTAssertTrue(label.waitForExistence(timeout: 10), "The app shows no item count")
-        return label.label
+        let label = app.descendants(matching: .any)["items"]
+        XCTAssertTrue(label.waitForExistence(timeout: 30), "The app shows no item count. App state: \(app.state.rawValue)")
+        return label.label.isEmpty ? (label.value as? String ?? "") : label.label
     }
 
     static func add() {
