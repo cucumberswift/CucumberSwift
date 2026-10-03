@@ -35,9 +35,10 @@ enum ParallelTestRecords {
 
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
-        // A subclass of CucumberTest, as consumers write it. Under parallel testing XCTest hands it to a
-        // worker of its own, which must not run the scenarios again.
-        class TestDiscovery: CucumberTest { }
+        // A subclass of CucumberTest, as consumers write it.
+        class TestDiscovery: CucumberTest {
+            // Empty on purpose: XCTest hands this subclass to a worker of its own, which must not run the scenarios again.
+        }
         return Bundle(for: TestDiscovery.self)
     }
 
