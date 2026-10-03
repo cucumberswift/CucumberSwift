@@ -10,9 +10,9 @@ The repository has two kinds of manifest, each with its own lockfile:
 
 A newer toolchain reads the version-specific manifest, Package@swift-6.1.swift,
 instead of Package.swift. It adds swift-syntax behind the Macros package trait.
-SwiftPM never pins a dependency that only a trait uses in the root package's
-Package.resolved, even with every trait on, so swift-syntax has no pin there
-(see UNPINNED). CI builds against the newest version in its range.
+Whether SwiftPM pins a dependency that only a trait uses depends on the
+toolchain, so swift-syntax is left out of the comparison (see UNPINNED). CI
+builds against the newest version in its range.
 
 The Xcode side is read from project.pbxproj, which is what xcodebuild resolves
 from. The project_drift job in CI.yml checks that it matches Project.swift.
@@ -48,12 +48,13 @@ PBXPROJ = f"{XCODE_PROJECT}/project.pbxproj"
 XCODE_RESOLVED = f"{XCODE_PROJECT}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 # How to fix each side, for the error messages.
-# A plain resolve: traits do not change the root package's pins (see UNPINNED), and Swift 6.1's
-# `swift package` has no trait options.
+# A plain resolve: Swift 6.1's `swift package` has no trait options.
 RESOLVE_SWIFTPM = ("swift", "package", "resolve")
-# Dependencies that only a package trait uses. SwiftPM leaves them out of the root
-# package's Package.resolved (verified with Swift 6.2.3, with every trait on), so a
-# missing pin is expected. A pin, if one appears, is still checked against the range.
+# Dependencies that only a package trait uses. Toolchains disagree on whether the root
+# package's Package.resolved pins them: Swift 6.1.2 adds a pin, Swift 6.2.3 removes it,
+# even with every trait on. So a missing pin is expected, and a pin that resolving adds or
+# removes does not make the lockfile stale. A pin that is there is still checked against
+# the manifest's range.
 UNPINNED = {"swift-syntax"}
 FIX_SWIFTPM = (f"Edit {PACKAGE_SWIFT} and each {VERSIONED_PACKAGE_SWIFT} alike, then run "
                f"`{' '.join(RESOLVE_SWIFTPM)}` and commit {PACKAGE_RESOLVED}.")
@@ -315,16 +316,32 @@ def run(*args):
     return subprocess.run(args).returncode
 
 
+def checked_pins(text):
+    """Package.resolved's pins, without those in UNPINNED."""
+    return {name: pin for name, pin in parse_resolved(text, PACKAGE_RESOLVED).items()
+            if name not in UNPINNED}
+
+
 def check_resolve():
     """Check 3: resolve each lockfile against its manifest, and fail if it changes."""
     errors = []
     command = " ".join(RESOLVE_SWIFTPM)
+    before = read(PACKAGE_RESOLVED)
     if run(*RESOLVE_SWIFTPM) != 0:
         errors.append(f"`{command}` failed, so {PACKAGE_RESOLVED} cannot satisfy "
                       f"{PACKAGE_SWIFT}. {FIX_SWIFTPM}")
-    elif run("git", "diff", "--exit-code", "--", PACKAGE_RESOLVED) != 0:
-        errors.append(f"{PACKAGE_RESOLVED} is stale: `{command}` changed it (diff "
-                      f"above). {FIX_SWIFTPM}")
+    else:
+        # Compare the pins rather than the file, so that a pin in UNPINNED, or the
+        # originHash that changes with it, does not count.
+        try:
+            stale = checked_pins(before) != checked_pins(read(PACKAGE_RESOLVED))
+        except CheckError as error:
+            errors.append(str(error))
+            stale = False
+        if stale:
+            run("git", "diff", "--", PACKAGE_RESOLVED)
+            errors.append(f"{PACKAGE_RESOLVED} is stale: `{command}` changed it (diff "
+                          f"above). {FIX_SWIFTPM}")
     # -disableAutomaticPackageResolution makes xcodebuild fail, rather than
     # re-resolve, when the lockfile does not satisfy the project.
     if run("xcodebuild", "-resolvePackageDependencies", "-project", XCODE_PROJECT,

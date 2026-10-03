@@ -395,14 +395,17 @@ class MissingFileTests(Repository):
 class ResolveTests(Repository):
     """--resolve, with swift, xcodebuild and git replaced by a fake."""
 
-    def resolve(self, failing=()):
+    def resolve(self, failing=(), resolved=None):
         """Run main with --resolve. Each command whose first two words are in
-        `failing` exits 1; every other command exits 0."""
+        `failing` exits 1; every other command exits 0. `swift package resolve`
+        rewrites Package.resolved to `resolved`, when given."""
         self.commands = []
 
         def fake_run(args, **kwargs):
             self.commands.append(list(args))
             key = " ".join(args[:2]) if args[0] != "git" else f"git diff {args[-1]}"
+            if key == "swift package" and resolved is not None and key not in failing:
+                self.write(check_lockfiles.PACKAGE_RESOLVED, resolved)
             return subprocess.CompletedProcess(args, 1 if key in failing else 0)
 
         with mock.patch.object(check_lockfiles.subprocess, "run", side_effect=fake_run):
@@ -414,7 +417,6 @@ class ResolveTests(Repository):
         self.assertEqual(self.errors(output), [])
         self.assertEqual(self.commands, [
             ["swift", "package", "resolve"],
-            ["git", "diff", "--exit-code", "--", "Package.resolved"],
             ["xcodebuild", "-resolvePackageDependencies", "-project", "CucumberSwift.xcodeproj",
              "-disableAutomaticPackageResolution"],
             ["git", "diff", "--exit-code", "--", check_lockfiles.XCODE_RESOLVED],
@@ -425,13 +427,32 @@ class ResolveTests(Repository):
         self.assertEqual(status, 1)
         [error] = self.errors(output)
         self.assertIn("`swift package resolve` failed, so Package.resolved cannot satisfy Package.swift", error)
-        self.assertNotIn(["git", "diff", "--exit-code", "--", "Package.resolved"], self.commands)
+        self.assertNotIn(["git", "diff", "--", "Package.resolved"], self.commands)
 
     def test_a_stale_swiftpm_lockfile_fails(self):
-        status, output = self.resolve(failing={"git diff Package.resolved"})
+        changed = [pin if pin[0] != "SymbolKit" else ("SymbolKit", SYMBOLKIT, "1.0.1", "e" * 40)
+                   for pin in SWIFTPM_PINS]
+        status, output = self.resolve(resolved=resolved_v1(changed))
         self.assertEqual(status, 1)
         [error] = self.errors(output)
         self.assertIn("Package.resolved is stale: `swift package resolve` changed it", error)
+        self.assertIn(["git", "diff", "--", "Package.resolved"], self.commands)
+
+    def test_a_swift_syntax_pin_that_resolving_adds_or_removes_is_not_stale(self):
+        # Swift 6.1.2 pins a dependency only a trait uses; Swift 6.2.3 does not.
+        syntax = ("swift-syntax", "https://github.com/swiftlang/swift-syntax.git", "602.0.0", "f" * 40)
+        for before, after in [(SWIFTPM_PINS, SWIFTPM_PINS + [syntax]),
+                              (SWIFTPM_PINS + [syntax], SWIFTPM_PINS)]:
+            with self.subTest(before=len(before), after=len(after)):
+                self.write(check_lockfiles.PACKAGE_RESOLVED, resolved_v3(before))
+                status, output = self.resolve(resolved=resolved_v3(after))
+                self.assertEqual(status, 0, output)
+                self.assertNotIn(["git", "diff", "--", "Package.resolved"], self.commands)
+
+    def test_a_lockfile_that_resolving_reformats_is_not_stale(self):
+        # The same pins in another format, as when SwiftPM upgrades it, are not a change.
+        status, output = self.resolve(resolved=resolved_v3(SWIFTPM_PINS))
+        self.assertEqual(status, 0, output)
 
     def test_an_xcode_lockfile_that_does_not_satisfy_the_project_fails(self):
         status, output = self.resolve(failing={"xcodebuild -resolvePackageDependencies"})
