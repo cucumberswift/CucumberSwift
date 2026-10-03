@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
       "state" : {
-        "revision" : "4c9c0794b422f6338264013f739711b484155373",
-        "version" : "1.2.0"
+        "revision" : "bca20fd58d7305b3a70d097ae615c182e0a653e4",
+        "version" : "1.4.0"
       }
     },
     {

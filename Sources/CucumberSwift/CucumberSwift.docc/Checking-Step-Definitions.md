@@ -115,6 +115,7 @@ Each mistake is an error on its own line. Click the error's icon to see the whol
 | The closure takes too few or too many arguments | `#Given("I have {int} cukes in my {string}") { (count: Int) in … }` | Changes the closure's arguments to `(count: Int, string: String)` |
 | An argument has the wrong type | `#Given("I have {int} cukes") { (count: String) in … }` | Changes `String` to `Int` |
 | A parameter is missing its `}` | `#Given("I have {int cukes")` | Inserts `}` after `{int` |
+| Any other Cucumber expression that does not follow the syntax, such as empty optional text or a parameter inside optional text | `#Given("I have () cukes")` | None: the error says what is wrong and how to fix it |
 | A pattern that is read as a regular expression does not compile | `#Given("I have {int} cukes$")`, where the `$` makes it a regular expression | Removes the `^`, `$` or slashes, when what is left is a valid Cucumber expression |
 | The pattern is not a string literal | `#Given("I have \(count) cukes")` | None: write the pattern out |
 

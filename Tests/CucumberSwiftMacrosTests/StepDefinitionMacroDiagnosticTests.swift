@@ -99,7 +99,7 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             #Given("I have {int cukes") { (count: Int) in }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "The parameter {int is missing its closing '}'.",
+                DiagnosticSpec(message: #"The '{' does not have a matching '}'. If you did not intend to use a parameter you can use '\{' to escape the a parameter"#,
                                line: 1,
                                column: 8,
                                fixIts: [FixItSpec(message: "Insert '}'")])
@@ -114,13 +114,13 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
     func testInvalidRegularExpressionIsAnErrorThatCanBecomeAnExpression() {
         assertMacroExpansion(
             """
-            #Given("^I have (a cuke$") { }
+            #Given("I have {int} cukes$") { (count: Int) in }
             """,
             expandedSource: """
-            #Given("^I have (a cuke$") { }
+            #Given("I have {int} cukes$") { (count: Int) in }
             """,
             diagnostics: [
-                DiagnosticSpec(message: invalidRegularExpressionMessage("^I have (a cuke$"),
+                DiagnosticSpec(message: problemMessage("I have {int} cukes$"),
                                line: 1,
                                column: 8,
                                fixIts: [FixItSpec(message: "Use it as a Cucumber Expression")])
@@ -128,8 +128,41 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             macros: macros,
             applyFixIts: ["Use it as a Cucumber Expression"],
             fixedSource: """
-            #Given("I have (a cuke") { }
+            #Given("I have {int} cukes") { (count: Int) in }
             """)
+    }
+
+    func testInvalidRegularExpressionThatIsNoExpressionEitherHasNoFix() {
+        // Without its anchors, "I have (a cuke" is optional text with no ')', so it is not a fix.
+        assertMacroExpansion(
+            """
+            #Given("^I have (a cuke$") { }
+            """,
+            expandedSource: """
+            #Given("^I have (a cuke$") { }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: problemMessage("^I have (a cuke$"),
+                               line: 1,
+                               column: 8)
+            ],
+            macros: macros)
+    }
+
+    func testOtherSyntaxErrorsAreReportedWithoutAFix() {
+        assertMacroExpansion(
+            """
+            #Given("I have () cukes") { }
+            """,
+            expandedSource: """
+            #Given("I have () cukes") { }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: problemMessage("I have () cukes"),
+                               line: 1,
+                               column: 8)
+            ],
+            macros: macros)
     }
 
     func testInterpolatedPatternIsAnError() {
@@ -148,8 +181,8 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             macros: macros)
     }
 
-    /// The message CucumberSwift reports at run time for the same pattern.
-    private func invalidRegularExpressionMessage(_ pattern: String) -> String {
+    /// The message the macro reports for a pattern that does not parse.
+    private func problemMessage(_ pattern: String) -> String {
         do {
             _ = try StepPattern(pattern)
             return "expected an error"

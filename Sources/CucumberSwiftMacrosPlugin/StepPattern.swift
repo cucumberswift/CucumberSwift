@@ -38,27 +38,28 @@ struct StepPattern {
     let isRegularExpression: Bool
 
     init(_ pattern: String) throws {
-        isRegularExpression = Self.isRegularExpression(pattern)
-        captures = isRegularExpression ? try Self.regularExpressionCaptures(pattern)
-                                       : try Self.expressionCaptures(pattern)
+        let syntax: CucumberExpression.Syntax
+        do {
+            syntax = try CucumberExpression.Syntax(parsing: pattern)
+        } catch let error as InvalidRegularExpression {
+            throw Problem(message: error.description, corrected: Self.withoutRegularExpressionMarkers(pattern))
+        } catch let error as CucumberExpression.SyntaxError {
+            throw Problem(message: "\(error.message). \(error.solution)", corrected: Self.correction(for: error))
+        }
+        isRegularExpression = syntax.kind == .regularExpression
+        captures = try syntax.arguments.map { argument in
+            let parameter = argument.parameterName.isEmpty ? "anonymous" : argument.parameterName
+            guard Self.isIdentifier(parameter) else {
+                throw Problem(message: "The parameter type {\(parameter)} must be a Swift identifier, because the step definition reads it as \\.\(parameter) on Match.",
+                              corrected: nil)
+            }
+            return Capture(parameter: parameter, type: Self.builtInTypes[parameter])
+        }
     }
 
     /// The same rule as `CucumberExpression.init(_:)`.
     static func isRegularExpression(_ pattern: String) -> Bool {
         pattern.first == "^" || pattern.last == "$" || (pattern.count >= 2 && pattern.first == "/" && pattern.last == "/")
-    }
-
-    private static func regularExpressionCaptures(_ pattern: String) throws -> [Capture] {
-        do {
-            _ = try CucumberExpression(validating: pattern)
-        } catch let error as InvalidRegularExpression {
-            throw Problem(message: error.description, corrected: withoutRegularExpressionMarkers(pattern))
-        }
-        let compiled = pattern.first == "/" && pattern.last == "/" && pattern.count >= 2 ? String(pattern.dropFirst().dropLast()) : pattern
-        // CucumberSwiftExpressions passes only top-level groups as arguments, so counting every group is
-        // wrong for nested groups. cucumberswift/CucumberSwiftExpressions#67 makes the count public.
-        let groups = (try? NSRegularExpression(pattern: compiled).numberOfCaptureGroups) ?? 0
-        return Array(repeating: Capture(parameter: "anonymous", type: "String"), count: groups)
     }
 
     /// The pattern as a Cucumber Expression, when removing the anchors or slashes leaves a valid one.
@@ -71,45 +72,22 @@ struct StepPattern {
             if stripped.last == "$" { stripped = stripped.dropLast() }
         }
         let candidate = String(stripped)
-        guard !candidate.isEmpty, !isRegularExpression(candidate), (try? expressionCaptures(candidate)) != nil else { return nil }
+        guard !candidate.isEmpty,
+              let syntax = try? CucumberExpression.Syntax(parsing: candidate),
+              syntax.kind == .cucumberExpression else { return nil }
         return candidate
     }
 
-    // CucumberSwiftExpressions' lexer reports no errors, so this reads `{…}` itself until
-    // cucumberswift/CucumberSwiftExpressions#67 reports syntax errors with their positions.
-    private static func expressionCaptures(_ pattern: String) throws -> [Capture] {
-        let characters = Array(pattern)
-        var captures = [Capture]()
-        var index = 0
-        while index < characters.count {
-            switch characters[index] {
-                case "\\":
-                    index += 2
-                case "{":
-                    guard let close = characters[(index + 1)...].firstIndex(of: "}") else {
-                        throw unterminated(characters, open: index)
-                    }
-                    let name = String(characters[(index + 1)..<close])
-                    let parameter = name.isEmpty ? "anonymous" : name
-                    guard isIdentifier(parameter) else {
-                        throw Problem(message: "The parameter type {\(name)} must be a Swift identifier, because the step definition reads it as \\.\(name) on Match.",
-                                      corrected: nil)
-                    }
-                    captures.append(Capture(parameter: parameter, type: builtInTypes[parameter]))
-                    index = close + 1
-                default:
-                    index += 1
-            }
-        }
-        return captures
-    }
-
-    /// `{int cukes` most likely means `{int} cukes`, so the correction closes the parameter after its first word.
-    private static func unterminated(_ characters: [Character], open: Int) -> Problem {
-        let word = characters[(open + 1)...].prefix { !$0.isWhitespace }
-        var corrected = characters
-        corrected.insert("}", at: open + 1 + word.count)
-        return Problem(message: "The parameter {\(String(word)) is missing its closing '}'.", corrected: String(corrected))
+    /// The fix for a syntax error, when it is clear. `{int cukes` most likely means `{int} cukes`, so a
+    /// missing `}` goes after the first word of the parameter's name.
+    private static func correction(for error: CucumberExpression.SyntaxError) -> String? {
+        guard error.problem == .missingClosingBrace else { return nil }
+        let expression = error.expression
+        let name = expression[error.range.upperBound...].prefix { !$0.isWhitespace }
+        var corrected = expression
+        corrected.insert("}", at: name.endIndex)
+        guard (try? CucumberExpression.Syntax(parsing: corrected)) != nil else { return nil }
+        return corrected
     }
 
     private static func isIdentifier(_ name: String) -> Bool {

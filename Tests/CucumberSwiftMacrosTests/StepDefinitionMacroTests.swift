@@ -117,6 +117,23 @@ final class StepDefinitionMacroTests: XCTestCase {
             macros: macros)
     }
 
+    func testNestedCaptureGroupsAreOneArgument() {
+        // Only top-level groups are arguments, as at run time.
+        assertMacroExpansion(
+            #"""
+            #Then("^I see ((\\d+) red) cukes$") { (count: String) in
+                print(count)
+            }
+            """#,
+            expandedSource: #"""
+            Then("^I see ((\\d+) red) cukes$" as CucumberExpression) { match, _ in
+                let count: String = try match.first(\.anonymous)
+                print(count)
+            }
+            """#,
+            macros: macros)
+    }
+
     func testAParameterNamedMatchDoesNotHideTheMatch() {
         assertMacroExpansion(
             """
