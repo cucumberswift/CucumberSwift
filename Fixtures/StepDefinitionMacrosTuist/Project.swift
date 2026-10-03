@@ -6,7 +6,7 @@ import ProjectDescription
 let project = Project(
     name: "StepDefinitionMacrosTuist",
     packages: [
-        .package(path: "../..", traits: ["Macros"]),
+        .package(path: "../..", traits: ["Macros"])
     ],
     targets: [
         .target(
@@ -24,15 +24,15 @@ let project = Project(
             settings: .settings(base: [
                 "SWIFT_VERSION": "6.0",
                 // Builds and runs without a signing team.
-                "CODE_SIGN_IDENTITY": "-",
+                "CODE_SIGN_IDENTITY": "-"
             ])
-        ),
+        )
     ],
     schemes: [
         .scheme(
             name: "StepDefinitionMacrosTuist",
             buildAction: .buildAction(targets: ["StepDefinitionMacrosTuistTests"]),
             testAction: .targets(["StepDefinitionMacrosTuistTests"])
-        ),
+        )
     ]
 )
