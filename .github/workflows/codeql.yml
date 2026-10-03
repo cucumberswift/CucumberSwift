@@ -23,7 +23,7 @@ jobs:
   analyze:
     name: Analyze Swift
     # Swift analysis requires a macOS runner; matches the other workflows.
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
 
     permissions:
