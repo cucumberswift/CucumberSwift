@@ -63,4 +63,48 @@ public macro But<each Argument>(_ expression: StaticString,
 public macro MatchAll<each Argument>(_ expression: StaticString,
                                      _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+#else
+// Without the Macros trait the macros are declared but unavailable, so that using one says what
+// to turn on, rather than that no such macro exists.
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro Given<each Argument>(_ expression: StaticString,
+                   _ body: (repeat each Argument) async throws -> Void) -> GivenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro When<each Argument>(_ expression: StaticString,
+                  _ body: (repeat each Argument) async throws -> Void) -> WhenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro Then<each Argument>(_ expression: StaticString,
+                  _ body: (repeat each Argument) async throws -> Void) -> ThenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro And<each Argument>(_ expression: StaticString,
+                 _ body: (repeat each Argument) async throws -> Void) -> AndStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro But<each Argument>(_ expression: StaticString,
+                 _ body: (repeat each Argument) async throws -> Void) -> ButStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MatchAll<each Argument>(_ expression: StaticString,
+                      _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 #endif

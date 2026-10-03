@@ -293,3 +293,39 @@ jobs:
         run: swift test --package-path Tests/CucumberSwiftDSLConsumerTests
       - name: Run the Swift 6 language mode consumer tests
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
+      # Uses the step definition macros as a project would: the Macros trait turned on from its own
+      # Package.swift, on the oldest Swift that has traits. The Fixtures job runs it on a newer one.
+      - name: Run the step definition macros package fixture
+        run: swift test --package-path Fixtures/StepDefinitionMacrosPackage
+
+  # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
+  # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
+  # package trait only compiles with Xcode 26.4 or later.
+  fixtures:
+    name: Fixtures
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Build and test the fixtures
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run test-fixtures

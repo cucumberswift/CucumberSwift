@@ -52,6 +52,25 @@ Then `import CucumberSwiftMacros` where you write step definitions. It imports C
 
 In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
 
+In a project that Tuist generates, turn the trait on where the project lists its packages, and depend on the product:
+
+```swift
+let project = Project(
+    name: "MyApp",
+    packages: [
+        .package(url: "https://github.com/cucumberswift/CucumberSwift", from: "6.4.0", traits: ["Macros"])
+    ],
+    targets: [
+        .target(
+            name: "MyAppTests",
+            // …
+            dependencies: [.package(product: "CucumberSwiftMacros")])
+    ]
+)
+```
+
+Tuist writes the trait into the Xcode project it generates, so the same Xcode 26.4 or later is needed. If the trait is off, or your Xcode does not apply it, each macro you use is an error that says to turn the `Macros` trait on.
+
 > Note: Macros are only available through Swift Package Manager. Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
 
 The first time you build a macro, Xcode asks you to trust and enable it. Recent versions of Xcode and SwiftPM download swift-syntax prebuilt, so it does not slow the build down.

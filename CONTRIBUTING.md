@@ -113,6 +113,21 @@ Also worth knowing:
 - **The localized macros are generated.** `Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift` declares a macro for every localized step type in `Sources/CucumberSwift/Generated/I18n.swift`, such as `#ES_Dado`. `LocalizedStepDefinitionMacroTests` fails when the two differ; rewrite the file with `CUCUMBERSWIFT_WRITE_LOCALIZED_MACROS=1 swift test --traits Macros --filter LocalizedStepDefinitionMacroTests`.
 - **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
 
+### Fixtures
+
+`Fixtures/` holds small projects that use CucumberSwift the way a project that depends on it would, from this checkout, to test what the packages above cannot: package traits, Tuist-generated projects, and a test target in the Swift 6 language mode. Each has a README that says what it proves. Run them all with:
+
+```bash
+mise run test-fixtures
+```
+
+CI runs them in the "Fixtures" job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
+
+- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`; name the project and its scheme after the fixture's folder, which is how the task finds them.
+- **Depend on CucumberSwift by path.** `.package(name: "CucumberSwift", path: "../..")` in a Swift package, `.package(path: "../..")` in a Tuist project.
+- **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
+- **Nothing generated is committed**: `.gitignore` covers each fixture's Xcode project, `Derived` folder, `.build` folder and `Package.resolved`. They are outside `Project.swift`'s globs, so they are not in CucumberSwift's Xcode project or in what Carthage builds.
+
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 
 ## The Xcode project

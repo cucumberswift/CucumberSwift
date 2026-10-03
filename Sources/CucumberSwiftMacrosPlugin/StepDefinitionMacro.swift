@@ -139,7 +139,12 @@ struct StepDefinition {
         let signature = closure.signature
         let attributes = signature?.attributes.map { "\($0.trimmedDescription) " }.joined() ?? ""
         let captureList = signature?.capture.map { "\($0.trimmedDescription) " } ?? ""
-        let effects = signature?.effectSpecifiers?.trimmedDescription ?? ""
+        // The expansion reads its arguments with `try`. Swift infers `throws` for a closure that
+        // writes no effects, but not for one that writes `async` alone, so add it there.
+        var effects = signature?.effectSpecifiers?.trimmedDescription ?? ""
+        if signature?.effectSpecifiers?.asyncSpecifier != nil, signature?.effectSpecifiers?.throwsClause == nil {
+            effects += " throws"
+        }
         let arguments = effects.isEmpty ? "\(match), \(stepName)" : "(\(match), \(stepName)) \(effects)"
         let body = (bindings.map { "    \($0)" } + [Self.reindented(closure.statements)]).filter { !$0.isEmpty }
 

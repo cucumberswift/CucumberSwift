@@ -85,6 +85,24 @@ final class StepDefinitionMacroTests: XCTestCase {
             macros: macros)
     }
 
+    func testAnAsyncClosureThatDoesNotSayThrowsStillThrows() {
+        // The arguments are read with `try`, so the expansion needs `throws` even when the closure
+        // only says `async`.
+        assertMacroExpansion(
+            """
+            #When("I wait for {int} cukes") { (count: Int) async in
+                await wait(count)
+            }
+            """,
+            expandedSource: """
+            When("I wait for {int} cukes" as CucumberExpression) { (match, _) async throws in
+                let count: Int = try match.first(\\.int)
+                await wait(count)
+            }
+            """,
+            macros: macros)
+    }
+
     func testCustomParameterIsReadByItsKeyPath() {
         assertMacroExpansion(
             """
