@@ -33,9 +33,6 @@ public class Step: CustomStringConvertible {
     public internal(set) var dataTable: DataTable?
     public private(set)  var docString: DocString?
     public private(set)  var location: Lexer.Position
-    /// The language of the feature file the step comes from. Its keyword is named in this language, not in
-    /// the one the lexer last read, which is the last feature file's.
-    let language: Language
     public internal(set) var testCase: XCTestCase?
 
     typealias MatchesExpression = ((_ str: String) -> Bool)
@@ -87,6 +84,9 @@ public class Step: CustomStringConvertible {
     /// matches is ambiguous: it fails and runs none of them.
     var matchingDefinitions = [Definition]()
     var isAmbiguous: Bool { matchingDefinitions.count > 1 }
+    /// The language of the feature file the step comes from. Its keyword is named in this language, not in
+    /// the one the lexer last read, which is the last feature file's.
+    let language: Language
     /// The step's keyword as written in its feature file: `And` or `But` rather than the keyword it
     /// continues, which ``keyword`` also holds.
     var writtenKeyword: String {
@@ -213,28 +213,6 @@ extension Step {
             toString(in: Scope.language)
         }
 
-        func toString(in language: Language) -> String {
-            if let str = stringValue {
-                return str
-            }
-            if contains(Keyword.given) {
-                return language.given
-            }
-            if contains(Keyword.when) {
-                return language.when
-            }
-            if contains(Keyword.then) {
-                return language.then
-            }
-            if contains(Keyword.and) {
-                return language.and
-            }
-            if contains(Keyword.but) {
-                return language.but
-            }
-            return "UNKNOWN"
-        }
-
         public func hasMultipleValues() -> Bool {
             guard rawValue > 2 else { return false }
             return ceil(log2(Double(rawValue))) != floor(log2(Double(rawValue)))
@@ -250,5 +228,30 @@ extension Step {
         enum KeywordError: Error {
             case notPrimaryKeyword
         }
+    }
+}
+
+extension Step.Keyword {
+    /// The keyword named in the given language.
+    func toString(in language: Language) -> String {
+        if let str = stringValue {
+            return str
+        }
+        if contains(.given) {
+            return language.given
+        }
+        if contains(.when) {
+            return language.when
+        }
+        if contains(.then) {
+            return language.then
+        }
+        if contains(.and) {
+            return language.and
+        }
+        if contains(.but) {
+            return language.but
+        }
+        return "UNKNOWN"
     }
 }
