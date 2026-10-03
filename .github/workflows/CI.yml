@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-14
+    runs-on: macos-15
     permissions:
       contents: read
     steps:
@@ -46,7 +46,7 @@ jobs:
   # Needs nothing from `test`, so it starts alongside it instead of waiting for a
   # second macOS runner afterwards. A required check: keep the job name.
   build_for_package_managers:
-    runs-on: macos-14
+    runs-on: macos-15
     permissions:
       contents: read
     steps:
@@ -75,7 +75,8 @@ jobs:
   #
   # Several Xcode versions, because consumers build with whatever Xcode they have,
   # so a new Xcode that breaks this path should show up here first. `default` is
-  # the runner image's own Xcode; the macos-15 image also carries Xcode 26.
+  # the runner image's own Xcode, and the macos-15 image's (Xcode 16) is the oldest
+  # Xcode CI builds with. That image also carries Xcode 26.
   carthage:
     name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }})
     runs-on: ${{ matrix.os }}
@@ -86,8 +87,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
-            xcode: default
           - os: macos-15
             xcode: default
           - os: macos-15
@@ -226,7 +225,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-26]
+        os: [macos-15, macos-26]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
