@@ -21,25 +21,16 @@ public class Feature: Taggable, Positionable {
         location = node.tokens.first?.position ?? .start
         endLocation = .start
         self.uri = uri
-        for token in node.tokens {
-            if case Lexer.Token.title(_, let t) = token {
-                title = t
-            } else if case Lexer.Token.description(_, let description) = token {
-                desc += description + "\n"
-            } else if case Lexer.Token.tag(_, let tag) = token {
-                tags.append(tag)
-            }
-        }
-        let backgroundSteps: [AST.StepNode] = node.children.compactMap { $0 as? AST.BackgroundNode }
-                                        .flatMap { $0.children.compactMap { $0 as? AST.StepNode } }
-        node.children.forEach { node in
-            if let sn = node as? AST.ScenarioNode {
-                scenarios.append(Scenario(with: sn, tags: tags, stepNodes: backgroundSteps))
-            } else if let son = node as? AST.ScenarioOutlineNode {
-                let generatedScenarios = ScenarioOutlineParser.parse(son, featureTags: tags, backgroundStepNodes: backgroundSteps, uri: uri)
-                scenarios.append(contentsOf: generatedScenarios)
-            } else if let rn = node as? AST.RuleNode {
-                scenarios.append(contentsOf: RuleParser.parse(rn, featureTags: tags, backgroundStepNodes: backgroundSteps))
+        let header = NodeHeader(node.tokens)
+        title = header.title
+        desc = header.description
+        tags = header.tags
+        for content in node.scenarioContents(featureTags: tags, uri: uri) {
+            switch content {
+                case let .scenario(scenarioNode, backgroundStepNodes):
+                    scenarios.append(Scenario(with: scenarioNode, tags: tags, stepNodes: backgroundStepNodes))
+                case let .outline(_, examples):
+                    scenarios.append(contentsOf: examples.map { Scenario(example: $0) })
             }
         }
         scenarios.forEach { $0.feature = self }

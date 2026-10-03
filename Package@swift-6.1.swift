@@ -57,6 +57,11 @@ let package = Package(
             ],
             path: "Sources/CucumberSwift",
             exclude: ["Info.plist"]),
+        // CucumberSwift's Gherkin parser for build tools: Sources/CucumberSwift/Gherkin/Core, through the
+        // Core symlink, compiled a second time without XCTest. Not a product.
+        .target(
+            name: "CucumberSwiftGherkin",
+            path: "Sources/CucumberSwiftGherkin"),
         // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
         .executableTarget(
             name: "CucumberSwiftLintTool",
@@ -101,6 +106,10 @@ let package = Package(
                 "CucumberSwiftMacrosPlugin",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
             ]),
+        .testTarget(
+            name: "CucumberSwiftGherkinTests",
+            // CucumberSwift too, to check that both read feature files alike.
+            dependencies: ["CucumberSwiftGherkin", "CucumberSwift"]),
         .testTarget(
             name: "CucumberSwiftLintToolTests",
             dependencies: ["CucumberSwiftLintTool"]),

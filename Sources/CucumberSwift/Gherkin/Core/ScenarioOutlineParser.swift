@@ -8,6 +8,20 @@
 
 import Foundation
 
+/// One example of a Scenario Outline: a row of one of its Examples tables, with the row's values in
+/// place of the outline's `<placeholders>`. CucumberSwift turns each into a ``Scenario``.
+struct OutlineExample {
+    /// The outline's title with the row's values, made unique among the outline's examples.
+    let title: String
+    let description: String
+    /// The feature's and the outline's tags, and those of its Examples blocks.
+    let tags: [String]
+    /// Where the row is.
+    let position: Lexer.Position
+    /// The Background's steps, then the outline's steps with the row's values filled in.
+    let stepNodes: [AST.StepNode]
+}
+
 enum ScenarioOutlineParser {
     /// What every example of one Scenario Outline shares.
     private struct Outline {
@@ -34,7 +48,7 @@ enum ScenarioOutlineParser {
      
      The resulting string is the final description text used for each generated scenario.
      */
-    private static func extractOutlineDescription(_ scenarioOutlineNode: AST.ScenarioOutlineNode, stepNodes: [AST.StepNode]) -> String {
+    static func extractOutlineDescription(_ scenarioOutlineNode: AST.ScenarioOutlineNode, stepNodes: [AST.StepNode]) -> String {
         // Collect tokens up to (but not including) the first Examples block
         let tokensUpToExamples = scenarioOutlineNode.tokens.prefix { !$0.isExampleScope() }
 
@@ -78,13 +92,8 @@ enum ScenarioOutlineParser {
         return trimmed.joined(separator: "\n") + "\n"
     }
 
-    static func parse(_ scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String], backgroundStepNodes: [AST.StepNode], uri: String = "") -> [Scenario] {
-        let tags = featureTags.appending(contentsOf: scenarioOutlineNode.tokens.compactMap {
-            if case Lexer.Token.tag(_, let tag) = $0 {
-                return tag
-            }
-            return nil
-        })
+    static func examples(of scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String], backgroundStepNodes: [AST.StepNode], uri: String = "") -> [OutlineExample] {
+        let tags = self.tags(of: scenarioOutlineNode, featureTags: featureTags)
         let stepNodes = scenarioOutlineNode.children.compactMap { $0 as? AST.StepNode }
         let outline = Outline(titleLine: scenarioOutlineNode.tokens.groupedByLine().first,
                               tags: tags,
@@ -98,6 +107,27 @@ enum ScenarioOutlineParser {
             .flatMap { parseExample($0, of: outline, usedTitles: &usedTitles) }
     }
 
+    /// The feature's tags, then the outline's and those of its Examples blocks. Every example has them all.
+    static func tags(of scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String]) -> [String] {
+        featureTags.appending(contentsOf: scenarioOutlineNode.tokens.compactMap {
+            if case Lexer.Token.tag(_, let tag) = $0 {
+                return tag
+            }
+            return nil
+        })
+    }
+
+    /// The outline's title as written, with its `<placeholders>`.
+    static func title(of scenarioOutlineNode: AST.ScenarioOutlineNode) -> String {
+        scenarioOutlineNode.tokens.groupedByLine().first?.reduce(into: "") {
+            if case Lexer.Token.tableHeader(_, let headerText) = $1 {
+                $0 += "<\(headerText)>"
+            } else if case Lexer.Token.title(_, let titleText) = $1 {
+                $0 += titleText
+            }
+        } ?? ""
+    }
+
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
         scenarioOutlineNode.tokens.drop { !$0.isExampleScope() }.groupedByExample()
     }
@@ -109,9 +139,9 @@ enum ScenarioOutlineParser {
         }
     }
 
-    private static func parseExample(_ tokens: [Lexer.Token], of outline: Outline, usedTitles: inout Set<String>) -> [Scenario] {
+    private static func parseExample(_ tokens: [Lexer.Token], of outline: Outline, usedTitles: inout Set<String>) -> [OutlineExample] {
         let titleLine = outline.titleLine
-        var scenarios = [Scenario]()
+        var examples = [OutlineExample]()
         let lines = tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
         validateTable(lines, uri: outline.uri)
         let headerLookup: [String: Int]? = lines.first?.enumerated().reduce(into: [:]) {
@@ -140,18 +170,23 @@ enum ScenarioOutlineParser {
                     $0? += titleText
                 }
             } ?? ""
-            var steps = outline.backgroundStepNodes.map { Step(with: $0) }
+            var stepNodes = outline.backgroundStepNodes
             for stepNode in outline.stepNodes {
-                steps.append(getStepFromLine(line, lookup: headerLookup, stepNode: stepNode))
+                stepNodes.append(getStepFromLine(line, lookup: headerLookup, stepNode: stepNode))
             }
             let values = zip(headers, line).compactMap { header, cell -> String? in
                 guard !headersInTitle.contains(header), case Lexer.Token.tableCell(_, let cellText) = cell else { return nil }
                 return "\(header): \(cellText.valueDescription)"
             }
             let exampleTitle = exampleTitle(title, values: values, exampleNumber: index + 1, usedTitles: &usedTitles)
-            scenarios.append(Scenario(with: steps, title: exampleTitle, description: outline.description, tags: outline.tags, position: line.first?.position ?? .start))
+            examples.append(OutlineExample(
+                title: exampleTitle,
+                description: outline.description,
+                tags: outline.tags,
+                position: line.first?.position ?? .start,
+                stepNodes: stepNodes))
         }
-        return scenarios
+        return examples
     }
 
     /// An example's title: the outline's title followed by the example's values for the columns the
@@ -184,7 +219,7 @@ enum ScenarioOutlineParser {
         return exampleTitle
     }
 
-    private static func getStepFromLine(_ line: [Lexer.Token], lookup: [String: Int]?, stepNode: AST.StepNode) -> Step {
+    private static func getStepFromLine(_ line: [Lexer.Token], lookup: [String: Int]?, stepNode: AST.StepNode) -> AST.StepNode {
         let node = AST.StepNode(node: stepNode)
         for (i, token) in node.tokens.enumerated() {
             if case Lexer.Token.tableHeader(_, let headerText) = token,
@@ -200,7 +235,7 @@ enum ScenarioOutlineParser {
                 node.tokens[i] = .tableCell(pos, .match(cellToken.position, cellText.valueDescription))
             }
         }
-        return Step(with: node)
+        return node
     }
 }
 
