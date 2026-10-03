@@ -1,0 +1,7 @@
+# Each iOS test runs on a simulator that rules_apple creates and boots, and the first
+# boot of a new simulator migrates its data, which can take minutes. Booting one for
+# each suite at once ran past the timeout in CI, so run the tests one at a time (the
+# later suites then reuse the booted simulator), and give each test longer than the
+# default 300 seconds.
+test --local_test_jobs=1
+test --test_timeout=900
