@@ -269,22 +269,86 @@ jobs:
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
   # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
-  # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too. A
-  # combination fails unless every scenario ran exactly once, and the scenarios ran in as many
-  # workers as the fixtures' plain XCTest classes (PlainXCTestControl), up to two. Where Xcode
-  # runs those in one worker too, that is how Xcode runs that kind of target. UI tests on a Mac
-  # run with one worker: they drive the one copy of the app a Mac can run.
-  # Each run of a scenario writes a record in PARALLEL_TEST_RECORDS, named after the scenario,
-  # its worker's process and a UUID, so that two runs never share one. xcodebuild's log can't
-  # show this, because it interleaves its own output with the workers' and cuts test lines short.
+  # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too.
+  # .github/scripts/parallel-fixture.sh runs one combination and says when it fails.
+  #
+  # They fail fast, because they need many macOS runners: they run only when a change could
+  # affect them, never in the merge queue (they are not required checks, and the pull request
+  # has run them), the rest wait for one quick combination to pass, and the first failure
+  # cancels the others.
+  parallel_changes:
+    name: Parallel tests needed
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      needed: ${{ steps.diff.outputs.needed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check what changed
+        id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          # The code, the fixtures, the package manifests, the tool versions or this workflow; not
+          # the documentation, which lives in Sources too.
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/parallel-fixture\.sh$)'
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            needed=true
+          elif git diff --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            needed=true
+          else
+            needed=false
+          fi
+          echo "Parallel tests needed: $needed"
+          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+
+  parallel_smoke:
+    name: Parallel tests (Hostless, macOS, macos-26)
+    needs: parallel_changes
+    if: needs.parallel_changes.outputs.needed == 'true'
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise install
+      - name: Generate the fixtures' project
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run generate-fixtures
+      - name: Run the parallel fixture
+        env:
+          PLATFORM: macOS
+          KIND: Hostless
+        run: .github/scripts/parallel-fixture.sh
+
   parallel_test:
     name: Parallel tests (${{ matrix.kind }}, ${{ matrix.platform }}, ${{ matrix.os }})
+    needs: [parallel_changes, parallel_smoke]
+    if: needs.parallel_changes.outputs.needed == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
       contents: read
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [macos-15, macos-26]
         platform: [iOS Simulator, tvOS Simulator, macOS, Mac Catalyst]
@@ -294,7 +358,12 @@ jobs:
             platform: tvOS Simulator
           - os: macos-15
             platform: macOS
+          # Run first, by parallel_smoke.
+          - os: macos-26
+            platform: macOS
+            kind: Hostless
         include:
+          # UI tests on a Mac drive the one copy of the app a Mac can run.
           - platform: Mac Catalyst
             kind: UI
             workers: 1
@@ -319,88 +388,12 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run generate-fixtures
-      - name: Choose the scheme and destination
-        id: destination
+      - name: Run the parallel fixture
         env:
           PLATFORM: ${{ matrix.platform }}
           KIND: ${{ matrix.kind }}
-        run: |
-          case "$PLATFORM" in
-            "Mac Catalyst") suffix=""; destination="platform=macOS,variant=Mac Catalyst" ;;
-            "macOS") suffix="Mac"; destination="platform=macOS" ;;
-            *)
-              # The newest runtime's first iPhone or Apple TV, so the job doesn't depend on a device name.
-              if [ "$PLATFORM" = "tvOS Simulator" ]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
-              udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" python3 -c '
-          import json, os, sys
-          devices = json.load(sys.stdin)["devices"]
-          prefix = ".SimRuntime." + os.environ["RUNTIME"] + "-"
-          runtimes = sorted((r for r in devices if prefix in r),
-                            key=lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")], reverse=True)
-          print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith(os.environ["DEVICE"])), ""))
-          ')
-              if [ -z "$udid" ]; then
-                echo "::error::No $device simulator is available on this runner."
-                exit 1
-              fi
-              destination="platform=$PLATFORM,id=$udid" ;;
-          esac
-          echo "scheme=Parallel${KIND}Tests${suffix}" >> "$GITHUB_OUTPUT"
-          echo "destination=$destination" >> "$GITHUB_OUTPUT"
-      - name: Run the parallel fixture
-        env:
-          SCHEME: ${{ steps.destination.outputs.scheme }}
-          DESTINATION: ${{ steps.destination.outputs.destination }}
-          # The scenarios in Tests/ParallelFixtures/Features.
-          EXPECTED_SCENARIOS: 10
           WORKERS: ${{ matrix.workers || 3 }}
-        run: |
-          set +e
-          records="$RUNNER_TEMP/parallel-test-records"
-          mkdir -p "$records"
-          xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$RUNNER_TEMP/parallel-test.xcresult" PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
-          status=$?
-          # The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
-          cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
-          echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
-          grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
-          grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
-          # Each failing test and why, from the result bundle: the log names a failing test, not always why.
-          xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/parallel-test.xcresult" 2>/dev/null | python3 -c '
-          import json, sys
-          for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
-              print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
-          ' || true
-          # A fixture app that crashed leaves a report: show what it died of.
-          for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
-            echo "Crash report $(basename "$report"):"
-            grep -E '"(exception|termination|asi)"' "$report" | head -5
-          done
-          grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
-          total=$(ls "$records" | wc -l | tr -d ' ')
-          # Each record is <scenario>.<worker's process>.<UUID>.
-          scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
-          workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
-          echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
-          # The workers Xcode gave the plain XCTest classes, named in each result line.
-          control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" parallel-test.log | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
-          [ "$control" -gt 0 ] || control=1
-          echo "Plain XCTest classes ran in $control workers"
-          min_workers=$(( control < 2 ? control : 2 ))
-          ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
-          if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
-            echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in CI.yml."
-            status=1
-          fi
-          if [ "$total" -ne "$scenarios" ]; then
-            echo "::error::Some scenarios ran more than once."
-            status=1
-          fi
-          if [ "$workers" -lt "$min_workers" ]; then
-            echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel."
-            status=1
-          fi
-          exit $status
+        run: .github/scripts/parallel-fixture.sh
 
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
   # SwiftPM links all of a package's test targets into one test bundle, and each
