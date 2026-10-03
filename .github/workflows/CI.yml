@@ -339,11 +339,17 @@ jobs:
           set +e
           records="$RUNNER_TEMP/parallel-test-records"
           mkdir -p "$records"
-          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" > parallel-test.log 2>&1
+          xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$RUNNER_TEMP/parallel-test.xcresult" PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
           status=$?
           echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
           grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
           grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
+          # Each failing test and why, from the result bundle: the log names a failing test, not always why.
+          xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/parallel-test.xcresult" 2>/dev/null | python3 -c '
+          import json, sys
+          for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
+              print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:300])
+          ' || true
           # A fixture app that crashed leaves a report: show what it died of.
           for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
             echo "Crash report $(basename "$report"):"

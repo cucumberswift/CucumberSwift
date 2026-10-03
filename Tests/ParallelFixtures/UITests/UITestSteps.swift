@@ -16,12 +16,18 @@ import CucumberSwiftExpressions
 enum UITestApp {
     static let app = XCUIApplication()
 
-    /// The item count the app shows. Found by its identifier whatever kind of element the platform makes of
-    /// the text, and waited for, since the first launch on a new simulator clone can be slow.
+    /// The item count the app shows. Found by its identifier, or by its text, whatever kind of element the
+    /// platform makes of it, and waited for, since the first launch on a new simulator clone can be slow.
+    /// When it isn't there, the failure shows what the app does show.
     static func items() -> String {
-        let label = app.descendants(matching: .any)["items"]
-        XCTAssertTrue(label.waitForExistence(timeout: 30), "The app shows no item count. App state: \(app.state.rawValue)")
-        return label.label.isEmpty ? (label.value as? String ?? "") : label.label
+        let byIdentifier = app.descendants(matching: .any)["items"]
+        let byText = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Items:' OR value BEGINSWITH 'Items:'")).firstMatch
+        let found = byIdentifier.waitForExistence(timeout: 30) ? byIdentifier : byText
+        guard found.exists else {
+            XCTFail("The app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
+            return ""
+        }
+        return found.label.isEmpty ? (found.value as? String ?? "") : found.label
     }
 
     static func add() {
