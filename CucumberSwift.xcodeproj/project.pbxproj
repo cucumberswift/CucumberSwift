@@ -10,6 +10,7 @@
 		009975E6661DCE17B129C7F0 /* StringReaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB817496F330098529E21B73 /* StringReaderTests.swift */; };
 		038EEA80244A21548F4B6DFF /* Positionable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642B45B68C6343B91008C5A /* Positionable.swift */; };
 		07013ECAA03897AA69778212 /* CharacterExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F40A4B629C8002F3D6C5A9C /* CharacterExtensions.swift */; };
+		081FB63548F3A8CAAF3D54F8 /* UndefinedStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28DACBFA3E45CE73235B8ED3 /* UndefinedStepTests.swift */; };
 		0E5179311CFBFB0C3D103F26 /* JSONReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A22F85448DE49049412E696 /* JSONReporter.swift */; };
 		133B0984FA23614E461D4D3D /* Method.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF018E99FE333CD47613B2 /* Method.swift */; };
 		134EBC2C3285D604906C98F3 /* AST.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51321BF66FB4F58D26A41D5 /* AST.swift */; };
@@ -226,6 +227,7 @@
 		1EDABCBC861D11AD3E422012 /* DSLBackgroundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLBackgroundTests.swift; sourceTree = "<group>"; };
 		27009DC17F4BA44009C09B53 /* Token.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Token.swift; sourceTree = "<group>"; };
 		28B76CF44C2A8ACE0C03F295 /* AmbiguousStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbiguousStepTests.swift; sourceTree = "<group>"; };
+		28DACBFA3E45CE73235B8ED3 /* UndefinedStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndefinedStepTests.swift; sourceTree = "<group>"; };
 		28F7ADE24B1C68204F9BDF39 /* StubGeneratorToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubGeneratorToken.swift; sourceTree = "<group>"; };
 		2ADF912DAC05C2E2AFA648EB /* AsyncStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncStepTests.swift; sourceTree = "<group>"; };
 		2C6AD0750E2501E709CA8DD2 /* GeneratedStepDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedStepDefinitions.swift; sourceTree = "<group>"; };
@@ -728,6 +730,7 @@
 				41A562D88BBACC53D2D23CD0 /* SkippedStepTests.swift */,
 				5E75F552A5CAD45258EC3909 /* StepFailureLocationTests.swift */,
 				6A2F0AEDB5AA6F5EA32A169B /* StepTestCaseTests.swift */,
+				28DACBFA3E45CE73235B8ED3 /* UndefinedStepTests.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -1003,6 +1006,7 @@
 				747CAE60AED2F131F9B3CAA4 /* SkippedStepTests.swift in Sources */,
 				8728D3532389DBE9A17F74D1 /* StepFailureLocationTests.swift in Sources */,
 				F5A27EFDC19DC976FA7F8721 /* StepTestCaseTests.swift in Sources */,
+				081FB63548F3A8CAAF3D54F8 /* UndefinedStepTests.swift in Sources */,
 				D2ABB8C03D687F2610679F88 /* SendableTests.swift in Sources */,
 				BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */,
 				009975E6661DCE17B129C7F0 /* StringReaderTests.swift in Sources */,

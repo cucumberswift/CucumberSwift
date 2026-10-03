@@ -78,7 +78,7 @@ This is the reference run. It builds every test target through the Xcode project
 CI also runs every test target with SwiftPM. Run all four packages:
 
 ```bash
-swift test
+swift test --skip 'CucumberSwift\.CucumberTest'
 swift test --package-path Tests/CucumberSwiftConsumerTests
 swift test --package-path Tests/CucumberSwiftDSLConsumerTests
 swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
@@ -94,7 +94,9 @@ mise run test-swiftpm
 
 **The Swift 6 package has no Xcode target.** `Tests/CucumberSwiftSwift6ConsumerTests` builds its test target in the Swift 6 language mode, as a project that has moved to Swift 6 would, while CucumberSwift itself stays in the Swift 5 language mode. It checks that the setup in "Matching Steps" → "Swift 6 language mode" compiles and runs. If a change makes Swift 6 code stop compiling, this package fails to build.
 
-**Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles. The root package runs 12 tests more than the `CucumberSwiftTests` bundle, because the Xcode test plan skips `CucumberTest`, the run of `Tests/CucumberSwiftTests/Features`. `swift test --skip 'CucumberSwift\.CucumberTest'` leaves those out, so its count matches the bundle exactly.
+**Why the root package skips `CucumberTest`.** `CucumberTest` is the run of `Tests/CucumberSwiftTests/Features`, whose steps have no step definitions, so each of those steps would fail. The Xcode test plan skips it too, and `--skip 'CucumberSwift\.CucumberTest'` does the same for SwiftPM.
+
+**Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles, and the root package the same as the `CucumberSwiftTests` bundle, apart from the tests that need UIKit, which `swift test` on macOS doesn't have.
 
 Also worth knowing:
 

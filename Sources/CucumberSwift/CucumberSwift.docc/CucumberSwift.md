@@ -23,5 +23,6 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Matching-Steps>
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>
+- <doc:Checking-Feature-Files>
 - <doc:Hooks>
 - <doc:CucumberSwift+UIUTest>
