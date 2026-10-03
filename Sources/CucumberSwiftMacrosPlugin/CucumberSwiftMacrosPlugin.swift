@@ -8,7 +8,9 @@
 // executable, so it still needs an entry point to build.
 @main
 enum CucumberSwiftMacrosPluginWithoutMacros {
-    static func main() { }
+    static func main() {
+        // Nothing to do: the compiler never runs this plugin without the Macros trait.
+    }
 }
 #else
 import SwiftCompilerPlugin

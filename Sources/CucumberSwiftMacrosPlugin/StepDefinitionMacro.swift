@@ -273,7 +273,7 @@ enum StepFixItMessage: FixItMessage {
 /// `#ES_Dado(…)` becomes `ES_Dado(…)`.
 public struct StepDefinitionMacro: ExpressionMacro {
     public static func expansion(of node: some FreestandingMacroExpansionSyntax,
-                                 in context: some MacroExpansionContext) throws -> ExprSyntax {
+                                 in _: some MacroExpansionContext) throws -> ExprSyntax {
         try StepDefinition(node).expansion(keyword: node.macroName.text)
     }
 }
