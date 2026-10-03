@@ -110,36 +110,27 @@ jobs:
           xcrun simctl list runtimes | grep -i ios || true
       - name: Install Carthage
         run: command -v carthage || brew install carthage
-      - name: Build the framework with Carthage
-        run: carthage build --no-skip-current --use-xcframeworks --platform iOS --log-path carthage-build.log
-      - name: Show what Carthage produced
-        run: find Carthage/Build -maxdepth 3 \( -name '*.framework' -o -name '*.xcframework' \) | sort
-      # A build is not proof a consumer can use it. CucumberSwiftExpressions is a
-      # static package, so it must be inside the framework rather than a separate
-      # dynamic dependency that Carthage would not deliver; and the framework must
-      # import and link from outside this project.
-      - name: Check a consumer can link the framework
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: |
-          set -eu
-          xcf=Carthage/Build/CucumberSwift.xcframework
-          if otool -L "$xcf/ios-arm64/CucumberSwift.framework/CucumberSwift" | grep -i 'CucumberSwiftExpressions'; then
-            echo "::error::CucumberSwift links CucumberSwiftExpressions dynamically, which Carthage does not deliver"
-            exit 1
-          fi
-          sim=""
-          for slice in "$xcf"/*-simulator; do sim=$slice; done
-          if [ -z "$sim" ] || [ ! -d "$sim" ]; then echo "::error::no simulator slice in $xcf"; exit 1; fi
-          platform=$(xcrun --sdk iphonesimulator --show-sdk-platform-path)
-          cat > "$RUNNER_TEMP/Consumer.swift" <<'SWIFT'
-          import CucumberSwift
-          public func consumerTouchesCucumber() -> Cucumber { Cucumber.shared }
-          SWIFT
-          xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios13.0-simulator \
-            -F "$sim" -F "$platform/Developer/Library/Frameworks" \
-            -I "$platform/Developer/usr/lib" -L "$platform/Developer/usr/lib" \
-            -framework CucumberSwift -framework XCTest \
-            -emit-library -o "$RUNNER_TEMP/libConsumer.dylib" "$RUNNER_TEMP/Consumer.swift"
-          echo "A consumer imported and linked CucumberSwift from $sim"
+          mise --version
+          mise install
+      # Builds the framework with Carthage, then runs Fixtures/CarthageXCFramework: an iOS test
+      # target that links and embeds it and runs step definitions with Cucumber expressions, once
+      # the build folder is gone, as on a consumer's machine.
+      - name: Build the framework with Carthage and test a project that uses it
+        env:
+          CARTHAGE_LOG: carthage-build.log
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run test-carthage
+      - name: Show what Carthage produced
+        if: always()
+        run: find Carthage/Build -maxdepth 5 \( -name '*.framework' -o -name '*.xcframework' -o -name '*.swiftmodule' \) | sort || true
       # An unsigned build kept for inspection, not a distribution channel. One
       # matrix entry, so each run has one artifact. The wildcard keeps the
       # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
