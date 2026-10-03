@@ -1580,7 +1580,7 @@
 			repositoryURL = "https://github.com/cucumberswift/CucumberSwiftExpressions.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
+				minimumVersion = 1.4.0;
 			};
 		};
 		AD3E8E4A6C3684CD29E6B6B4 /* XCRemoteSwiftPackageReference "JSONSchema.swift" */ = {

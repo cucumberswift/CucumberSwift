@@ -1,7 +1,10 @@
-// swift-tools-version:5.7
+// swift-tools-version:6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
-// 5.7 (Xcode 14) for the CucumberSwiftLint build tool plugin, and for applying it in Xcode projects.
+// Swift 6.1 and later read this manifest instead of Package.swift. It adds the CucumberSwiftMacros
+// product, which needs swift-syntax, behind the Macros trait, so a package that does not turn the
+// trait on never resolves or downloads swift-syntax. Keep everything else the same as Package.swift.
 
+import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
@@ -20,13 +23,22 @@ let package = Package(
         // or Fix Feature Files on the project's or package's menu in Xcode.
         .plugin(
             name: "FixFeatureFiles",
-            targets: ["Fix Feature Files"])
+            targets: ["Fix Feature Files"]),
+        // Step definition macros, checked at compile time. Needs the Macros trait.
+        .library(
+            name: "CucumberSwiftMacros",
+            targets: ["CucumberSwiftMacros"])
+    ],
+    traits: [
+        .trait(name: "Macros", description: "Builds the CucumberSwiftMacros product, which depends on swift-syntax.")
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
         // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
-        .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0")
+        .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0"),
+        // Only resolved when the Macros trait is on. 601 is the version Swift 6.1 ships with.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "601.0.0"..<"603.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -67,6 +79,28 @@ let package = Package(
                 ]),
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/FixFeatureFilesPlugin"),
+        // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.
+        .macro(
+            name: "CucumberSwiftMacrosPlugin",
+            dependencies: [
+                "CucumberSwiftExpressions",
+                .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftDiagnostics", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ],
+            path: "Sources/CucumberSwiftMacrosPlugin"),
+        .target(
+            name: "CucumberSwiftMacros",
+            dependencies: ["CucumberSwift", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],
+            path: "Sources/CucumberSwiftMacros"),
+        .testTarget(
+            name: "CucumberSwiftMacrosTests",
+            dependencies: [
+                "CucumberSwiftMacrosPlugin",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ]),
         .testTarget(
             name: "CucumberSwiftLintToolTests",
             dependencies: ["CucumberSwiftLintTool"]),
@@ -81,5 +115,7 @@ let package = Package(
                 .copy("testdata"),
                 .copy("Features")
             ])
-    ]
+    ],
+    // The other targets are written for Swift 5, as Package.swift builds them.
+    swiftLanguageModes: [.v5]
 )

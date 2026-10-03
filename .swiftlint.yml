@@ -83,8 +83,17 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   # Bazel's output symlinks, which hold copies of the sources.
   - bazel-*
   - Tests/bazel-*
+  # The projects in Fixtures/: their manifests, and what building them leaves behind.
+  - Fixtures/*/.build/
+  - Fixtures/*/.swiftpm/
+  - Fixtures/*/Derived/
+  - Fixtures/*/Package.swift
+  - Fixtures/*/Project.swift
+  - Fixtures/*/Tuist.swift
   - .swiftlint.yml
   - Sources/CucumberSwift/Generated
+  # Generated from I18n.swift by LocalizedStepDefinitionMacroTests.
+  - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
   - Sources/CucumberSwift/CucumberSwift.docc
 
 line_length:

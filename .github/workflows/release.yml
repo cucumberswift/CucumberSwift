@@ -139,7 +139,7 @@ jobs:
   test:
     needs: plan
     if: ${{ !inputs.dry_run }}
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     permissions:
       contents: read
@@ -203,7 +203,7 @@ jobs:
   docs-build:
     needs: plan
     if: ${{ !inputs.dry_run }}
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     permissions:
       contents: read

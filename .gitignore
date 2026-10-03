@@ -39,6 +39,13 @@ playground.xcworkspace
 # The consumer test packages under Tests/ resolve CucumberSwiftExpressions within
 # Package.swift's range, as a consumer would, so they keep no lockfile.
 Tests/*/Package.resolved
+# The projects in Fixtures/ resolve CucumberSwift from this checkout and keep no lockfile, and
+# Tuist generates their Xcode projects (`mise run test-fixtures`).
+Fixtures/*/Package.resolved
+Fixtures/*/*.xcodeproj
+Fixtures/*/*.xcworkspace
+Fixtures/*/Derived/
+Fixtures/*/.swiftpm/
 
 # Carthage
 #

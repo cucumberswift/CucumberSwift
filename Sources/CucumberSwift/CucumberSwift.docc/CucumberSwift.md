@@ -21,5 +21,6 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>
 - <doc:Checking-Feature-Files>
+- <doc:Checking-Step-Definitions>
 - <doc:Hooks>
 - <doc:CucumberSwift+UIUTest>
