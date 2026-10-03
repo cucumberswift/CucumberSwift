@@ -238,7 +238,7 @@ jobs:
         # three test bundles run today (406 + 61 + 28): raise it when you add tests.
         # Count from the log, not the .xcresult, which merges suites that share a name.
         env:
-          MIN_TESTS: 495
+          MIN_TESTS: 496
         run: |
           set +e
           xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1
@@ -332,3 +332,88 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+
+  # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
+  # MODULE.bazel cannot drift from Package.swift or break for consumers:
+  # - against a `git archive` of the commit, which is what the release's source
+  #   archive (and so the Bazel Central Registry entry) contains, not the checkout;
+  # - from Tests/, a separate module that depends on this one;
+  # - on every Bazel major that MODULE.bazel's bazel_compatibility allows, and
+  #   on macOS and an iOS simulator, at the lowest OS versions consumers use.
+  bazel:
+    name: Bazel tests (${{ matrix.label }})
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      # The labels are the check names, which rulesets require, so they hold no
+      # version number. An empty version means Bazelisk runs .bazelversion.
+      # The oldest major that bazel_compatibility in MODULE.bazel allows, 8.x, runs
+      # in the merge queue and on main only, to save macOS runners on every pull
+      # request push. It still checks every change before it merges.
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'pull_request'
+          && '[{"label":"pinned Bazel","bazel":""}]'
+          || '[{"label":"pinned Bazel","bazel":""},{"label":"oldest Bazel","bazel":"8.x"}]') }}
+    env:
+      # The runner's `bazel` is Bazelisk, which runs this version, or .bazelversion.
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the Bazel version
+        run: bazel version
+      - name: Check MODULE.bazel's CucumberSwiftExpressions is at least Package.swift's
+        run: |
+          spm=$(sed -n 's/.*CucumberSwiftExpressions.git", from: "\([0-9.]*\)".*/\1/p' Package.swift)
+          bzl=$(sed -n 's/.*bazel_dep(name = "cucumberswift_expressions", version = "\([0-9.]*\)".*/\1/p' MODULE.bazel)
+          echo "Package.swift: from $spm, MODULE.bazel: $bzl"
+          if [ -z "$spm" ] || [ -z "$bzl" ] || [ "$(printf '%s\n%s\n' "$spm" "$bzl" | sort -V | head -1)" != "$spm" ]; then
+            echo "::error::MODULE.bazel must depend on CucumberSwiftExpressions $spm or later, the version Package.swift starts from."
+            exit 1
+          fi
+          echo "EXPRESSIONS_VERSION=$bzl" >> "$GITHUB_ENV"
+      - name: Unpack the commit as the release archive will contain it
+        run: |
+          mkdir "$RUNNER_TEMP/module"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/module"
+          echo "MODULE_PATH=$RUNNER_TEMP/module" >> "$GITHUB_ENV"
+      # Until the Bazel Central Registry has cucumberswift_expressions
+      # (bazelbuild/bazel-central-registry#10867), use the source archive of the
+      # release MODULE.bazel names, which is what that entry will contain. Then
+      # remove this step and the cucumberswift_expressions --override_module below.
+      - name: Fetch CucumberSwiftExpressions
+        run: |
+          mkdir "$RUNNER_TEMP/expressions"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
+            "https://github.com/cucumberswift/CucumberSwiftExpressions/archive/refs/tags/$EXPRESSIONS_VERSION.tar.gz" \
+            | tar -xz --strip-components=1 -C "$RUNNER_TEMP/expressions"
+          echo "EXPRESSIONS_PATH=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
+      - name: Build every target in the module, as a consumer would
+        working-directory: Tests
+        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
+      - name: Run the consumer tests on macOS and on an iOS simulator
+        working-directory: Tests
+        run: bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors
+      # A run with no features still passes, so this catches a Features folder
+      # Bazel left out. The floors are what `swift test` runs for each suite.
+      - name: Check every feature ran
+        working-directory: Tests
+        run: |
+          status=0
+          for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
+            name=${suite%%:*}; min=${suite##*:}
+            for t in "$name" "${name}_iOS"; do
+              # A log with no count, or no log, counts as 0 rather than ending the step.
+              n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/$t/test.log" 2>/dev/null | tail -1 | grep -Eo '[0-9]+' || true)
+              echo "$t: ${n:-0} tests (at least $min expected)"
+              if [ "${n:-0}" -lt "$min" ]; then
+                echo "::error::Only ${n:-0} tests ran in $t. If you removed tests on purpose, lower its floor in CI.yml."
+                status=1
+              fi
+            done
+          done
+          exit $status
