@@ -1,5 +1,6 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
+// 5.7 (Xcode 14) for the CucumberSwiftLint build tool plugin, and for applying it in Xcode projects.
 
 import PackageDescription
 
@@ -10,7 +11,11 @@ let package = Package(
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
             name: "CucumberSwift",
-            targets: ["CucumberSwift"])
+            targets: ["CucumberSwift"]),
+        // Checks feature files on every build, and shows each problem as a warning in Xcode.
+        .plugin(
+            name: "CucumberSwiftLint",
+            targets: ["CucumberSwiftLintPlugin"])
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.2.0"),
@@ -35,6 +40,19 @@ let package = Package(
             ],
             path: "Sources/CucumberSwift",
             exclude: ["Info.plist"]),
+        // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
+        .executableTarget(
+            name: "CucumberSwiftLintTool",
+            dependencies: ["CucumberSwiftExpressions"],
+            path: "Sources/CucumberSwiftLintTool"),
+        .plugin(
+            name: "CucumberSwiftLintPlugin",
+            capability: .buildTool(),
+            dependencies: ["CucumberSwiftLintTool"],
+            path: "Plugins/CucumberSwiftLintPlugin"),
+        .testTarget(
+            name: "CucumberSwiftLintToolTests",
+            dependencies: ["CucumberSwiftLintTool"]),
         .testTarget(
             name: "CucumberSwiftTests",
             dependencies: [

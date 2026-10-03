@@ -142,8 +142,6 @@ extension CucumberTest {
                 XCTContext.runActivity(named: "Skipped: \(step.writtenKeyword) \(step.match)") { _ in
                     // Empty on purpose: the activity only shows in the test report that the step didn't run.
                 }
-            } else if !step.canExecute && !step.isAmbiguous {
-                recordMissingStepDefinition(for: step, on: test)
             } else {
                 step.method(at: index, of: scenario.steps.count)?.closure()
             }
@@ -160,21 +158,5 @@ extension CucumberTest {
         Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
         Cucumber.shared.setupAfterHooksFor(step)
         step.endTime = Date()
-    }
-
-    /// Fails a step that no step definition matches, at its line in the feature file. A full run reports
-    /// it in testGherkin too, but a scenario run on its own from the test navigator doesn't run that.
-    private static func recordMissingStepDefinition(for step: Step, on test: XCTestCase) {
-        Cucumber.shared.currentStep = step
-        let stub = StubGenerator.getStubs(for: Cucumber.shared.features).first { $0.step.match == step.match }?.generatedSwift
-        let message = missingStepDefinitionMessage(generatedSwift: stub ?? "",
-                                                   invalidRegularExpressions: RegularExpression.errors.snapshot)
-        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
-        test.record(XCTIssue(type: .assertionFailure,
-                             compactDescription: message,
-                             detailedDescription: nil,
-                             sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
-                             associatedError: nil,
-                             attachments: []))
     }
 }

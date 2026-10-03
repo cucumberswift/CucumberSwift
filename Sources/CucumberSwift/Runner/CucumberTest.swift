@@ -15,6 +15,10 @@ open class CucumberTest: XCTestCase {
     private static var hasBeenBuilt = false
     static var featuresLoaded = false
 
+    /// Calls `failStep` for the steps that no step definition matches, so that a replacement of
+    /// `failStep` still sees their failures, now that each one fails in its own test.
+    private static let missingStepDefinitionReporter: CucumberTest = MissingStepDefinitionReporter()
+
     #if DEBUG
     static func resetSetUp() {
         hasBeenBuilt = false
@@ -168,23 +172,9 @@ open class CucumberTest: XCTestCase {
             XCTFail($0)
         }
 
-        let invalidRegularExpressions = RegularExpression.errors.snapshot
-        Self.reportInvalidRegularExpressions(invalidRegularExpressions) { [self] in failStep($0) }
+        Self.reportInvalidRegularExpressions(RegularExpression.errors.snapshot) { [self] in failStep($0) }
         Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
-
-        StubGenerator.getStubs(for: Cucumber.shared.features).forEach { [self] in
-            guard let sourceFile = $0.step.location.uri else { return }
-            let attachment = Self.stubAttachment(named: Self.stubAttachmentName(sourceFile: sourceFile, line: $0.step.location.line),
-                                                 generatedSwift: $0.generatedSwift)
-
-            failStep(XCTIssue(type: .assertionFailure,
-                              compactDescription: Self.missingStepDefinitionMessage(generatedSwift: $0.generatedSwift,
-                                                                                    invalidRegularExpressions: invalidRegularExpressions),
-                              detailedDescription: nil,
-                              sourceCodeContext: .init(location: .init(fileURL: sourceFile, lineNumber: Int($0.step.location.line))),
-                              associatedError: nil,
-                              attachments: [attachment]))
-        }
+        // A step that no step definition matches fails in its own test, or its scenario's, not here.
     }
 
     /// A generated step definition as an attachment. The type must be Swift source, not the bare extension
@@ -259,6 +249,32 @@ open class CucumberTest: XCTestCase {
         runningTestCase.record(ambiguousStepIssue(for: step))
     }
 
+    /// The failure for a step that no step definition matches, at the step in its feature file, with the
+    /// step definition to add as an attachment.
+    static func missingStepDefinitionIssue(for step: Step) -> XCTIssue {
+        // The step's own feature, for when the features have been read again since its test was made.
+        let generatedSwift = StubGenerator.stub(for: step, in: Cucumber.shared.features)
+            ?? step.scenario?.feature.flatMap { StubGenerator.stub(for: step, in: [$0]) }
+            ?? ""
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        let attachments = step.location.uri.map {
+            [stubAttachment(named: stubAttachmentName(sourceFile: $0, line: step.location.line), generatedSwift: generatedSwift)]
+        } ?? []
+        return XCTIssue(type: .assertionFailure,
+                        compactDescription: missingStepDefinitionMessage(generatedSwift: generatedSwift,
+                                                                         invalidRegularExpressions: RegularExpression.errors.snapshot),
+                        detailedDescription: nil,
+                        sourceCodeContext: location.map { XCTSourceCodeContext(location: $0) } ?? XCTSourceCodeContext(),
+                        associatedError: nil,
+                        attachments: attachments)
+    }
+
+    /// Fails a step that no step definition matches on the test XCTest is running: the step's own test, or
+    /// its scenario's.
+    static func recordMissingStepDefinition(for step: Step) {
+        missingStepDefinitionReporter.failStep(missingStepDefinitionIssue(for: step))
+    }
+
     /// Records one failure for each problem found in the step definitions, such as a regular expression
     /// that will not compile or a duplicate step definition. A problem from a step definition fails at
     /// that step definition, so Xcode marks the consumer's own line. One with no step definition, such
@@ -288,6 +304,20 @@ open class CucumberTest: XCTestCase {
 
     public dynamic func failStep(_ issue: XCTIssue) {
         record(issue)
+    }
+}
+
+/// The test case that `failStep` is called on for a step that no step definition matches. It never runs:
+/// its suite has no tests, and what it records goes to the test that is running, the step's own or its
+/// scenario's.
+private final class MissingStepDefinitionReporter: CucumberTest {
+    override static var defaultTestSuite: XCTestSuite {
+        XCTestSuite(name: String(describing: Self.self))
+    }
+
+    override func record(_ issue: XCTIssue) {
+        guard let runningTestCase = Cucumber.shared.runningTestCase else { return super.record(issue) }
+        runningTestCase.record(issue)
     }
 }
 
@@ -356,6 +386,11 @@ extension Step {
             CucumberTest.recordAmbiguousStep(self, on: Cucumber.shared.runningTestCase)
             errorMessage = CucumberTest.ambiguousStepMessage(for: self)
             result = .ambiguous
+            return
+        }
+        guard canExecute else {
+            // The recorded failure fails the scenario, so the steps after this one are skipped.
+            CucumberTest.recordMissingStepDefinition(for: self)
             return
         }
         if let `class` = executeClass, let selector = executeSelector {
