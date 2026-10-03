@@ -57,6 +57,8 @@ Against the target's step definitions:
 
 When the plugin suggests a keyword, as in "'Thne' is not a Gherkin keyword. Did you mean 'Then'?", the **Fix Feature Files** command makes the change for you. It applies every such suggestion in your feature files at once, and changes nothing else.
 
+![A feature file in Xcode with seven warnings that each suggest a keyword: "feture", "Scenario Outline" without its colon, "Gvien", "Wehn", "Thne", "scenario" in lowercase, and "Adn".](FixFeatureFiles-Before.png)
+
 In Xcode, right-click the project or package in the Project navigator, and choose **Fix Feature Files** under CucumberSwift:
 
 ![The Project navigator's shortcut menu for a project, with Fix Feature Files in its CucumberSwift section.](FixFeatureFiles-Menu.png)
@@ -65,7 +67,11 @@ Then choose the targets whose feature files to fix, and click **Run**:
 
 ![The Fix Feature Files dialog, listing the project's test target, with Cancel and Run buttons.](FixFeatureFiles-Dialog.png)
 
-In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only that target's feature files.
+The command fixes each keyword, and the warnings are gone after the next build:
+
+![The same feature file after the command, with Feature, Scenario Outline, Given, When, Then, Scenario and And spelt correctly, and no warnings.](FixFeatureFiles-After.png)
+
+In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only the feature files in that target's folder, the same files the build plugin checks.
 
 The command needs permission to change files in your project or package. Xcode asks before it runs, and you can tell it not to ask again. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
 
