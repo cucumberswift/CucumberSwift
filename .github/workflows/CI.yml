@@ -363,6 +363,11 @@ jobs:
             platform: macOS
             kind: Hostless
         include:
+          # Two workers on a Simulator, not three: booting a third clone on a busy runner timed out.
+          - platform: iOS Simulator
+            workers: 2
+          - platform: tvOS Simulator
+            workers: 2
           # UI tests on a Mac drive the one copy of the app a Mac can run.
           - platform: Mac Catalyst
             kind: UI
