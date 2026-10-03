@@ -84,6 +84,10 @@ Tuist/.build/
 # Package.resolved. Committing it would mean keeping a second generated artifact
 # in step for no benefit.
 CucumberSwift.xcworkspace/
+# The parallel testing fixtures' workspace and lockfile. Like the consumer packages, the fixtures resolve
+# CucumberSwiftExpressions within Package.swift's range. Their project and Derived folder are committed.
+Tests/ParallelFixtures/ParallelFixtures.xcworkspace/
+Tests/ParallelFixtures/**/Package.resolved
 
 # NOTE: CucumberSwift.xcodeproj is deliberately NOT ignored.
 # Carthage clones this repository and runs xcodebuild against the shared

@@ -14,7 +14,6 @@
 		0E5179311CFBFB0C3D103F26 /* JSONReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A22F85448DE49049412E696 /* JSONReporter.swift */; };
 		133B0984FA23614E461D4D3D /* Method.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF018E99FE333CD47613B2 /* Method.swift */; };
 		134EBC2C3285D604906C98F3 /* AST.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51321BF66FB4F58D26A41D5 /* AST.swift */; };
-		1393ED64797CB8609F7F5EFC /* CucumberSwiftExpressions in Frameworks */ = {isa = PBXBuildFile; productRef = 6CF7F2BAC6D2B40584572C1D /* CucumberSwiftExpressions */; };
 		15211A91D22BB36427F6E0F9 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = 34403C7ACE9D693AEAA7FB49 /* Features */; };
 		152678D2C29AA80A686008F0 /* CucumberSwiftExpressions in Frameworks */ = {isa = PBXBuildFile; productRef = B500FE921BF4BF1A9648EBA4 /* CucumberSwiftExpressions */; };
 		17D425469CA3508DF3BA5DAA /* testdata in Resources */ = {isa = PBXBuildFile; fileRef = 3F53BE18F40D6DEA79C22475 /* testdata */; };
@@ -24,7 +23,6 @@
 		1A9BEB00D0199A934BBAFBDF /* TagTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7AC01561165E18CBD85F6 /* TagTests.swift */; };
 		1DFC89A88CA651D7722F1469 /* AsyncIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BFC4AC8518624BC6134E5E0 /* AsyncIsolationTests.swift */; };
 		22A8213B548DAA379C6C8732 /* CucumberExpressionStepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */; };
-		24616FCB299DBAD7117BA29B /* Features in Resources */ = {isa = PBXBuildFile; fileRef = 4241AD75C6DB2EDA8F8055B0 /* Features */; };
 		24A75AEEBA738F6BE416FF5C /* CucumberStepTest.m in Sources */ = {isa = PBXBuildFile; fileRef = DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */; };
 		257B2D6903568991E78FBD23 /* Lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15022B66C52BA042F6CA7B0F /* Lexer.swift */; };
 		2674A2F1A834F2B693D9D9D1 /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D9CF0803D60B5788FE598E2 /* Position.swift */; };
@@ -102,7 +100,6 @@
 		95186D42C4735C46EE593D41 /* Hook.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA454CA88F99BB9AC7E04124 /* Hook.swift */; };
 		97817CE172D6392BEE986899 /* Languages.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE35DC04B37F49D561ABCB79 /* Languages.swift */; };
 		9A7176D0074FE65676AF7EB3 /* DuplicateStepDefinitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9233E6D52476E61D53F633A /* DuplicateStepDefinitionTests.swift */; };
-		9DF3097D9E8B314EB21CE32E /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
 		9E946F7ED5679E4330379EAD /* StepTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30EDFE8C5E74CC443320B00E /* StepTestCase.swift */; };
 		A154D9D3516C3EF1795A049D /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEF22537F3F86A6A7A30B0EC /* StringExtensions.swift */; };
 		A1CF5E5D5C87AC5F140986B8 /* DSLBackgroundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EDABCBC861D11AD3E422012 /* DSLBackgroundTests.swift */; };
@@ -111,7 +108,6 @@
 		A278A33656817F742D1815C2 /* CommentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 779B5DFEC8D3931B751016D9 /* CommentTests.swift */; };
 		A3CCF1AC635CC82B3FECE3B1 /* I18n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B04A56526A3E64CD604A788 /* I18n.swift */; };
 		A43AE851A9E592AAA58A6878 /* RuleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEA059D8DEDD462293ADB60B /* RuleTests.swift */; };
-		A9EC4B34094ED4BA1DC493E9 /* CucumberSwiftParallelConsumerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1651A153DDEC640B680F99D4 /* CucumberSwiftParallelConsumerTests.swift */; };
 		AA7DCF374F6B970AB1E4F3E9 /* ScenarioTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932DC90167770A7459AAB029 /* ScenarioTest.swift */; };
 		AB534846BC00891622829F85 /* StubGeneratorLexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C1B5E7AB9544FC9BB382DF /* StubGeneratorLexer.swift */; };
 		AB94B653663DE4361CE17BE5 /* CucumberExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3392BF56B436489C26EF79F6 /* CucumberExtensions.swift */; };
@@ -170,13 +166,6 @@
 			remoteGlobalIDString = C4FCE1A2D2CE0C1970581815;
 			remoteInfo = CucumberSwift;
 		};
-		D12B15186D5E6A04FBAB1561 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = DED5B10BA637AA691A3E615F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = C4FCE1A2D2CE0C1970581815;
-			remoteInfo = CucumberSwift;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -220,16 +209,6 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		F5EB2A121870CD03D24BE2B4 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -241,7 +220,6 @@
 		0E69AB7C3EADA654EE7DBA45 /* ASTRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASTRule.swift; sourceTree = "<group>"; };
 		13EAD0621B74C8DB85760B5A /* CucumberSwiftDSLConsumerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftDSLConsumerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		15022B66C52BA042F6CA7B0F /* Lexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lexer.swift; sourceTree = "<group>"; };
-		1651A153DDEC640B680F99D4 /* CucumberSwiftParallelConsumerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberSwiftParallelConsumerTests.swift; sourceTree = "<group>"; };
 		175AA2B2087F9A59368B780B /* StepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepTests.swift; sourceTree = "<group>"; };
 		1866F6F1EFF7584E8F3A0A54 /* Feature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feature.swift; sourceTree = "<group>"; };
 		18AC3C01665C42A22172F9A8 /* MightEqualOperator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MightEqualOperator.swift; sourceTree = "<group>"; };
@@ -267,7 +245,6 @@
 		375AB9FC546235DFB1EFBF89 /* CucumberSwiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A6074AD010F9652941ABA77 /* ScenarioBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioBuilder.swift; sourceTree = "<group>"; };
 		3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepGenerationTests.swift; sourceTree = "<group>"; };
-		3B1DA2887E6FFE06F4D734D8 /* CucumberSwiftParallelConsumerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftParallelConsumerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWithLineNumberTests.swift; sourceTree = "<group>"; };
 		3D1D0F0F67BFAAC899912FC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberExpressionStepGenerationTests.swift; sourceTree = "<group>"; };
@@ -276,11 +253,9 @@
 		3F53BE18F40D6DEA79C22475 /* testdata */ = {isa = PBXFileReference; path = testdata; sourceTree = "<group>"; };
 		409E110CAE7DC4BBCD9A50DA /* TableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableTests.swift; sourceTree = "<group>"; };
 		41A562D88BBACC53D2D23CD0 /* SkippedStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkippedStepTests.swift; sourceTree = "<group>"; };
-		4241AD75C6DB2EDA8F8055B0 /* Features */ = {isa = PBXFileReference; path = Features; sourceTree = "<group>"; };
 		42462EC668D5385FB0E44F22 /* GherkinDSL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GherkinDSL.swift; sourceTree = "<group>"; };
 		4653CC61B70D4024CE614C44 /* ParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParserTests.swift; sourceTree = "<group>"; };
 		4733435259BE844B5C82072D /* CucumberScenarioTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CucumberScenarioTest.m; sourceTree = "<group>"; };
-		477774E1FF538BA7B0A0C2DE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4A8C960840BE8048AD7B7BD2 /* CucumberSwiftConsumerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftConsumerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B04A56526A3E64CD604A788 /* I18n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = I18n.swift; sourceTree = "<group>"; };
 		4E84199B26F53AA7B1C99323 /* StubGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubGenerator.swift; sourceTree = "<group>"; };
@@ -392,15 +367,6 @@
 			files = (
 				74D1E6688E5392C5FAC49337 /* CucumberSwift.framework in Frameworks */,
 				35C841D0A6D85B5E7666F6A6 /* CucumberSwiftExpressions in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		7F64CB57E168D7760DDB5C8F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				9DF3097D9E8B314EB21CE32E /* CucumberSwift.framework in Frameworks */,
-				1393ED64797CB8609F7F5EFC /* CucumberSwiftExpressions in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -580,7 +546,6 @@
 				F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */,
 				4A8C960840BE8048AD7B7BD2 /* CucumberSwiftConsumerTests.xctest */,
 				13EAD0621B74C8DB85760B5A /* CucumberSwiftDSLConsumerTests.xctest */,
-				3B1DA2887E6FFE06F4D734D8 /* CucumberSwiftParallelConsumerTests.xctest */,
 				375AB9FC546235DFB1EFBF89 /* CucumberSwiftTests.xctest */,
 			);
 			name = Products;
@@ -681,7 +646,6 @@
 			children = (
 				3E461D684DD3BB9D2FEF73AD /* CucumberSwiftConsumerTests */,
 				0EC0B12D1AFDADA05A28604E /* CucumberSwiftDSLConsumerTests */,
-				EDAD1EC12679DBE5AF95BC34 /* CucumberSwiftParallelConsumerTests */,
 				8A6E4222BBE4F015A7FFBE1A /* CucumberSwiftTests */,
 			);
 			path = Tests;
@@ -785,16 +749,6 @@
 			path = "Custom Operators";
 			sourceTree = "<group>";
 		};
-		EDAD1EC12679DBE5AF95BC34 /* CucumberSwiftParallelConsumerTests */ = {
-			isa = PBXGroup;
-			children = (
-				1651A153DDEC640B680F99D4 /* CucumberSwiftParallelConsumerTests.swift */,
-				4241AD75C6DB2EDA8F8055B0 /* Features */,
-				477774E1FF538BA7B0A0C2DE /* Info.plist */,
-			);
-			path = CucumberSwiftParallelConsumerTests;
-			sourceTree = "<group>";
-		};
 		EE73C4F51D5DF2585297A7DB /* Reporter */ = {
 			isa = PBXGroup;
 			children = (
@@ -831,28 +785,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		064F3991E4894D8B17924BD6 /* CucumberSwiftParallelConsumerTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E676A075536CDE0BB4F09B60 /* Build configuration list for PBXNativeTarget "CucumberSwiftParallelConsumerTests" */;
-			buildPhases = (
-				1587E467B8ECC41358D3F0A3 /* Sources */,
-				B48D87EE26185766B07DE1C1 /* Resources */,
-				7F64CB57E168D7760DDB5C8F /* Frameworks */,
-				F5EB2A121870CD03D24BE2B4 /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				BF856AA68523FF32EC1F59F5 /* PBXTargetDependency */,
-			);
-			name = CucumberSwiftParallelConsumerTests;
-			packageProductDependencies = (
-				6CF7F2BAC6D2B40584572C1D /* CucumberSwiftExpressions */,
-			);
-			productName = CucumberSwiftParallelConsumerTests;
-			productReference = 3B1DA2887E6FFE06F4D734D8 /* CucumberSwiftParallelConsumerTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		4F8544AD2455CAE1D5A24C76 /* CucumberSwiftConsumerTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = F94E47F5C97E081496DEAE16 /* Build configuration list for PBXNativeTarget "CucumberSwiftConsumerTests" */;
@@ -972,7 +904,6 @@
 				C4FCE1A2D2CE0C1970581815 /* CucumberSwift */,
 				4F8544AD2455CAE1D5A24C76 /* CucumberSwiftConsumerTests */,
 				E9E64156EF05292C89FF4F4B /* CucumberSwiftDSLConsumerTests */,
-				064F3991E4894D8B17924BD6 /* CucumberSwiftParallelConsumerTests */,
 				7D0F3C309B2537CC79D7A29E /* CucumberSwiftTests */,
 			);
 		};
@@ -993,14 +924,6 @@
 				F643D5DA5361ECBD8BFC53D0 /* Features in Resources */,
 				C6E7524091376BABF6A80500 /* Schema.json in Resources */,
 				17D425469CA3508DF3BA5DAA /* testdata in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		B48D87EE26185766B07DE1C1 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				24616FCB299DBAD7117BA29B /* Features in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1098,14 +1021,6 @@
 				64B9C1211D231BEA471125E9 /* GeneratedStepDefinitionTests.swift in Sources */,
 				17F19DEBC239F488DF36A1CD /* GeneratedStepDefinitions.swift in Sources */,
 				8516266936C3D4A5F25EEBD1 /* WaitUntil.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		1587E467B8ECC41358D3F0A3 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A9EC4B34094ED4BA1DC493E9 /* CucumberSwiftParallelConsumerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1224,12 +1139,6 @@
 			target = C4FCE1A2D2CE0C1970581815 /* CucumberSwift */;
 			targetProxy = 81DD123671FB7F14F57F2C63 /* PBXContainerItemProxy */;
 		};
-		BF856AA68523FF32EC1F59F5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = CucumberSwift;
-			target = C4FCE1A2D2CE0C1970581815 /* CucumberSwift */;
-			targetProxy = D12B15186D5E6A04FBAB1561 /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1336,34 +1245,6 @@
 			};
 			name = Debug;
 		};
-		8201C51F77B812B761CF5B4B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9CUJHB48U6;
-				INFOPLIST_FILE = Tests/CucumberSwiftParallelConsumerTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = TylerThompson.CucumberSwiftParallelConsumerTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTS_MACCATALYST = YES;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		8AA28C2C07E76E8663BB93E3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1405,34 +1286,6 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
-		};
-		93CD79E491A36C9D70DFF97B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9CUJHB48U6;
-				INFOPLIST_FILE = Tests/CucumberSwiftParallelConsumerTests/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = TylerThompson.CucumberSwiftParallelConsumerTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTS_MACCATALYST = YES;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
 		};
 		973319DB0592046580013093 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1718,15 +1571,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E676A075536CDE0BB4F09B60 /* Build configuration list for PBXNativeTarget "CucumberSwiftParallelConsumerTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				93CD79E491A36C9D70DFF97B /* Debug */,
-				8201C51F77B812B761CF5B4B /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		F94E47F5C97E081496DEAE16 /* Build configuration list for PBXNativeTarget "CucumberSwiftConsumerTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1769,10 +1613,6 @@
 		5E3FE9513504C54CFC7DEE12 /* JSONSchema */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = JSONSchema;
-		};
-		6CF7F2BAC6D2B40584572C1D /* CucumberSwiftExpressions */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = CucumberSwiftExpressions;
 		};
 		B500FE921BF4BF1A9648EBA4 /* CucumberSwiftExpressions */ = {
 			isa = XCSwiftPackageProductDependency;

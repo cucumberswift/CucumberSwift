@@ -216,10 +216,10 @@ jobs:
       - name: Run the tests on Mac Catalyst
         # A test that silently stops running still reports success (#231), so the
         # step also fails when fewer tests run than this. It is the number the
-        # three test bundles run today (410 + 61 + 28): raise it when you add tests.
+        # three test bundles run today (411 + 61 + 28): raise it when you add tests.
         # Count from the log, not the .xcresult, which merges suites that share a name.
         env:
-          MIN_TESTS: 499
+          MIN_TESTS: 500
         run: |
           set +e
           xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1
@@ -247,64 +247,79 @@ jobs:
           fi
           exit $status
 
-  # Experimental parallel testing (#31). Runs a consumer bundle with Xcode's parallel
-  # testing on, on Mac Catalyst and on clones of an iOS Simulator, and fails unless every
-  # scenario ran exactly once and more than one worker ran them. Each run of a scenario
-  # writes a record in PARALLEL_TEST_RECORDS, named after the scenario, its worker's process
-  # and a UUID, so that two runs never share one. xcodebuild's log can't show this, because
-  # it interleaves its own output with the workers' and cuts test lines short.
+  # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
+  # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
+  # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
+  # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too. A
+  # combination fails unless every scenario ran exactly once and enough workers ran them.
+  # Each run of a scenario writes a record in PARALLEL_TEST_RECORDS, named after the scenario,
+  # its worker's process and a UUID, so that two runs never share one. xcodebuild's log can't
+  # show this, because it interleaves its own output with the workers' and cuts test lines short.
   parallel_test:
-    name: Parallel tests (${{ matrix.platform }}, ${{ matrix.os }})
+    name: Parallel tests (${{ matrix.kind }}, ${{ matrix.platform }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
         os: [macos-15, macos-26]
-        platform: [Mac Catalyst, iOS Simulator]
+        platform: [iOS Simulator, tvOS Simulator, macOS, Mac Catalyst]
+        kind: [Hostless, Hosted, UI]
+        exclude:
+          - os: macos-15
+            platform: tvOS Simulator
+          - os: macos-15
+            platform: macOS
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Show the toolchain
         run: xcodebuild -version
-      - name: Choose the destination
+      - name: Choose the scheme and destination
         id: destination
         env:
           PLATFORM: ${{ matrix.platform }}
+          KIND: ${{ matrix.kind }}
         run: |
-          if [ "$PLATFORM" = "Mac Catalyst" ]; then
-            echo "destination=platform=macOS,variant=Mac Catalyst" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # The newest iOS runtime's first iPhone, so the job doesn't depend on a device name.
-          udid=$(xcrun simctl list devices available --json | python3 -c '
-          import json, sys
+          case "$PLATFORM" in
+            "Mac Catalyst") suffix=""; destination="platform=macOS,variant=Mac Catalyst" ;;
+            "macOS") suffix="Mac"; destination="platform=macOS" ;;
+            *)
+              # The newest runtime's first iPhone or Apple TV, so the job doesn't depend on a device name.
+              if [ "$PLATFORM" = "tvOS Simulator" ]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
+              udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" python3 -c '
+          import json, os, sys
           devices = json.load(sys.stdin)["devices"]
-          runtimes = sorted((r for r in devices if ".SimRuntime.iOS-" in r),
-                            key=lambda r: [int(n) for n in r.rsplit("iOS-", 1)[1].split("-")], reverse=True)
-          print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith("iPhone")), ""))
+          prefix = ".SimRuntime." + os.environ["RUNTIME"] + "-"
+          runtimes = sorted((r for r in devices if prefix in r),
+                            key=lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")], reverse=True)
+          print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith(os.environ["DEVICE"])), ""))
           ')
-          if [ -z "$udid" ]; then
-            echo "::error::No iPhone simulator is available on this runner."
-            exit 1
-          fi
-          echo "destination=platform=iOS Simulator,id=$udid" >> "$GITHUB_OUTPUT"
-      - name: Run the parallel consumer tests
+              if [ -z "$udid" ]; then
+                echo "::error::No $device simulator is available on this runner."
+                exit 1
+              fi
+              destination="platform=$PLATFORM,id=$udid" ;;
+          esac
+          echo "scheme=Parallel${KIND}Tests${suffix}" >> "$GITHUB_OUTPUT"
+          echo "destination=$destination" >> "$GITHUB_OUTPUT"
+      - name: Run the parallel fixture
         env:
+          SCHEME: ${{ steps.destination.outputs.scheme }}
           DESTINATION: ${{ steps.destination.outputs.destination }}
-          # The scenarios in Tests/CucumberSwiftParallelConsumerTests/Features.
+          # The scenarios in Tests/ParallelFixtures/Features.
           EXPECTED_SCENARIOS: 10
         run: |
           set +e
           records="$RUNNER_TEMP/parallel-test-records"
           mkdir -p "$records"
-          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -scheme CucumberSwiftParallelConsumerTests -destination "$DESTINATION" -parallel-testing-worker-count 3 CODE_SIGNING_ALLOWED=NO > parallel-test.log 2>&1
+          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count 3 > parallel-test.log 2>&1
           status=$?
           grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Tests/||' | sort -u | head -20
-          grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
+          grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
           total=$(ls "$records" | wc -l | tr -d ' ')
           # Each record is <scenario>.<worker's process>.<UUID>.
           scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
@@ -312,7 +327,7 @@ jobs:
           echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
           ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
           if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
-            echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixture's features, update EXPECTED_SCENARIOS in CI.yml."
+            echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in CI.yml."
             status=1
           fi
           if [ "$total" -ne "$scenarios" ]; then

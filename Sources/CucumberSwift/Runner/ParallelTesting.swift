@@ -28,6 +28,12 @@ enum ParallelTesting {
         classesMade.snapshot
     }
 
+    /// The bundle of each scenario's class: the test bundle. A class made at run time belongs to no image,
+    /// so `Bundle(for:)` would give the main bundle, which in a test target hosted in an app is the app.
+    /// XCTest groups test classes by their bundle, and xcodebuild crashes on scenarios grouped under the app.
+    nonisolated private static let bundles = Locked([ObjectIdentifier: Bundle]())
+    nonisolated private static let bundleForClassReplaced = Locked(false)
+
     #if DEBUG
     nonisolated static func reset() {
         classesMade.withLock { $0 = false }
@@ -52,13 +58,19 @@ enum ParallelTesting {
     }
 
     /// Makes each scenario's class, whose `defaultTestSuite` is the scenario's steps, so that XCTest can
-    /// hand the scenario to a worker of its own. The suite is named after its class, which is unique, not
-    /// after the scenario: two scenarios with the same name would otherwise have suites with the same name,
-    /// and when two workers run those at once, xcodebuild crashes as it records the results.
+    /// hand the scenario to a worker of its own. The suite is the class's, named after the class, which is
+    /// unique, not after the scenario: two scenarios with the same name would otherwise have suites with the
+    /// same name, and when two workers run those at once, xcodebuild crashes as it records the results.
     static func makeScenarioClasses() {
+        let testBundle = (Cucumber.shared as? StepImplementation)?.bundle
         for scenarioSuite in CucumberTest.scenarioSuites() {
             guard let testClass = scenarioSuite.tests.first.map({ type(of: $0) }) else { continue }
-            let suite = XCTestSuite(name: NSStringFromClass(testClass))
+            if let testBundle = testBundle {
+                bundles.withLock { $0[ObjectIdentifier(testClass)] = testBundle }
+            }
+            // A suite for the class, as XCTest makes for a class it finds, so that it names the class and
+            // xcodebuild can tell which tests it holds. The class has no methods XCTest would add itself.
+            let suite = XCTestSuite(forTestCaseClass: testClass)
             scenarioSuite.tests.forEach { suite.addTest($0) }
             let defaultTestSuite: @convention(block) (AnyObject) -> XCTestSuite = { _ in suite }
             class_addMethod(object_getClass(testClass),
@@ -66,6 +78,23 @@ enum ParallelTesting {
                             imp_implementationWithBlock(defaultTestSuite),
                             "@@:")
         }
+        replaceBundleForClass()
         classesMade.withLock { $0 = true }
+    }
+
+    /// Makes `Bundle(for:)` give the test bundle for each scenario's class, and leaves every other class as it was.
+    private static func replaceBundleForClass() {
+        let alreadyReplaced = bundleForClassReplaced.withLock { replaced -> Bool in
+            defer { replaced = true }
+            return replaced
+        }
+        let selector = NSSelectorFromString("bundleForClass:")
+        guard !alreadyReplaced, let method = class_getClassMethod(Bundle.self, selector) else { return }
+        typealias BundleForClass = @convention(c) (AnyClass, Selector, AnyClass) -> Bundle
+        let original = unsafeBitCast(method_getImplementation(method), to: BundleForClass.self)
+        let replacement: @convention(block) (AnyClass, AnyClass) -> Bundle = { bundleClass, testClass in
+            bundles.withLock { $0[ObjectIdentifier(testClass)] } ?? original(bundleClass, selector, testClass)
+        }
+        method_setImplementation(method, imp_implementationWithBlock(replacement))
     }
 }

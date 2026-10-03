@@ -82,6 +82,20 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertEqual(second.defaultTestSuite.name, name + "1")
     }
 
+    // XCTest groups test classes by their bundle. A class made at run time would otherwise be in the main
+    // bundle, which in a test target hosted in an app is the app, and xcodebuild crashes on that.
+    @MainActor
+    func testEachScenarioClassIsInTheTestBundleAndOtherClassesAreNot() throws {
+        let title = parseFeature()
+
+        ParallelTesting.makeScenarioClasses()
+
+        let testBundle = try XCTUnwrap((Cucumber.shared as? StepImplementation)?.bundle)
+        XCTAssertEqual(Bundle(for: try XCTUnwrap(scenarioClass(title, "Pay by card"))), testBundle)
+        XCTAssertEqual(Bundle(for: ParallelTestingTests.self), Bundle(for: CucumberSwiftTests.self))
+        XCTAssertEqual(Bundle(for: CucumberTest.self), Bundle(for: Cucumber.self))
+    }
+
     @MainActor
     func testCucumberTestLeavesTheScenariosOutOnceTheirClassesAreMade() {
         let title = parseFeature()
