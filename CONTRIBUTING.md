@@ -109,14 +109,18 @@ Also worth knowing:
 
 ### With Bazel
 
-CucumberSwift is also a Bazel module (`MODULE.bazel`, `BUILD.bazel`). CI's `Bazel tests` job runs `CucumberSwiftConsumerTests` with Bazel, on macOS and on an iOS simulator, as a project that builds with Bazel would. With [Bazelisk](https://github.com/bazelbuild/bazelisk) installed (`brew install bazelisk`), which runs the Bazel version in `.bazelversion`:
+CucumberSwift is also a Bazel module (`MODULE.bazel`, `BUILD.bazel`). Its tests with Bazel are in `Tests/`, a separate module (`Tests/MODULE.bazel`, `Tests/BUILD.bazel`) that depends on `cucumberswift` the way a Bazel project does. It runs the three consumer suites on macOS and on an iOS simulator. `REPO.bazel` and `.bazelignore` keep `Tests/` out of the root module, so `bazel build @cucumberswift//...` works for a consumer. With [Bazelisk](https://github.com/bazelbuild/bazelisk) installed (`brew install bazelisk`), which runs the Bazel version in `.bazelversion`, run from `Tests/`:
 
 ```bash
-bazelisk test //Tests:CucumberSwiftConsumerTests
-bazelisk test //Tests:CucumberSwiftConsumerTests_iOS
+bazelisk test //...
 ```
 
+Until CucumberSwiftExpressions is on the Bazel Central Registry, point Bazel at a copy of the release `MODULE.bazel` names, for example `--override_module=cucumberswift_expressions=../../CucumberSwiftExpressions` for a checkout of its tag.
+
+CI's `Bazel tests` jobs run the same against a `git archive` of the commit, which is what the release's source archive contains, on the Bazel version in `.bazelversion` and on Bazel 8, the oldest that `MODULE.bazel` allows. They fail if a suite runs fewer tests than `swift test` does.
+
 - **A new source file needs no change**: `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
+- **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in CI's `Check every feature ran` step.
 - **Keep the CucumberSwiftExpressions versions in step.** CI fails if `MODULE.bazel`'s `bazel_dep` is older than the version `Package.swift` starts from.
 - **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).
 

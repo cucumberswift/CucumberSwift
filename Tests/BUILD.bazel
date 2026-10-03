@@ -1,38 +1,16 @@
-load("@rules_apple//apple:resources.bzl", "apple_resource_group")
-load("@rules_apple//apple:ios.bzl", "ios_unit_test")
-load("@rules_apple//apple:macos.bzl", "macos_unit_test")
-load("@rules_swift//swift:swift_library.bzl", "swift_library")
+load(":consumer_tests.bzl", "consumer_tests")
 
-# Runs CucumberSwiftConsumerTests with Bazel, as a project that builds with Bazel would:
-# `bazel test //Tests:CucumberSwiftConsumerTests` on macOS, and
-# `bazel test //Tests:CucumberSwiftConsumerTests_iOS` on an iOS simulator.
+# From this folder: `bazel test //...` runs each suite on macOS and on an iOS simulator.
 
-# CucumberSwift looks for a Features folder in the test bundle, so keep the folder.
-apple_resource_group(
-    name = "CucumberSwiftConsumerTestsFeatures",
-    strip_structured_resources_prefixes = ["CucumberSwiftConsumerTests"],
-    structured_resources = glob(["CucumberSwiftConsumerTests/Features/**"]),
-)
-
-swift_library(
-    name = "CucumberSwiftConsumerTestsLib",
-    testonly = True,
-    srcs = glob(["CucumberSwiftConsumerTests/*.swift"], exclude = ["CucumberSwiftConsumerTests/Package.swift"]),
+consumer_tests(
+    name = "CucumberSwiftConsumerTests",
     # Xcode turns bare slash regex literals on by default; GeneratedBareSlashStepDefinitions.swift needs them.
     copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
-    data = [":CucumberSwiftConsumerTestsFeatures"],
-    module_name = "CucumberSwiftConsumerTests",
-    deps = ["//:CucumberSwift"],
 )
 
-macos_unit_test(
-    name = "CucumberSwiftConsumerTests",
-    minimum_os_version = "10.15",
-    deps = [":CucumberSwiftConsumerTestsLib"],
-)
+consumer_tests(name = "CucumberSwiftDSLConsumerTests")
 
-ios_unit_test(
-    name = "CucumberSwiftConsumerTests_iOS",
-    minimum_os_version = "13.0",
-    deps = [":CucumberSwiftConsumerTestsLib"],
+consumer_tests(
+    name = "CucumberSwiftSwift6ConsumerTests",
+    copts = ["-swift-version", "6"],
 )

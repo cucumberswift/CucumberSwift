@@ -95,4 +95,5 @@ CucumberSwift.xcworkspace/
 # Bazel's output symlinks. MODULE.bazel.lock is not committed: CucumberSwift is a
 # library, and a lockfile only applies when the module is the root of a build.
 /bazel-*
+/Tests/bazel-*
 MODULE.bazel.lock

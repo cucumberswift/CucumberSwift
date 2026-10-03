@@ -8,13 +8,15 @@ CucumberSwift is a Bazel module. Its library builds with [rules_swift](https://g
 
 ### Add the module
 
-In your `MODULE.bazel`:
+CucumberSwift is a Bazel module named `cucumberswift`. Add it to your `MODULE.bazel`, with the latest version from the [Bazel Central Registry](https://registry.bazel.build/modules/cucumberswift) in place of `X.Y.Z`:
+
+> Note: CucumberSwift is not on the Bazel Central Registry yet. The first version published there will be the first release that includes the Bazel files, and this article applies from then on.
 
 ```starlark
-bazel_dep(name = "cucumberswift", version = "6.4.0")
+bazel_dep(name = "cucumberswift", version = "X.Y.Z")
 ```
 
-Bazel also fetches CucumberSwiftExpressions, the module CucumberSwift depends on.
+Bazel also fetches CucumberSwiftExpressions, the module CucumberSwift depends on. The module needs Bazel 8 or later, and is tested with Bazel 8 and with the version in its `.bazelversion`.
 
 ### Put the Features folder at the root of the test bundle
 
