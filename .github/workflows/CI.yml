@@ -289,13 +289,13 @@ jobs:
       fail-fast: false
       # The labels are the check names, which rulesets require, so they hold no
       # version number. An empty version means Bazelisk runs .bazelversion.
+      # The oldest major that bazel_compatibility in MODULE.bazel allows, 8.x, runs
+      # in the merge queue and on main only, to save macOS runners on every pull
+      # request push. It still checks every change before it merges.
       matrix:
-        include:
-          - label: pinned Bazel
-            bazel: ''
-          # The oldest major that bazel_compatibility in MODULE.bazel allows.
-          - label: oldest Bazel
-            bazel: '8.x'
+        include: ${{ fromJSON(github.event_name == 'pull_request'
+          && '[{"label":"pinned Bazel","bazel":""}]'
+          || '[{"label":"pinned Bazel","bazel":""},{"label":"oldest Bazel","bazel":"8.x"}]') }}
     env:
       # The runner's `bazel` is Bazelisk, which runs this version, or .bazelversion.
       USE_BAZEL_VERSION: ${{ matrix.bazel }}
@@ -323,20 +323,20 @@ jobs:
       # Until the Bazel Central Registry has cucumberswift_expressions
       # (bazelbuild/bazel-central-registry#10867), use the source archive of the
       # release MODULE.bazel names, which is what that entry will contain. Then
-      # remove this step and the --override_module for it below.
+      # remove this step and the cucumberswift_expressions --override_module below.
       - name: Fetch CucumberSwiftExpressions
         run: |
           mkdir "$RUNNER_TEMP/expressions"
           curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
             "https://github.com/cucumberswift/CucumberSwiftExpressions/archive/refs/tags/$EXPRESSIONS_VERSION.tar.gz" \
             | tar -xz --strip-components=1 -C "$RUNNER_TEMP/expressions"
-          echo "OVERRIDES=--override_module=cucumberswift=$RUNNER_TEMP/module --override_module=cucumberswift_expressions=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
+          echo "EXPRESSIONS_PATH=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
       - name: Build every target in the module, as a consumer would
         working-directory: Tests
-        run: bazel build @cucumberswift//... $OVERRIDES
+        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
       - name: Run the consumer tests on macOS and on an iOS simulator
         working-directory: Tests
-        run: bazel test //... $OVERRIDES --test_output=errors
+        run: bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors
       # A run with no features still passes, so this catches a Features folder
       # Bazel left out. The floors are what `swift test` runs for each suite.
       - name: Check every feature ran
