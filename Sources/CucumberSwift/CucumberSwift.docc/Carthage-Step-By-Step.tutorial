@@ -88,7 +88,7 @@
             @Step {
                 Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
 
-                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers fails at its line in Calculator.feature, with the suggested step definition in the failure message, and the other three steps are skipped.")
+                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
             }
 
             @Step {
