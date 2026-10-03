@@ -147,6 +147,26 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertEqual(issue.sourceCodeContext.location?.lineNumber, 3)
     }
 
+    // The failure names each step with its own feature file's keyword, not the last parsed file's (#290).
+    func testTheFailureNamesTheStepInItsFeatureFilesLanguage() throws {
+        parseFeature(withSteps: "Given some precondition")
+        Cucumber.shared.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+           Escenario: Comer pepinos
+             Cuando como 2 pepinos
+        """, uri: "file:///Features/Pepinos.feature")
+        Given("some precondition") { _, _ in }
+        MatchAll("^some (.*)$") { _, _ in }
+        When("como {int} pepinos") { _, _ in }
+        MatchAll("^como (\\d+) pepinos$") { _, _ in }
+
+        XCTAssertEqual(steps.map(\.isAmbiguous), [true, true])
+        let messages = steps.map { CucumberTest.ambiguousStepMessage(for: $0) }
+        XCTAssertTrue(messages[0].hasPrefix("Ambiguous step 'Given some precondition': "), messages[0])
+        XCTAssertTrue(messages[1].hasPrefix("Ambiguous step 'Cuando como 2 pepinos': "), messages[1])
+    }
+
     func testTheFailureListsThreeDefinitions() throws {
         parseFeature(withSteps: "Given some precondition")
         let firstLine = #line + 1
