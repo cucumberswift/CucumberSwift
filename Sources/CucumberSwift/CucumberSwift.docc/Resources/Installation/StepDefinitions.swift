@@ -14,6 +14,12 @@ extension Cucumber: @retroactive StepImplementation {
         var numbers = [Int]()
         var result = 0
 
+        // setupSteps() runs once, so reset the calculator before each scenario.
+        BeforeScenario { _ in
+            numbers = []
+            result = 0
+        }
+
         // Each pattern is a Cucumber Expression: {int} captures a whole number, and
         // match.first(\.int) reads it back as an Int.
         Given("I have entered {int} into the calculator") { match, _ in
