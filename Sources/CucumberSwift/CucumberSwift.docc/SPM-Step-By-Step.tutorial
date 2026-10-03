@@ -16,7 +16,7 @@
             @Step {
                 Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. When Xcode asks which target to add the CucumberSwift library to, choose your unit test target, not your app.
 
-                @Image(source: "SPM-Add-Package.png", alt: "The Choose Package Products sheet for CucumberSwift, with the CucumberSwift library added to the unit test target.")
+                @Image(source: "SPM-Add-Package.png", alt: "Xcode's Add Package Dependencies sheet, with the CucumberSwift package found from its URL, the dependency rule Up to Next Major Version from 6.3.0, and the Calculator project selected.")
             }
         }
     }
@@ -36,11 +36,17 @@
             }
 
             @Step {
-                Drag the `Features` folder into the project navigator. In the options sheet, reference the folder in place rather than copying it, add it as a folder reference, and add it to your test target only.
+                Choose File → Add Files to "Calculator"… (the menu item has your project's name), select the `Features` folder, and select Add. In the options sheet, set Action to "Reference files in place" and Groups to "Create folders", and select your test target only.
 
-                The folder appears blue in the project navigator. Xcode copies it, with everything in it, into the test bundle.
+                @Image(source: "AddFeaturesFolder.png", alt: "Xcode's options sheet for adding the Features folder: Action is Reference files in place, Groups is Create folders, and only the CalculatorTests target is selected.")
+            }
 
-                @Image(source: "AddFolderReference.png", alt: "Xcode's options sheet for adding the Features folder as a folder reference to the unit test target.")
+            @Step {
+                Xcode adds the folder as a synchronized folder, which copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
+
+                Changing the build rule removes the folder from your test target. Under Target Membership, select the add button (+), choose your test target, and select Save.
+
+                @Image(source: "FeaturesFolderBuildRules.png", alt: "The File inspector for the Features folder: Build Rules is Apply Once to Folder, and Target Membership lists CalculatorTests.")
             }
 
             @Step {

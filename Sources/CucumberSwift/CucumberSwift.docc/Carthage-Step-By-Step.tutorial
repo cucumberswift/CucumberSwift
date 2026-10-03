@@ -48,11 +48,17 @@
             }
 
             @Step {
-                Drag the `Features` folder into the project navigator. In the options sheet, reference the folder in place rather than copying it, add it as a folder reference, and add it to your test target only.
+                Choose File → Add Files to "Calculator"… (the menu item has your project's name), select the `Features` folder, and select Add. In the options sheet, set Action to "Reference files in place" and Groups to "Create folders", and select your test target only.
 
-                The folder appears blue in the project navigator. Xcode copies it, with everything in it, into the test bundle.
+                @Image(source: "AddFeaturesFolder.png", alt: "Xcode's options sheet for adding the Features folder: Action is Reference files in place, Groups is Create folders, and only the CalculatorTests target is selected.")
+            }
 
-                @Image(source: "AddFolderReference.png", alt: "Xcode's options sheet for adding the Features folder as a folder reference to the unit test target.")
+            @Step {
+                Xcode adds the folder as a synchronized folder, which copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
+
+                Changing the build rule removes the folder from your test target. Under Target Membership, select the add button (+), choose your test target, and select Save.
+
+                @Image(source: "FeaturesFolderBuildRules.png", alt: "The File inspector for the Features folder: Build Rules is Apply Once to Folder, and Target Membership lists CalculatorTests.")
             }
 
             @Step {
