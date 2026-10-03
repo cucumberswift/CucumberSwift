@@ -11,7 +11,7 @@ import XCTest
 
 public class Step: CustomStringConvertible {
     public var description: String {
-        "TAGS:\(tags)\n\(keyword.toString()): \(match)"
+        "TAGS:\(tags)\n\(keywordText): \(match)"
     }
 
     public var continueAfterFailure = true {
@@ -84,15 +84,25 @@ public class Step: CustomStringConvertible {
     /// matches is ambiguous: it fails and runs none of them.
     var matchingDefinitions = [Definition]()
     var isAmbiguous: Bool { matchingDefinitions.count > 1 }
+    /// The language of the feature file the step comes from. Its keyword is named in this language, not in
+    /// the one the lexer last read, which is the last feature file's.
+    let language: Language
     /// The step's keyword as written in its feature file: `And` or `But` rather than the keyword it
     /// continues, which ``keyword`` also holds.
     var writtenKeyword: String {
-        if keyword.contains(.and) { return Scope.language.and }
-        if keyword.contains(.but) { return Scope.language.but }
-        return keyword.toString()
+        if keyword.contains(.and) { return language.and }
+        if keyword.contains(.but) { return language.but }
+        return keywordText
+    }
+    /// The step's ``keyword`` named in its feature file's language.
+    var keywordText: String {
+        keyword.toString(in: language)
     }
 
-    init(with node: AST.StepNode) {
+    /// A step parsed from a feature file. Steps are built straight after their file is lexed, so the lexer's
+    /// language is still that file's.
+    init(with node: AST.StepNode, language: Language = Scope.language) {
+        self.language = language
         location = node.tokens.first { $0.isKeyword() }?.position ?? .start
         tokens = node.tokens.filter { !$0.isKeyword() }
         for token in node.tokens {
@@ -127,7 +137,9 @@ public class Step: CustomStringConvertible {
         match = match.trimmingCharacters(in: .whitespaces)
     }
 
+    /// A step written in the Swift DSL, whose keywords are English.
     init(with execute: @escaping (([String], Step) -> Void), match: String?, position: Lexer.Position) {
+        language = .default
         location = position
         self.match ?= match
         self.execute = { _, step in
@@ -150,13 +162,13 @@ public class Step: CustomStringConvertible {
             return [
                 "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .nanoseconds).value],
                 "name": "\(match)",
-                "keyword": "\(keyword.toString())"
+                "keyword": "\(keywordText)"
             ]
         } else {
             return [
                 "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .seconds).value * 1_000_000_000],
                 "name": "\(match)",
-                "keyword": "\(keyword.toString())"
+                "keyword": "\(keywordText)"
             ]
         }
     }
@@ -195,26 +207,10 @@ extension Step {
             self = set
         }
 
+        /// The keyword named in the language of the feature file the lexer last read. A step's own keyword
+        /// is named in its feature file's language.
         public func toString() -> String {
-            if let str = stringValue {
-                return str
-            }
-            if contains(Keyword.given) {
-                return Scope.language.given
-            }
-            if contains(Keyword.when) {
-                return Scope.language.when
-            }
-            if contains(Keyword.then) {
-                return Scope.language.then
-            }
-            if contains(Keyword.and) {
-                return Scope.language.and
-            }
-            if contains(Keyword.but) {
-                return Scope.language.but
-            }
-            return "UNKNOWN"
+            toString(in: Scope.language)
         }
 
         public func hasMultipleValues() -> Bool {
@@ -232,5 +228,30 @@ extension Step {
         enum KeywordError: Error {
             case notPrimaryKeyword
         }
+    }
+}
+
+extension Step.Keyword {
+    /// The keyword named in the given language.
+    func toString(in language: Language) -> String {
+        if let str = stringValue {
+            return str
+        }
+        if contains(.given) {
+            return language.given
+        }
+        if contains(.when) {
+            return language.when
+        }
+        if contains(.then) {
+            return language.then
+        }
+        if contains(.and) {
+            return language.and
+        }
+        if contains(.but) {
+            return language.but
+        }
+        return "UNKNOWN"
     }
 }

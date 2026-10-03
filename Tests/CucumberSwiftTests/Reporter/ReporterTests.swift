@@ -134,6 +134,30 @@ class ReporterTests: XCTestCase {
         XCTAssertEqual(result?["status"] as? String, "pending")
     }
 
+    // A step's keyword is written in its own feature file's language, not the last parsed file's (#290).
+    func testStepKeywordsAreWrittenInTheirFeatureFilesLanguage() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Cuando como 2 pepinos
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        let written = try steps.map { step -> String? in
+            let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(CucumberJSONReporter.Step(step))) as? [AnyHashable: Any]
+            return json?["keyword"] as? String
+        }
+
+        XCTAssertEqual(written, ["Given", "Cuando"])
+        XCTAssertEqual(steps.map { $0.toJSON()["keyword"] as? String }, ["Given", "Cuando"])
+    }
+
     func testReporterJsonConformsToCucumberJsonSchema() throws {
         let path = URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
