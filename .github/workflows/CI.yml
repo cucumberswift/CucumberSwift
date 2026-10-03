@@ -13,6 +13,14 @@ on:
       - 'support/**'
   workflow_dispatch:
 
+# A new push to a pull request cancels the run it replaces, so the old run stops
+# holding macOS runners that merge queue entries wait for. Every other run gets
+# a group of its own and is never cancelled or held back: merge_group runs are
+# what the queue merges on, and push runs check main and support/N.x.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-pr-{1}', github.workflow, github.event.pull_request.number) || format('{0}-run-{1}', github.workflow, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # Least privilege. The repository default for GITHUB_TOKEN is `write`; these jobs
 # only read the checkout, so they are pinned to read.
 permissions:
@@ -35,8 +43,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
 
+  # Needs nothing from `test`, so it starts alongside it instead of waiting for a
+  # second macOS runner afterwards. A required check: keep the job name.
   build_for_package_managers:
-    needs: test
     runs-on: macos-15
     permissions:
       contents: read
@@ -131,6 +140,17 @@ jobs:
             -framework CucumberSwift -framework XCTest \
             -emit-library -o "$RUNNER_TEMP/libConsumer.dylib" "$RUNNER_TEMP/Consumer.swift"
           echo "A consumer imported and linked CucumberSwift from $sim"
+      # An unsigned build kept for inspection, not a distribution channel. One
+      # matrix entry, so each run has one artifact. The wildcard keeps the
+      # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
+      - name: Upload the xcframework
+        if: matrix.xcode == '26.2'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: CucumberSwift.xcframework
+          path: Carthage/Build/*.xcframework
+          if-no-files-found: error
+          retention-days: 7
       - name: Show why the build failed
         if: failure()
         run: |
