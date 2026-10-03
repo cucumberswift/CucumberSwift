@@ -41,9 +41,6 @@ func send<T: Sendable>(_ value: T) {
     Task.detached { _ = value }
 }
 
-/// Finds the test bundle, where Bazel puts the Features folder.
-private final class Swift6BundleFinder {}
-
 /// A custom Cucumber Expression parameter, as in "Matching Steps".
 final class Airport: Sendable {
     static let lax = Airport()
@@ -97,7 +94,7 @@ extension Cucumber: @retroactive StepImplementation {
         #if SWIFT_PACKAGE
         return Bundle.module
         #else
-        return Bundle(for: Swift6BundleFinder.self)
+        return Bundle(for: MainActorReporter.self)
         #endif
     }
 

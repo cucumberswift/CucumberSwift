@@ -327,7 +327,7 @@ jobs:
       - name: Fetch CucumberSwiftExpressions
         run: |
           mkdir "$RUNNER_TEMP/expressions"
-          curl --fail --silent --show-error --location \
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
             "https://github.com/cucumberswift/CucumberSwiftExpressions/archive/refs/tags/$EXPRESSIONS_VERSION.tar.gz" \
             | tar -xz --strip-components=1 -C "$RUNNER_TEMP/expressions"
           echo "OVERRIDES=--override_module=cucumberswift=$RUNNER_TEMP/module --override_module=cucumberswift_expressions=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
