@@ -6,7 +6,9 @@ name: Release
 #
 # The workflow computes the version from the last release on the branch, checks
 # it, runs the tests, commits the version files, and only then creates the tag
-# and the release. Nothing is public until every check has passed.
+# and the release. Nothing is public until every check has passed. The release
+# carries the docs and a source archive, CucumberSwift-X.Y.Z.tar.gz,
+# built with git archive from the tagged commit, for Bazel registry entries.
 #
 # The version commit, the tag and the release are written with a short-lived
 # token from the organization's release GitHub App. Its private key is a secret
@@ -151,6 +153,7 @@ jobs:
 
   # The only job that writes to the repository's code. It runs no project or
   # dependency code: only the release script, git and the gh CLI.
+  # The whole tree is checked out, because the source archive is built from it.
   release:
     needs: [plan, test, docs-build]
     if: ${{ !inputs.dry_run }}
@@ -165,7 +168,6 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-          sparse-checkout: .github/scripts
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-notes
@@ -189,6 +191,8 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_BOT: ${{ steps.app.outputs.app-slug }}[bot]
+          # What the source archive must contain. Add the Bazel files once they ship.
+          ARCHIVE_REQUIRES: Package.swift Sources/
         run: python3 .github/scripts/release.py publish
 
   # DocC runs project and dependency code, so it builds with read access only.
