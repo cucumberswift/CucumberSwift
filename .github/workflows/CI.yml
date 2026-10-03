@@ -252,6 +252,9 @@ jobs:
   # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
   # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too. A
   # combination fails unless every scenario ran exactly once and enough workers ran them.
+  # Two combinations run with fewer: Xcode launches one copy of a Mac Catalyst host app, so
+  # hosted unit tests there get one worker; and UI tests on a Mac drive the one copy of the app
+  # the Mac can run, so parallel workers end each other's copy and they run with one worker.
   # Each run of a scenario writes a record in PARALLEL_TEST_RECORDS, named after the scenario,
   # its worker's process and a UUID, so that two runs never share one. xcodebuild's log can't
   # show this, because it interleaves its own output with the workers' and cuts test lines short.
@@ -272,6 +275,18 @@ jobs:
             platform: tvOS Simulator
           - os: macos-15
             platform: macOS
+        include:
+          - platform: Mac Catalyst
+            kind: Hosted
+            min_workers: 1
+          - platform: Mac Catalyst
+            kind: UI
+            workers: 1
+            min_workers: 1
+          - platform: macOS
+            kind: UI
+            workers: 1
+            min_workers: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -312,13 +327,17 @@ jobs:
           DESTINATION: ${{ steps.destination.outputs.destination }}
           # The scenarios in Tests/ParallelFixtures/Features.
           EXPECTED_SCENARIOS: 10
+          WORKERS: ${{ matrix.workers || 3 }}
+          MIN_WORKERS: ${{ matrix.min_workers || 2 }}
         run: |
           set +e
           records="$RUNNER_TEMP/parallel-test-records"
           mkdir -p "$records"
-          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count 3 > parallel-test.log 2>&1
+          TEST_RUNNER_PARALLEL_TEST_RECORDS="$records" xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" > parallel-test.log 2>&1
           status=$?
-          grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Tests/||' | sort -u | head -20
+          echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
+          grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
+          grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
           grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
           total=$(ls "$records" | wc -l | tr -d ' ')
           # Each record is <scenario>.<worker's process>.<UUID>.
@@ -334,7 +353,7 @@ jobs:
             echo "::error::Some scenarios ran more than once."
             status=1
           fi
-          if [ "$workers" -lt 2 ]; then
+          if [ "$workers" -lt "$MIN_WORKERS" ]; then
             echo "::error::Only $workers worker ran the scenarios, so they did not run in parallel."
             status=1
           fi
