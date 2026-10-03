@@ -41,7 +41,7 @@ The first time Xcode builds a target that uses a package plugin, it asks you to 
 
 In every feature file:
 
-- **Keywords.** Text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `Scenario` without its colon), with a suggestion.
+- **Keywords.** Text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion.
 - **Structure.** A step outside a scenario or background, a step after `Examples`, and `Examples` outside a scenario.
 - **Tables.** A row with a different number of cells from the first row of its table, and a table that doesn't follow a step or `Examples`.
 - **Doc strings.** A doc string that doesn't follow a step, or is never closed.
@@ -52,6 +52,39 @@ Against the target's step definitions:
 
 - **Undefined steps.** A step that none of the target's step definitions matches. Each step of a `Scenario Outline` is checked with the values from its `Examples` filled in.
 - **Step definitions that can never match.** A string pattern that starts with `^` or ends with `$` but isn't a valid regular expression, or a regex literal that doesn't compile. The warning is on the step definition's line.
+
+### Fix misspelt keywords
+
+When the plugin suggests a keyword, as in "'Thne' is not a Gherkin keyword. Did you mean 'Then'?", the **Fix Feature Files** command makes the change for you. It applies every such suggestion in your feature files at once, and changes nothing else.
+
+![A feature file in Xcode with seven warnings that each suggest a keyword: "feture", "Scenario Outline" without its colon, "Gvien", "Wehn", "Thne", "scenario" in lowercase, and "Adn".](FixFeatureFiles-Before.png)
+
+In Xcode, right-click the project or package in the Project navigator, and choose **Fix Feature Files** under CucumberSwift:
+
+![The Project navigator's shortcut menu for a project, with Fix Feature Files in its CucumberSwift section.](FixFeatureFiles-Menu.png)
+
+Then choose the targets whose feature files to fix, and click **Run**:
+
+![The Fix Feature Files dialog, listing the project's test target, with Cancel and Run buttons.](FixFeatureFiles-Dialog.png)
+
+The command fixes each keyword, and the warnings are gone after the next build:
+
+![The same feature file after the command, with Feature, Scenario Outline, Given, When, Then, Scenario and And spelt correctly, and no warnings.](FixFeatureFiles-After.png)
+
+In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only the feature files in that target's folder, the same files the build plugin checks.
+
+The command needs permission to change files in your project or package. Xcode asks before it runs, and you can tell it not to ask again. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
+
+It lists each line it changed, before and after:
+
+```
+Features/Login.feature:12: Thne the user is signed in → Then the user is signed in
+Fixed 1 line in 1 of 4 feature files.
+```
+
+Fixing a line can turn the lines after it into steps, which the plugin checks more closely, so the command checks each file again and applies any new suggestion until nothing is left to fix. Text between a header and its first step is a description, where any text is allowed, so the command fixes a line there only when the line after it is a step, a table or a doc string. A line it leaves keeps its warning, for you to fix or ignore. A file with nothing to fix is left exactly as it was. If a file can't be read or saved, for example because it is read-only, the command names it and fails. Other warnings, such as an undefined step or a table row with a cell too many, are still yours to fix.
+
+The command only needs CucumberSwift added with Swift Package Manager; the build plugin doesn't have to be added to a target.
 
 ### Know its limits
 

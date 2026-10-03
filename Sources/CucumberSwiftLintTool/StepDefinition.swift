@@ -10,10 +10,10 @@ struct StepDefinition {
     }
 
     // Given("…"), Given(#/…/#) or Given(/…/), and the same for the other keywords.
-    private static let finder = try! NSRegularExpression( // swiftlint:disable:this force_try
-        pattern: #"\b(?:Given|When|Then|And|But|MatchAll)\s*\(\s*(?:"((?:[^"\\\n]|\\.)*)"|#/((?:[^\\\n]|\\.)*?)/#|/((?:[^/\\\n]|\\.)+)/)"#)
+    private static let finder = compile(
+        #"\b(?:Given|When|Then|And|But|MatchAll)\s*\(\s*(?:"((?:[^"\\\n]|\\.)*)"|#/((?:[^\\\n]|\\.)*?)/#|/((?:[^/\\\n]|\\.)+)/)"#)
     private static let builtInParameters: Set = ["", "int", "float", "double", "word", "string"]
-    private static let parameter = try! NSRegularExpression(pattern: #"(?<!\\)\{([^{}]*)\}"#) // swiftlint:disable:this force_try
+    private static let parameter = compile(#"(?<!\\)\{([^{}]*)\}"#)
 
     let pattern: Pattern
     let file: String
@@ -47,6 +47,15 @@ struct StepDefinition {
             }
         }
         return definitions
+    }
+
+    /// Compiles one of the fixed patterns above, which are known to be valid.
+    private static func compile(_ pattern: String) -> NSRegularExpression {
+        do {
+            return try NSRegularExpression(pattern: pattern)
+        } catch {
+            fatalError("CucumberSwiftLintTool's pattern \(pattern) does not compile: \(error)")
+        }
     }
 
     /// Custom parameter types are registered at run time, so the build can't know what they match.

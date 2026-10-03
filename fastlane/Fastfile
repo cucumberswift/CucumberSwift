@@ -7,11 +7,15 @@ platform :ios do
     clear_derived_data
   end
 
+  # The destination is named rather than left to scan, which on the macos-15
+  # runner picked none, so xcodebuild fell back to Mac Catalyst and failed to
+  # sign. OS=latest is the newest iOS Simulator runtime of the selected Xcode.
   lane :unit_test do
     scan(
       code_coverage: true,
       scheme:  'CucumberSwift',
-      project: 'CucumberSwift.xcodeproj'
+      project: 'CucumberSwift.xcodeproj',
+      destination: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
     )
   end
 
