@@ -52,10 +52,14 @@ enum ParallelTesting {
     }
 
     /// Makes each scenario's class, whose `defaultTestSuite` is the scenario's steps, so that XCTest can
-    /// hand the scenario to a worker of its own.
+    /// hand the scenario to a worker of its own. The suite is named after its class, which is unique, not
+    /// after the scenario: two scenarios with the same name would otherwise have suites with the same name,
+    /// and when two workers run those at once, xcodebuild crashes as it records the results.
     static func makeScenarioClasses() {
-        for suite in CucumberTest.scenarioSuites() {
-            guard let testClass = suite.tests.first.map({ type(of: $0) }) else { continue }
+        for scenarioSuite in CucumberTest.scenarioSuites() {
+            guard let testClass = scenarioSuite.tests.first.map({ type(of: $0) }) else { continue }
+            let suite = XCTestSuite(name: NSStringFromClass(testClass))
+            scenarioSuite.tests.forEach { suite.addTest($0) }
             let defaultTestSuite: @convention(block) (AnyObject) -> XCTestSuite = { _ in suite }
             class_addMethod(object_getClass(testClass),
                             NSSelectorFromString("defaultTestSuite"),

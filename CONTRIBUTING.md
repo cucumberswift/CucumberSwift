@@ -79,7 +79,7 @@ Experimental parallel testing has a test target of its own, `CucumberSwiftParall
 xcodebuild test -scheme CucumberSwiftParallelConsumerTests -destination 'platform=macOS,variant=Mac Catalyst' -parallel-testing-worker-count 3 CODE_SIGNING_ALLOWED=NO
 ```
 
-Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` job also checks across the workers that every scenario ran exactly once and that more than one worker ran them. To check that locally, set `TEST_RUNNER_PARALLEL_TEST_RECORDS` to an empty folder: each scenario writes a file there named after the scenario and its worker's process. It has no Swift package, because `swift test` can't run scenarios in parallel.
+Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` job also checks across the workers that every scenario ran exactly once and that more than one worker ran them. To check that locally, set `TEST_RUNNER_PARALLEL_TEST_RECORDS` to an empty folder: each run of a scenario writes a file there named after the scenario, its worker's process and a UUID. It has no Swift package, because `swift test` can't run scenarios in parallel.
 
 ### With Swift Package Manager
 

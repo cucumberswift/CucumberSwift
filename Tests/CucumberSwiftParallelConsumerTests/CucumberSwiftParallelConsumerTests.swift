@@ -5,7 +5,7 @@
 //  A consumer of experimental parallel testing (#31), run by CI with Xcode's parallel testing on. Each
 //  worker checks that a scenario's steps ran once each, in order. CI checks the rest across workers:
 //  every scenario ran exactly once, and more than one worker ran them. For that, each scenario writes a
-//  record, named after the scenario and the worker's process, to the folder in the environment variable
+//  record of each run, named after the scenario and the worker's process, to the folder in the environment variable
 //  `PARALLEL_TEST_RECORDS`, when it is set.
 //
 //  Not part of CucumberSwift.xctestplan, whose CI job fails any bundle that runs in parallel.
@@ -16,14 +16,15 @@ import XCTest
 import CucumberSwift
 
 enum ParallelTestRecords {
-    /// Writes an empty file named after the scenario, by its feature and its line, and this worker's process.
+    /// Writes an empty file named after the scenario, by its feature and its line, and this worker's process. A
+    /// UUID ends the name, so that a second run of the scenario in the same worker writes a second record.
     static func record(_ scenario: Scenario) {
         guard let folder = ProcessInfo.processInfo.environment["PARALLEL_TEST_RECORDS"], !folder.isEmpty else { return }
         let feature = scenario.feature?.title ?? "No feature"
         let name = "\(feature) line \(scenario.location.line) \(scenario.title)"
             .map { $0.isLetter || $0.isNumber ? $0 : "-" }
         let url = URL(fileURLWithPath: folder, isDirectory: true)
-            .appendingPathComponent("\(String(name)).\(ProcessInfo.processInfo.processIdentifier)")
+            .appendingPathComponent("\(String(name)).\(ProcessInfo.processInfo.processIdentifier).\(UUID().uuidString)")
         do {
             try FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
             try Data().write(to: url)
@@ -74,6 +75,10 @@ extension Cucumber: StepImplementation {
         // Long enough that Xcode hands the scenarios to more than one worker.
         Then("the scenario takes a moment") { _, _ in
             Thread.sleep(forTimeInterval: 0.5)
+        }
+        // Long enough that the two scenarios that share a name run at the same time in two workers.
+        Then("the scenario takes a while") { _, _ in
+            Thread.sleep(forTimeInterval: 4)
         }
     }
 }

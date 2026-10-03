@@ -216,10 +216,10 @@ jobs:
       - name: Run the tests on Mac Catalyst
         # A test that silently stops running still reports success (#231), so the
         # step also fails when fewer tests run than this. It is the number the
-        # three test bundles run today (409 + 61 + 28): raise it when you add tests.
+        # three test bundles run today (410 + 61 + 28): raise it when you add tests.
         # Count from the log, not the .xcresult, which merges suites that share a name.
         env:
-          MIN_TESTS: 498
+          MIN_TESTS: 499
         run: |
           set +e
           xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO > catalyst-test.log 2>&1
@@ -249,10 +249,10 @@ jobs:
 
   # Experimental parallel testing (#31). Runs a consumer bundle with Xcode's parallel
   # testing on, on Mac Catalyst and on clones of an iOS Simulator, and fails unless every
-  # scenario ran exactly once and more than one worker ran them. Each scenario records
-  # itself in PARALLEL_TEST_RECORDS, named after the scenario and its worker's process:
-  # xcodebuild's log can't show this, because it interleaves its own output with the
-  # workers' and cuts test lines short.
+  # scenario ran exactly once and more than one worker ran them. Each run of a scenario
+  # writes a record in PARALLEL_TEST_RECORDS, named after the scenario, its worker's process
+  # and a UUID, so that two runs never share one. xcodebuild's log can't show this, because
+  # it interleaves its own output with the workers' and cuts test lines short.
   parallel_test:
     name: Parallel tests (${{ matrix.platform }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -306,16 +306,17 @@ jobs:
           grep -E ': error: -\[' parallel-test.log | sed -E 's|^.*/Tests/||' | sort -u | head -20
           grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
           total=$(ls "$records" | wc -l | tr -d ' ')
-          scenarios=$(ls "$records" | sed -E 's/\.[0-9]+$//' | sort -u | wc -l | tr -d ' ')
-          workers=$(ls "$records" | grep -oE '[0-9]+$' | sort -u | wc -l | tr -d ' ')
+          # Each record is <scenario>.<worker's process>.<UUID>.
+          scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
+          workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
           echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
-          ls "$records" | sed -E 's/\.[0-9]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
+          ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
           if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
             echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixture's features, update EXPECTED_SCENARIOS in CI.yml."
             status=1
           fi
           if [ "$total" -ne "$scenarios" ]; then
-            echo "::error::Some scenarios ran in more than one worker."
+            echo "::error::Some scenarios ran more than once."
             status=1
           fi
           if [ "$workers" -lt 2 ]; then

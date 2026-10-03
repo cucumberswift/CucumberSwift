@@ -59,6 +59,29 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertTrue(ParallelTesting.scenarioClassesMade)
     }
 
+    // Two workers can run two scenarios with the same name at once, and xcodebuild crashes when two suites
+    // with the same name run at once, so each suite is named after its class, which is unique.
+    @MainActor
+    func testScenariosWithTheSameNameHaveSuitesWithDifferentNames() throws {
+        let title = "Parallel \(UUID().uuidString)"
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: \(title)
+           Scenario: Pay by card
+             Given a cart
+           Scenario: Pay by card
+             Given a cart
+        """)
+        CucumberTest.featuresLoaded = true
+
+        ParallelTesting.makeScenarioClasses()
+
+        let name = title + CucumberTest.readFeatureScenarioDelimiter() + "Pay by card"
+        let first = try XCTUnwrap(NSClassFromString(name) as? XCTestCase.Type)
+        let second = try XCTUnwrap(NSClassFromString(name + "1") as? XCTestCase.Type)
+        XCTAssertEqual(first.defaultTestSuite.name, name)
+        XCTAssertEqual(second.defaultTestSuite.name, name + "1")
+    }
+
     @MainActor
     func testCucumberTestLeavesTheScenariosOutOnceTheirClassesAreMade() {
         let title = parseFeature()
