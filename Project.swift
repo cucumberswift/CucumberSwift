@@ -252,8 +252,8 @@ let cucumberSwiftDSLConsumerTests = Target.target(
 
 // MARK: - Schemes
 //
-// These three names are load bearing. `fastlane unit_test` runs the CucumberSwift
-// scheme and CI runs fastlane, so the names must not drift. Automatic scheme
+// These three names are load bearing. CI and the Release workflow test the
+// CucumberSwift scheme by name, so the names must not drift. Automatic scheme
 // generation is switched off in Project.options so no fourth scheme appears.
 //
 // `shared: true` is not decoration. Carthage clones this repository and builds

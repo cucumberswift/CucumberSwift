@@ -17,18 +17,35 @@ permissions:
   contents: read
 
 jobs:
+  # The iOS Simulator run, and the coverage report codecov/patch reads. A required
+  # check: keep the job name. Name the destination: the scheme also builds for Mac
+  # Catalyst, which test_catalyst covers. OS=latest is the newest iOS Simulator
+  # runtime on the runner image.
   test:
     runs-on: macos-15
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Run TESTS
-        run: fastlane unit_test
-      # NOTE: codecov-action is held at v1 by the repository's Actions allow-list.
-      # A SHA pin would no longer match that entry, so this stays on the tag.
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios || true
+      - name: Run the tests on an iOS Simulator
+        run: |
+          set +e
+          xcodebuild test -scheme CucumberSwift -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' -enableCodeCoverage YES > ios-test.log 2>&1
+          status=$?
+          grep -E "Test Suite '.*\.(xctest|framework)' (passed|failed)" -A1 ios-test.log | grep -E 'Executed' | sort -u
+          grep -E ': error: -\[' ios-test.log | sed -E 's|^.*/Resources/||' | sort -u | head -20
+          # A failure before any test runs (a bad destination, a build error)
+          # prints no counts, so show xcodebuild's own errors too.
+          grep -E -A4 'xcodebuild: error|\*\* (BUILD|TEST) FAILED' ios-test.log | head -30
+          exit $status
+      # Finds the coverage xcodebuild wrote to the default DerivedData folder.
       # Pull requests from forks have no token, so only a push fails on an upload error.
-      - uses: codecov/codecov-action@v7
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
@@ -36,14 +53,18 @@ jobs:
   build_for_package_managers:
     needs: test
     runs-on: macos-15
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Show the toolchain
+        run: swift --version
       - name: Validate SwiftPM BUILDs
-        run: fastlane build_swiftpm
+        run: swift build --configuration release --build-path ./build
+      # Through Bundler, so CocoaPods comes from the Gemfile.
       - name: Validate Cocoapods Can Deploy (lib lint)
-        run: fastlane cocoapods_liblint
+        run: bundle exec pod lib lint CucumberSwift.podspec --allow-warnings
 
   release_script:
     name: Release script tests
@@ -166,10 +187,10 @@ jobs:
         run: mise run check-project
 
   # The test command CONTRIBUTING.md gives contributors runs on Mac Catalyst, but
-  # the `test` job above runs `fastlane unit_test`, which picks an iOS Simulator
-  # and never exercises Catalyst. The two destinations run test suites in a
-  # different order, which hid an order-dependent failure on the Simulator for
-  # years (#183), so run the documented command as written.
+  # the `test` job above runs on an iOS Simulator and never exercises Catalyst.
+  # The two destinations run test suites in a different order, which hid an
+  # order-dependent failure on the Simulator for years (#183), so run the
+  # documented command as written.
   #
   # Xcode 26 runs on macos-26: the macos-15 image carries Xcode 26 too, but its host
   # is macOS 15, and Xcode 26 will not run Catalyst tests there.

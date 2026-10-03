@@ -53,19 +53,6 @@ Podfile.lock
 
 Carthage/Build
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/#source-control
-
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots
-fastlane/test_output
-fastlane/reports
-fastlane/xcov_report
 Gemfile.lock
 
 node_modules
@@ -86,8 +73,8 @@ __pycache__/
 Tuist/.build/
 .package.resolved
 
-# Tuist also generates a workspace. Nothing consumes it: Carthage, fastlane and
-# CI all build CucumberSwift.xcodeproj directly, and the project carries its own
+# Tuist also generates a workspace. Nothing consumes it: Carthage and CI both
+# build CucumberSwift.xcodeproj directly, and the project carries its own
 # Package.resolved. Committing it would mean keeping a second generated artifact
 # in step for no benefit.
 CucumberSwift.xcworkspace/
