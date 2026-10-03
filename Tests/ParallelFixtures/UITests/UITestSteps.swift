@@ -12,6 +12,27 @@ import XCTest
 import CucumberSwift
 import CucumberSwiftExpressions
 
+@MainActor
+enum UITestApp {
+    static let app = XCUIApplication()
+
+    static func items() -> String {
+        let label = app.staticTexts["items"]
+        XCTAssertTrue(label.waitForExistence(timeout: 10), "The app shows no item count")
+        return label.label
+    }
+
+    static func add() {
+        #if os(tvOS)
+        XCUIRemote.shared.press(.select)
+        #elseif os(macOS)
+        app.buttons["add"].click()
+        #else
+        app.buttons["add"].tap()
+        #endif
+    }
+}
+
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
         // A subclass of CucumberTest, as consumers write it.
@@ -50,26 +71,5 @@ extension Cucumber: StepImplementation {
         Then("the scenario takes a while" as CucumberExpression) { _, _ async throws in
             try await Task.sleep(nanoseconds: 4_000_000_000)
         }
-    }
-}
-
-@MainActor
-enum UITestApp {
-    static let app = XCUIApplication()
-
-    static func items() -> String {
-        let label = app.staticTexts["items"]
-        XCTAssertTrue(label.waitForExistence(timeout: 10), "The app shows no item count")
-        return label.label
-    }
-
-    static func add() {
-        #if os(tvOS)
-        XCUIRemote.shared.press(.select)
-        #elseif os(macOS)
-        app.buttons["add"].click()
-        #else
-        app.buttons["add"].tap()
-        #endif
     }
 }

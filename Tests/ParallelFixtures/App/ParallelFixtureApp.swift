@@ -8,15 +8,6 @@
 
 import SwiftUI
 
-@main
-struct ParallelFixtureApp: App {
-    var body: some Scene {
-        WindowGroup {
-            CartView()
-        }
-    }
-}
-
 struct CartView: View {
     @State private var items = 0
 
@@ -28,5 +19,14 @@ struct CartView: View {
                 .accessibilityIdentifier("add")
         }
         .padding()
+    }
+}
+
+@main
+struct ParallelFixtureApp: App {
+    var body: some Scene {
+        WindowGroup {
+            CartView()
+        }
     }
 }
