@@ -288,6 +288,18 @@ jobs:
           persist-credentials: false
       - name: Show the toolchain
         run: xcodebuild -version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise install
+      - name: Generate the fixtures' project
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run generate-fixtures
       - name: Choose the scheme and destination
         id: destination
         env:

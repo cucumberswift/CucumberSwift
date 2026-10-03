@@ -2,7 +2,7 @@
 # Checks that the committed Xcode project still matches Project.swift, but only when
 # a commit could change it. Opt in once per clone: git config core.hooksPath .githooks
 # CI runs the same check, so this only catches a mismatch sooner.
-manifest=$(git diff --cached --name-only -- Project.swift Tuist.swift .mise.toml CucumberSwift.xcodeproj Tests/ParallelFixtures/Project.swift Tests/ParallelFixtures/ParallelFixtures.xcodeproj Tests/ParallelFixtures/Derived)
+manifest=$(git diff --cached --name-only -- Project.swift Tuist.swift .mise.toml CucumberSwift.xcodeproj)
 file_list=$(git diff --cached --name-only --diff-filter=ADR -- Sources Tests)
 if [ -n "$manifest$file_list" ]; then
   exec mise run check-project

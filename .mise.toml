@@ -16,11 +16,13 @@ description = "Generate CucumberSwift.xcodeproj from Project.swift"
 run = "tuist generate --no-open"
 
 [tasks.generate-fixtures]
+# Not committed: Tuist names the local package's folder after the checkout's folder, which differs
+# from clone to clone. CI generates it before running the fixtures.
 description = "Generate the parallel testing fixtures' project from Tests/ParallelFixtures/Project.swift"
 run = "tuist generate --path Tests/ParallelFixtures --no-open"
 
 [tasks.check-project]
-description = "Fail if CucumberSwift.xcodeproj or the fixtures' project differs from what its Project.swift generates"
+description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
 # Compares the regenerated project with the index, so a regenerated project that is
 # already staged passes. CI and the pre-commit hook both run this.
 run = """
@@ -28,14 +30,6 @@ tuist generate --no-open
 if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --others --exclude-standard -- CucumberSwift.xcodeproj)" ]; then
   git status --short -- CucumberSwift.xcodeproj
   echo "CucumberSwift.xcodeproj does not match Project.swift. Run 'mise run generate' and commit the result."
-  exit 1
-fi
-fixtures="Tests/ParallelFixtures/ParallelFixtures.xcodeproj Tests/ParallelFixtures/Derived"
-tuist generate --path Tests/ParallelFixtures --no-open
-if ! git diff --quiet -- $fixtures || [ -n "$(git ls-files --others --exclude-standard -- $fixtures)" ]; then
-  git status --short -- $fixtures
-  git diff -- $fixtures | head -60
-  echo "The parallel testing fixtures' project does not match Tests/ParallelFixtures/Project.swift. Run 'mise run generate-fixtures' and commit the result."
   exit 1
 fi
 """
