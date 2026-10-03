@@ -174,6 +174,7 @@ final class FeatureFixerTests: LintTestCase {
     }
 
     func testAFileThatCantBeSavedIsAnError() throws {
+        try XCTSkipIf(getuid() == 0, "File permissions aren't enforced for root")
         let file = directory.appendingPathComponent("Test.feature")
         try "Feature: F\n  Scenario: S\n    Given a step\n    Thne another step\n".write(to: file, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o444], ofItemAtPath: file.path)
@@ -188,19 +189,25 @@ final class FeatureFixerTests: LintTestCase {
         XCTAssertTrue(try String(contentsOf: file, encoding: .utf8).contains("Thne"))
     }
 
-    func testAFileThatCantBeCheckedIsAnError() throws {
+    func testAFileThatCantBeReadIsAnError() throws {
+        try XCTSkipIf(getuid() == 0, "File permissions aren't enforced for root")
         let unreadable = directory.appendingPathComponent("Unreadable.feature")
         try "Feature: F\n".write(to: unreadable, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: unreadable.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: unreadable.path) }
+
+        XCTAssertEqual(FeatureFixer.fix(paths: [directory.path]).failures, [
+            .init(file: unreadable.standardizedFileURL.path, reason: "Couldn't read this feature file")
+        ])
+    }
+
+    func testAFileThatIsntUTF8IsAnError() throws {
         let latin1 = directory.appendingPathComponent("Latin1.feature")
         // "Café" in Latin-1, where "é" is the single byte E9.
         try (Data("Feature: Caf".utf8) + Data([0xE9, 0x0A])).write(to: latin1)
 
-        let failures = FeatureFixer.fix(paths: [directory.path]).failures
-        XCTAssertEqual(failures, [
-            .init(file: latin1.standardizedFileURL.path, reason: "This feature file isn't UTF-8 text, so it wasn't checked"),
-            .init(file: unreadable.standardizedFileURL.path, reason: "Couldn't read this feature file")
+        XCTAssertEqual(FeatureFixer.fix(paths: [directory.path]).failures, [
+            .init(file: latin1.standardizedFileURL.path, reason: "This feature file isn't UTF-8 text, so it wasn't checked")
         ])
     }
 
