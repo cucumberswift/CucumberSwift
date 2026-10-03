@@ -54,11 +54,10 @@ extension Cucumber: StepImplementation {
 
         // Plain, synchronous hooks and steps, as XCUITest expects: its calls wait on the main run loop
         // themselves. They run on the main thread, which MainActor.assumeIsolated tells the compiler.
+        // launch() ends a copy left running by the scenario before, so nothing terminates the app: on a
+        // simulator clone, terminating it can fail.
         BeforeScenario { _ in
             MainActor.assumeIsolated { UITestApp.app.launch() }
-        }
-        AfterScenario { _ in
-            MainActor.assumeIsolated { UITestApp.app.terminate() }
         }
 
         Given("a fresh cart") { _, _ in

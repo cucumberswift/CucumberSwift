@@ -35,18 +35,26 @@ enum ParallelFixtureSupport {
 
     /// Writes an empty file named after the scenario, by its feature and its line, this worker's process,
     /// and a UUID, so that a second run of the scenario in the same worker writes a second record.
+    ///
+    /// The UI test runner on macOS and Mac Catalyst is sandboxed and may not write to that folder. It then
+    /// writes the record to `parallel-test-records` in its own temporary folder, where CI collects it too.
     static func record(_ scenario: Scenario) {
         guard let folder = ProcessInfo.processInfo.environment["PARALLEL_TEST_RECORDS"], !folder.isEmpty else { return }
         let feature = scenario.feature?.title ?? "No feature"
         let name = "\(feature) line \(scenario.location.line) \(scenario.title)"
             .map { $0.isLetter || $0.isNumber ? $0 : "-" }
-        let url = URL(fileURLWithPath: folder, isDirectory: true)
-            .appendingPathComponent("\(String(name)).\(ProcessInfo.processInfo.processIdentifier).\(UUID().uuidString)")
-        do {
-            try FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
-            try Data().write(to: url)
-        } catch {
-            XCTFail("Could not record '\(scenario.title)' at \(url.path): \(error)")
+        let file = "\(String(name)).\(ProcessInfo.processInfo.processIdentifier).\(UUID().uuidString)"
+        let sandboxFolder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("parallel-test-records").path
+        var errors = [String]()
+        for candidate in [folder, sandboxFolder] {
+            do {
+                try FileManager.default.createDirectory(atPath: candidate, withIntermediateDirectories: true)
+                try Data().write(to: URL(fileURLWithPath: candidate, isDirectory: true).appendingPathComponent(file))
+                return
+            } catch {
+                errors.append("\(candidate): \(error.localizedDescription)")
+            }
         }
+        XCTFail("Could not record '\(scenario.title)': \(errors.joined(separator: "; "))")
     }
 }

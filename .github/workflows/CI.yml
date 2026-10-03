@@ -360,6 +360,8 @@ jobs:
           mkdir -p "$records"
           xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$SCHEME" -destination "$DESTINATION" -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$RUNNER_TEMP/parallel-test.xcresult" PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
           status=$?
+          # The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
+          cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
           echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
           grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
           grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
