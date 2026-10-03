@@ -8,6 +8,9 @@
 @_exported import CucumberSwift
 @_exported import CucumberSwiftExpressions
 
+// The pattern is a `String`, not a `StaticString`, so that an interpolated pattern or a variable
+// reaches the macro, which reports that the pattern must be a string literal. A `StaticString`
+// would fail Swift's own type check first, with an error that does not say why.
 #if Macros
 /// A `Given` step definition whose pattern and closure are checked when it compiles.
 ///
@@ -24,35 +27,35 @@
 /// to the step definition you would write by hand; use Expand Macro in Xcode to see it.
 @freestanding(expression)
 @discardableResult
-public macro Given<each Argument>(_ expression: StaticString,
+public macro Given<each Argument>(_ expression: String,
                                   _ body: (repeat each Argument) async throws -> Void) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 /// A `When` step definition whose pattern and closure are checked when it compiles. See ``Given(_:_:)``.
 @freestanding(expression)
 @discardableResult
-public macro When<each Argument>(_ expression: StaticString,
+public macro When<each Argument>(_ expression: String,
                                  _ body: (repeat each Argument) async throws -> Void) -> WhenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 /// A `Then` step definition whose pattern and closure are checked when it compiles. See ``Given(_:_:)``.
 @freestanding(expression)
 @discardableResult
-public macro Then<each Argument>(_ expression: StaticString,
+public macro Then<each Argument>(_ expression: String,
                                  _ body: (repeat each Argument) async throws -> Void) -> ThenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 /// An `And` step definition whose pattern and closure are checked when it compiles. See ``Given(_:_:)``.
 @freestanding(expression)
 @discardableResult
-public macro And<each Argument>(_ expression: StaticString,
+public macro And<each Argument>(_ expression: String,
                                 _ body: (repeat each Argument) async throws -> Void) -> AndStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 /// A `But` step definition whose pattern and closure are checked when it compiles. See ``Given(_:_:)``.
 @freestanding(expression)
 @discardableResult
-public macro But<each Argument>(_ expression: StaticString,
+public macro But<each Argument>(_ expression: String,
                                 _ body: (repeat each Argument) async throws -> Void) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
@@ -60,7 +63,7 @@ public macro But<each Argument>(_ expression: StaticString,
 /// See ``Given(_:_:)``.
 @freestanding(expression)
 @discardableResult
-public macro MatchAll<each Argument>(_ expression: StaticString,
+public macro MatchAll<each Argument>(_ expression: String,
                                      _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 #else
@@ -69,42 +72,42 @@ public macro MatchAll<each Argument>(_ expression: StaticString,
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro Given<each Argument>(_ expression: StaticString,
+public macro Given<each Argument>(_ expression: String,
                    _ body: (repeat each Argument) async throws -> Void) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro When<each Argument>(_ expression: StaticString,
+public macro When<each Argument>(_ expression: String,
                   _ body: (repeat each Argument) async throws -> Void) -> WhenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro Then<each Argument>(_ expression: StaticString,
+public macro Then<each Argument>(_ expression: String,
                   _ body: (repeat each Argument) async throws -> Void) -> ThenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro And<each Argument>(_ expression: StaticString,
+public macro And<each Argument>(_ expression: String,
                  _ body: (repeat each Argument) async throws -> Void) -> AndStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro But<each Argument>(_ expression: StaticString,
+public macro But<each Argument>(_ expression: String,
                  _ body: (repeat each Argument) async throws -> Void) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 
 @freestanding(expression)
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
-public macro MatchAll<each Argument>(_ expression: StaticString,
+public macro MatchAll<each Argument>(_ expression: String,
                       _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 #endif
