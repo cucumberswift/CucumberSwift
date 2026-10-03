@@ -7,22 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08FA8CB881460ED2600F6B83 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
+		0971C1192588FCFE68428CA3 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		11C655BD04BEF629B532B4AA /* UnitTestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F349B3D574F043B21907917 /* UnitTestSteps.swift */; };
 		14E44280E55AE6F221CEF117 /* UnitTestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F349B3D574F043B21907917 /* UnitTestSteps.swift */; };
 		185951DFCEC2A1C480656235 /* UITestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005D1369BD1A9DCC2AD1E80D /* UITestSteps.swift */; };
+		1ED25A953E90D633F63675ED /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		238264696C12204C8C11E285 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		242AA6AB67457121605E63CB /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
 		25AA7961CE2C338A6C7EFDBD /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A39B1A773D0D126CAAE69F80 /* CucumberSwift */; };
 		27642C161FE5217A17CB0C03 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		29317F6DF208055FDD440FC0 /* UITestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005D1369BD1A9DCC2AD1E80D /* UITestSteps.swift */; };
+		2D8E889691C593AF02BCC67D /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		2DAB606A489D7B492B975B86 /* UnitTestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F349B3D574F043B21907917 /* UnitTestSteps.swift */; };
 		32DF3F20540D57C799C8D7C9 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
+		3E92B168B048821888533256 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		5CFF05E2926D9A8922006776 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		5EDCD324ABEEAE0FD4A39C6D /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		659354317C3B6E26D60727E7 /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = E0A6B6BD25D52FCB77059478 /* CucumberSwift */; };
 		67430F04C2D00C62F8E98968 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
 		6B8B1790D43A58E0E600EDC7 /* ParallelFixtureApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574320C0858C47366FA64777 /* ParallelFixtureApp.swift */; };
 		6C417EB9888AC4920569A117 /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3D90CD849D10B290CD6E3D22 /* CucumberSwift */; };
+		71E99DC62B4A43CBE79FF02C /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		7A03A4281B178D1195C2A023 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
 		7C2AABA2BD561738C878B7BB /* UITestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 005D1369BD1A9DCC2AD1E80D /* UITestSteps.swift */; };
 		83E7CB535AA0E90A25875B15 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
@@ -33,6 +39,7 @@
 		89DFBED8F39725484C374ABC /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
 		92E1A10580A28DE039D6B5C6 /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FE25F72350DFF7DBE23219DD /* CucumberSwift */; };
 		9AAD4DAB762FB95A44CC0CD2 /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DE781ACCE52C2CDCF1251E1A /* CucumberSwift */; };
+		9C13A1844C71EF2F67BDBD17 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		A19C341678F1D5A38FCA6389 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		A429464A418A683BCFFED1D0 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
 		A6838B5F1E9DD0384AC2351D /* CucumberSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3AA25AA614DD5958A50E89D1 /* CucumberSwift */; };
@@ -40,6 +47,8 @@
 		B4AD9E559F3EE60BD9D820B3 /* UnitTestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F349B3D574F043B21907917 /* UnitTestSteps.swift */; };
 		B53BC6FF81233AF4B3D55E13 /* ParallelFixtureApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574320C0858C47366FA64777 /* ParallelFixtureApp.swift */; };
 		B6D55E20930F85048BA2E805 /* ParallelFixtureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */; };
+		B96392298FF4B01A2B121D89 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
+		BF8E9A03185B0ABE6FBABFF3 /* PlainXCTestControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */; };
 		D33848E02BC92599D38C6F64 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
 		D792CB2B142670F1957D71C1 /* UnitTestSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F349B3D574F043B21907917 /* UnitTestSteps.swift */; };
 		DA5ADE50709E490A14BEDB88 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = C7FE1E1198D3F7617311C40F /* Features */; };
@@ -237,6 +246,7 @@
 		8B55DBA5CD41FD12F9ABF629 /* ParallelHostlessTestsMac.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ParallelHostlessTestsMac.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9DC737EF5C9D987C57EE22E9 /* ParallelHostlessTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ParallelHostlessTests-Info.plist"; sourceTree = "<group>"; };
 		A1FA0EC7798BF298A4603115 /* ParallelHostedTestsTV-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ParallelHostedTestsTV-Info.plist"; sourceTree = "<group>"; };
+		A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainXCTestControl.swift; sourceTree = "<group>"; };
 		AE575E9AA38A15FCBC0B1D9A /* ParallelHostedTestsTV.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ParallelHostedTestsTV.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C006B0C09D6CBC510B27958A /* ParallelHostedTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ParallelHostedTests-Info.plist"; sourceTree = "<group>"; };
 		C04BC82C90058767DFFDD93E /* ParallelFixtureAppMac-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "ParallelFixtureAppMac-Info.plist"; sourceTree = "<group>"; };
@@ -426,6 +436,7 @@
 			isa = PBXGroup;
 			children = (
 				5C80C8FC3A4EA83A9DD2C72D /* ParallelFixtureSupport.swift */,
+				A4665FE7E774B04CE0945D7E /* PlainXCTestControl.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -882,6 +893,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				83E7CB535AA0E90A25875B15 /* ParallelFixtureSupport.swift in Sources */,
+				1ED25A953E90D633F63675ED /* PlainXCTestControl.swift in Sources */,
 				11C655BD04BEF629B532B4AA /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -899,6 +911,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				27642C161FE5217A17CB0C03 /* ParallelFixtureSupport.swift in Sources */,
+				71E99DC62B4A43CBE79FF02C /* PlainXCTestControl.swift in Sources */,
 				185951DFCEC2A1C480656235 /* UITestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -908,6 +921,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B6D55E20930F85048BA2E805 /* ParallelFixtureSupport.swift in Sources */,
+				2D8E889691C593AF02BCC67D /* PlainXCTestControl.swift in Sources */,
 				88D684B5F9F5F9414FB3DFAB /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -917,6 +931,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5EDCD324ABEEAE0FD4A39C6D /* ParallelFixtureSupport.swift in Sources */,
+				BF8E9A03185B0ABE6FBABFF3 /* PlainXCTestControl.swift in Sources */,
 				D792CB2B142670F1957D71C1 /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -926,6 +941,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				238264696C12204C8C11E285 /* ParallelFixtureSupport.swift in Sources */,
+				B96392298FF4B01A2B121D89 /* PlainXCTestControl.swift in Sources */,
 				2DAB606A489D7B492B975B86 /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -935,6 +951,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F84F1215030682C61D218667 /* ParallelFixtureSupport.swift in Sources */,
+				0971C1192588FCFE68428CA3 /* PlainXCTestControl.swift in Sources */,
 				14E44280E55AE6F221CEF117 /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -952,6 +969,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5CFF05E2926D9A8922006776 /* ParallelFixtureSupport.swift in Sources */,
+				9C13A1844C71EF2F67BDBD17 /* PlainXCTestControl.swift in Sources */,
 				B4AD9E559F3EE60BD9D820B3 /* UnitTestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -961,6 +979,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A19C341678F1D5A38FCA6389 /* ParallelFixtureSupport.swift in Sources */,
+				3E92B168B048821888533256 /* PlainXCTestControl.swift in Sources */,
 				7C2AABA2BD561738C878B7BB /* UITestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -970,6 +989,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A429464A418A683BCFFED1D0 /* ParallelFixtureSupport.swift in Sources */,
+				08FA8CB881460ED2600F6B83 /* PlainXCTestControl.swift in Sources */,
 				29317F6DF208055FDD440FC0 /* UITestSteps.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

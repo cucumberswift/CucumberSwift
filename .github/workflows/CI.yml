@@ -251,10 +251,10 @@ jobs:
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
   # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
   # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too. A
-  # combination fails unless every scenario ran exactly once and enough workers ran them.
-  # Two combinations run with fewer: Xcode launches one copy of a Mac Catalyst host app, so
-  # hosted unit tests there get one worker; and UI tests on a Mac drive the one copy of the app
-  # the Mac can run, so parallel workers end each other's copy and they run with one worker.
+  # combination fails unless every scenario ran exactly once, and the scenarios ran in as many
+  # workers as the fixtures' plain XCTest classes (PlainXCTestControl), up to two. Where Xcode
+  # runs those in one worker too, that is how Xcode runs that kind of target. UI tests on a Mac
+  # run with one worker: they drive the one copy of the app a Mac can run.
   # Each run of a scenario writes a record in PARALLEL_TEST_RECORDS, named after the scenario,
   # its worker's process and a UUID, so that two runs never share one. xcodebuild's log can't
   # show this, because it interleaves its own output with the workers' and cuts test lines short.
@@ -277,16 +277,11 @@ jobs:
             platform: macOS
         include:
           - platform: Mac Catalyst
-            kind: Hosted
-            min_workers: 1
-          - platform: Mac Catalyst
             kind: UI
             workers: 1
-            min_workers: 1
           - platform: macOS
             kind: UI
             workers: 1
-            min_workers: 1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -328,7 +323,6 @@ jobs:
           # The scenarios in Tests/ParallelFixtures/Features.
           EXPECTED_SCENARIOS: 10
           WORKERS: ${{ matrix.workers || 3 }}
-          MIN_WORKERS: ${{ matrix.min_workers || 2 }}
         run: |
           set +e
           records="$RUNNER_TEMP/parallel-test-records"
@@ -349,6 +343,11 @@ jobs:
           scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
           workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
           echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
+          # The workers Xcode gave the plain XCTest classes, named in each result line.
+          control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" parallel-test.log | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
+          [ "$control" -gt 0 ] || control=1
+          echo "Plain XCTest classes ran in $control workers"
+          min_workers=$(( control < 2 ? control : 2 ))
           ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
           if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
             echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in CI.yml."
@@ -358,8 +357,8 @@ jobs:
             echo "::error::Some scenarios ran more than once."
             status=1
           fi
-          if [ "$workers" -lt "$MIN_WORKERS" ]; then
-            echo "::error::Only $workers worker ran the scenarios, so they did not run in parallel."
+          if [ "$workers" -lt "$min_workers" ]; then
+            echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel."
             status=1
           fi
           exit $status

@@ -43,8 +43,16 @@ enum ParallelTesting {
     /// Prepares once XCTest has loaded the test bundle and the main actor is first free. In a parallel
     /// worker that is before XCTest lists the classes to hand out. In a serial run XCTest has already
     /// built every suite by then, and preparing does nothing.
+    ///
+    /// A test bundle hosted in an app, or run by a UI test runner, is loaded into an app that is already
+    /// running, and XCTest lists the classes before the main actor is free. There it prepares at once,
+    /// while the bundle loads.
     nonisolated static func prepareWhenLoaded() {
-        Task { @MainActor in prepare() }
+        if Thread.isMainThread && Bundle.main.bundlePath.hasSuffix(".app") {
+            MainActor.assumeIsolated { prepare() }
+        } else {
+            Task { @MainActor in prepare() }
+        }
     }
 
     static func prepare() {
