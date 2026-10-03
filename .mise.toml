@@ -28,12 +28,32 @@ if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --other
 fi
 """
 
+[tasks.test-fixtures]
+description = "Build and test every project in Fixtures/"
+# Each fixture is a Swift package (Package.swift), tested with `swift test`, or a Tuist project
+# (Project.swift) whose project and scheme are named after its folder. See "Fixtures" in
+# CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later.
+run = '''
+set -e
+for fixture in Fixtures/*/; do
+  name=$(basename "$fixture")
+  if [ -f "$fixture/Package.swift" ]; then
+    swift test --package-path "$fixture"
+  fi
+  if [ -f "$fixture/Project.swift" ]; then
+    tuist generate --no-open --path "$fixture"
+    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination 'platform=macOS' \
+      -skipMacroValidation CODE_SIGNING_ALLOWED=NO
+  fi
+done
+'''
+
 [tasks.test-swiftpm]
 description = "Run every test target with Swift Package Manager"
 # SwiftPM links all of a package's test targets into one bundle, so each consumer
 # test folder is a package of its own. See "Running the tests" in CONTRIBUTING.md.
 run = [
-  "swift test --skip 'CucumberSwift\\.CucumberTest'",
+  "swift test --enable-all-traits --skip 'CucumberSwift\\.CucumberTest'",
   "swift test --package-path Tests/CucumberSwiftConsumerTests",
   "swift test --package-path Tests/CucumberSwiftDSLConsumerTests",
   "swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests",

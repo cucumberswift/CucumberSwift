@@ -274,6 +274,13 @@ class CucumberTests: XCTestCase {
         XCTAssertTrue(message.contains("setupSteps()"))
     }
 
+    func testNoFeaturesMessageNamesTheBazelSetup() {
+        let message = CucumberTest.noFeaturesMessage(bundle: Bundle(for: CucumberTests.self))
+
+        XCTAssertTrue(message.contains("structured_resources"))
+        XCTAssertTrue(message.contains("strip_structured_resources_prefixes"))
+    }
+
     func testNoFeaturesMessageWithoutAStepImplementation() {
         let message = CucumberTest.noFeaturesMessage(bundle: nil)
 

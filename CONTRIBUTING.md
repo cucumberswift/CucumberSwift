@@ -78,7 +78,7 @@ This is the reference run. It builds every test target through the Xcode project
 CI also runs every test target with SwiftPM. Run all four packages:
 
 ```bash
-swift test --skip 'CucumberSwift\.CucumberTest'
+swift test --enable-all-traits --skip 'CucumberSwift\.CucumberTest'
 swift test --package-path Tests/CucumberSwiftConsumerTests
 swift test --package-path Tests/CucumberSwiftDSLConsumerTests
 swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
@@ -94,6 +94,8 @@ mise run test-swiftpm
 
 **The Swift 6 package has no Xcode target.** `Tests/CucumberSwiftSwift6ConsumerTests` builds its test target in the Swift 6 language mode, as a project that has moved to Swift 6 would, while CucumberSwift itself stays in the Swift 5 language mode. It checks that the setup in "Matching Steps" → "Swift 6 language mode" compiles and runs. If a change makes Swift 6 code stop compiling, this package fails to build.
 
+**Why the root package turns on every trait.** The step definition macros, the `CucumberSwiftMacros` product, are behind the `Macros` package trait, so that projects which don't use them never download swift-syntax. `--enable-all-traits` builds them and runs their tests, `CucumberSwiftMacrosTests`. The consumer packages turn no trait on, as most projects that use CucumberSwift, so they check that everything still builds without it. Traits need Swift 6.1 or later; an earlier toolchain reads `Package.swift`, which has no macros, and runs the root package without `--enable-all-traits`.
+
 **Why the root package skips `CucumberTest`.** `CucumberTest` is the run of `Tests/CucumberSwiftTests/Features`, whose steps have no step definitions, so each of those steps would fail. The Xcode test plan skips it too, and `--skip 'CucumberSwift\.CucumberTest'` does the same for SwiftPM.
 
 **Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles, and the root package the same as the `CucumberSwiftTests` bundle, apart from the tests that need UIKit, which `swift test` on macOS doesn't have.
@@ -107,7 +109,42 @@ Also worth knowing:
 - **Don't use `swift test --parallel`.** It runs only the tests `swift test list` shows, so no scenario runs, and it still passes.
 - **SwiftPM builds for macOS only.** iOS and Mac Catalyst behaviour still needs `xcodebuild`.
 - **The generated step definitions are compiled.** `GeneratedStepDefinitions.swift` (in `CucumberSwiftTests`) and `GeneratedBareSlashStepDefinitions.swift` (in `CucumberSwiftConsumerTests`, which turns on bare slash regex literals) hold the stub generator's output: Cucumber expressions and `#/…/#` in the first, `/…/` in the second. `GeneratedStepDefinitionTests` fails when the generator's output changes and prints the new output to paste in.
+- **There are two manifests.** Swift 6.1 and later read `Package@swift-6.1.swift`, which adds the macros; earlier toolchains read `Package.swift`. Make every other change to both. CI's "Manifests match their lockfiles" job checks both against `Package.resolved`. A swift-syntax pin there may be present or absent: toolchains disagree on whether to pin a dependency that only a trait uses (Swift 6.1 adds the pin, a plain resolve with Swift 6.2 removes it), so the check accepts either, and checks the pin against the manifest's range when there is one. Commit `Package.resolved` as a plain `swift package resolve` leaves it.
+- **The localized macros are generated.** `Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift` declares a macro for every localized step type in `Sources/CucumberSwift/Generated/I18n.swift`, such as `#ES_Dado`. `LocalizedStepDefinitionMacroTests` fails when the two differ; rewrite the file with `CUCUMBERSWIFT_WRITE_LOCALIZED_MACROS=1 swift test --traits Macros --filter LocalizedStepDefinitionMacroTests`.
 - **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
+
+### With Bazel
+
+CucumberSwift is also a Bazel module (`MODULE.bazel`, `BUILD.bazel`). Its tests with Bazel are in `Tests/`, a separate module (`Tests/MODULE.bazel`, `Tests/BUILD.bazel`) that depends on `cucumberswift` the way a Bazel project does. It runs the three consumer suites on macOS and on an iOS simulator. `REPO.bazel` and `.bazelignore` keep `Tests/` out of the root module, so `bazel build @cucumberswift//...` works for a consumer. With [Bazelisk](https://github.com/bazelbuild/bazelisk) installed (`brew install bazelisk`), which runs the Bazel version in `.bazelversion`, run from `Tests/`:
+
+```bash
+bazelisk test //...
+```
+
+Until CucumberSwiftExpressions is on the Bazel Central Registry, point Bazel at a copy of the release `MODULE.bazel` names, for example `--override_module=cucumberswift_expressions=../../CucumberSwiftExpressions` for a checkout of its tag.
+
+CI's `Bazel tests` jobs run the same against a `git archive` of the commit, which is what the release's source archive contains, on the Bazel version in `.bazelversion`, and in the merge queue and on `main` also on Bazel 8, the oldest that `MODULE.bazel` allows. They fail if a suite runs fewer tests than `swift test` does.
+
+- **A new source file needs no change**: `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
+- **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in CI's `Check every feature ran` step.
+- **Keep the CucumberSwiftExpressions versions in step.** CI fails if `MODULE.bazel`'s `bazel_dep` is older than the version `Package.swift` starts from.
+- **`Tests/.bazelrc` runs the tests one at a time.** Each iOS suite needs a booted simulator, and booting several at once timed out in CI. The first run boots a new simulator, which can take a few minutes.
+- **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).
+
+### Fixtures
+
+`Fixtures/` holds small projects that use CucumberSwift the way a project that depends on it would, from this checkout, to test what the packages above cannot: package traits, Tuist-generated projects, and a test target in the Swift 6 language mode. Each has a README that says what it proves. Run them all with:
+
+```bash
+mise run test-fixtures
+```
+
+CI runs them in the "Fixtures" job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
+
+- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`; name the project and its scheme after the fixture's folder, which is how the task finds them.
+- **Depend on CucumberSwift by path.** `.package(name: "CucumberSwift", path: "../..")` in a Swift package, `.package(path: "../..")` in a Tuist project.
+- **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
+- **Nothing generated is committed**: `.gitignore` covers each fixture's Xcode project, `Derived` folder, `.build` folder and `Package.resolved`. They are outside `Project.swift`'s globs, so they are not in CucumberSwift's Xcode project or in what Carthage builds.
 
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 

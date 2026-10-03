@@ -88,7 +88,15 @@ extension Cucumber: @retroactive CucumberTestObservable {
 }
 
 extension Cucumber: @retroactive StepImplementation {
-    public var bundle: Bundle { Bundle.module }
+    public var bundle: Bundle {
+        // SwiftPM copies the Features folder into a resource bundle of its own; Bazel puts it in
+        // the test bundle, as Xcode does.
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
+        return Bundle(for: MainActorReporter.self)
+        #endif
+    }
 
     public func setupSteps() {
         var changes = 0
@@ -112,7 +120,7 @@ extension Cucumber: @retroactive StepImplementation {
         }
 
         Given("a step that reads Cucumber.shared") { _, _ in
-            XCTAssertEqual(Cucumber.shared.bundle, Bundle.module)
+            XCTAssertNotNil(Cucumber.shared.bundle.url(forResource: "Features", withExtension: nil))
         }
 
         Given("there are {int} flights from {airport}" as CucumberExpression) { match, _ in

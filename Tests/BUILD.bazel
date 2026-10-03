@@ -1,0 +1,16 @@
+load(":consumer_tests.bzl", "consumer_tests")
+
+# From this folder: `bazel test //...` runs each suite on macOS and on an iOS simulator.
+
+consumer_tests(
+    name = "CucumberSwiftConsumerTests",
+    # Xcode turns bare slash regex literals on by default; GeneratedBareSlashStepDefinitions.swift needs them.
+    copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
+)
+
+consumer_tests(name = "CucumberSwiftDSLConsumerTests")
+
+consumer_tests(
+    name = "CucumberSwiftSwift6ConsumerTests",
+    copts = ["-swift-version", "6"],
+)
