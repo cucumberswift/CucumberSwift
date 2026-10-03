@@ -60,15 +60,3 @@ extension Step {
         return "\(position) \u{203A} " + CucumberTest.generatedTestName(text, readable: true)
     }
 }
-
-extension String {
-    func toClassString() -> String {
-        camelCasingString()
-            .lazy
-            .drop { !$0.isLetter }
-            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
-            .map(String.init)
-            .joined()
-            .capitalizingFirstLetter()
-    }
-}

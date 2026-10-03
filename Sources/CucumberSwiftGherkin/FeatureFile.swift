@@ -79,6 +79,8 @@ extension FeatureFile {
         /// The keywords step definitions can match the step with: its own, and for an `And`, `But`
         /// or `*` step, the `Given`, `When` or `Then` it continues. `*` has all five of its own.
         public let keywords: Set<Keyword>
+        /// The keyword in the feature file's language, as CucumberSwift names it in its messages.
+        public let keywordName: String
         /// The step's text, after its keyword.
         public let text: String
         public let line: Int
@@ -196,6 +198,8 @@ extension Array where Element == FeatureFile.Step {
 extension FeatureFile.Step {
     fileprivate init(_ content: StepNodeContent, keyword: Step.Keyword) {
         keywords = Set(FeatureFile.Keyword.allCases.filter { keyword.contains(Step.Keyword($0)) })
+        // Steps are read straight after their file is lexed, so the lexer's language is still the file's.
+        keywordName = keyword.toString(in: Scope.language)
         text = content.match
         line = Int(content.location.line)
         column = Int(content.location.column)
@@ -215,5 +219,29 @@ extension Step.Keyword {
             case .and: self = .and
             case .but: self = .but
         }
+    }
+}
+
+// MARK: - Names and suggestions, as CucumberSwift makes them
+
+extension FeatureFile {
+    /// `title` as a Swift type name, as CucumberSwift names the classes of the tests it generates:
+    /// `Pay with a gift card` is `PayWithAGiftCard`. Empty when `title` has no letters.
+    public static func typeName(for title: String) -> String {
+        title.toClassString()
+    }
+}
+
+extension FeatureFile.Step {
+    /// The step definition CucumberSwift suggests for this step when no step definition matches it,
+    /// with a Cucumber Expression. `failure` is its last line, which fails the step until it is filled in.
+    public func suggestedStepDefinition(failure: String) -> String {
+        let keyword = keywords.reduce(into: Step.Keyword()) { $0.insert(Step.Keyword($1)) }
+        return StubGenerator.method(for: text,
+                                    keyword: keyword,
+                                    hasDataTable: dataTable != nil,
+                                    hasDocString: docString != nil,
+                                    style: .cucumberExpression)
+            .generateSwift(failure: failure)
     }
 }

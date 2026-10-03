@@ -1,0 +1,111 @@
+# Running Feature Files with Swift Testing
+
+Run your feature files with Swift Testing in a unit test target, with the step definitions you already have.
+
+## Overview
+
+CucumberSwift runs feature files with XCTest. In a unit test target, you can run them with Swift Testing instead. A build tool plugin reads the target's feature files when it builds, and generates a Swift Testing test for each scenario:
+
+- a suite for each feature,
+- a test for each Scenario,
+- a parameterized test for each Scenario Outline, with one test case for each row of its Examples tables.
+
+Xcode's test navigator shows every feature and scenario before anything runs, and you can run a single scenario from Xcode, with `swift test --filter`, or with `xcodebuild -only-testing`.
+
+Step definitions are written as for CucumberSwift: `extension Cucumber: StepImplementation`, `setupSteps()`, `Given`, `When`, `Then`, `And`, `But` and `MatchAll`, and the step definition macros. Backgrounds, Rules, Scenario Outlines, tags and `CUCUMBER_TAGS`, doc strings, data tables, scenario and step hooks, and feature files in other languages work as they do with CucumberSwift.
+
+## Requirements
+
+- **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin.
+- **Unit test targets only.** Xcode doesn't allow Swift Testing in UI test targets. UI tests keep running their feature files with CucumberSwift and XCTest.
+- **`#expect` and `#require`, not `XCTAssert`.** Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass. Step definitions that this runner runs must use Swift Testing's expectations.
+- **One runner per test target.** `CucumberSwiftTesting` has its own `Cucumber`, `Given` and the rest, with the same names as CucumberSwift's, so a file can't import both.
+
+## Set up a Swift package
+
+Add `CucumberSwiftTesting` to the test target, and apply the plugin to it:
+
+```swift
+// swift-tools-version:6.1
+import PackageDescription
+
+let package = Package(
+    name: "MyAppTests",
+    dependencies: [
+        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0")
+    ],
+    targets: [
+        .testTarget(
+            name: "MyAppTests",
+            dependencies: [.product(name: "CucumberSwiftTesting", package: "CucumberSwift")],
+            // The plugin reads the feature files when the tests build; the tests don't need them.
+            exclude: ["Features"],
+            plugins: [.plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift")])
+    ]
+)
+```
+
+The plugin finds every `.feature` file in the target's folder.
+
+To use the step definition macros, turn on the `Macros` trait and depend on `CucumberSwiftTestingMacros` instead, as <doc:Checking-Step-Definitions> describes for CucumberSwift. Then `import CucumberSwiftTestingMacros`; it imports `CucumberSwiftTesting` too. The localized macros, such as `#ES_Dado`, aren't available with this runner.
+
+## Set up an Xcode project
+
+1. Add the CucumberSwift package to the project, and add `CucumberSwiftTesting` to your unit test target.
+2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugin the first time it runs.
+3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin only sees files that belong to the target.
+
+## Write step definitions
+
+Register step definitions in `setupSteps()`, as with CucumberSwift. Because `Cucumber` and `StepImplementation` both come from `CucumberSwiftTesting`, Swift 6 asks you to mark the conformance `@retroactive`:
+
+```swift
+import CucumberSwiftTesting
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        BeforeScenario { _ in
+            Basket.shared.empty()
+        }
+        Given("I have {int} cukes") { match, _ in
+            Basket.shared.add(try match.first(\.int))
+        }
+        Then("the basket has {int} cukes") { match, step in
+            let count = try match.first(\.int)
+            #expect(Basket.shared.count == count)
+        }
+    }
+}
+```
+
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, a string that starts with `^` or ends with `$` for a regular expression, or a regex literal. The `step` argument has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+
+`BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+
+## Run scenarios
+
+Each scenario's test is named after its title, as CucumberSwift names the tests it generates: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard()`.
+
+```bash
+swift test --filter PayWithAGiftCard
+xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithAGiftCard()'
+```
+
+A Scenario Outline is one test, and each example is one of its test cases, named as CucumberSwift names the example's scenario. Xcode can run a single example from the test navigator, but `xcodebuild -only-testing` can only select the whole outline: given a test case, it runs nothing, and still succeeds.
+
+`CUCUMBER_TAGS` works as it does with CucumberSwift: a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, which Swift Testing reports as a pass.
+
+Scenarios run one at a time, as with CucumberSwift, because step definitions usually share state.
+
+## How failures are reported
+
+- A step that no step definition matches fails on its line in the feature file, and the message includes a step definition to paste into `setupSteps()`.
+- A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
+- A step definition, or a step hook, that throws fails on the step's line in the feature file. A scenario hook that throws fails on the scenario's line.
+
+In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A failed `#expect` is reported where you wrote it, and the scenario goes on, as a failed XCTest assertion does with CucumberSwift.
+
+## What isn't available
+
+These parts of CucumberSwift have no counterpart in this runner: `BeforeFeature` and `AfterFeature`, `shouldRunWith(scenario:tags:)`, verbose output and the JSON report, `ExecuteFirstStep`, `Attach`, and the localized step types such as `ES_Dado`. Feature files in any language still work: their steps match by their text.

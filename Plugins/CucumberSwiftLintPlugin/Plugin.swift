@@ -54,13 +54,3 @@ private func lintCommands(tool: Path, workDirectory: Path, targetName: String, f
                       outputFiles: [stamp])
     ]
 }
-
-private func expand(_ path: String) -> [String] {
-    var isDirectory: ObjCBool = false
-    guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else { return [] }
-    guard isDirectory.boolValue else { return [path] }
-    guard let enumerator = FileManager.default.enumerator(atPath: path) else { return [] }
-    return enumerator.compactMap { $0 as? String }
-        .filter { !$0.hasPrefix(".build/") && !$0.contains("/.build/") }
-        .map { URL(fileURLWithPath: path).appendingPathComponent($0).path }
-}
