@@ -48,7 +48,9 @@ PBXPROJ = f"{XCODE_PROJECT}/project.pbxproj"
 XCODE_RESOLVED = f"{XCODE_PROJECT}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 # How to fix each side, for the error messages.
-RESOLVE_SWIFTPM = ("swift", "package", "--enable-all-traits", "resolve")
+# A plain resolve: traits do not change the root package's pins (see UNPINNED), and Swift 6.1's
+# `swift package` has no trait options.
+RESOLVE_SWIFTPM = ("swift", "package", "resolve")
 # Dependencies that only a package trait uses. SwiftPM leaves them out of the root
 # package's Package.resolved (verified with Swift 6.2.3, with every trait on), so a
 # missing pin is expected. A pin, if one appears, is still checked against the range.
@@ -316,7 +318,6 @@ def run(*args):
 def check_resolve():
     """Check 3: resolve each lockfile against its manifest, and fail if it changes."""
     errors = []
-    # Every trait on, so the lockfile also pins the dependencies behind a trait.
     command = " ".join(RESOLVE_SWIFTPM)
     if run(*RESOLVE_SWIFTPM) != 0:
         errors.append(f"`{command}` failed, so {PACKAGE_RESOLVED} cannot satisfy "

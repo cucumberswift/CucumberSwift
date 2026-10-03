@@ -153,7 +153,7 @@ class LowerBoundTests(Repository):
         [error] = self.errors(output)
         self.assertIn(f"Package.swift requires {DOCC} from 1.0.0, but Package.resolved pins 1.5.0", error)
         self.assertIn("Set the lower bound in Package.swift to 1.5.0", error)
-        self.assertIn("swift package --enable-all-traits resolve", error)
+        self.assertIn("swift package resolve", error)
 
     def test_an_xcode_lower_bound_below_its_pin_fails(self):
         self.write(check_lockfiles.PBXPROJ,
@@ -256,7 +256,7 @@ class VersionedManifestTests(Repository):
         self.assertEqual(status, 1)
         [error] = self.errors(output)
         self.assertIn("Package.resolved has no pin for " + other + ", which Package@swift-6.1.swift requires", error)
-        self.assertIn("swift package --enable-all-traits resolve", error)
+        self.assertIn("swift package resolve", error)
 
 
 class SharedPackageTests(Repository):
@@ -413,7 +413,7 @@ class ResolveTests(Repository):
         self.assertEqual(status, 0)
         self.assertEqual(self.errors(output), [])
         self.assertEqual(self.commands, [
-            ["swift", "package", "--enable-all-traits", "resolve"],
+            ["swift", "package", "resolve"],
             ["git", "diff", "--exit-code", "--", "Package.resolved"],
             ["xcodebuild", "-resolvePackageDependencies", "-project", "CucumberSwift.xcodeproj",
              "-disableAutomaticPackageResolution"],
@@ -424,15 +424,14 @@ class ResolveTests(Repository):
         status, output = self.resolve(failing={"swift package"})
         self.assertEqual(status, 1)
         [error] = self.errors(output)
-        self.assertIn("`swift package --enable-all-traits resolve` failed, so Package.resolved cannot satisfy "
-                      "Package.swift", error)
+        self.assertIn("`swift package resolve` failed, so Package.resolved cannot satisfy Package.swift", error)
         self.assertNotIn(["git", "diff", "--exit-code", "--", "Package.resolved"], self.commands)
 
     def test_a_stale_swiftpm_lockfile_fails(self):
         status, output = self.resolve(failing={"git diff Package.resolved"})
         self.assertEqual(status, 1)
         [error] = self.errors(output)
-        self.assertIn("Package.resolved is stale: `swift package --enable-all-traits resolve` changed it", error)
+        self.assertIn("Package.resolved is stale: `swift package resolve` changed it", error)
 
     def test_an_xcode_lockfile_that_does_not_satisfy_the_project_fails(self):
         status, output = self.resolve(failing={"xcodebuild -resolvePackageDependencies"})
