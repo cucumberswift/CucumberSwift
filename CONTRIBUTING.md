@@ -124,6 +124,7 @@ CI's `Bazel tests` jobs run the same against a `git archive` of the commit, whic
 - **A new source file needs no change**: `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
 - **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in CI's `Check every feature ran` step.
 - **Keep the CucumberSwiftExpressions versions in step.** CI fails if `MODULE.bazel`'s `bazel_dep` is older than the version `Package.swift` starts from.
+- **`Tests/.bazelrc` runs the tests one at a time.** Each iOS suite needs a booted simulator, and booting several at once timed out in CI. The first run boots a new simulator, which can take a few minutes.
 - **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).
 
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
