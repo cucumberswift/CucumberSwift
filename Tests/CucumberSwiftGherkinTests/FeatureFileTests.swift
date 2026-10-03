@@ -78,7 +78,7 @@ final class FeatureFileTests: XCTestCase {
               | cukes | 5    |
         """)
         let steps = try XCTUnwrap(feature.scenarios.first?.steps)
-        XCTAssertEqual(steps[0].docString?.content, "{\"a\": 1}")
+        XCTAssertEqual(steps[0].docString?.literal, "{\"a\": 1}")
         XCTAssertEqual(steps[0].docString?.contentType, "json")
         XCTAssertNil(steps[0].dataTable)
         XCTAssertNil(steps[1].docString)

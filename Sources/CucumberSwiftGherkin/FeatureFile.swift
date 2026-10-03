@@ -92,9 +92,12 @@ extension FeatureFile {
         case given, when, then, and, but
     }
 
+    /// A step's doc string, named as CucumberSwift's `DocString` names it.
     public struct DocString: Equatable, Sendable {
         /// The text between the delimiters, without their indentation.
-        public let content: String
+        public let literal: String
+        /// The text between the delimiters as written.
+        public let rawLiteral: String
         /// The text after the opening delimiter, such as `json`, if there is any.
         public let contentType: String?
     }
@@ -196,7 +199,9 @@ extension FeatureFile.Step {
         text = content.match
         line = Int(content.location.line)
         column = Int(content.location.column)
-        docString = content.docString.map { FeatureFile.DocString(content: $0.literal, contentType: $0.contentType) }
+        docString = content.docString.map {
+            FeatureFile.DocString(literal: $0.literal, rawLiteral: $0.rawLiteral, contentType: $0.contentType)
+        }
         dataTable = content.tableRows.isEmpty ? nil : content.tableRows
     }
 }

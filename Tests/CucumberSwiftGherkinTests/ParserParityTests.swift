@@ -20,6 +20,7 @@ final class ParserParityTests: XCTestCase {
         let line: Int
         let column: Int
         let docString: String?
+        let rawDocString: String?
         let contentType: String?
         let dataTable: [[String]]?
     }
@@ -81,7 +82,8 @@ final class ParserParityTests: XCTestCase {
             text: step.text,
             line: step.line,
             column: step.column,
-            docString: step.docString?.content,
+            docString: step.docString?.literal,
+            rawDocString: step.docString?.rawLiteral,
             contentType: step.docString?.contentType,
             dataTable: step.dataTable)
     }
@@ -105,6 +107,7 @@ final class ParserParityTests: XCTestCase {
             line: Int(step.location.line),
             column: Int(step.location.column),
             docString: step.docString?.literal,
+            rawDocString: step.docString?.rawLiteral,
             contentType: step.docString?.contentType,
             dataTable: step.dataTable?.rows)
     }
