@@ -19,6 +19,11 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftLint",
             targets: ["CucumberSwiftLintPlugin"]),
+        // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
+        // or Fix Feature Files on the project's or package's menu in Xcode.
+        .plugin(
+            name: "FixFeatureFiles",
+            targets: ["Fix Feature Files"]),
         // Step definition macros, checked at compile time. Needs the Macros trait.
         .library(
             name: "CucumberSwiftMacros",
@@ -62,6 +67,18 @@ let package = Package(
             capability: .buildTool(),
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/CucumberSwiftLintPlugin"),
+        // Named as Xcode shows it on the project's or package's menu.
+        .plugin(
+            name: "Fix Feature Files",
+            capability: .command(
+                intent: .custom(
+                    verb: "fix-feature-files",
+                    description: "Fixes the misspelt Gherkin keywords that CucumberSwiftLint reports in feature files"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Fixes misspelt Gherkin keywords in your feature files")
+                ]),
+            dependencies: ["CucumberSwiftLintTool"],
+            path: "Plugins/FixFeatureFilesPlugin"),
         // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.
         .macro(
             name: "CucumberSwiftMacrosPlugin",
