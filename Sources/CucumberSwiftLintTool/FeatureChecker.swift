@@ -23,7 +23,7 @@ final class FeatureChecker {
     let file: String
     let definitions: [StepDefinition]?
 
-    private var report: (Diagnostic) -> Void = { _ in }
+    private var report: ((Diagnostic) -> Void)?
     private var english = true
     private var section = Section.none
     private var sawStep = false
@@ -34,6 +34,8 @@ final class FeatureChecker {
     private var pendingSteps = [PendingStep]()
     private var exampleHeader: [String]?
     private var exampleRows = [[String: String]]()
+    // Every line, trimmed, to look ahead from a line that may be a description.
+    private var lines = [String]()
 
     init(file: String, definitions: [StepDefinition]?) {
         self.file = file
@@ -42,9 +44,15 @@ final class FeatureChecker {
 
     func check(report: @escaping (Diagnostic) -> Void) {
         guard let contents = try? String(contentsOfFile: file, encoding: .utf8) else { return }
+        check(contents: contents, report: report)
+    }
+
+    /// Checks `contents` as the text of `file`.
+    func check(contents: String, report: @escaping (Diagnostic) -> Void) {
         self.report = report
-        let lines = contents.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
-        for (index, raw) in lines.enumerated() {
+        let rawLines = contents.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        lines = rawLines.map { $0.trimmingCharacters(in: .whitespaces) }
+        for (index, raw) in rawLines.enumerated() {
             let text = raw.trimmingCharacters(in: .whitespaces)
             let column = raw.prefix { $0 == " " || $0 == "\t" }.count + 1
             check(text, line: index + 1, column: column)
@@ -152,19 +160,43 @@ final class FeatureChecker {
     private func checkOtherText(_ text: String, line: Int, column: Int) {
         // Examples may have a description before their table.
         tableAllowed = section == .examples && exampleHeader == nil
-        let firstWord = String(text.prefix { !$0.isWhitespace && $0 != ":" })
-        let suggestion = Self.suggestion(for: firstWord, strict: !sawStep)
-        if sawStep, [.background, .scenario, .outline].contains(section) {
-            let hint = suggestion.map { " Did you mean '\($0)'?" } ?? ""
-            warn(line, column, "Expected a step (Given, When, Then, And, But), a table or a doc string.\(hint)")
-        } else if let suggestion = suggestion {
-            warn(line, column, "'\(firstWord)' is not a Gherkin keyword. Did you mean '\(suggestion)'?")
-            // Read a header that is only missing its colon as that header, so the lines after it
-            // aren't reported too.
-            if suggestion == firstWord + ":" {
-                checkHeader(firstWord, line: line, column: column)
-            }
+        let header = Self.headerWithoutColon(in: text)
+        let firstWord = header.map { String(text.prefix($0.count)) }
+            ?? String(text.prefix { !$0.isWhitespace && $0 != ":" })
+        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: firstWord, strict: !sawStep)
+        let inSteps = sawStep && [.background, .scenario, .outline].contains(section)
+        let fix = suggestion.flatMap { suggestion -> Diagnostic.Fix? in
+            guard inSteps || section == .none || isMistake(firstWord, in: text, suggestion: suggestion, line: line) else { return nil }
+            return Self.fix(replacing: firstWord, in: text, with: suggestion)
         }
+        if inSteps {
+            let hint = suggestion.map { " Did you mean '\($0)'?" } ?? ""
+            warn(line, column, "Expected a step (Given, When, Then, And, But), a table or a doc string.\(hint)", fix: fix)
+        } else if let suggestion = suggestion {
+            warn(line, column, "'\(firstWord)' is not a Gherkin keyword. Did you mean '\(suggestion)'?", fix: fix)
+        }
+        // Read a header that is only missing its colon as that header, so the lines after it
+        // aren't reported too.
+        if let header = header, fix != nil {
+            checkHeader(header, line: line, column: column)
+        }
+    }
+
+    /// Text after a header and before its first step is a description, where anything goes. So a
+    /// `word` there is only a mistake when it isn't an ordinary word (a misspelling, the header in
+    /// its own case, or a word with a colon), and the next line is a step, a table or a doc string.
+    private func isMistake(_ word: String, in text: String, suggestion: String, line: Int) -> Bool {
+        let keyword = suggestion.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
+        let misspelt = word.lowercased() != keyword.lowercased()
+        guard misspelt || word == keyword || text.dropFirst(word.count).hasPrefix(":") else { return false }
+        guard let next = lines.dropFirst(line).first(where: { !$0.isEmpty && !$0.hasPrefix("#") }) else { return false }
+        if Self.stepKeyword(of: next) != nil || next.hasPrefix("|") || next.hasPrefix("\"\"\"") || next.hasPrefix("```") {
+            return true
+        }
+        // The next line may be a misspelt step itself.
+        let nextWord = String(next.prefix { !$0.isWhitespace && $0 != ":" })
+        guard let step = Self.suggestion(for: nextWord, strict: false), Self.stepKeywords.contains(step) else { return false }
+        return nextWord.lowercased() != step.lowercased()
     }
 
     private func finishScenario() {
@@ -187,8 +219,8 @@ final class FeatureChecker {
         }
     }
 
-    private func warn(_ line: Int, _ column: Int, _ message: String) {
-        report(.init(file: file, line: line, column: column, message: message))
+    private func warn(_ line: Int, _ column: Int, _ message: String, fix: Diagnostic.Fix? = nil) {
+        report?(.init(file: file, line: line, column: column, message: message, fix: fix))
     }
 }
 
@@ -218,20 +250,39 @@ extension FeatureChecker {
         return cells
     }
 
+    /// The header that `text` starts with when it is written without its colon, or in the wrong case:
+    /// `Scenario Outline Foo` or `feature: F`. Not `Rule`, which also starts sentences.
+    private static func headerWithoutColon(in text: String) -> String? {
+        headers.first { header in
+            guard header != "Rule", text.prefix(header.count).lowercased() == header.lowercased() else { return false }
+            let next = text.dropFirst(header.count).first
+            return next.map { $0 == ":" || $0.isWhitespace } ?? true
+        }
+    }
+
+    /// The fix that replaces `word`, at the start of `text`, with the keyword `suggestion`. A colon
+    /// already after the word is kept rather than doubled. Nil when there is nothing to change.
+    private static func fix(replacing word: String, in text: String, with suggestion: String) -> Diagnostic.Fix? {
+        var replacement = suggestion
+        if suggestion.hasSuffix(":"), text.dropFirst(word.count).hasPrefix(":") {
+            replacement.removeLast()
+        }
+        return replacement == word ? nil : Diagnostic.Fix(text: word, replacement: replacement)
+    }
+
     /// A keyword that `word` looks like a misspelling of. Before the first step of a scenario, text
     /// is a description, so `strict` only suggests one for a near miss that isn't a common word.
     private static func suggestion(for word: String, strict: Bool) -> String? {
         let lowered = word.lowercased()
         guard lowered.count >= 3, !commonWords.contains(lowered) else { return nil }
-        for candidate in stepKeywords + ["Feature:", "Background:", "Scenario:", "Examples:"] {
-            let bare = candidate.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
-            if bare == word { return candidate } // "Scenario Foo", missing its colon
-            let distance = editDistance(lowered, bare.lowercased())
-            if distance == 0 || (distance == 1 && (!strict || lowered.count >= 4)) {
-                return candidate
+        // The closest keyword, so that "then" is "Then" rather than "When".
+        let closest = (stepKeywords + ["Feature:", "Background:", "Scenario:", "Examples:"])
+            .map { candidate in
+                (candidate, editDistance(lowered, candidate.trimmingCharacters(in: CharacterSet(charactersIn: ":")).lowercased()))
             }
-        }
-        return nil
+            .min { $0.1 < $1.1 }
+        guard let (candidate, distance) = closest else { return nil }
+        return distance == 0 || (distance == 1 && (!strict || lowered.count >= 4)) ? candidate : nil
     }
 
     /// Optimal string alignment distance: insertions, deletions, substitutions and swaps.
