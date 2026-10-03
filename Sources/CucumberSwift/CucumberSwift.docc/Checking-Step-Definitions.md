@@ -138,7 +138,7 @@ Every localized step definition has a macro too, with the same name: `#ES_Dado` 
 
 Each mistake is an error on its own line. Click the error's icon to see the whole message and, where there is one, the fix: click **Apply** to make the change.
 
-![A Swift file in Xcode with three step definition macros marked as errors. The popover for the first, a closure that takes one argument for a pattern with two parameters, offers to change the closure's parameters to "(count: Int, string: String)", with an Apply button. The others show "The parameter {int is missing its closing '}'" and that a pattern ending in "$" is treated as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
+![A Swift file in Xcode with four step definition macros marked as errors, each message shown on its line: the pattern has 2 parameters but the closure takes 1 argument; {int} gives Int but 'count' is declared as String; the '{' does not have a matching '}'; and a pattern ending in "$" is treated as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
 
 | Mistake | Example | Fix |
 |---|---|---|
