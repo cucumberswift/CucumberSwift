@@ -263,8 +263,10 @@ jobs:
           persist-credentials: false
       - name: Show the toolchain
         run: swift --version
+      # Every trait on, so the step definition macros (the Macros trait) and their tests build too.
+      # The consumer packages below turn no trait on, as most projects that use CucumberSwift.
       - name: Run the root package's tests
-        run: swift test --skip 'CucumberSwift\.CucumberTest'
+        run: swift test --enable-all-traits --skip 'CucumberSwift\.CucumberTest'
       - name: Run the consumer tests
         run: swift test --package-path Tests/CucumberSwiftConsumerTests
       - name: Run the DSL consumer tests

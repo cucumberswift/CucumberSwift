@@ -153,7 +153,7 @@ class LowerBoundTests(Repository):
         [error] = self.errors(output)
         self.assertIn(f"Package.swift requires {DOCC} from 1.0.0, but Package.resolved pins 1.5.0", error)
         self.assertIn("Set the lower bound in Package.swift to 1.5.0", error)
-        self.assertIn("swift package resolve", error)
+        self.assertIn("swift package --enable-all-traits resolve", error)
 
     def test_an_xcode_lower_bound_below_its_pin_fails(self):
         self.write(check_lockfiles.PBXPROJ,
@@ -191,6 +191,72 @@ class LowerBoundTests(Repository):
         self.assertEqual(status, 1)
         [error] = self.errors(output)
         self.assertIn("has a `branch` requirement, not a version range", error)
+
+
+SYNTAX = "https://github.com/swiftlang/swift-syntax.git"
+
+
+def versioned_package_swift(syntax='"601.0.0"..<"603.0.0"', docc='from: "1.5.0"'):
+    """Package@swift-6.1.swift: Package.swift's dependencies, and swift-syntax as a range."""
+    return package_swift(docc=docc).replace(
+        f'.package(url: "{DOCC}", {docc})',
+        f'.package(url: "{DOCC}", {docc}),\n        .package(url: "{SYNTAX}", {syntax})')
+
+
+class VersionedManifestTests(Repository):
+    """A version-specific manifest is checked against Package.resolved, as Package.swift is."""
+
+    def setUp(self):
+        super().setUp()
+        self.write("Package@swift-6.1.swift", versioned_package_swift())
+        self.write(check_lockfiles.PACKAGE_RESOLVED,
+                   resolved_v1(SWIFTPM_PINS + [("swift-syntax", SYNTAX, "602.0.0", "f" * 40)]))
+
+    def test_a_pin_inside_a_range_passes(self):
+        status, output = self.main()
+        self.assertEqual(status, 0, output)
+
+    def test_a_pin_at_an_exclusive_upper_bound_fails(self):
+        self.write("Package@swift-6.1.swift", versioned_package_swift(syntax='"601.0.0"..<"602.0.0"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Package@swift-6.1.swift requires " + SYNTAX + " from 601.0.0 to 602.0.0, "
+                      "but Package.resolved pins 602.0.0, outside that range.", error)
+
+    def test_a_pin_at_an_inclusive_upper_bound_passes(self):
+        self.write("Package@swift-6.1.swift", versioned_package_swift(syntax='"601.0.0"..."602.0.0"'))
+        status, output = self.main()
+        self.assertEqual(status, 0, output)
+
+    def test_a_pin_below_a_range_fails(self):
+        self.write("Package@swift-6.1.swift", versioned_package_swift(syntax='"602.0.1"..<"603.0.0"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        self.assertEqual(len(self.errors(output)), 1)
+
+    def test_a_lower_bound_in_the_versioned_manifest_is_checked(self):
+        self.write("Package@swift-6.1.swift", versioned_package_swift(docc='from: "1.0.0"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Package@swift-6.1.swift requires " + DOCC + " from 1.0.0", error)
+
+    def test_swift_syntax_without_a_pin_passes(self):
+        # SwiftPM does not pin a dependency only a trait uses in the root package's lockfile.
+        self.write(check_lockfiles.PACKAGE_RESOLVED, resolved_v1(SWIFTPM_PINS))
+        status, output = self.main()
+        self.assertEqual(status, 0, output)
+
+    def test_another_dependency_missing_from_the_lockfile_names_the_versioned_manifest(self):
+        other = "https://github.com/example/Other.git"
+        self.write("Package@swift-6.1.swift", versioned_package_swift().replace(
+            f'.package(url: "{SYNTAX}"', f'.package(url: "{other}", from: "1.0.0"),\n        .package(url: "{SYNTAX}"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Package.resolved has no pin for " + other + ", which Package@swift-6.1.swift requires", error)
+        self.assertIn("swift package --enable-all-traits resolve", error)
 
 
 class SharedPackageTests(Repository):
@@ -244,19 +310,19 @@ class RepositoryURLTests(Repository):
 
 
 class ParsingTests(unittest.TestCase):
-    def test_every_version_requirement_form_gives_its_lower_bound(self):
-        for requirement, bound in [
-            ('from: "1.2.0"', "1.2.0"),
-            ('.upToNextMajor(from: "1.2.0")', "1.2.0"),
-            ('.upToNextMinor(from: "1.2.0")', "1.2.0"),
-            ('exact: "1.2.0"', "1.2.0"),
-            ('.exact("1.2.0")', "1.2.0"),
-            ('"1.2.0"..<"2.0.0"', "1.2.0"),
-            ('"1.2.0"..."1.9.9"', "1.2.0"),
+    def test_every_version_requirement_form_gives_its_bounds(self):
+        for requirement, bound, upper in [
+            ('from: "1.2.0"', "1.2.0", None),
+            ('.upToNextMajor(from: "1.2.0")', "1.2.0", None),
+            ('.upToNextMinor(from: "1.2.0")', "1.2.0", None),
+            ('exact: "1.2.0"', "1.2.0", None),
+            ('.exact("1.2.0")', "1.2.0", None),
+            ('"1.2.0"..<"2.0.0"', "1.2.0", ("2.0.0", False)),
+            ('"1.2.0"..."1.9.9"', "1.2.0", ("1.9.9", True)),
         ]:
             with self.subTest(requirement):
                 parsed = check_lockfiles.parse_package_swift(package_swift(expressions=requirement))
-                self.assertEqual(parsed["cucumberswiftexpressions"], (EXPRESSIONS, bound))
+                self.assertEqual(parsed["cucumberswiftexpressions"], (EXPRESSIONS, bound, upper))
 
     def test_a_named_package_and_a_local_package(self):
         text = """
@@ -266,7 +332,7 @@ class ParsingTests(unittest.TestCase):
         ]
         """
         self.assertEqual(check_lockfiles.parse_package_swift(text),
-                         {"foo": ("https://example.com/Foo.git", "2.0.0")})
+                         {"foo": ("https://example.com/Foo.git", "2.0.0", None)})
 
     def test_a_dependency_in_a_block_comment_is_ignored(self):
         # A commented-out dependency has no pin, and must not be reported as missing one.
@@ -283,7 +349,7 @@ class ParsingTests(unittest.TestCase):
     def test_comment_markers_inside_a_string_are_not_comments(self):
         text = 'let x = "/* not a comment"\n.package(url: "https://example.com/Foo.git", from: "1.0.0") // done'
         self.assertEqual(check_lockfiles.parse_package_swift(text),
-                         {"foo": ("https://example.com/Foo.git", "1.0.0")})
+                         {"foo": ("https://example.com/Foo.git", "1.0.0", None)})
 
     def test_a_raw_string_before_a_dependency_does_not_hide_it(self):
         # `#"C:\"#` ends at `"#`; the `\"` inside it is not an escape.
@@ -291,12 +357,12 @@ class ParsingTests(unittest.TestCase):
             with self.subTest(declaration):
                 text = declaration + '\n.package(url: "https://example.com/Foo.git", from: "1.0.0")'
                 self.assertEqual(check_lockfiles.parse_package_swift(text),
-                                 {"foo": ("https://example.com/Foo.git", "1.0.0")})
+                                 {"foo": ("https://example.com/Foo.git", "1.0.0", None)})
 
     def test_a_parenthesis_inside_a_string_does_not_end_the_call(self):
         text = '.package(name: "Odd)Name", url: "https://example.com/Foo.git", from: "1.0.0")'
         self.assertEqual(check_lockfiles.parse_package_swift(text),
-                         {"foo": ("https://example.com/Foo.git", "1.0.0")})
+                         {"foo": ("https://example.com/Foo.git", "1.0.0", None)})
 
     def test_a_dependency_whose_url_is_not_a_literal_fails(self):
         # Treating it as local would leave a remote dependency unchecked.
@@ -309,7 +375,7 @@ class ParsingTests(unittest.TestCase):
 
     def test_an_exact_xcode_requirement_gives_its_version(self):
         parsed = check_lockfiles.parse_pbxproj(pbxproj("kind = exactVersion;\n\t\t\t\tversion = 1.2.0;"))
-        self.assertEqual(parsed["cucumberswiftexpressions"], (EXPRESSIONS, "1.2.0"))
+        self.assertEqual(parsed["cucumberswiftexpressions"], (EXPRESSIONS, "1.2.0", None))
 
     def test_an_unreadable_lockfile_fails_with_its_path(self):
         with self.assertRaises(check_lockfiles.CheckError) as raised:
@@ -347,7 +413,7 @@ class ResolveTests(Repository):
         self.assertEqual(status, 0)
         self.assertEqual(self.errors(output), [])
         self.assertEqual(self.commands, [
-            ["swift", "package", "resolve"],
+            ["swift", "package", "--enable-all-traits", "resolve"],
             ["git", "diff", "--exit-code", "--", "Package.resolved"],
             ["xcodebuild", "-resolvePackageDependencies", "-project", "CucumberSwift.xcodeproj",
              "-disableAutomaticPackageResolution"],
@@ -358,14 +424,15 @@ class ResolveTests(Repository):
         status, output = self.resolve(failing={"swift package"})
         self.assertEqual(status, 1)
         [error] = self.errors(output)
-        self.assertIn("`swift package resolve` failed, so Package.resolved cannot satisfy Package.swift", error)
+        self.assertIn("`swift package --enable-all-traits resolve` failed, so Package.resolved cannot satisfy "
+                      "Package.swift", error)
         self.assertNotIn(["git", "diff", "--exit-code", "--", "Package.resolved"], self.commands)
 
     def test_a_stale_swiftpm_lockfile_fails(self):
         status, output = self.resolve(failing={"git diff Package.resolved"})
         self.assertEqual(status, 1)
         [error] = self.errors(output)
-        self.assertIn("Package.resolved is stale: `swift package resolve` changed it", error)
+        self.assertIn("Package.resolved is stale: `swift package --enable-all-traits resolve` changed it", error)
 
     def test_an_xcode_lockfile_that_does_not_satisfy_the_project_fails(self):
         status, output = self.resolve(failing={"xcodebuild -resolvePackageDependencies"})

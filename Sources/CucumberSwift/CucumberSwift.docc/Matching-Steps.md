@@ -2,6 +2,8 @@
 
 Gherkin defined in `.feature` files can be matched in several ways. All matching is done using global functions that align with gherkin keywords. For example, ``Given``, ``When``, and ``Then`` functions. These functions are also localized, so if you'd rather use spanish you can use ``ES_Dado``. 
 
+To have the compiler check each step definition's pattern and closure, write it as a macro such as `#Given` instead: see <doc:Checking-Step-Definitions>.
+
 ## How a string pattern is read
 When you pass a string to ``Given``, ``When`` or ``Then``, CucumberSwift decides from its shape whether it is a regular expression or a Cucumber expression, the same way other Cucumber implementations do:
 

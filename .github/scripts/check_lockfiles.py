@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """Check that each dependency manifest agrees with its lockfile.
 
-The repository has two manifests, each with its own lockfile:
+The repository has two kinds of manifest, each with its own lockfile:
 
-  Package.swift          -> Package.resolved (SwiftPM)
+  Package.swift and      -> Package.resolved (SwiftPM)
+  Package@swift-*.swift
   Project.swift (Tuist)  -> CucumberSwift.xcodeproj/.../swiftpm/Package.resolved
                             (Xcode, CI's test jobs, and Carthage users)
+
+A newer toolchain reads the version-specific manifest, Package@swift-6.1.swift,
+instead of Package.swift. It adds swift-syntax behind the Macros package trait.
+SwiftPM never pins a dependency that only a trait uses in the root package's
+Package.resolved, even with every trait on, so swift-syntax has no pin there
+(see UNPINNED). CI builds against the newest version in its range.
 
 The Xcode side is read from project.pbxproj, which is what xcodebuild resolves
 from. The project_drift job in CI.yml checks that it matches Project.swift.
 
 This fails when:
 
-  1. a manifest's lower bound is not the version its lockfile pins;
+  1. a manifest's lower bound is not the version its lockfile pins, or, for a
+     dependency written as a range such as `"601.0.0"..<"603.0.0"`, the pin is
+     outside the range;
   2. the two lockfiles pin a different version or revision of a package that
      both contain;
   3. with --resolve, a lockfile is stale or does not satisfy its manifest.
@@ -24,19 +33,28 @@ Run from the repository root:
 
 Only the standard library is used.
 """
+import glob
 import json
 import re
 import subprocess
 import sys
 
 PACKAGE_SWIFT = "Package.swift"
+# Version-specific manifests, such as Package@swift-6.1.swift.
+VERSIONED_PACKAGE_SWIFT = "Package@swift-*.swift"
 PACKAGE_RESOLVED = "Package.resolved"
 XCODE_PROJECT = "CucumberSwift.xcodeproj"
 PBXPROJ = f"{XCODE_PROJECT}/project.pbxproj"
 XCODE_RESOLVED = f"{XCODE_PROJECT}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 # How to fix each side, for the error messages.
-FIX_SWIFTPM = f"Edit {PACKAGE_SWIFT}, then run `swift package resolve` and commit {PACKAGE_RESOLVED}."
+RESOLVE_SWIFTPM = ("swift", "package", "--enable-all-traits", "resolve")
+# Dependencies that only a package trait uses. SwiftPM leaves them out of the root
+# package's Package.resolved (verified with Swift 6.2.3, with every trait on), so a
+# missing pin is expected. A pin, if one appears, is still checked against the range.
+UNPINNED = {"swift-syntax"}
+FIX_SWIFTPM = (f"Edit {PACKAGE_SWIFT} and each {VERSIONED_PACKAGE_SWIFT} alike, then run "
+               f"`{' '.join(RESOLVE_SWIFTPM)}` and commit {PACKAGE_RESOLVED}.")
 FIX_XCODE = (f"Edit Project.swift and run `mise run generate`, then run "
              f"`xcodebuild -resolvePackageDependencies -project {XCODE_PROJECT}` and commit "
              f"the project and {XCODE_RESOLVED}.")
@@ -48,6 +66,9 @@ REQUIREMENT = re.compile(
     r'|\.(?:upToNextMajor|upToNextMinor)\s*\(\s*from\s*:\s*"([^"]+)"'
     r'|\.exact\s*\(\s*"([^"]+)"'
     r'|"([^"]+)"\s*\.\.[.<]')
+# A range's upper bound, and whether the range includes it: `"1.0.0"..."1.9.9"` does,
+# `"1.0.0"..<"2.0.0"` does not.
+RANGE = re.compile(r'"[^"]+"\s*\.\.([.<])\s*"([^"]+)"')
 # The start of a string literal: a `"`, after any `#`s of a raw string's delimiter.
 STRING_START = re.compile(r'#*"')
 LOCAL = re.compile(r'\bpath\s*:\s*"')
@@ -145,8 +166,9 @@ def package_calls(text):
             yield text[match.end():end]
 
 
-def parse_package_swift(text):
-    """Return {identity: (url, lower bound)} for each remote dependency."""
+def parse_package_swift(text, path=PACKAGE_SWIFT):
+    """Return {identity: (url, lower bound, upper bound)} for each remote dependency. The
+    upper bound is None, or for a range, `(version, whether the range includes it)`."""
     dependencies = {}
     for arguments in package_calls(strip_comments(text)):
         url = URL.search(arguments)
@@ -155,20 +177,22 @@ def parse_package_swift(text):
         if not url:
             # Fail rather than skip: a remote dependency whose URL is not a string
             # literal (a constant, a registry `id:`) would otherwise go unchecked.
-            raise CheckError(f"{PACKAGE_SWIFT}: this check cannot read the URL of "
+            raise CheckError(f"{path}: this check cannot read the URL of "
                              f"`.package({' '.join(arguments.split())})`. Write the URL as a "
                              f"string literal, `url: \"https://...\"`.")
         requirement = REQUIREMENT.search(arguments)
         if not requirement:
-            raise CheckError(f"{PACKAGE_SWIFT}: {url.group(1)} has no version requirement this "
+            raise CheckError(f"{path}: {url.group(1)} has no version requirement this "
                              f"check can read. Use a version range such as `from: \"1.2.0\"`.")
         bound = next(group for group in requirement.groups() if group)
-        dependencies[identity(url.group(1))] = (url.group(1), bound)
+        upper = RANGE.search(arguments)
+        dependencies[identity(url.group(1))] = (
+            url.group(1), bound, upper and (upper.group(2), upper.group(1) == "."))
     return dependencies
 
 
 def parse_pbxproj(text):
-    """Return {identity: (url, lower bound)} for each XCRemoteSwiftPackageReference."""
+    """Return {identity: (url, lower bound, None)} for each XCRemoteSwiftPackageReference."""
     dependencies = {}
     for quoted_url, bare_url, body in PBX_REFERENCE.findall(text):
         url = quoted_url or bare_url
@@ -178,7 +202,7 @@ def parse_pbxproj(text):
             raise CheckError(f"{PBXPROJ}: {url} has a `{fields.get('kind', 'unknown')}` "
                              f"requirement, not a version range. Use `.upToNextMajor(from:)` "
                              f"in Project.swift.")
-        dependencies[identity(url)] = (url, bound)
+        dependencies[identity(url)] = (url, bound, None)
     return dependencies
 
 
@@ -199,11 +223,27 @@ def parse_resolved(text, path):
         raise CheckError(f"{path} is not a Package.resolved file this check can read ({error}).")
 
 
+def version_key(version):
+    """A version's numbers, for comparing: "601.0.2" gives (601, 0, 2). Any pre-release or
+    build suffix is ignored."""
+    return tuple(int(part) for part in re.findall(r"\d+", version.split("-")[0].split("+")[0]))
+
+
+def in_range(version, lower, upper):
+    """Whether `version` is in the range from `lower` to `upper`, (version, inclusive)."""
+    top, inclusive = upper
+    key = version_key(version)
+    return version_key(lower) <= key and (key <= version_key(top) if inclusive else key < version_key(top))
+
+
 def check_bounds(manifest, dependencies, lockfile, pins, fix):
-    """Errors for each direct dependency whose lower bound is not its locked version."""
+    """Errors for each direct dependency whose lower bound is not its locked version, or
+    whose locked version is outside its range."""
     errors = []
-    for name, (url, bound) in sorted(dependencies.items()):
+    for name, (url, bound, upper) in sorted(dependencies.items()):
         pin = pins.get(name)
+        if pin is None and lockfile == PACKAGE_RESOLVED and name in UNPINNED:
+            continue
         if pin is None:
             errors.append(f"{lockfile} has no pin for {url}, which {manifest} requires. {fix}")
         elif not same_repository(pin["url"], url):
@@ -211,6 +251,10 @@ def check_bounds(manifest, dependencies, lockfile, pins, fix):
                           f"different repository with the same package identity. {fix}")
         elif pin["version"] is None:
             errors.append(f"{lockfile} pins {url} to a branch or revision, not a version. {fix}")
+        elif upper is not None:
+            if not in_range(pin["version"], bound, upper):
+                errors.append(f"{manifest} requires {url} from {bound} to {upper[0]}, but "
+                              f"{lockfile} pins {pin['version']}, outside that range. {fix}")
         elif pin["version"] != bound:
             errors.append(f"{manifest} requires {url} from {bound}, but {lockfile} pins "
                           f"{pin['version']}. Set the lower bound in {manifest} to "
@@ -244,12 +288,20 @@ def read(path):
         return handle.read()
 
 
+def swiftpm_manifests():
+    """Package.swift, then each version-specific manifest, in name order."""
+    return [PACKAGE_SWIFT] + sorted(glob.glob(VERSIONED_PACKAGE_SWIFT))
+
+
 def check_files():
     """Checks 1 and 2, on the files in the working directory."""
     swiftpm_pins = parse_resolved(read(PACKAGE_RESOLVED), PACKAGE_RESOLVED)
     xcode_pins = parse_resolved(read(XCODE_RESOLVED), XCODE_RESOLVED)
-    return (check_bounds(PACKAGE_SWIFT, parse_package_swift(read(PACKAGE_SWIFT)),
-                         PACKAGE_RESOLVED, swiftpm_pins, FIX_SWIFTPM)
+    swiftpm_errors = []
+    for manifest in swiftpm_manifests():
+        swiftpm_errors += check_bounds(manifest, parse_package_swift(read(manifest), manifest),
+                                       PACKAGE_RESOLVED, swiftpm_pins, FIX_SWIFTPM)
+    return (swiftpm_errors
             + check_bounds("Project.swift", parse_pbxproj(read(PBXPROJ)),
                            XCODE_RESOLVED, xcode_pins, FIX_XCODE)
             + check_shared(swiftpm_pins, xcode_pins))
@@ -264,11 +316,13 @@ def run(*args):
 def check_resolve():
     """Check 3: resolve each lockfile against its manifest, and fail if it changes."""
     errors = []
-    if run("swift", "package", "resolve") != 0:
-        errors.append(f"`swift package resolve` failed, so {PACKAGE_RESOLVED} cannot satisfy "
+    # Every trait on, so the lockfile also pins the dependencies behind a trait.
+    command = " ".join(RESOLVE_SWIFTPM)
+    if run(*RESOLVE_SWIFTPM) != 0:
+        errors.append(f"`{command}` failed, so {PACKAGE_RESOLVED} cannot satisfy "
                       f"{PACKAGE_SWIFT}. {FIX_SWIFTPM}")
     elif run("git", "diff", "--exit-code", "--", PACKAGE_RESOLVED) != 0:
-        errors.append(f"{PACKAGE_RESOLVED} is stale: `swift package resolve` changed it (diff "
+        errors.append(f"{PACKAGE_RESOLVED} is stale: `{command}` changed it (diff "
                       f"above). {FIX_SWIFTPM}")
     # -disableAutomaticPackageResolution makes xcodebuild fail, rather than
     # re-resolve, when the lockfile does not satisfy the project.
