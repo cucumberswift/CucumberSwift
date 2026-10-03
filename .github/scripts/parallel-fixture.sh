@@ -20,7 +20,7 @@ case "$PLATFORM" in
   "macOS") suffix="Mac"; destination="platform=macOS" ;;
   *)
     # The newest runtime's first iPhone or Apple TV, so the job doesn't depend on a device name.
-    if [ "$PLATFORM" = "tvOS Simulator" ]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
+    if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
     udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" python3 -c '
 import json, os, sys
 devices = json.load(sys.stdin)["devices"]
@@ -29,8 +29,8 @@ runtimes = sorted((r for r in devices if prefix in r),
                   key=lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")], reverse=True)
 print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith(os.environ["DEVICE"])), ""))
 ')
-    if [ -z "$udid" ]; then
-      echo "::error::No $device simulator is available on this runner."
+    if [[ -z "$udid" ]]; then
+      echo "::error::No $device simulator is available on this runner." >&2
       exit 1
     fi
     destination="platform=$PLATFORM,id=$udid" ;;
@@ -70,20 +70,20 @@ workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | 
 echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
 # The workers Xcode gave the plain XCTest classes, named in each result line.
 control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" parallel-test.log | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
-[ "$control" -gt 0 ] || control=1
+[[ "$control" -gt 0 ]] || control=1
 echo "Plain XCTest classes ran in $control workers"
 min_workers=$(( control < 2 ? control : 2 ))
-ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /'
-if [ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]; then
-  echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh."
+ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /' >&2
+if [[ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]]; then
+  echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh." >&2
   status=1
 fi
-if [ "$total" -ne "$scenarios" ]; then
-  echo "::error::Some scenarios ran more than once."
+if [[ "$total" -ne "$scenarios" ]]; then
+  echo "::error::Some scenarios ran more than once." >&2
   status=1
 fi
-if [ "$workers" -lt "$min_workers" ]; then
-  echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel."
+if [[ "$workers" -lt "$min_workers" ]]; then
+  echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
   status=1
 fi
 exit $status
