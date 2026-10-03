@@ -15,6 +15,12 @@ min_version = "2026.9.1"
 description = "Generate CucumberSwift.xcodeproj from Project.swift"
 run = "tuist generate --no-open"
 
+[tasks.generate-fixtures]
+# Not committed: Tuist names the local package's folder after the checkout's folder, which differs
+# from clone to clone. CI generates it before running the fixtures.
+description = "Generate the parallel testing fixtures' project from Tests/ParallelFixtures/Project.swift"
+run = "tuist generate --path Tests/ParallelFixtures --no-open"
+
 [tasks.check-project]
 description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
 # Compares the regenerated project with the index, so a regenerated project that is
