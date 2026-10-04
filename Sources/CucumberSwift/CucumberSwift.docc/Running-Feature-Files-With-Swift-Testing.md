@@ -23,7 +23,7 @@ Step definitions are written as for CucumberSwift: `extension Cucumber: StepImpl
 
 ## Set up a Swift package
 
-Add `CucumberSwiftTesting` to the test target, and apply the plugin to it:
+Turn on CucumberSwift's `Macros` trait, add `CucumberSwiftTestingMacros` to the test target, and apply the plugin to it:
 
 ```swift
 // swift-tools-version:6.1
@@ -32,12 +32,12 @@ import PackageDescription
 let package = Package(
     name: "MyAppTests",
     dependencies: [
-        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0")
+        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0", traits: ["Macros"])
     ],
     targets: [
         .testTarget(
             name: "MyAppTests",
-            dependencies: [.product(name: "CucumberSwiftTesting", package: "CucumberSwift")],
+            dependencies: [.product(name: "CucumberSwiftTestingMacros", package: "CucumberSwift")],
             // The plugin reads the feature files when the tests build; the tests don't need them.
             exclude: ["Features"],
             plugins: [.plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift")])
@@ -45,22 +45,22 @@ let package = Package(
 )
 ```
 
-The plugin finds every `.feature` file in the target's folder.
+The plugin finds every `.feature` file in the target's folder. `CucumberSwiftTestingMacros` has the step definition macros, and imports `CucumberSwiftTesting`, the runner, too.
 
-To use the step definition macros, turn on the `Macros` trait and depend on `CucumberSwiftTestingMacros` instead, as <doc:Checking-Step-Definitions> describes for CucumberSwift. Then `import CucumberSwiftTestingMacros`; it imports `CucumberSwiftTesting` too. The localized macros, such as `#ES_Dado`, aren't available with this runner.
+The macros need the trait, which downloads swift-syntax. To write step definitions without them, leave the trait off and depend on `CucumberSwiftTesting` instead; see <doc:#Without-the-macros>.
 
 ## Set up an Xcode project
 
-1. Add the CucumberSwift package to the project, and add `CucumberSwiftTesting` to your unit test target.
+1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later; with an earlier Xcode, add `CucumberSwiftTesting` and write step definitions without the macros.
 2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugin the first time it runs.
 3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin only sees files that belong to the target.
 
 ## Write step definitions
 
-Register step definitions in `setupSteps()`, as with CucumberSwift. Because `Cucumber` and `StepImplementation` both come from `CucumberSwiftTesting`, Swift 6 asks you to mark the conformance `@retroactive`:
+Register step definitions in `setupSteps()`, as with CucumberSwift, and write them with the step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`. The compiler checks each expression against its closure: one argument for each parameter, of the parameter's type, and optionally the `Step` last. Because `Cucumber` and `StepImplementation` both come from `CucumberSwiftTesting`, Swift 6 asks you to mark the conformance `@retroactive`:
 
 ```swift
-import CucumberSwiftTesting
+import CucumberSwiftTestingMacros
 import Testing
 
 extension Cucumber: @retroactive StepImplementation {
@@ -68,10 +68,36 @@ extension Cucumber: @retroactive StepImplementation {
         BeforeScenario { _ in
             Basket.shared.empty()
         }
+        #Given("I have {int} cukes") { (count: Int) in
+            Basket.shared.add(count)
+        }
+        #Then("the basket has {int} cukes") { (count: Int) in
+            #expect(Basket.shared.count == count)
+        }
+    }
+}
+```
+
+<doc:Checking-Step-Definitions> describes the macros in full: the argument each parameter gives, the mistakes the compiler reports, and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which it doesn't have.
+
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, a string that starts with `^` or ends with `$` for a regular expression, or a regex literal. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+
+`BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+
+### Without the macros
+
+Each macro expands to a step definition you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`:
+
+```swift
+import CucumberSwiftTesting
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
         Given("I have {int} cukes") { match, _ in
             Basket.shared.add(try match.first(\.int))
         }
-        Then("the basket has {int} cukes") { match, step in
+        Then("the basket has {int} cukes") { match, _ in
             let count = try match.first(\.int)
             #expect(Basket.shared.count == count)
         }
@@ -79,9 +105,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, a string that starts with `^` or ends with `$` for a regular expression, or a regex literal. The `step` argument has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
-
-`BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+This needs no package trait, and so works in an Xcode project with any supported Xcode. You can mix both styles in one target.
 
 ## Run scenarios
 
@@ -113,12 +137,12 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 | Test target | Product | Runs feature files with |
 |---|---|---|
 | UI tests | `CucumberSwift` | XCTest, as before |
-| Unit tests | `CucumberSwiftTesting` and `CucumberSwiftTestingPlugin` | Swift Testing |
+| Unit tests | `CucumberSwiftTestingMacros` (or `CucumberSwiftTesting`) and `CucumberSwiftTestingPlugin` | Swift Testing |
 
 One scheme can test both targets. To move a unit test target:
 
-1. Replace its `CucumberSwift` dependency with `CucumberSwiftTesting`, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import `CucumberSwiftTesting` instead of `CucumberSwift`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use.
+1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are.
 3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step can't go on.
 4. Remove anything listed in <doc:#What-isnt-available>.
 
