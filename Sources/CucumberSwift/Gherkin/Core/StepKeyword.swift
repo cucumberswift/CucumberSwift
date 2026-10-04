@@ -44,7 +44,10 @@ extension Step {
         /// The keyword named in the language of the feature file the lexer last read. A step's own keyword
         /// is named in its feature file's language.
         public func toString() -> String {
-            toString(in: Scope.language)
+            if let str = stringValue {
+                return str
+            }
+            return toString(in: Scope.language)
         }
 
         public func hasMultipleValues() -> Bool {
@@ -68,9 +71,6 @@ extension Step {
 extension Step.Keyword {
     /// The keyword named in the given language.
     func toString(in language: Language) -> String {
-        if let str = stringValue {
-            return str
-        }
         if contains(.given) {
             return language.given
         }
