@@ -5,5 +5,9 @@
 manifest=$(git diff --cached --name-only -- Project.swift Tuist.swift .mise.toml CucumberSwift.xcodeproj)
 file_list=$(git diff --cached --name-only --diff-filter=ADR -- Sources Tests)
 if [ -n "$manifest$file_list" ]; then
+  # Git runs hooks with GIT_INDEX_FILE, GIT_DIR and others set for this repository. Tuist's
+  # package resolution runs git in each package's checkout, and with them set it reads this
+  # repository's index there and fails with "unable to read tree".
+  unset $(git rev-parse --local-env-vars)
   exec mise run check-project
 fi
