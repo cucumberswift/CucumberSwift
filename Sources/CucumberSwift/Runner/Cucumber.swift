@@ -8,7 +8,9 @@
 
 import Foundation
 import XCTest
-import CucumberSwiftExpressions
+// Step definitions use CucumberSwiftExpressions' types, such as `Match` and `CucumberExpression`.
+// Re-exporting it means `import CucumberSwift` is enough, also with MemberImportVisibility on.
+@_exported import CucumberSwiftExpressions
 
 @objc public class Cucumber: NSObject { // swiftlint:disable:this type_body_length
     /// A step definition's body: synchronous, or async and run to completion by `AsyncStepRunner`.

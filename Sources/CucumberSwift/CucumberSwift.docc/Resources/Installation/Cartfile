@@ -1,1 +1,1 @@
-github "cucumberswift/CucumberSwift"
+github "cucumberswift/CucumberSwift" ~> 6.3

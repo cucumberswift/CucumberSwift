@@ -19,8 +19,12 @@ run = "tuist generate --no-open"
 description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
 # Compares the regenerated project with the index, so a regenerated project that is
 # already staged passes. CI and the pre-commit hook both run this.
+# Git runs hooks with GIT_INDEX_FILE, GIT_DIR and others set. Tuist resolves packages by
+# running git in each package's checkout, where those would make it read this repository's
+# index and fail with "unable to read tree", so they are cleared for Tuist only. The git
+# checks below keep them, so they compare against the index being committed.
 run = """
-tuist generate --no-open
+(unset $(git rev-parse --local-env-vars); tuist generate --no-open)
 if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --others --exclude-standard -- CucumberSwift.xcodeproj)" ]; then
   git status --short -- CucumberSwift.xcodeproj
   echo "CucumberSwift.xcodeproj does not match Project.swift. Run 'mise run generate' and commit the result."
@@ -37,6 +41,8 @@ run = '''
 set -e
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
+  # Needs a Carthage build first: `mise run test-carthage` runs it.
+  if [ "$name" = CarthageXCFramework ]; then continue; fi
   if [ -f "$fixture/Package.swift" ]; then
     swift test --package-path "$fixture"
   fi
@@ -46,6 +52,47 @@ for fixture in Fixtures/*/; do
       -skipMacroValidation CODE_SIGNING_ALLOWED=NO
   fi
 done
+'''
+
+[tasks.test-carthage]
+description = "Build the framework with Carthage and test a project that uses it"
+# Builds Carthage/Build/CucumberSwift.xcframework as `carthage update` does for a consumer, then
+# runs Fixtures/CarthageXCFramework, an iOS test target that links and embeds it, on a simulator.
+# See "Fixtures" in CONTRIBUTING.md.
+run = '''
+set -eu
+derived=$(mktemp -d)
+carthage build --no-skip-current --use-xcframeworks --platform iOS --derived-data "$derived" \
+  --log-path "${CARTHAGE_LOG:-${TMPDIR:-/tmp}/carthage-build.log}"
+# CucumberSwift.swiftmodule records this build's search paths, which still hold every module the
+# build made. A consumer's machine doesn't have them, so remove them before the consumer builds.
+rm -rf "$derived"
+xcf=Carthage/Build/CucumberSwift.xcframework
+# CucumberSwiftExpressions is static, so its code is inside the framework rather than a separate
+# dynamic dependency that Carthage would not deliver.
+for binary in "$xcf"/*/CucumberSwift.framework/CucumberSwift; do
+  if otool -L "$binary" | grep -i CucumberSwiftExpressions; then
+    echo "$binary links CucumberSwiftExpressions dynamically, which Carthage does not deliver"
+    exit 1
+  fi
+done
+tuist generate --no-open --path Fixtures/CarthageXCFramework
+simulator=$(xcrun simctl list devices available --json | python3 -c '
+import json, sys
+runtimes = json.load(sys.stdin)["devices"]
+ios = sorted((r for r in runtimes if ".iOS-" in r), key=lambda r: [int(n) for n in r.rsplit("iOS-", 1)[1].split("-")])
+print(next(d["udid"] for r in reversed(ios) for d in runtimes[r] if d["name"].startswith("iPhone")))
+')
+log=$(mktemp)
+set -o pipefail
+xcodebuild test -project Fixtures/CarthageXCFramework/CarthageXCFramework.xcodeproj \
+  -scheme CarthageXCFramework -destination "platform=iOS Simulator,id=$simulator" \
+  -derivedDataPath "$(mktemp -d)" CODE_SIGNING_ALLOWED=NO | tee "$log"
+# A step that matches no step definition doesn't fail the run, so check the last step ran.
+if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
+  echo "The fixture's scenario did not run all its steps"
+  exit 1
+fi
 '''
 
 [tasks.test-swiftpm]

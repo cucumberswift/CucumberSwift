@@ -845,6 +845,7 @@
 				4E0581C2A4AE7E0A97679CAD /* Frameworks */,
 				561C1C877C35FF1AE88566FA /* Embed Frameworks */,
 				C33937488DC58E8F0E868961 /* Lint */,
+				FEBAF56FE60331EE6355A7B1 /* Embed CucumberSwiftExpressions module */,
 			);
 			buildRules = (
 			);
@@ -970,6 +971,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\n\nif which swiftlint > /dev/null; then\n  swiftlint --config .swiftlint.yml\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+		};
+		FEBAF56FE60331EE6355A7B1 /* Embed CucumberSwiftExpressions module */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed CucumberSwiftExpressions module";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "source=\"${BUILT_PRODUCTS_DIR}/CucumberSwiftExpressions.swiftmodule\"\ndestination=\"${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Modules/CucumberSwiftExpressions.swiftmodule\"\nif [ ! -d \"$source\" ]; then\n  echo \"error: $source not found, so CucumberSwift.framework would ship without the CucumberSwiftExpressions module\"\n  exit 1\nfi\nrm -rf \"$destination\"\nditto \"$source\" \"$destination\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 

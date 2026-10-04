@@ -65,7 +65,7 @@ CucumberSwift prints to standard output, with each line starting with `[Cucumber
 - **Xcode:** open the **Report navigator** (⌘9), choose the test run, and look at its **Test** log. Use the filter box to search for `[CucumberSwift]`.
 - **Command line:** the lines appear in the terminal among the usual `Test Case` lines.
 
-Xcode doesn't list CucumberSwift's scenarios in the Test navigator, because they're created while the tests run. To run them from there, add `class TestExplorer: CucumberTest { }` to your test target and run its `testGherkin`.
+Xcode's Test navigator lists CucumberSwift's scenarios only after the first run, because they're created while the tests run. To run one scenario on its own, see <doc:Running-Tests-In-Xcode#Run-one-scenario>.
 
 ### What it doesn't change
 

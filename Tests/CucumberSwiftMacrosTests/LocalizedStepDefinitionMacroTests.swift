@@ -71,7 +71,7 @@ final class LocalizedStepDefinitionMacroTests: XCTestCase {
 
     private static func declaration(of macro: LocalizedStep, attributes: [String]) -> [String] {
         ["@freestanding(expression)", "@discardableResult"] + attributes + [
-            "public macro \(macro.name)<each Argument>(_ expression: StaticString,",
+            "public macro \(macro.name)<each Argument>(_ expression: String,",
             "    _ body: (repeat each Argument) async throws -> Void) -> \(macro.type)",
             "    = #externalMacro(module: \"CucumberSwiftMacrosPlugin\", type: \"StepDefinitionMacro\")"
         ]
