@@ -256,6 +256,44 @@ jobs:
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 
+  # The pre-commit hook runs actionlint too, but a commit can skip it. The versions
+  # are the ones .mise.lint.toml pins. Each download is checked against the digest
+  # GitHub publishes for it, as mise does.
+  workflow_checks:
+    name: Workflow checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the pinned actionlint and ShellCheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          pinned() { sed -n "s|^\"aqua:$1\" = \"\(.*\)\"$|\1|p" .mise.lint.toml; }
+          download() { # repository, tag, asset
+            gh release download "$2" --repo "$1" --pattern "$3" --dir "$RUNNER_TEMP"
+            digest=$(gh api "repos/$1/releases/tags/$2" --jq ".assets[] | select(.name == \"$3\") | .digest")
+            echo "${digest#sha256:}  $RUNNER_TEMP/$3" | sha256sum --check
+            tar -xf "$RUNNER_TEMP/$3" -C "$RUNNER_TEMP/bin"
+          }
+          mkdir "$RUNNER_TEMP/bin"
+          actionlint=$(pinned rhysd/actionlint)
+          shellcheck=$(pinned koalaman/shellcheck)
+          download rhysd/actionlint "v$actionlint" "actionlint_${actionlint}_linux_amd64.tar.gz"
+          download koalaman/shellcheck "v$shellcheck" "shellcheck-v$shellcheck.linux.x86_64.tar.xz"
+          mv "$RUNNER_TEMP/bin/shellcheck-v$shellcheck/shellcheck" "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Check the workflows
+        run: |
+          actionlint --version
+          shellcheck --version
+          actionlint
+
   # Carthage builds CucumberSwift from the committed Xcode project and its shared
   # CucumberSwift scheme, with no chance to run a generator first. Nothing else in
   # CI builds that path, so this job is the only check that Carthage consumers can
