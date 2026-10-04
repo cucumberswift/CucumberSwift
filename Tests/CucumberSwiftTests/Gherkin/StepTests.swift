@@ -404,4 +404,14 @@ class StepTest: XCTestCase {
         XCTAssertNil(Cucumber.shared.features.first?.scenarios.first?.steps.first?.execute,
                      "An expression that will not compile can never match, so it should not be attached")
     }
+
+    /// #310: Foundation's description of the problem ends with a full stop of its own, so the message
+    /// needs CucumberSwiftExpressions 1.4.1 to have one full stop between the problem and the fix.
+    func testAnExpressionRegexThatFoundationRejectsHasOneFullStopBeforeTheFix() {
+        When("the basket holds {int} cukes$", callback: { _, _ in }, line: 42, file: "StepDefinitions.swift")
+
+        let message = RegularExpression.errors.snapshot.first?.message ?? ""
+        XCTAssert(message.hasSuffix(". Remove the anchors, or write a valid regular expression."), message)
+        XCTAssertFalse(message.contains(".."), message)
+    }
 }
