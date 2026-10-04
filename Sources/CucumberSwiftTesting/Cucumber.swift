@@ -101,14 +101,17 @@ public final class Cucumber {
             return false
         }
         let ran = "\(step.keywordName) \(step.match)"
-        guard await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran) else { return false }
-        var passed = true
-        RunningLocation.shared.current = .init(location: location, step: ran)
-        do {
-            try await match.body(step)
-        } catch {
-            Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
-            passed = false
+        // As with CucumberSwift, a step's AfterStep hooks run even when a BeforeStep hook failed, which
+        // skips the step itself.
+        var passed = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran)
+        if passed {
+            RunningLocation.shared.current = .init(location: location, step: ran)
+            do {
+                try await match.body(step)
+            } catch {
+                Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
+                passed = false
+            }
         }
         let afterHooksPassed = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran)
         return passed && afterHooksPassed

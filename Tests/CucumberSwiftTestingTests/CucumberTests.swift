@@ -91,6 +91,24 @@ final class CucumberTests {
         #expect(ran == ["before a failure", "after a failure"])
     }
 
+    @Test func aThrowingBeforeStepHookSkipsTheStepButNotItsAfterStepHooks() async {
+        struct Failure: Error {}
+        BeforeStep { [self] step in
+            ran.append("before \(step.match)")
+            throw Failure()
+        }
+        AfterStep { [self] step in ran.append("after \(step.match)") }
+        Given("a step") { [self] _, _ in ran.append("given") }
+        Then("a result") { [self] _, _ in ran.append("then") }
+
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a step", line: 3), step(.then, "a result", line: 4)]))
+        } matching: { issue in
+            issue.sourceLocation?.line == 3 && issue.error is Failure
+        }
+        #expect(ran == ["before a step", "after a step"])
+    }
+
     #if compiler(>=6.2)
     /// `filterIssues` sees the issue after `reportedInFeatureFiles` has moved it, and drops it only if it is
     /// at the step's line with the step as it ran and where it was recorded. Any other issue fails the test.
