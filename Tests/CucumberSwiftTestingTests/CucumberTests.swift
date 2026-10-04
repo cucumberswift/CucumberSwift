@@ -91,6 +91,21 @@ final class CucumberTests {
         #expect(ran == ["before a failure", "after a failure"])
     }
 
+    #if compiler(>=6.2)
+    /// `filterIssues` sees the issue after `reportedInFeatureFiles` has moved it, and drops it only if it is
+    /// at the step's line with the comment. Any other issue fails the test.
+    @Test(.filterIssues { issue in
+        !(issue.sourceLocation?.fileName == "Test.feature" && issue.sourceLocation?.line == 7
+            && issue.comments.contains { $0.rawValue.hasPrefix("Recorded at CucumberTests.swift:") })
+    }, .reportedInFeatureFiles)
+    func aFailedExpectationInAStepIsReportedAtTheStepsLine() async {
+        Then("a result") { _, _ in
+            #expect(Bool(false), "deliberately")
+        }
+        await Cucumber.shared.run(scenario([step(.then, "a result", line: 7)]))
+    }
+    #endif
+
     @Test func aRegexLiteralMatchesAStepsWholeText() async {
         guard #available(macOS 13.0, *) else { return }
         Given(#/I have (\d+) cukes/#) { [self] match, _ in ran.append(String(match.1)) }

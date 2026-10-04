@@ -128,7 +128,9 @@ Scenarios run one at a time, as with CucumberSwift, because step definitions usu
 - A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
 - A step definition, or a step hook, that throws fails on the step's line in the feature file. A scenario hook that throws fails on the scenario's line.
 
-In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A failed `#expect` is reported where you wrote it, and the scenario goes on, as a failed XCTest assertion does with CucumberSwift.
+In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do.
+
+A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook, as CucumberSwift reports a failed XCTest assertion. Its message says where it was recorded, such as `Recorded at StepDefinitions.swift:31`. The scenario goes on after a failed `#expect`. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
 
 ## Move unit tests to Swift Testing
 

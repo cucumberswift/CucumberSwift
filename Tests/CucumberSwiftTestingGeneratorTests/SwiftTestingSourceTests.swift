@@ -20,10 +20,11 @@ final class SwiftTestingSourceTests: XCTestCase {
         import CucumberSwiftTesting
         import Testing
 
-        /// Every feature in the target. Serialized, because CucumberSwift runs one scenario at a time, and
-        /// step definitions often share state.
+        // Every feature in the target. Serialized, because CucumberSwift runs one scenario at a time, and
+        // step definitions often share state. A failed expectation is reported in the feature file.
+        // Not a doc comment, which Swift Testing would show with each failure.
         @MainActor
-        @Suite("Features", .serialized)
+        @Suite("Features", .serialized, .reportedInFeatureFiles)
         struct CucumberFeatures {
             @MainActor
             @Suite("Eat fruit")

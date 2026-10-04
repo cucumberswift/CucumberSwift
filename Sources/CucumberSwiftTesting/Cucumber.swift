@@ -68,6 +68,7 @@ public final class Cucumber {
             }
         }
         await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file)
+        RunningLocation.shared.current = nil
     }
 
     /// Calls `setupSteps()` once, before the first scenario. Without step definitions, fails at the first
@@ -101,6 +102,7 @@ public final class Cucumber {
         }
         guard await runHooks(beforeStepHooks, with: step, at: step.location, in: file) else { return false }
         var passed = true
+        RunningLocation.shared.current = location
         do {
             try await match.body(step)
         } catch {
@@ -120,6 +122,7 @@ public final class Cucumber {
         in file: String
     ) async -> Bool {
         for hook in hooks.inPriorityOrder() {
+            RunningLocation.shared.current = Self.sourceLocation(file, location)
             do {
                 try await hook.body(argument)
             } catch {
