@@ -1,88 +1,137 @@
-@Tutorial(time: 10) {
+@Tutorial(time: 15) {
     @Intro(title: "Using CucumberSwift with Carthage") {
-        If you're using the Carthage package manager this tutorial will walk you through how to get CucumberSwift installed and added to your project.
+        Add CucumberSwift to a unit test target in an Xcode project with Carthage, write a first feature file, and let CucumberSwift suggest its step definitions.
+
+        You end up with the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample, in an iOS app's unit test target: a `Features` folder, and step definitions that use Cucumber Expressions.
     }
-    
-    @Section(title: "Installing CucumberSwift") {
+
+    @Section(title: "Add CucumberSwift to your test target") {
         @ContentAndMedia {
-            CucumberSwift is a test runner, while this example uses XCUITest as the mechanism for executing those tests it could've been a unit test.
+            You need Xcode 16 or later, Carthage 0.37 or later, and an Xcode project with an iOS app and a unit test target. If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
+
+            This tutorial differs from the GettingStarted sample in its platform only: the sample is a macOS unit test target that gets CucumberSwift with Swift Package Manager. The feature file and the step definitions are the same.
         }
-        
+
         @Steps {
             @Step {
-                @Code(file: "Cartfile", name: "Cartfile")
-                Add CucumberSwift to your Cartfile, then run `carthage update --use-xcframeworks --platform iOS`. That builds `CucumberSwift.xcframework` under `Carthage/Build`. You need Carthage 0.37 or later.
-            }
-            
-            @Step {
-                @Image(source: "Carthage-Copy-Files.png", alt: "A new Copy Files phase that adds CucumberSwift")
-                Add CucumberSwift.framework to your test target by opening your "Build Phases" and adding a "Copy Files" phase. The framework is `Carthage/Build/CucumberSwift.xcframework`.
-                
-                > NOTE: Make sure "Frameworks" is selected when you add your "Copy Files" phase.
-            }
-            
-            @Step {
-                @Image(source: "Carthage-Link-Framework.png", alt: "A dialog ready to link CucumberSwift")
-                Expand the "Link Binary with Libraries" panel and link CucumberSwift
-                
-                > NOTE: You'll need to select "Add Other" -> "Add Files" to find `Carthage/Build/CucumberSwift.xcframework`
-            }
-            
-            @Step {
-                @Image(source: "Carthage-Validate-Workspace.png", alt: "The validate workspace setting being set to yes")
-                Make sure "validate workspace" is set to "yes" under "Build Settings"
+                Add CucumberSwift to your Cartfile, then run `carthage update --use-xcframeworks --platform iOS`. That builds `CucumberSwift.xcframework` in `Carthage/Build`.
 
-                Then add `$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules` to "Import Paths" (`SWIFT_INCLUDE_PATHS`) under "Swift Compiler - Search Paths". CucumberSwift's step definitions use types from CucumberSwiftExpressions, whose module is inside the framework, and this is where Xcode finds it.
+                @Code(name: "Cartfile", file: "Cartfile")
             }
-            
-            @Step {
-                @Image(source: "CreateFeaturesFolder.png", alt: "A folder named Features being created in the finder")
-                Create the folder that'll hold your .feature files.
-                
-                > NOTE: This folder name is case sensitive by default CucumberSwift looks for "Features". In order to showcase this sample in full I created a folder named "AppFeatures".
-            }
-            
-            @Step {
-                @Image(source: "AddFolderReference.png", alt: "Xcode adding a new folder reference to a testing target")
-                Add your newly created folder as a folder reference to your project. Ensure the correct target is selected, you want your testing target. Make certain that "Create Folder Reference" is selected, not "Create Groups" and "Copy items if needed" is UNCHECKED
-            }
-            
-            @Step {
-                @Image(source: "ChangeFeaturesPath.png", alt: "Info.plist being modified to add a FeaturesPath property")
-                Open the `info` tab of your target. Add a property called `FeaturesPath` with the relative path (from the bundle) to the folder containing all you `.feature` files.
-                
-                > NOTE: If you named your folder "Features" (case sensitive!) then you may skip the this step.
-            }
-            
-            @Step {
-                @Code(file: "SetupSteps.swift", name: "CucumberTests.swift")
-                Add your StepImplementation. Note that you must supply the bundle your features folder is referenced from.
-                
-                > NOTE: You can replace the xcode generated test file with this step implementation. It should be named something like `{TEST_TARGET}Tests.swift`. If you run your tests right now they may fail if you have no .feature files.
-            }
-            
-            @Step {
-                @Code(file: "FirstFeature.feature", name: "FirstFeature.feature")
-                Add `.feature` files to your folder, feel free to group them in subfolders.
-                
-                > NOTE: If you run tests you may see failures because CucumberSwift has no expressions matching statements in your `.feature` files.
 
-                > TIP: To have Xcode color the Gherkin in your `.feature` files, install CucumberSwift's syntax highlighting: see <doc:Running-Tests-In-Xcode#Highlight-feature-files>.
-            }
-            
             @Step {
-                @Image(source: "ViewGeneratedStubs.png", alt: "The GENERATED_Unimplemented_Step_Definitions file shown in the test report")
-                Run the tests. They should fail because no CucumberSwift expressions match the Gherkin in your `.feature` files. To make your life easier, each failure message contains the step definition CucumberSwift generated for that step: copy it from the failure in the Issue navigator or the test report into your step implementation file. CucumberSwift also attaches all the generated step definitions as a file. To open it, select the test "GenerateStepsStubsIfNecessary" in the Test navigator, right-click it and choose "Jump to Report". Under "Pending Steps", select the file whose name starts with "GENERATED_Unimplemented_Step_Definitions" and choose "Open with Xcode". Xcode adds a unique ID to the end of the file name.
+                Select your unit test target and open its Build Phases. Expand Link Binary With Libraries and select the add button (+). Choose Add Other… → Add Files…, and select `Carthage/Build/CucumberSwift.xcframework`.
 
-                > NOTE: Leave parallel testing off for your CucumberSwift test target: the "Execute in parallel" option on that target in your scheme or test plan. XCTest's parallel workers do not run CucumberSwift's scenarios correctly. Depending on the setup, each scenario runs once in every worker, or not at all, and the test run can still pass.
+                @Image(source: "Carthage-Link-Framework.png", alt: "The Link Binary With Libraries phase of the unit test target, with CucumberSwift.xcframework added.")
             }
-            
+
             @Step {
-                @Code(file: "FilledInSteps.swift", name: "CucumberTests.swift")
-                Paste the generated stubs into your `setupSteps()` method located in the test file we created earlier.
+                The test bundle must contain the framework too. Select the add button (+) at the top of Build Phases and choose New Copy Files Phase. Set its destination to Frameworks, and add `CucumberSwift.xcframework` to it.
 
-                > NOTE: Your tests should now pass. Feel free to start adding assertions to the steps we just created.
+                @Image(source: "Carthage-Copy-Files.png", alt: "A Copy Files phase of the unit test target, with the destination Frameworks and CucumberSwift.xcframework in it.")
             }
+
+            @Step {
+                Your step definitions use types from CucumberSwiftExpressions, which CucumberSwift is built on. Its module is inside the framework, so tell Xcode where to find it. Open your test target's Build Settings, search for "Import Paths", and add `$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules` to Module Import Paths.
+
+                > Note: Without it, the build fails with "Unable to find module dependency: 'CucumberSwiftExpressions'".
+
+                @Image(source: "Carthage-Import-Paths.png", alt: "The test target's Build Settings filtered to Import Paths, with $(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules in Module Import Paths.")
+            }
+        }
+    }
+
+    @Section(title: "Add a Features folder") {
+        @ContentAndMedia {
+            CucumberSwift looks for your `.feature` files in a folder named `Features`, inside the test bundle. The name is case sensitive. Xcode must copy the folder into the bundle as a folder, so add it as a folder reference.
+        }
+
+        @Steps {
+            @Step {
+                In the Finder, create a folder named `Features` in your project's folder, next to the folder of your test target.
+
+                > Important: Don't create it inside your test target's folder if that folder is a synchronized folder (the default for targets created in Xcode 16 and later). Xcode copies each file of a synchronized folder into the bundle on its own, without the `Features` folder, and CucumberSwift then finds no features.
+
+                @Image(source: "CreateFeaturesFolder.png", alt: "The Finder, showing a new Features folder next to the test target's folder.")
+            }
+
+            @Step {
+                Choose File → Add Files to "Calculator"… (the menu item has your project's name), select the `Features` folder, and select Add. In the options sheet, set Action to "Reference files in place" and Groups to "Create folders", and select your test target only.
+
+                @Image(source: "AddFeaturesFolder.png", alt: "Xcode's options sheet for adding the Features folder: Action is Reference files in place, Groups is Create folders, and only the CalculatorTests target is selected.")
+            }
+
+            @Step {
+                Xcode adds the folder as a synchronized folder, which copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
+
+                Changing the build rule removes the folder from your test target. Under Target Membership, select the add button (+), choose your test target, and select Save.
+
+                @Image(source: "FeaturesFolderBuildRules.png", alt: "The File inspector for the Features folder: Build Rules is Apply Once to Folder, and Target Membership lists CalculatorTests.")
+            }
+
+            @Step {
+                Add a feature file to the `Features` folder. You can group feature files in subfolders.
+
+                > Tip: To have Xcode color the Gherkin in your `.feature` files, install CucumberSwift's syntax highlighting: see <doc:Running-Tests-In-Xcode#Highlight-feature-files>.
+
+                @Code(name: "Calculator.feature", file: "Calculator.feature")
+            }
+        }
+    }
+
+    @Section(title: "Write the step definitions") {
+        @ContentAndMedia {
+            CucumberSwift finds your step definitions through an extension of `Cucumber` that conforms to `StepImplementation`. When a step has no definition, CucumberSwift writes one for you.
+        }
+
+        @Steps {
+            @Step {
+                Replace the test file Xcode created in your test target with this one. `bundle` returns the bundle that holds the `Features` folder: your test bundle.
+
+                The extension adds a conformance to a type and a protocol that both come from CucumberSwift. `@retroactive` says you mean it. Without it, Xcode warns about the conformance, in Swift 5 and Swift 6 language modes alike.
+
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Empty.swift")
+            }
+
+            @Step {
+                Turn off parallel testing for your test target. XCTest's parallel workers don't run CucumberSwift's scenarios correctly: each scenario can run once in every worker, or not at all, and the test run can still pass. Xcode turns parallel testing on for new test targets.
+
+                Choose Product → Test Plan → Edit Test Plan. Next to your test target, select Options…, and set Parallelization to Disabled. Leave "Automatically include new tests" on: CucumberSwift creates its tests while the tests run, and with the option off, the test plan runs only the tests it already lists, so your scenarios don't run and the run still succeeds. If Xcode says the autocreated test plan is an in-memory document, choose Save so that the setting is kept.
+
+                @Image(source: "TestPlanParallelization.png", alt: "The test plan editor with the Options popover for CalculatorTests: Automatically include new tests is on, and Parallelization is Disabled.")
+            }
+
+            @Step {
+                Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
+
+                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
+            }
+
+            @Step {
+                The failure suggests a definition for the first step only. CucumberSwift also writes one for every step without a definition, skipped steps included, to a file. To open it, right-click the test `GenerateStepsStubsIfNecessary` in the Test navigator and choose Jump to Report. Under Pending Steps, open the file whose name starts with `GENERATED_Unimplemented_Step_Definitions`. Xcode adds a unique ID to the end of the file name.
+
+                @Image(source: "ViewGeneratedStubs.png", alt: "The test report for GenerateStepsStubsIfNecessary, with the GENERATED_Unimplemented_Step_Definitions file under Pending Steps.")
+            }
+
+            @Step {
+                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a Cucumber Expression: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Each step fails until you replace its `XCTFail` line with your test code.
+
+                > Note: To have regular expression literals suggested instead, turn on `Cucumber.generateRegexLiterals`: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
+
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Generated.swift")
+            }
+
+            @Step {
+                Replace each `XCTFail` line with your test code. Run the tests again. They pass.
+
+                See <doc:Matching-Steps> for every way to match a step.
+
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
+            }
+
+            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. Its next sample, TestNavigator, shows how your scenarios read in Xcode's test navigator. See also <doc:Running-Tests-In-Xcode>.
+
+            CucumberSwift also runs in a UI test target. The setup is the same: add CucumberSwift, the `Features` folder and the step definitions to the UI test target, and drive your app from the steps with `XCUIApplication`. To test UIKit screens from a unit test target instead, see <doc:CucumberSwift+UIUTest>.
         }
     }
 }
