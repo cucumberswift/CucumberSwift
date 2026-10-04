@@ -50,7 +50,7 @@ let package = Package(
 
 Then `import CucumberSwiftMacros` where you write step definitions. It imports CucumberSwift and CucumberSwiftExpressions as well.
 
-In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
+In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, turn the trait on from a local package instead: see <doc:#Use-the-macros-in-an-Xcode-project-before-Xcode-264>.
 
 In a project that Tuist generates, turn the trait on where the project lists its packages, and depend on the product:
 
@@ -70,6 +70,42 @@ let project = Project(
 ```
 
 Tuist writes the trait into the Xcode project it generates, so the same Xcode 26.4 or later is needed. If the trait is off, or your Xcode does not apply it, each macro you use is an error that says to turn the `Macros` trait on.
+
+### Use the macros in an Xcode project before Xcode 26.4
+
+Before Xcode 26.4, an Xcode project can't turn on a package's traits, but a Swift package that the project depends on can, in its own `Package.swift`, with any Xcode that has Swift 6.1. So add a small local package that turns the trait on and passes the macros through:
+
+```swift
+// swift-tools-version:6.1
+// StepDefinitionMacros/Package.swift, next to your Xcode project.
+import PackageDescription
+
+let package = Package(
+    name: "StepDefinitionMacros",
+    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13)],
+    products: [
+        .library(name: "StepDefinitionMacros", targets: ["StepDefinitionMacros"])
+    ],
+    dependencies: [
+        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0", traits: ["Macros"])
+    ],
+    targets: [
+        .target(
+            name: "StepDefinitionMacros",
+            dependencies: [.product(name: "CucumberSwiftMacros", package: "CucumberSwift")])
+    ]
+)
+```
+
+Its only source file, `Sources/StepDefinitionMacros/Exports.swift`, re-exports the macros:
+
+```swift
+@_exported import CucumberSwiftMacros
+```
+
+Add the folder to your project as a local package (in Xcode, **File > Add Package Dependencies… > Add Local…**; in Tuist, `.package(path: "StepDefinitionMacros")` in `Project.packages`), add its `StepDefinitionMacros` product to your test target, and `import StepDefinitionMacros` where you write step definitions. Keep CucumberSwift itself in the project, without the trait, if a target needs anything else from it, such as a plugin: SwiftPM turns the trait on for the whole package as long as one dependency asks for it.
+
+For the Swift Testing runner, depend on `CucumberSwiftTestingMacros` and re-export it instead; see <doc:Running-Feature-Files-With-Swift-Testing>.
 
 > Note: Macros are only available through Swift Package Manager. Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
 

@@ -1,8 +1,9 @@
 import ProjectDescription
 
 // SwiftTestingAndXCTestTuist with step definitions written as macros: the UI tests use CucumberSwiftMacros
-// with CucumberSwift and XCTest, and the unit tests use CucumberSwiftTestingMacros with Swift Testing. The
-// Macros package trait only reaches an Xcode project from Xcode 26.4. See README.md.
+// with CucumberSwift and XCTest, and the unit tests use CucumberSwiftTestingMacros with Swift Testing. They
+// come through StepDefinitionMacros, a local package that turns on CucumberSwift's Macros trait in its own
+// manifest, which works with any Xcode that has Swift 6.1. See README.md.
 let settings: Settings = .settings(base: [
     "SWIFT_VERSION": "6.0",
     // Builds and runs without a signing team.
@@ -12,7 +13,10 @@ let settings: Settings = .settings(base: [
 let project = Project(
     name: "SwiftTestingAndXCTestMacrosTuist",
     packages: [
-        .package(path: "../..", traits: ["Macros"])
+        // For the CucumberSwiftTestingPlugin build tool plugin.
+        .package(path: "../.."),
+        // For the macros, with the Macros trait on.
+        .package(path: "StepDefinitionMacros")
     ],
     targets: [
         .target(
@@ -38,7 +42,7 @@ let project = Project(
             resources: [.folderReference(path: "UnitTests/Features")],
             dependencies: [
                 .target(name: "BasketApp"),
-                .package(product: "CucumberSwiftTestingMacros"),
+                .package(product: "UnitStepDefinitionMacros"),
                 .package(product: "CucumberSwiftTestingPlugin", type: .plugin)
             ],
             settings: settings
@@ -56,7 +60,7 @@ let project = Project(
             resources: [.folderReference(path: "UITests/Features")],
             dependencies: [
                 .target(name: "BasketApp"),
-                .package(product: "CucumberSwiftMacros")
+                .package(product: "UIStepDefinitionMacros")
             ],
             settings: settings
         )

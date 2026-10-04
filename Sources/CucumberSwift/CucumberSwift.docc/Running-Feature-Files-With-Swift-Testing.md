@@ -51,7 +51,7 @@ The macros need the trait, which downloads swift-syntax. To write step definitio
 
 ## Set up an Xcode project
 
-1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later; with an earlier Xcode, add `CucumberSwiftTesting` and write step definitions without the macros.
+1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, turn the trait on from a local package that re-exports `CucumberSwiftTestingMacros`, as <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264> describes, and keep CucumberSwift in the project for the plugin; or add `CucumberSwiftTesting` and write step definitions without the macros.
 2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugin the first time it runs.
 3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin only sees files that belong to the target.
 

@@ -8,11 +8,14 @@
   through the `CucumberSwiftTestingPlugin` build tool plugin, and writes its step definitions with
   `CucumberSwiftTestingMacros`.
 
-CucumberSwift is added with the `Macros` package trait turned on. Each test target links one runner and
-has its own feature files and step definitions. One scheme tests both. If the macros stop compiling for
-either runner, or either runner stops working beside the other, this fixture fails.
+The macros need CucumberSwift's `Macros` package trait. An Xcode project can turn on a package's traits
+itself only from Xcode 26.4, so this one gets the macros through `StepDefinitionMacros`, a local Swift
+package that turns the trait on in its own `Package.swift` and re-exports each runner's macros. That works
+with any Xcode that has Swift 6.1. The project also depends on CucumberSwift directly, for the plugin.
 
-Needs Xcode 26.4 or later: an earlier Xcode doesn't apply a package's traits in an Xcode project, and each
-macro then reports that the `Macros` trait has to be turned on. Runs on the iOS simulator in
-`xcodebuild-destination`, with the Tuist version pinned in `.mise.toml`. Run every fixture with
-`mise run test-fixtures`.
+Each test target links one runner and has its own feature files and step definitions. One scheme tests
+both. If the macros stop compiling for either runner, or the trait stops reaching CucumberSwift through
+the local package, or either runner stops working beside the other, this fixture fails.
+
+Runs on the iOS simulator in `xcodebuild-destination`, with the Tuist version pinned in `.mise.toml`. Run
+every fixture with `mise run test-fixtures`.

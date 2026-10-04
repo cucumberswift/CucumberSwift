@@ -8,7 +8,7 @@
 //
 
 @testable import BasketApp
-import CucumberSwiftTestingMacros
+import UnitStepDefinitionMacros
 import Testing
 
 @MainActor
