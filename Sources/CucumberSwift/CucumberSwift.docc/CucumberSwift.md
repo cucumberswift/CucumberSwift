@@ -16,7 +16,6 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Tutorial-Table-of-Contents>
 - <doc:Running-Tests-In-Xcode>
 - <doc:Running-Tests-With-Swift-Package-Manager>
-- <doc:Running-Tests-With-Bazel>
 - <doc:Running-Feature-Files-With-Swift-Testing>
 - <doc:Matching-Steps>
 - <doc:Generating-Reports>

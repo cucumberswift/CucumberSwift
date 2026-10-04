@@ -135,18 +135,11 @@ public class Step: CustomStringConvertible {
     }
 
     func toJSON() -> [String: Any] {
-        if #available(iOS 13.0, macOS 10.15, tvOS 13, *) {
-            return [
-                "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .nanoseconds).value],
-                "name": "\(match)",
-                "keyword": "\(keywordText)"
-            ]
-        } else {
-            return [
-                "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .seconds).value * 1_000_000_000],
-                "name": "\(match)",
-                "keyword": "\(keywordText)"
-            ]
-        }
+        [
+            "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .nanoseconds).value],
+            "name": "\(match)",
+            "keyword": "\(keywordText)"
+        ]
     }
 }
+
