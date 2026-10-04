@@ -148,7 +148,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      # The same iOS Simulator run as CI's `test` job. CI.yml holds the test count
+      # The same iOS Simulator run as CI's iOS tests job. CI.yml holds the test count
       # floor and has checked this commit, so here it only fails a run where no
       # test ran.
       - name: Run tests
