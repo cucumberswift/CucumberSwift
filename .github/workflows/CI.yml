@@ -60,8 +60,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Show the toolchain
         run: swift --version
+      # Only the versions Package.resolved pins.
       - name: Validate SwiftPM BUILDs
-        run: swift build --configuration release --build-path ./build
+        run: swift build --configuration release --build-path ./build --force-resolved-versions
       # Through Bundler, so CocoaPods comes from the Gemfile.
       - name: Validate Cocoapods Can Deploy (lib lint)
         run: bundle exec pod lib lint CucumberSwift.podspec --allow-warnings
