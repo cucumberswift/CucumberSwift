@@ -125,6 +125,8 @@ A Scenario Outline is one test, and each example is one of its test cases, named
 
 Scenarios run one at a time, as with CucumberSwift, because step definitions usually share state.
 
+The test navigator lists the scenarios that Xcode found when it last indexed the target, and it doesn't always index again when only a feature file changes. Editing a scenario's steps or examples keeps its results on its row. A scenario you add or rename runs with the others, and shows in the test report, but its row in the navigator can wait until Xcode indexes the target again, for example after you build it or reopen the project.
+
 ## How failures are reported
 
 - A step that no step definition matches fails on its line in the feature file, and the message includes a step definition to paste into `setupSteps()`.
