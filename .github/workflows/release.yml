@@ -147,8 +147,9 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      # The same iOS Simulator run as CI's `test` job.
       - name: Run tests
-        run: fastlane unit_test
+        run: xcodebuild test -scheme CucumberSwift -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
 
   # The only job that writes to the repository's code. It runs no project or
   # dependency code: only the release script, git and the gh CLI.
