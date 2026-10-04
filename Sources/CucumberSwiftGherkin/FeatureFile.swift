@@ -50,8 +50,8 @@ extension FeatureFile {
     public struct Scenario: Equatable, Sendable {
         public let title: String
         public let description: String
-        /// The feature's tags, then the scenario's. A Scenario Outline's also include those of its
-        /// Examples blocks.
+        /// The feature's tags, then the scenario's. For a Scenario Outline, each of its ``examples``
+        /// also has its own Examples block's tags.
         public let tags: [String]
         public let line: Int
         public let column: Int
@@ -67,6 +67,7 @@ extension FeatureFile {
         /// The outline's title with the row's values, as CucumberSwift names the scenario. Unique
         /// within the outline.
         public let title: String
+        /// The feature's and the outline's tags, then those of the row's own Examples block.
         public let tags: [String]
         /// The row's line.
         public let line: Int

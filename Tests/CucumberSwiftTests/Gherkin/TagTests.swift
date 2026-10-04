@@ -192,6 +192,57 @@ class TagTests: XCTestCase {
         Cucumber.shouldRunWith = { _, _ in true }
     }
 
+    let outlineWithTaggedExamplesBlocks =
+    """
+    @featuretag
+    Feature: Basket
+      @outlinetag
+      Scenario Outline: Eat <n> cukes
+        Given I eat <n> cukes
+
+        @small
+        Examples:
+          | n |
+          | 1 |
+
+        @large @huge
+        Examples:
+          | n  |
+          | 99 |
+
+        Examples:
+          | n |
+          | 0 |
+    """
+
+    func testEachExampleHasOnlyItsOwnExamplesBlocksTags() {
+        let cucumber = Cucumber(withString: outlineWithTaggedExamplesBlocks)
+        let scenarios = cucumber.features.first?.scenarios
+        XCTAssertEqual(scenarios?.map(\.steps.first?.match), ["I eat 1 cukes", "I eat 99 cukes", "I eat 0 cukes"])
+        XCTAssertEqual(scenarios?.map(\.tags), [
+            ["featuretag", "outlinetag", "small"],
+            ["featuretag", "outlinetag", "large", "huge"],
+            ["featuretag", "outlinetag"]
+        ])
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
+    }
+
+    func testCucumberTagsRunOnlyTheMatchingExamplesBlocksRows() {
+        Cucumber.shared.features.removeAll()
+        Cucumber.shared.parseIntoFeatures(outlineWithTaggedExamplesBlocks)
+        Cucumber.shared.environment["CUCUMBER_TAGS"] = "small"
+
+        var eaten = [String]()
+        Given("I eat {int} cukes") { _, step in
+            eaten.append(step.match)
+        }
+
+        Cucumber.shared.executeFeatures()
+
+        XCTAssertEqual(eaten, ["I eat 1 cukes"])
+        Cucumber.shared.environment["CUCUMBER_TAGS"] = nil
+    }
+
     func testAtSignInStepTextIsText() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Some terse yet descriptive text of what is desired
