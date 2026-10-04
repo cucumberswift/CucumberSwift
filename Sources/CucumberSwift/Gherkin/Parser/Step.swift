@@ -154,7 +154,7 @@ public class Step: CustomStringConvertible {
         guard Keyword.primaryKeywords.contains(keyword) else {
             throw Keyword.KeywordError.notPrimaryKeyword
         }
-        self.keyword.insert(keyword)
+        self.keyword = self.keyword.adding(keyword)
     }
 
     func toJSON() -> [String: Any] {
@@ -178,7 +178,6 @@ extension Step {
         }
 
         public init?(_ str: String) {
-            stringValue = str
             var set: Keyword = []
             if Scope.language.matchesGiven(str) {
                 set.insert(.given)
@@ -197,15 +196,25 @@ extension Step {
             }
             guard !set.isEmpty else { return nil }
             self = set
+            stringValue = str
         }
 
-        /// The keyword named in the language of the feature file the lexer last read. A step's own keyword
-        /// is named in its feature file's language.
+        /// The keyword as it is written in the feature file it was read from, such as `Given`, `And` or `Dado`.
+        /// A keyword that was not read from a feature file, such as ``given`` or the result of combining
+        /// keywords, is named in the language of the feature file the lexer last read.
         public func toString() -> String {
             if let str = stringValue {
                 return str
             }
             return toString(in: Scope.language)
+        }
+
+        /// This keyword with `other`'s keywords added, still written as this one is. `insert` would forget how
+        /// it is written, as every set operation does.
+        func adding(_ other: Keyword) -> Keyword {
+            var keyword = union(other)
+            keyword.stringValue = stringValue
+            return keyword
         }
 
         public func hasMultipleValues() -> Bool {
