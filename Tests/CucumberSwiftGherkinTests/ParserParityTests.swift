@@ -35,7 +35,7 @@ final class ParserParityTests: XCTestCase {
         let tests = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let files = FileManager.default.enumerator(at: tests, includingPropertiesForKeys: nil)?
             .compactMap { $0 as? URL }
-            .filter { $0.pathExtension == "feature" && !$0.path.contains("/.build/") } ?? []
+            .filter { $0.pathExtension == "feature" && !$0.pathComponents.contains(".build") } ?? []
         return files.sorted { $0.path < $1.path }
     }
 
