@@ -103,6 +103,29 @@ let lintScript = TargetScript.post(
     basedOnDependencyAnalysis: false
 )
 
+// MARK: - CucumberSwiftExpressions module script
+//
+// CucumberSwiftExpressions is a static package, so its code is linked into the framework, but
+// its Swift module is left in the build folder. CucumberSwift's public API uses its types, so a
+// target that imports CucumberSwift needs that module too. Carthage only delivers the framework,
+// so the module goes inside it, next to CucumberSwift.swiftmodule. A Carthage consumer adds
+// $(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules to SWIFT_INCLUDE_PATHS to find it.
+
+let expressionsModuleScript = TargetScript.post(
+    script: """
+    source="${BUILT_PRODUCTS_DIR}/CucumberSwiftExpressions.swiftmodule"
+    destination="${TARGET_BUILD_DIR}/${CONTENTS_FOLDER_PATH}/Modules/CucumberSwiftExpressions.swiftmodule"
+    if [ ! -d "$source" ]; then
+      echo "error: $source not found, so CucumberSwift.framework would ship without the CucumberSwiftExpressions module"
+      exit 1
+    fi
+    rm -rf "$destination"
+    ditto "$source" "$destination"
+    """,
+    name: "Embed CucumberSwiftExpressions module",
+    basedOnDependencyAnalysis: false
+)
+
 // MARK: - Targets
 
 let cucumberSwift = Target.target(
@@ -125,7 +148,7 @@ let cucumberSwift = Target.target(
         "Sources/CucumberSwiftObjC/**/*.m"
     ],
     resources: [".swiftlint.yml"],
-    scripts: [lintScript],
+    scripts: [lintScript, expressionsModuleScript],
     dependencies: [
         .package(product: "CucumberSwiftExpressions"),
         .xctest

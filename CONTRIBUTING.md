@@ -141,6 +141,12 @@ mise run test-fixtures
 
 CI runs them in the "Fixtures" job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
 
+`Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with the following, which builds the framework with Carthage first; CI runs it in the Carthage build jobs:
+
+```bash
+mise run test-carthage
+```
+
 - **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`; name the project and its scheme after the fixture's folder, which is how the task finds them.
 - **Depend on CucumberSwift by path.** `.package(name: "CucumberSwift", path: "../..")` in a Swift package, `.package(path: "../..")` in a Tuist project.
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
@@ -203,6 +209,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 ### Things to keep in mind
 
 - **Three scheme names are load bearing.** The CI and Release workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`.
+- **The framework carries CucumberSwiftExpressions' module.** CucumberSwift's API uses CucumberSwiftExpressions' types, so a target that imports CucumberSwift needs that module too, and Carthage delivers only the framework. The "Embed CucumberSwiftExpressions module" script in `Project.swift` copies the module into the framework's `Modules` folder. Don't remove it: `mise run test-carthage` fails without it.
 - **`project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is a lockfile for Carthage users.** It pins the CucumberSwiftExpressions version they get. Regenerating leaves it alone. If your diff changes it anyway, put it back unless updating that dependency is what your change is for.
 - **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve`, run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, or when the two lockfiles pin a package differently, and its error says which file to fix.
 
@@ -277,7 +284,7 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 When you open a PR:
 
-1. **CI runs** the tests, and builds the package with Swift Package Manager. It doesn't build with Carthage, so if you add a source file, build the Xcode project yourself. Please fix anything it reports.
+1. **CI runs** the tests, builds the package with Swift Package Manager, and builds the framework with Carthage. Please fix anything it reports.
 2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
 3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
 
