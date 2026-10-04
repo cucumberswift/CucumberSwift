@@ -8,8 +8,9 @@ name: CI
 # A pull request runs each check once, on the newest toolchain. The merge queue,
 # main, support/N.x, the nightly run and manual runs add the older variants
 # (Xcode 16, the oldest Bazel), so every change is checked on all of them before
-# it merges. The full parallel tests matrix runs on main and nightly (see
-# parallel_tests).
+# it merges. The parallel tests skip the merge queue, run when the code changes
+# on pull requests and main (the full matrix on main), and run the full matrix on
+# every nightly and manual run (see parallel_tests).
 on:
   pull_request:
   merge_group:
