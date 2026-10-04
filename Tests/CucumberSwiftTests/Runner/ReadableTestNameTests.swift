@@ -30,6 +30,34 @@ class ReadableTestNameTests: XCTestCase {
         }
     }
 
+    /// The generated tests' names after parsing an English feature file and then a Spanish one (#290).
+    private static func generatedTestNamesForTwoLanguages(readable: Bool) -> [String] {
+        Cucumber.shared.reset()
+        Cucumber.readableTestNames = readable
+        defer {
+            Cucumber.readableTestNames = nil
+            Cucumber.shared.reset()
+        }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Basket
+          Scenario: Eating cukes
+            Given I have 3 cukes
+            When I eat 2 cukes
+            And I wait
+            Then I have 1 cuke
+        """)
+        Cucumber.shared.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+          Escenario: Comer pepinos
+            Cuando como 2 pepinos
+            Entonces quedan 3 pepinos
+        """)
+        let suite = XCTestSuite(name: "Two languages")
+        CucumberTest.generateAlltests(suite)
+        return suite.tests.compactMap { $0 as? XCTestSuite }.flatMap { $0.tests.map(\.name) }
+    }
+
     func testByDefaultANameIsCamelCased() {
         XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob@x.com)", readable: false), "SignInEmailBobXCom")
     }
@@ -107,6 +135,29 @@ class ReadableTestNameTests: XCTestCase {
         let names = Self.generatedTestNames(readable: false)
         XCTAssertTrue(names.contains { $0.hasSuffix(" Step000_GivenACart]") }, "\(names)")
         XCTAssertTrue(names.contains { $0.hasSuffix(" Step001_GivenAGiftCard]") }, "\(names)")
+    }
+
+    // A step is named in its own feature file's language, not in the language of the file parsed last (#290).
+    func testEachStepIsNamedInItsOwnFeatureFilesLanguage() {
+        let names = Self.generatedTestNamesForTwoLanguages(readable: true)
+        let expectedNames = [
+            "1 \u{203A} Given I have 3 cukes]", "2 \u{203A} When I eat 2 cukes]", "3 \u{203A} And I wait]", "4 \u{203A} Then I have 1 cuke]",
+            "1 \u{203A} Cuando como 2 pepinos]", "2 \u{203A} Entonces quedan 3 pepinos]"
+        ]
+        for expected in expectedNames {
+            XCTAssertTrue(names.contains { $0.hasSuffix(" \(expected)") }, "No test named \(expected) in \(names)")
+        }
+    }
+
+    func testEachCamelCasedStepNameUsesItsOwnFeatureFilesLanguage() {
+        let names = Self.generatedTestNamesForTwoLanguages(readable: false)
+        let expectedNames = [
+            "Step000_GivenIHave3Cukes]", "Step001_WhenIEat2Cukes]", "Step003_ThenIHave1Cuke]",
+            "Step000_CuandoComo2Pepinos]", "Step001_EntoncesQuedan3Pepinos]"
+        ]
+        for expected in expectedNames {
+            XCTAssertTrue(names.contains { $0.hasSuffix(" \(expected)") }, "No test named \(expected) in \(names)")
+        }
     }
 
     func testReadableNamesAreTheDefault() {
