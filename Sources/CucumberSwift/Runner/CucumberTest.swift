@@ -12,7 +12,7 @@ import XCTest
 open class CucumberTest: XCTestCase {
     static var didRun = false
 
-    private static var hasBeenBuilt = false
+    private(set) static var hasBeenBuilt = false
     static var featuresLoaded = false
 
     /// Calls `failStep` for the steps that no step definition matches, so that a replacement of
@@ -23,6 +23,7 @@ open class CucumberTest: XCTestCase {
     static func resetSetUp() {
         hasBeenBuilt = false
         featuresLoaded = false
+        ParallelTesting.reset()
     }
     #endif
 
@@ -37,6 +38,12 @@ open class CucumberTest: XCTestCase {
         guard !hasBeenBuilt else {
             return XCTestSuite(name: String(describing: CucumberTest.self))
         }
+        // In a parallel worker XCTest hands CucumberTest and a subclass of it, such as the one a
+        // StepImplementation's `bundle` uses, to different workers. Only CucumberTest's own suite runs
+        // the checks every run needs, so that they run once.
+        if ParallelTesting.scenarioClassesMade && self != CucumberTest.self {
+            return XCTestSuite(name: String(describing: CucumberTest.self))
+        }
 
         let bundle = (Cucumber.shared as? StepImplementation)?.bundle
         loadFeaturesIfNeeded()
@@ -49,7 +56,9 @@ open class CucumberTest: XCTestCase {
         }
 
         let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
-        generateAlltests(suite)
+        // With experimental parallel testing, each scenario's class was made before XCTest listed the
+        // classes to hand to its workers, and runs on its own, so it is not part of this suite.
+        generateAlltests(suite, includeScenarios: !ParallelTesting.scenarioClassesMade)
         return suite
     }
 
@@ -77,7 +86,7 @@ open class CucumberTest: XCTestCase {
             + "If you use the DSL, define your features in `setupSteps()`."
     }
 
-    static func generateAlltests(_ rootSuite: XCTestSuite) {
+    static func generateAlltests(_ rootSuite: XCTestSuite, includeScenarios: Bool = true) {
         let stubsSuite = XCTestSuite(name: "GeneratedSteps")
         var stubTests = [XCTestCase]()
         createTestCaseForStubs(&stubTests)
@@ -89,6 +98,13 @@ open class CucumberTest: XCTestCase {
             return
         }
 
+        guard includeScenarios else { return }
+        scenarioSuites().forEach { rootSuite.addTest($0) }
+    }
+
+    /// A suite for each scenario that will run, holding the tests of the class made for it: one for each step.
+    static func scenarioSuites() -> [XCTestSuite] {
+        var suites = [XCTestSuite]()
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter()
 
@@ -97,9 +113,10 @@ open class CucumberTest: XCTestCase {
                 var tests = [XCTestCase]()
                 createTestCaseFor(className: className, scenario: scenario, tests: &tests)
                 tests.forEach { childSuite.addTest($0) }
-                rootSuite.addTest(childSuite)
+                suites.append(childSuite)
             }
         }
+        return suites
     }
 
     private static func createTestCaseForStubs(_ tests: inout [XCTestCase]) {

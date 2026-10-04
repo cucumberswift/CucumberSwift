@@ -23,6 +23,11 @@ final class CucumberTestSupport: NSObject {
         StepTestCase.step(of: test).map { StepTestCase.issue(issue, locatedAt: $0) } ?? issue
     }
 
+    @objc(prepareForParallelTesting)
+    static func prepareForParallelTesting() {
+        ParallelTesting.prepareWhenLoaded()
+    }
+
     // Asked by CucumberScenarioTest.m, for one test per scenario.
     @objc(resolveScenarioTestNamed:)
     static func resolveScenarioTest(named name: String) -> Bool {

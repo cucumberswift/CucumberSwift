@@ -73,6 +73,16 @@ xcodebuild test -scheme CucumberSwift -destination 'platform=macOS,variant=Mac C
 
 This is the reference run. It builds every test target through the Xcode project that CI and Carthage use, on Mac Catalyst.
 
+Experimental parallel testing has fixtures of their own, in `Tests/ParallelFixtures`: a project that uses CucumberSwift as a local Swift package, so `CucumberSwift.xcodeproj` doesn't change. It has an app, and for each platform family (iOS with Mac Catalyst, tvOS, and macOS) unit tests without a host app, unit tests hosted in the app, and UI tests. All of them run the same features. Each scheme turns parallel testing on, for example:
+
+```bash
+xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme ParallelHostedTestsMac -destination 'platform=macOS' -parallel-testing-worker-count 3
+```
+
+The schemes are `ParallelHostlessTests`, `ParallelHostedTests` and `ParallelUITests`, with `TV` or `Mac` at the end for tvOS or macOS. Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` job also checks across the workers that every scenario ran exactly once and that more than one worker ran them. CI runs each combination with `.github/scripts/parallel-fixture.sh`, which you can run the same way, for example `PLATFORM=macOS KIND=Hostless .github/scripts/parallel-fixture.sh`. It passes `PARALLEL_TEST_RECORDS` to `xcodebuild`, and each run of a scenario writes a file in that folder named after the scenario, its worker's process and a UUID. To keep CI's load down, the jobs run only when the code, the fixtures, a package manifest or the workflow changes, never in the merge queue, and only after the macOS hostless combination has passed; the first failure cancels the rest. UI tests on a Mac need automation mode, which macOS asks you to allow the first time. The fixtures have no Swift package, because `swift test` can't run scenarios in parallel.
+
+Generate the fixtures' project with `mise run generate-fixtures` before you open or run it, and again after changing `Tests/ParallelFixtures/Project.swift` or adding a file there. Unlike `CucumberSwift.xcodeproj` it is not committed: Tuist names the local package's folder after your checkout's folder, so the project differs from clone to clone. CI generates it the same way.
+
 ### With Swift Package Manager
 
 CI also runs every test target with SwiftPM. Run all four packages:
@@ -208,7 +218,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 ### Things to keep in mind
 
-- **Three scheme names are load bearing.** The CI and Release workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`.
+- **Three scheme names are load bearing.** The CI and Release workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`. CI's `Parallel tests` job runs the fixtures' schemes by name too.
 - **The framework carries CucumberSwiftExpressions' module.** CucumberSwift's API uses CucumberSwiftExpressions' types, so a target that imports CucumberSwift needs that module too, and Carthage delivers only the framework. The "Embed CucumberSwiftExpressions module" script in `Project.swift` copies the module into the framework's `Modules` folder. Don't remove it: `mise run test-carthage` fails without it.
 - **`project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is a lockfile for Carthage users.** It pins the CucumberSwiftExpressions version they get. Regenerating leaves it alone. If your diff changes it anyway, put it back unless updating that dependency is what your change is for.
 - **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve`, run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, or when the two lockfiles pin a package differently, and its error says which file to fix.
