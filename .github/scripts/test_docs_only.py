@@ -176,6 +176,12 @@ class PullRequestTests(Repository):
         self.assertTrue(self.decide("pull_request", self.pull_request(self.root, head)))
         self.assertIn('docs  docs/naïve "quoted".md', self.output)
 
+    def test_a_path_cannot_print_a_line_of_its_own(self):
+        head = self.branch(("docs/a\n::warning::forged\u2028.md", "text\n"))
+        self.assertTrue(self.decide("pull_request", self.pull_request(self.root, head)))
+        self.assertIn("docs  docs/a\\n::warning::forged\\u2028.md\n", self.output)
+        self.assertNotIn("\n::warning::", self.output)
+
     def test_a_pull_request_with_no_changed_files_is_not_docs_only(self):
         head = self.branch()
         self.assertFalse(self.decide("pull_request", self.pull_request(self.root, head)))

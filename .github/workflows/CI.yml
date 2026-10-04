@@ -42,6 +42,10 @@ jobs:
   # check. Pushes and manual runs always run everything. Each skipped job checks
   # `!cancelled()`, so if this job fails they run rather than skip. Path filters
   # on the whole workflow are not used: they would leave required checks waiting.
+  # A matrix job skipped this way reports one check with its name unexpanded,
+  # such as "Bazel tests (${{ matrix.label }})", so a required check that a
+  # matrix job reports would wait forever on a docs-only run. Make it a job
+  # without a matrix before requiring it.
   changes:
     name: Changed files
     runs-on: ubuntu-24.04

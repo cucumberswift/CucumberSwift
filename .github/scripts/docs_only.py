@@ -72,6 +72,11 @@ def docs_only(paths):
     return bool(paths) and all(is_docs(path) for path in paths)
 
 
+def printable(path):
+    """A path for the log, on one line: a newline in it could start a workflow command."""
+    return "".join(char if char.isprintable() else repr(char)[1:-1] for char in path)
+
+
 def git(*args):
     result = subprocess.run(["git", *args], capture_output=True, text=True)
     if result.returncode != 0:
@@ -123,7 +128,7 @@ def decide(event_name, event_path):
         return False
     print(f"{len(paths)} changed files:")
     for path in paths:
-        print(f"  {'docs' if is_docs(path) else 'code'}  {path}")
+        print(f"  {'docs' if is_docs(path) else 'code'}  {printable(path)}")
     result = docs_only(paths)
     print("Docs-only: the code jobs are skipped." if result else "Not docs-only: the full CI runs.")
     return result
