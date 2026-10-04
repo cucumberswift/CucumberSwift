@@ -211,6 +211,10 @@ class FullRunTests(Repository):
             ("pull_request", {"pull_request": {"base": {"sha": self.root}, "head": {"sha": 7}}}),
             ("merge_group", {"merge_group": {"head_sha": self.root}}),
             ("merge_group", []),
+            ("merge_group", {"merge_group": {"base_sha": "--output=/tmp/x", "head_sha": self.root}}),
+            ("merge_group", {"merge_group": {"base_sha": "HEAD~1", "head_sha": self.root}}),
+            ("merge_group", {"merge_group": {"base_sha": self.root[:12], "head_sha": self.root}}),
+            ("merge_group", {"merge_group": {"base_sha": self.root.upper(), "head_sha": self.root}}),
         ]:
             with self.subTest(event=event):
                 self.assertFalse(self.decide(event_name, event))

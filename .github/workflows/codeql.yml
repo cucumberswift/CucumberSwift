@@ -11,10 +11,10 @@ on:
     - cron: '17 7 * * 1'
   workflow_dispatch:
 
-# Least privilege: the analyze job only needs to read the code and upload results.
+# Least privilege: read-only by default. The analyze job adds the
+# security-events write it needs to upload results.
 permissions:
   contents: read
-  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -20,8 +20,8 @@ Which files a run changes depends on its event:
 
 Every other event (push, schedule, workflow_dispatch, ...) is never docs-only,
 so main and the support/N.x branches always run everything. So does any error:
-a missing or unreadable event, a commit missing from the checkout, a git
-failure, or a change with no files. When in doubt, CI runs in full.
+a missing or unreadable event, a commit that is not a full SHA or is missing
+from the checkout, a git failure, or a change with no files. When in doubt, CI runs in full.
 
 The checkout needs the history of both commits (actions/checkout with
 `fetch-depth: 0`; `filter: blob:none` is enough, since only paths are read).
@@ -38,6 +38,7 @@ Only the standard library is used.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -45,6 +46,8 @@ DOCS_EXTENSIONS = (".md",)
 DOCC_CATALOG = ".docc"
 ROOT_DOCS = {"LICENSE"}
 DOCS_FOLDERS = (".github/ISSUE_TEMPLATE/",)
+# A full commit SHA, SHA-1 or SHA-256. Anything else in the event never reaches git.
+COMMIT_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 
 class ChangesError(Exception):
@@ -87,8 +90,8 @@ def sha(event, *keys):
     value = event
     for key in keys:
         value = value.get(key) if isinstance(value, dict) else None
-    if not isinstance(value, str) or not value:
-        raise ChangesError(f"the event has no {'.'.join(keys)}")
+    if not isinstance(value, str) or not COMMIT_SHA.fullmatch(value):
+        raise ChangesError(f"the event has no commit SHA at {'.'.join(keys)}")
     return value
 
 
