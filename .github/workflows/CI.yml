@@ -31,8 +31,8 @@ env:
   # the iOS Simulator (`test`) and on Mac Catalyst (`test_catalyst`). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (409 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 498
+  # run today (420 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 509
 
 jobs:
   # Works out whether this run only changes documentation, with
@@ -337,6 +337,140 @@ jobs:
         run: xcodebuild -version
       - name: Run the tests on Mac Catalyst
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
+
+  # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
+  # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
+  # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
+  # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too.
+  # .github/scripts/parallel-fixture.sh runs one combination and says when it fails.
+  #
+  # They fail fast, because they need many macOS runners: they run only when a change could
+  # affect them, never in the merge queue (they are not required checks, and the pull request
+  # has run them), the rest wait for one quick combination to pass, and the first failure
+  # cancels the others.
+  parallel_changes:
+    name: Parallel tests needed
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      needed: ${{ steps.diff.outputs.needed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check what changed
+        id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          # The code, the fixtures, the package manifests, the tool versions or this workflow; not
+          # the documentation, which lives in Sources too.
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/parallel-fixture\.sh$)'
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            needed=true
+          elif git diff --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            needed=true
+          else
+            needed=false
+          fi
+          echo "Parallel tests needed: $needed"
+          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+
+  parallel_smoke:
+    name: Parallel tests (Hostless, macOS, macos-26)
+    needs: parallel_changes
+    if: needs.parallel_changes.outputs.needed == 'true'
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise install
+      - name: Generate the fixtures' project
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run generate-fixtures
+      - name: Run the parallel fixture
+        env:
+          PLATFORM: macOS
+          KIND: Hostless
+        run: .github/scripts/parallel-fixture.sh
+
+  parallel_test:
+    name: Parallel tests (${{ matrix.kind }}, ${{ matrix.platform }}, ${{ matrix.os }})
+    needs: [parallel_changes, parallel_smoke]
+    if: needs.parallel_changes.outputs.needed == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [macos-15, macos-26]
+        platform: [iOS Simulator, tvOS Simulator, macOS, Mac Catalyst]
+        kind: [Hostless, Hosted, UI]
+        exclude:
+          - os: macos-15
+            platform: tvOS Simulator
+          - os: macos-15
+            platform: macOS
+          # Run first, by parallel_smoke.
+          - os: macos-26
+            platform: macOS
+            kind: Hostless
+        include:
+          # Two workers on a Simulator, not three: booting a third clone on a busy runner timed out.
+          - platform: iOS Simulator
+            workers: 2
+          - platform: tvOS Simulator
+            workers: 2
+          # UI tests on a Mac have only been tried with one worker.
+          - platform: Mac Catalyst
+            kind: UI
+            workers: 1
+          - platform: macOS
+            kind: UI
+            workers: 1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: xcodebuild -version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise install
+      - name: Generate the fixtures' project
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run generate-fixtures
+      - name: Run the parallel fixture
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          KIND: ${{ matrix.kind }}
+          WORKERS: ${{ matrix.workers || 3 }}
+        run: .github/scripts/parallel-fixture.sh
 
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
   # SwiftPM links all of a package's test targets into one test bundle, and each

@@ -80,6 +80,11 @@ Tuist/.build/
 # Package.resolved. Committing it would mean keeping a second generated artifact
 # in step for no benefit.
 CucumberSwift.xcworkspace/
+# The parallel testing fixtures' generated project. Not committed: Tuist names the local package's folder
+# after the checkout's folder, so it differs from clone to clone. `mise run generate-fixtures` makes it.
+Tests/ParallelFixtures/ParallelFixtures.xcodeproj/
+Tests/ParallelFixtures/ParallelFixtures.xcworkspace/
+Tests/ParallelFixtures/Derived/
 
 # NOTE: CucumberSwift.xcodeproj is deliberately NOT ignored.
 # Carthage clones this repository and runs xcodebuild against the shared

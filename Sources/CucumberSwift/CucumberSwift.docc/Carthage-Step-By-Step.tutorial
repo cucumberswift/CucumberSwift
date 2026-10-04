@@ -94,7 +94,7 @@
             }
 
             @Step {
-                Turn off parallel testing for your test target. XCTest's parallel workers don't run CucumberSwift's scenarios correctly: each scenario can run once in every worker, or not at all, and the test run can still pass. Xcode turns parallel testing on for new test targets.
+                Turn off parallel testing for your test target. XCTest's parallel workers don't run CucumberSwift's scenarios correctly: each scenario can run once in every worker, or not at all, and the test run can still pass. Xcode turns parallel testing on for new test targets. To try it anyway, see <doc:Running-Tests-In-Xcode#Parallel-testing>.
 
                 Choose Product → Test Plan → Edit Test Plan. Next to your test target, select Options…, and set Parallelization to Disabled. Leave "Automatically include new tests" on: CucumberSwift creates its tests while the tests run, and with the option off, the test plan runs only the tests it already lists, so your scenarios don't run and the run still succeeds. If Xcode says the autocreated test plan is an in-memory document, choose Save so that the setting is kept.
 

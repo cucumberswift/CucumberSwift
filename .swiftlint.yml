@@ -92,6 +92,8 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Fixtures/*/Package.swift
   - Fixtures/*/Project.swift
   - Fixtures/*/Tuist.swift
+  # The parallel testing fixtures' Tuist manifest; the root Project.swift isn't linted either.
+  - Tests/ParallelFixtures/Project.swift
   - .swiftlint.yml
   - Sources/CucumberSwift/Generated
   # Generated from I18n.swift by LocalizedStepDefinitionMacroTests.

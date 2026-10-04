@@ -60,6 +60,7 @@
 		68FCBCEDED212050FCCF77E9 /* FeatureHook.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE716D4307D80176A0335D18 /* FeatureHook.swift */; };
 		6A0E62F57185B1D8E803EA2B /* DSLFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3AA4653DF4994CBD7591ED /* DSLFeatureTests.swift */; };
 		6B4A543BCCB35C350BB65F77 /* ReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C130B41439BE4A0333AD09B /* ReporterTests.swift */; };
+		6B63E1CAAE6A469A632CC20E /* ParallelTesting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59EEE589333462083B101943 /* ParallelTesting.swift */; };
 		6D2E2C048C9A905B049B0FA4 /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
 		720EA47F4DCE34AEE4B81805 /* Matcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18E60C513B3F372E67A9D4D5 /* Matcher.swift */; };
 		72D3B1246BD126EB9FD7E7A5 /* TestCaseGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C703E4EA2036DBAF96097ED7 /* TestCaseGenerator.swift */; };
@@ -136,6 +137,7 @@
 		EBB2E3C1A84E021B032E966A /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADBA8700E96CEB715E4B9570 /* FeatureFlags.swift */; };
 		EC0DF9CB6029AF124A97BD4D /* ScenarioDSL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56EC378FDDAC46CB59F3B9BB /* ScenarioDSL.swift */; };
 		EC4FEC25F4DF51639DE4A447 /* NodeHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E153FB91BE91986EF02D3B /* NodeHeader.swift */; };
+		ED73A523FA6CAFF7A6AF6898 /* ParallelTestingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */; };
 		ED90AA4928447A8B15764A15 /* CucumberSwift.docc in Sources */ = {isa = PBXBuildFile; fileRef = 7E6A4ED0E3F31B73FC4A0EEF /* CucumberSwift.docc */; };
 		EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */; };
 		F0A5E25C4ABFEFBBD54E6A67 /* StepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175AA2B2087F9A59368B780B /* StepTests.swift */; };
@@ -262,10 +264,12 @@
 		4A8C960840BE8048AD7B7BD2 /* CucumberSwiftConsumerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftConsumerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B04A56526A3E64CD604A788 /* I18n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = I18n.swift; sourceTree = "<group>"; };
 		4E84199B26F53AA7B1C99323 /* StubGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubGenerator.swift; sourceTree = "<group>"; };
+		5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelTestingTests.swift; sourceTree = "<group>"; };
 		56EC378FDDAC46CB59F3B9BB /* ScenarioDSL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioDSL.swift; sourceTree = "<group>"; };
 		57AB3A7392FB1651B0C69F5F /* WaitUntil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitUntil.swift; sourceTree = "<group>"; };
 		5921881DF3356119243E67A6 /* ScenarioNodeContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioNodeContent.swift; sourceTree = "<group>"; };
 		5982958F1E97117B42D9E939 /* StringExtensionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringExtensionsTests.swift; sourceTree = "<group>"; };
+		59EEE589333462083B101943 /* ParallelTesting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelTesting.swift; sourceTree = "<group>"; };
 		5A1776EFC5D37A95C6520D3A /* SequenceExtensionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceExtensionsTests.swift; sourceTree = "<group>"; };
 		5BFC4AC8518624BC6134E5E0 /* AsyncIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncIsolationTests.swift; sourceTree = "<group>"; };
 		5E75F552A5CAD45258EC3909 /* StepFailureLocationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepFailureLocationTests.swift; sourceTree = "<group>"; };
@@ -689,6 +693,7 @@
 				ADBA8700E96CEB715E4B9570 /* FeatureFlags.swift */,
 				E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */,
 				C70AED670EF8F80C94174E51 /* Globals.swift */,
+				59EEE589333462083B101943 /* ParallelTesting.swift */,
 				932DC90167770A7459AAB029 /* ScenarioTest.swift */,
 				9BB5321E29869AEB96319604 /* StepImplementation.swift */,
 				30EDFE8C5E74CC443320B00E /* StepTestCase.swift */,
@@ -709,6 +714,7 @@
 				D37DEF3781869D0B2555E6AF /* FeatureFlagsTests.swift */,
 				9B330B9C8309E062DC5F80CC /* HookTests.swift */,
 				086CE04A08240D7473E13F9E /* LockedTests.swift */,
+				5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */,
 				9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
 				DD09C92DD03AFD4765446E70 /* ScenarioRunTests.swift */,
@@ -1031,6 +1037,7 @@
 				2D72D4088AAD305BC6038BD7 /* FeatureFlagsTests.swift in Sources */,
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
 				AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */,
+				ED73A523FA6CAFF7A6AF6898 /* ParallelTestingTests.swift in Sources */,
 				82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
 				8658A6C302380BC1DACFCAFA /* ScenarioRunTests.swift in Sources */,
@@ -1113,6 +1120,7 @@
 				95186D42C4735C46EE593D41 /* Hook.swift in Sources */,
 				43EEE291F9B3463C4D5FB8FC /* ScenarioHook.swift in Sources */,
 				94EA6D58C98A53FF267FC9AD /* StepHook.swift in Sources */,
+				6B63E1CAAE6A469A632CC20E /* ParallelTesting.swift in Sources */,
 				AA7DCF374F6B970AB1E4F3E9 /* ScenarioTest.swift in Sources */,
 				E36DE6011552787DF61454D7 /* StepImplementation.swift in Sources */,
 				9E946F7ED5679E4330379EAD /* StepTestCase.swift in Sources */,
