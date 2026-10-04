@@ -48,7 +48,7 @@ if grep -qE "^Test suite '.*' started on '" "$log"; then
   status=1
 fi
 if [[ "$status" -eq 0 && "$total" -lt "$MIN_TESTS" ]]; then
-  echo "::error::Only $total tests ran; at least $MIN_TESTS were expected. If you removed tests on purpose, lower MIN_TESTS in CI.yml." >&2
+  echo "::error::Only $total tests ran; at least $MIN_TESTS were expected. If you removed tests on purpose, lower MIN_TESTS in the workflow that runs this script." >&2
   status=1
 fi
 exit $status
