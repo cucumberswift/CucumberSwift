@@ -91,6 +91,29 @@ def resolved_v3(pins):
         for _, url, version, revision in pins], "version": 3}, indent=2)
 
 
+def module_bazel(expressions='version = "1.2.0"', swift='"2.0.0"'):
+    return f"""# No version here: the registry sets it.
+module(name = "cucumberswift")
+
+bazel_dep(name = "rules_swift", version = {swift})
+# bazel_dep(name = "commented_out", version = "9.9.9")
+bazel_dep(name = "cucumberswift_expressions", {expressions})
+"""
+
+
+def tests_module_bazel(swift='"2.0.0"'):
+    return f"""module(name = "cucumberswift_tests")
+
+bazel_dep(name = "rules_apple", version = "5.0.0")
+bazel_dep(
+    name = 'rules_swift',
+    version = {swift},
+)
+bazel_dep(name = "cucumberswift")
+local_path_override(module_name = "cucumberswift", path = "..")
+"""
+
+
 SWIFTPM_PINS = [
     ("CucumberSwiftExpressions", EXPRESSIONS, "1.2.0", EXPRESSIONS_120),
     ("SwiftDocCPlugin", DOCC, "1.5.0", DOCC_150),
@@ -104,7 +127,7 @@ XCODE_PINS = [
 
 
 class Repository(unittest.TestCase):
-    """A temporary working directory holding the four files, as on main."""
+    """A temporary working directory holding the six files, as on main."""
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
@@ -116,6 +139,8 @@ class Repository(unittest.TestCase):
         self.write(check_lockfiles.PACKAGE_RESOLVED, resolved_v1(SWIFTPM_PINS))
         self.write(check_lockfiles.PBXPROJ, pbxproj())
         self.write(check_lockfiles.XCODE_RESOLVED, resolved_v3(XCODE_PINS))
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel())
+        self.write(check_lockfiles.TESTS_MODULE_BAZEL, tests_module_bazel())
 
     def write(self, path, text):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -242,11 +267,17 @@ class VersionedManifestTests(Repository):
         [error] = self.errors(output)
         self.assertIn("Package@swift-6.1.swift requires " + DOCC + " from 1.0.0", error)
 
-    def test_swift_syntax_without_a_pin_passes(self):
-        # SwiftPM does not pin a dependency only a trait uses in the root package's lockfile.
+    def test_swift_syntax_without_a_pin_fails(self):
+        # A plain resolve with Swift 6.2 drops the pin of a dependency only a trait uses,
+        # and Swift 6.1's `swift build --force-resolved-versions` then fails (#313).
         self.write(check_lockfiles.PACKAGE_RESOLVED, resolved_v1(SWIFTPM_PINS))
         status, output = self.main()
-        self.assertEqual(status, 0, output)
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Package.resolved has no pin for " + SYNTAX + ", which "
+                      "Package@swift-6.1.swift requires.", error)
+        self.assertIn("--force-resolved-versions", error)
+        self.assertIn("`swift package --enable-all-traits update swift-syntax`", error)
 
     def test_another_dependency_missing_from_the_lockfile_names_the_versioned_manifest(self):
         other = "https://github.com/example/Other.git"
@@ -257,22 +288,127 @@ class VersionedManifestTests(Repository):
         [error] = self.errors(output)
         self.assertIn("Package.resolved has no pin for " + other + ", which Package@swift-6.1.swift requires", error)
         self.assertIn("swift package resolve", error)
+        self.assertIn("swift package --enable-all-traits resolve", error)
+
+
+class BazelTests(Repository):
+    """MODULE.bazel against Package.swift, and against Tests/MODULE.bazel."""
+
+    def test_an_older_bazel_dep_fails(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel(expressions='version = "1.1.0"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn(f"Package.swift requires {EXPRESSIONS} from 1.2.0, but MODULE.bazel "
+                      f"depends on cucumberswift_expressions 1.1.0.", error)
+        self.assertIn('Set its version to "1.2.0" in MODULE.bazel', error)
+
+    def test_a_newer_bazel_dep_fails(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel(expressions='version = "1.3.0"'))
+        [error] = check_lockfiles.check_files()
+        self.assertIn("depends on cucumberswift_expressions 1.3.0", error)
+
+    def test_a_bazel_dep_without_a_version_fails(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel(expressions="repo_name = 'x'"))
+        [error] = check_lockfiles.check_files()
+        self.assertIn("depends on cucumberswift_expressions None", error)
+
+    def test_a_missing_bazel_dep_fails(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel().replace(
+            'bazel_dep(name = "cucumberswift_expressions", version = "1.2.0")', ""))
+        [error] = check_lockfiles.check_files()
+        self.assertIn("MODULE.bazel has no bazel_dep for cucumberswift_expressions, which "
+                      f"Package.swift requires as {EXPRESSIONS}.", error)
+
+    def test_a_module_the_two_files_depend_on_at_different_versions_fails(self):
+        self.write(check_lockfiles.TESTS_MODULE_BAZEL, tests_module_bazel(swift='"2.0.1"'))
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("MODULE.bazel depends on rules_swift 2.0.0, but Tests/MODULE.bazel "
+                      "depends on 2.0.1.", error)
+
+    def test_a_module_only_one_file_gives_a_version_fails(self):
+        for root, tests, expected in [
+                ('"2.0.0"', None, "MODULE.bazel depends on rules_swift 2.0.0, but "
+                                  "Tests/MODULE.bazel depends on it with no version."),
+                (None, '"2.0.0"', "MODULE.bazel depends on rules_swift with no version, but "
+                                  "Tests/MODULE.bazel depends on 2.0.0.")]:
+            with self.subTest(root=root, tests=tests):
+                self.write(check_lockfiles.MODULE_BAZEL, module_bazel().replace(
+                    'name = "rules_swift", version = "2.0.0"',
+                    f'name = "rules_swift", version = {root}' if root else 'name = "rules_swift"'))
+                self.write(check_lockfiles.TESTS_MODULE_BAZEL, tests_module_bazel().replace(
+                    "    version = \"2.0.0\",\n", f"    version = {tests},\n" if tests else ""))
+                [error] = check_lockfiles.check_files()
+                self.assertIn(expected, error)
+
+    def test_a_module_both_files_give_no_version_passes(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel().replace(
+            'name = "rules_swift", version = "2.0.0"', 'name = "rules_swift"'))
+        self.write(check_lockfiles.TESTS_MODULE_BAZEL, tests_module_bazel().replace(
+            '    version = "2.0.0",\n', ""))
+        self.assertEqual(check_lockfiles.check_files(), [])
+
+    def test_a_long_word_is_read_in_linear_time(self):
+        # A pattern that retried every position inside a word would take seconds here.
+        self.assertEqual(check_lockfiles.parse_module_bazel(
+            "bazel_dep(name = 'x', " + "a" * 200000 + ")", "MODULE.bazel"), {"x": None})
+
+    def test_a_dependency_in_a_comment_is_ignored(self):
+        modules = check_lockfiles.parse_module_bazel(module_bazel(), "MODULE.bazel")
+        self.assertEqual(modules, {"rules_swift": "2.0.0", "cucumberswift_expressions": "1.2.0"})
+
+    def test_single_quotes_and_several_lines_are_read(self):
+        modules = check_lockfiles.parse_module_bazel(tests_module_bazel(), "Tests/MODULE.bazel")
+        self.assertEqual(modules, {"rules_apple": "5.0.0", "rules_swift": "2.0.0",
+                                   "cucumberswift": None})
+
+    def test_a_bazel_dep_whose_name_is_not_a_literal_fails(self):
+        self.write(check_lockfiles.MODULE_BAZEL, module_bazel() + "bazel_dep(name = NAME)\n")
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("MODULE.bazel: this check cannot read the name of `bazel_dep(name = NAME)`",
+                      error)
+
+    def test_an_include_fails(self):
+        self.write(check_lockfiles.TESTS_MODULE_BAZEL,
+                   tests_module_bazel() + 'include("//:deps.MODULE.bazel")\n')
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Tests/MODULE.bazel uses include(), whose bazel_dep calls this check "
+                      "cannot read.", error)
+
+    def test_an_include_in_a_comment_is_ignored(self):
+        self.write(check_lockfiles.MODULE_BAZEL,
+                   module_bazel() + '# include("//:deps.MODULE.bazel")\n')
+        self.assertEqual(check_lockfiles.check_files(), [])
+
+    def test_a_missing_module_bazel_fails(self):
+        os.remove(check_lockfiles.TESTS_MODULE_BAZEL)
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn(check_lockfiles.TESTS_MODULE_BAZEL, error)
 
 
 class SharedPackageTests(Repository):
     def test_lockfiles_pinning_different_versions_fail(self):
         # What a Dependabot bump of CucumberSwiftExpressions alone would leave:
-        # Package.swift and Package.resolved move, the Xcode lockfile does not.
+        # Package.swift and Package.resolved move, the Xcode lockfile and MODULE.bazel do not.
         self.write(check_lockfiles.PACKAGE_SWIFT, package_swift(expressions='from: "1.3.0"'))
         self.write(check_lockfiles.PACKAGE_RESOLVED, resolved_v1(
             [("CucumberSwiftExpressions", EXPRESSIONS, "1.3.0", EXPRESSIONS_130)] + SWIFTPM_PINS[1:]))
         status, output = self.main()
         self.assertEqual(status, 1)
-        [error] = self.errors(output)
+        [error, bazel] = self.errors(output)
         self.assertIn(f"The lockfiles disagree on {EXPRESSIONS}: Package.resolved pins 1.3.0 "
                       f"({EXPRESSIONS_130}), {check_lockfiles.XCODE_RESOLVED} pins 1.2.0 "
                       f"({EXPRESSIONS_120})", error)
         self.assertIn("xcodebuild -resolvePackageDependencies", error)
+        self.assertIn("MODULE.bazel depends on cucumberswift_expressions 1.2.0", bazel)
 
     def test_lockfiles_pinning_different_revisions_fail(self):
         self.write(check_lockfiles.XCODE_RESOLVED, resolved_v3(
