@@ -62,6 +62,27 @@ Finding an existing attempt doesn't automatically mean stop. If it's gone stale,
 3. Open `CucumberSwift.xcodeproj` in Xcode.
 4. Install [SwiftLint](https://github.com/realm/SwiftLint) (for example `brew install swiftlint`). The Xcode build runs it with the repository's `.swiftlint.yml`.
 5. Only if you'll add, remove or rename files, or change targets or settings, set up Tuist as described in [The Xcode project](#the-xcode-project). Most changes don't need it.
+6. Optionally, turn on the [checks before each commit](#checks-before-each-commit).
+
+### Checks before each commit
+
+The git hooks in `.githooks` run CI's quick checks before each commit and each push, so a problem shows up in seconds instead of after a CI run. They need [mise](https://mise.jdx.dev), set up as in [The Xcode project](#setting-up-1). Then, once per clone:
+
+```bash
+mise trust && mise install
+MISE_ENV=lint mise install
+git config core.hooksPath .githooks
+```
+
+Before each commit, on what the commit changes:
+
+- [Trunk](https://trunk.io)'s `trunk check` runs actionlint (with ShellCheck) on the workflows, SwiftLint on Swift files, and `.github/scripts/check_lockfiles.py` when a manifest or lockfile changes. Only new problems in what you changed count, and SwiftLint warnings don't stop a commit, just as they don't fail the Xcode build.
+- `mise run check-project`, when the commit could change the Xcode project (see [Regenerating](#regenerating)).
+- The Python script tests, when a script in `.github/scripts` changes.
+
+Before each push, Trunk checks every commit being pushed, and the Python script tests run. `git commit --no-verify` and `git push --no-verify` skip the hooks; CI runs the same checks anyway.
+
+The tools' versions are pinned in `.mise.lint.toml`, which mise reads only when `MISE_ENV=lint`, as the hooks set it, so CI doesn't install them. Trunk's settings are in `.trunk/trunk.yaml`: the version of the Trunk CLI and its checksums, the linters, and `telemetry: off`, so it sends no usage data or error reports. Trunk installs no git hooks of its own.
 
 ## Running the tests
 
@@ -79,7 +100,7 @@ Experimental parallel testing has fixtures of their own, in `Tests/ParallelFixtu
 xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme ParallelHostedTestsMac -destination 'platform=macOS' -parallel-testing-worker-count 3
 ```
 
-The schemes are `ParallelHostlessTests`, `ParallelHostedTests` and `ParallelUITests`, with `TV` or `Mac` at the end for tvOS or macOS. Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` job also checks across the workers that every scenario ran exactly once and that more than one worker ran them. CI runs each combination with `.github/scripts/parallel-fixture.sh`, which you can run the same way, for example `PLATFORM=macOS KIND=Hostless .github/scripts/parallel-fixture.sh`. It passes `PARALLEL_TEST_RECORDS` to `xcodebuild`, and each run of a scenario writes a file in that folder named after the scenario, its worker's process and a UUID. To keep CI's load down, the jobs run only when the code, the fixtures, a package manifest or the workflow changes, never in the merge queue, and only after the macOS hostless combination has passed; the first failure cancels the rest. UI tests on a Mac need automation mode, which macOS asks you to allow the first time. The fixtures have no Swift package, because `swift test` can't run scenarios in parallel.
+The schemes are `ParallelHostlessTests`, `ParallelHostedTests` and `ParallelUITests`, with `TV` or `Mac` at the end for tvOS or macOS. Each worker checks that a scenario's steps ran once each, in order. CI's `Parallel tests` jobs also check across the workers that every scenario ran exactly once and that more than one worker ran them. CI runs each combination with `.github/scripts/parallel-fixture.sh`, which you can run the same way, for example `PLATFORM=macOS KIND=Hostless .github/scripts/parallel-fixture.sh`. It passes `PARALLEL_TEST_RECORDS` to `xcodebuild`, and each run of a scenario writes a file in that folder named after the scenario, its worker's process and a UUID. To keep CI's load down, the jobs run only when the code, the fixtures, a package manifest or the workflow changes, never in the merge queue, and only after the macOS hostless combination has passed; the first failure cancels the rest. A pull request runs the hosted tests on each platform with Xcode 26, and `main` runs every combination. A nightly run runs every combination whatever changed. UI tests on a Mac need automation mode, which macOS asks you to allow the first time. The fixtures have no Swift package, because `swift test` can't run scenarios in parallel.
 
 Generate the fixtures' project with `mise run generate-fixtures` before you open or run it, and again after changing `Tests/ParallelFixtures/Project.swift` or adding a file there. Unlike `CucumberSwift.xcodeproj` it is not committed: Tuist names the local package's folder after your checkout's folder, so the project differs from clone to clone. CI generates it the same way.
 
@@ -119,8 +140,11 @@ Also worth knowing:
 - **Don't use `swift test --parallel`.** It runs only the tests `swift test list` shows, so no scenario runs, and it still passes.
 - **SwiftPM builds for macOS only.** iOS and Mac Catalyst behaviour still needs `xcodebuild`.
 - **The generated step definitions are compiled.** `GeneratedStepDefinitions.swift` (in `CucumberSwiftTests`) and `GeneratedBareSlashStepDefinitions.swift` (in `CucumberSwiftConsumerTests`, which turns on bare slash regex literals) hold the stub generator's output: Cucumber expressions and `#/…/#` in the first, `/…/` in the second. `GeneratedStepDefinitionTests` fails when the generator's output changes and prints the new output to paste in.
-- **There are two manifests.** Swift 6.1 and later read `Package@swift-6.1.swift`, which adds the macros; earlier toolchains read `Package.swift`. Make every other change to both. CI's "Manifests match their lockfiles" job checks both against `Package.resolved`. A swift-syntax pin there may be present or absent: toolchains disagree on whether to pin a dependency that only a trait uses (Swift 6.1 adds the pin, a plain resolve with Swift 6.2 removes it), so the check accepts either, and checks the pin against the manifest's range when there is one. Commit `Package.resolved` as a plain `swift package resolve` leaves it.
+- **There are two manifests.** Swift 6.1 and later read `Package@swift-6.1.swift`, which adds the macros; earlier toolchains read `Package.swift`. Make every other change to both. CI's `Project checks` job checks both against `Package.resolved`, which must pin swift-syntax within `Package@swift-6.1.swift`'s range. CI's release build, `swift build --force-resolved-versions` with Swift 6.1, fails without that pin. Toolchains disagree on whether to pin a dependency that only a trait uses: Swift 6.1 adds the pin, but with Swift 6.2 and later a plain `swift package resolve` that re-resolves anything drops it. So with Swift 6.2 or later, resolve with `swift package --enable-all-traits resolve`, which keeps it. If the pin is already gone, `swift package --enable-all-traits update swift-syntax` puts it back.
 - **The localized macros are generated.** `Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift` declares a macro for every localized step type in `Sources/CucumberSwift/Generated/I18n.swift`, such as `#ES_Dado`. `LocalizedStepDefinitionMacroTests` fails when the two differ; rewrite the file with `CUCUMBERSWIFT_WRITE_LOCALIZED_MACROS=1 swift test --traits Macros --filter LocalizedStepDefinitionMacroTests`.
+- **The Gherkin parser is compiled twice.** `Sources/CucumberSwift/Gherkin/Core` is part of CucumberSwift, and the `CucumberSwiftGherkin` target compiles it again, through the `Sources/CucumberSwiftGherkin/Core` symlink, for build tools, which can't link XCTest. So code in that folder may use only Foundation and the other files in it; `swift build` fails otherwise. Tools read feature files through `FeatureFile`, and `ParserParityTests` checks that it reads every feature file under `Tests/` as CucumberSwift does, down to the step definitions it suggests.
+- **Two more files are shared by symlink.** `Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift` is CucumberSwiftMacros' declarations, which return the step types of whichever runner the module's `Exports.swift` re-exports. `Plugins/CucumberSwiftTestingPlugin/ExpandFolders.swift` is the lint plugin's, because plugins can't share a library. Edit the originals.
+- **The Swift Testing runner is tested in three places.** `CucumberSwiftTestingTests` runs single scenarios through the runner, `CucumberSwiftTestingGeneratorTests` checks the generated source, and the fixtures run feature files as a project would: `SwiftTestingPackage` from a Swift package, and `SwiftTestingAndXCTestTuist` and `SwiftTestingAndXCTestMacrosTuist` from an iOS app whose UI tests stay on CucumberSwift and XCTest while its unit tests use Swift Testing. The two Tuist fixtures are the same app, with step definitions written with the plain DSL and with the macros; the macros one links to the other's `App/BasketApp.swift` and `UITests/BasketUI.swift`, so that only the step definitions differ. The macros one also depends on a local package, `MacrosTrait`, which only turns the `Macros` trait on in its own manifest, so it also runs before Xcode 26.4; its test targets link the macros from CucumberSwift itself.
 - **A new consumer-style test target** needs its own package like the existing two, the same exclusions in `Project.swift` and `.swiftlint.yml`, and a line in CI's `SwiftPM tests` job and in the `test-swiftpm` task. New unit tests belong in `CucumberSwiftTests` and need none of that.
 
 ### With Bazel
@@ -137,7 +161,7 @@ CI's `Bazel tests` jobs run the same against a `git archive` of the commit, whic
 
 - **A new source file needs no change**: `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
 - **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in CI's `Check every feature ran` step.
-- **Keep the CucumberSwiftExpressions versions in step.** CI fails if `MODULE.bazel`'s `bazel_dep` is older than the version `Package.swift` starts from.
+- **Keep the CucumberSwiftExpressions versions in step.** `MODULE.bazel`'s `bazel_dep` must be the version `Package.swift` starts from, so Bazel builds against what the SwiftPM and Xcode jobs test. CI's `Project checks` job fails otherwise, and so does its check that `Tests/MODULE.bazel` depends on the same versions as `MODULE.bazel` for the modules both use.
 - **`Tests/.bazelrc` runs the tests one at a time.** Each iOS suite needs a booted simulator, and booting several at once timed out in CI. The first run boots a new simulator, which can take a few minutes.
 - **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).
 
@@ -149,16 +173,18 @@ CI's `Bazel tests` jobs run the same against a `git archive` of the commit, whic
 mise run test-fixtures
 ```
 
-CI runs them in the "Fixtures" job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
+CI runs them in the `Fixture tests` job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
 
-`Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with the following, which builds the framework with Carthage first; CI runs it in the Carthage build jobs:
+`Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with the following, which builds the framework with Carthage first; CI runs it in the `Carthage tests` jobs:
 
 ```bash
 mise run test-carthage
 ```
 
-- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`; name the project and its scheme after the fixture's folder, which is how the task finds them.
+- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`; name the project and its scheme after the fixture's folder, which is how the task finds them. It runs on macOS, unless the fixture has an `xcodebuild-destination` file with another `-destination`, such as `platform=iOS Simulator,name=iPhone 17`.
 - **Depend on CucumberSwift by path.** `.package(name: "CucumberSwift", path: "../..")` in a Swift package, `.package(path: "../..")` in a Tuist project.
+- **Apply the plugins a project would.** Every test target applies `CucumberSwiftLint`, and a Swift Testing target also `CucumberSwiftTestingPlugin`. Each test target has a `LintCheck.feature` with one misspelt keyword, and the fixture's `expected-warnings` lists the warning it must cause. The plugin only warns, so `mise run test-fixtures` fails when a listed warning is missing from the build output: that is how a fixture shows the plugin ran.
+- **`BrokenFeaturesPackage` is broken on purpose.** Its feature files have a misspelt keyword, an undefined step, an uneven table and an unsupported language, run by both runners. Its tests must fail, with every failure in its `expected-failures` and every warning in its `expected-warnings`. When CucumberSwift's messages change, update the expectations, not the feature files.
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
 - **Nothing generated is committed**: `.gitignore` covers each fixture's Xcode project, `Derived` folder, `.build` folder and `Package.resolved`. They are outside `Project.swift`'s globs, so they are not in CucumberSwift's Xcode project or in what Carthage builds.
 
@@ -202,13 +228,7 @@ mise exec -- tuist edit    # open Project.swift in Xcode with autocompletion
 
 If your change adds, removes or renames a file, or touches `Project.swift`, run `mise run generate` and commit the regenerated `CucumberSwift.xcodeproj` with your change. A pull request whose project and manifest disagree fails CI.
 
-To catch that before you push, turn on the pre-commit hook once in your clone:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-It runs `mise run check-project`, but only when a commit touches the manifests or the project, or adds, removes or renames a file under `Sources` or `Tests`.
+To catch that before you push, turn on the [checks before each commit](#checks-before-each-commit). The pre-commit hook runs `mise run check-project` when a commit touches the manifests or the project, or adds, removes or renames a file under `Sources` or `Tests`.
 
 You don't need `tuist install`. The package dependencies use Xcode's own Swift Package Manager integration. `tuist generate` may still print "We detected outdated dependencies. Run 'tuist install'"; you can ignore it.
 
@@ -218,10 +238,10 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 ### Things to keep in mind
 
-- **Three scheme names are load bearing.** The CI and Release workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`. CI's `Parallel tests` job runs the fixtures' schemes by name too.
+- **Three scheme names are load bearing.** The CI and Release workflows run `CucumberSwift`, and Carthage builds it. Don't rename `CucumberSwift`, `CucumberSwiftConsumerTests` or `CucumberSwiftDSLConsumerTests`. CI's `Parallel tests` jobs run the fixtures' schemes by name too.
 - **The framework carries CucumberSwiftExpressions' module.** CucumberSwift's API uses CucumberSwiftExpressions' types, so a target that imports CucumberSwift needs that module too, and Carthage delivers only the framework. The "Embed CucumberSwiftExpressions module" script in `Project.swift` copies the module into the framework's `Modules` folder. Don't remove it: `mise run test-carthage` fails without it.
 - **`project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is a lockfile for Carthage users.** It pins the CucumberSwiftExpressions version they get. Regenerating leaves it alone. If your diff changes it anyway, put it back unless updating that dependency is what your change is for.
-- **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve`, run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, or when the two lockfiles pin a package differently, and its error says which file to fix.
+- **Updating a dependency means both manifests and both lockfiles.** `Package.swift` has its own lockfile, `Package.resolved`. Raise the lower bound (`from:`) in each manifest that declares the dependency to the version you're moving to, run `swift package resolve` (with Swift 6.2 or later, `swift package --enable-all-traits resolve`; see "There are two manifests" under [With Swift Package Manager](#with-swift-package-manager)), run `mise run generate` and then `xcodebuild -resolvePackageDependencies -project CucumberSwift.xcodeproj`, and commit all of it. For CucumberSwiftExpressions, set the same version in `MODULE.bazel` too. CI fails a pull request when a lower bound isn't the locked version, when a lockfile is stale, when the two lockfiles pin a package differently, or when `MODULE.bazel` disagrees with `Package.swift`, and its error says which file to fix.
 
 ### Troubleshooting
 
@@ -296,7 +316,7 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 When you open a PR:
 
-1. **CI runs** the tests, builds the package with Swift Package Manager, and builds the framework with Carthage. Please fix anything it reports.
+1. **CI runs** the tests, builds the package with Swift Package Manager, and builds the framework with Carthage. Please fix anything it reports. A pull request runs each check on the newest Xcode; the merge queue also runs the older Xcode and Bazel versions before the change merges.
 2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
 3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
 

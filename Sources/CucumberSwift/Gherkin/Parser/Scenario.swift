@@ -22,16 +22,10 @@ public class Scenario: NSObject, Taggable, Positionable {
         endLocation = .start
         desc = ""
         super.init()
-        self.tags = tags
-        for token in node.tokens {
-            if case Lexer.Token.title(_, let t) = token {
-                title = t
-            } else if case Lexer.Token.description(_, let t) = token {
-                desc += t + "\n"
-            } else if case Lexer.Token.tag(_, let tag) = token {
-                self.tags.append(tag)
-            }
-        }
+        let header = NodeHeader(node.tokens)
+        title = header.title
+        desc = header.description
+        self.tags = tags + header.tags
         steps ?= node.children.compactMap { $0 as? AST.StepNode }.map { Step(with: $0) }
         steps.insert(contentsOf: stepNodes.map { Step(with: $0) }, at: 0)
         setupSteps()
@@ -51,14 +45,11 @@ public class Scenario: NSObject, Taggable, Positionable {
 
     private func setupSteps() {
         // What happens with Background steps? Background is Given, step is And?
-        var previousKeyword: Step.Keyword?
-        self.steps.forEach { [weak self] in
-            $0.scenario = self
-            if let previous = previousKeyword, !Step.Keyword.primaryKeywords.contains($0.keyword) {
-                try? $0.addPrimaryKeyword(previous)
-            }
-            if Step.Keyword.primaryKeywords.contains($0.keyword) {
-                previousKeyword = $0.keyword
+        let continuedKeywords = Step.Keyword.continuedKeywords(steps.map(\.keyword))
+        for (step, continued) in zip(steps, continuedKeywords) {
+            step.scenario = self
+            if let continued {
+                try? step.addPrimaryKeyword(continued)
             }
         }
     }

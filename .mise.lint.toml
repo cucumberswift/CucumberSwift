@@ -1,0 +1,16 @@
+# The tools the git hooks in .githooks run, through Trunk (.trunk/trunk.yaml). mise reads this
+# file only when MISE_ENV=lint, which the hooks set, so CI's jobs don't install these. Install
+# them once with: MISE_ENV=lint mise install
+# See "Checks before each commit" in CONTRIBUTING.md.
+#
+# Each comes from its GitHub release, checked against the digest GitHub publishes for it
+# (actionlint also against its signed build attestations), except the Trunk launcher: a
+# script from trunk.io with no published checksum. The launcher then checks the Trunk CLI it
+# downloads against the checksums in .trunk/trunk.yaml.
+
+[tools]
+"aqua:trunk-io/launcher" = "1.3.4"
+"aqua:rhysd/actionlint" = "1.7.12"
+# actionlint runs ShellCheck on each workflow's run: steps.
+"aqua:koalaman/shellcheck" = "0.11.0"
+"aqua:realm/SwiftLint" = "0.65.1"

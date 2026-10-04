@@ -3,10 +3,8 @@
 //  CucumberSwiftMacros
 //
 
-// The expansions use CucumberSwift's step types and CucumberSwiftExpressions' `CucumberExpression` and
-// `Match`, so importing this module is enough to use the macros.
-@_exported import CucumberSwift
-@_exported import CucumberSwiftExpressions
+// The macros return the step types of the runner that Exports.swift re-exports. CucumberSwiftTestingMacros
+// compiles this file too, through a symlink, for CucumberSwiftTesting's step types.
 
 // The pattern is a `String`, not a `StaticString`, so that an interpolated pattern or a variable
 // reaches the macro, which reports that the pattern must be a string literal. A `StaticString`

@@ -1,0 +1,1 @@
+../CucumberSwiftLintPlugin/ExpandFolders.swift

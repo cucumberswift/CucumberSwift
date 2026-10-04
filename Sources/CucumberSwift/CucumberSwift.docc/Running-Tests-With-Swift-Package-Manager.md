@@ -16,8 +16,12 @@ SwiftPM copies only the files you declare into the test bundle. Declare your `Fe
     dependencies: ["CucumberSwift"],
     resources: [
         .copy("Features")
-    ])
+    ],
+    // Checks the feature files on every build: see "Checking Feature Files While You Build".
+    plugins: [.plugin(name: "CucumberSwiftLint", package: "CucumberSwift")])
 ```
+
+The `CucumberSwiftLint` plugin checks your feature files and step definitions each time the target builds, and reports each problem as a warning: see <doc:Checking-Feature-Files>.
 
 The folder must be named `Features`, with that capitalisation. SwiftPM generates the test bundle's `Info.plist` itself, so the `FeaturesPath` and `FeatureScenarioDelimiter` keys that an Xcode test target can set are not available.
 

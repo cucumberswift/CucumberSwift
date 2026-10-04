@@ -1,9 +1,26 @@
 #!/bin/sh
-# Checks that the committed Xcode project still matches Project.swift, but only when
-# a commit could change it. Opt in once per clone: git config core.hooksPath .githooks
-# CI runs the same check, so this only catches a mismatch sooner.
+# Runs CI's quick checks on what a commit changes, so a problem shows up before CI:
+#   - Trunk's linters (.trunk/trunk.yaml): actionlint, SwiftLint, and the manifest and
+#     lockfile check;
+#   - the Xcode project check, when a commit could change the project;
+#   - the Python script tests, when a script changes.
+# Opt in once per clone: git config core.hooksPath .githooks
+# Install the tools once: mise install && MISE_ENV=lint mise install
+# CI runs the same checks. Skip them for one commit with git commit --no-verify.
+set -e
+
+# The linters' versions are pinned in .mise.lint.toml.
+MISE_ENV=lint mise exec -- trunk check --no-fix --no-progress -t git-commit \
+  --index-file "$GIT_INDEX_FILE" --upstream=HEAD
+
 manifest=$(git diff --cached --name-only -- Project.swift Tuist.swift .mise.toml CucumberSwift.xcodeproj)
 file_list=$(git diff --cached --name-only --diff-filter=ADR -- Sources Tests)
 if [ -n "$manifest$file_list" ]; then
-  exec mise run check-project
+  mise run check-project
+fi
+
+if [ -n "$(git diff --cached --name-only -- .github/scripts)" ]; then
+  # Without git's hook variables: some tests run git in repositories of their own.
+  # shellcheck disable=SC2046 # one variable name per word
+  (unset $(git rev-parse --local-env-vars); python3 -m unittest discover -s .github/scripts)
 fi

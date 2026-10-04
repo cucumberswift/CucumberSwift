@@ -20,7 +20,11 @@ let project = Project(
             // A folder reference keeps the feature files in a "Features" folder inside the test
             // bundle, where CucumberSwift looks for them.
             resources: [.folderReference(path: "Tests/Features")],
-            dependencies: [.package(product: "CucumberSwiftMacros")],
+            dependencies: [
+                .package(product: "CucumberSwiftMacros"),
+                // Checks the feature files and step definitions on every build.
+                .package(product: "CucumberSwiftLint", type: .plugin)
+            ],
             settings: .settings(base: [
                 "SWIFT_VERSION": "6.0",
                 // Builds and runs without a signing team.

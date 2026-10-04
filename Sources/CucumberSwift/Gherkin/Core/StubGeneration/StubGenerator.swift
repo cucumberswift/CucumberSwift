@@ -23,15 +23,7 @@ enum StubGenerator {
         let captures: [(type: String, value: String)]
     }
 
-    static var implementorRegexLiteralStyle: RegexLiteralStyle {
-        (Cucumber.shared as? StepImplementation)?.regexLiteralStyle ?? .extendedDelimiter
-    }
-
-    static var implementorStyle: Style {
-        FeatureFlags.isGenerateRegexLiterals ? .regexLiteral(implementorRegexLiteralStyle) : .cucumberExpression
-    }
-
-    private static func regexForTokens(_ tokens: [Token]) -> String {
+    static func regexForTokens(_ tokens: [Token]) -> String {
         var regex = ""
         for token in tokens {
             if case .match(let m) = token {
@@ -44,28 +36,6 @@ enum StubGenerator {
             }
         }
         return regex.trimmingCharacters(in: .whitespaces)
-    }
-
-    /// The generated step definition for a step that no step definition matches: the step's own, or else
-    /// one `getStubs` lists for a step with the same pattern that the step's keyword can use, preferring one
-    /// that also has a data table or doc string when this step does, so the definition binds `step` to read it.
-    static func stub(for step: Step,
-                     in features: [Feature],
-                     style: Style = implementorStyle) -> String? {
-        let stubs = getStubs(for: features, style: style)
-        if let own = stubs.first(where: { $0.step === step }) {
-            return own.generatedSwift
-        }
-        let regex = regexForTokens(Lexer(step.match).lex())
-        let keyword = step.keyword.primaryKeywords.toString().capitalizingFirstLetter()
-        let samePattern = stubs.filter { stub in
-            regexForTokens(Lexer(stub.step.match).lex()) == regex
-                && stub.generatedSwift.components(separatedBy: "\n").contains { $0.hasPrefix("\(keyword)(") || $0.hasPrefix("MatchAll(") }
-        }
-        let sameShape = samePattern.first {
-            ($0.step.dataTable != nil) == (step.dataTable != nil) && ($0.step.docString != nil) == (step.docString != nil)
-        }
-        return (sameShape ?? samePattern.first)?.generatedSwift
     }
 
     /// Reads `5.25` as one number, and a `-` straight before a number, after a space or at the start, as its sign.
@@ -185,60 +155,26 @@ enum StubGenerator {
                           captures: captures)
     }
 
-    static func getStubs(for features: [Feature],
-                         style: Style = implementorStyle) -> [(step: Step, generatedSwift: String)] {
-        var lookup = [String: Method]()
-        let executableSteps = features
-            .taggedElements(askImplementor: false)
-            .flatMap { $0.scenarios }
-            .taggedElements(askImplementor: true)
-            .flatMap { $0.steps }
-            .sorted { $0.keyword.rawValue < $1.keyword.rawValue }
-
-        let implementedSteps = executableSteps.filter { $0.canExecute }
-
-        let methods = executableSteps
-            .filter { !$0.canExecute }
-            .reduce(into: [(step: Step, method: Method)]()) {
-                let tokens = StubGenerator.Lexer($1.match).lex()
-                let regex = regexForTokens(tokens)
-                let definition: Definition
-                switch style {
-                    case .cucumberExpression: definition = cucumberExpressionDefinition(regex: regex, tokens: tokens)
-                    case .regexLiteral(let regexLiteralStyle):
-                        definition = regexLiteralDefinition(regex: regex, tokens: tokens, style: regexLiteralStyle)
-                }
-                let variables = [
-                    (type: "dataTable", count: $1.dataTable != nil ? 1 : 0),
-                    (type: "docString", count: $1.docString != nil ? 1 : 0)
-                ]
-
-                // Steps with the same pattern share a step definition. As Cucumber Expressions, steps that
-                // differ only in a number, such as `5` and `-5`, do; regular expressions keep the `-`.
-                if let m = lookup[definition.pattern],
-                   !m.keyword.contains($1.keyword) {
-                    m.insertKeyword($1.keyword)
-                } else {
-                    let method = Method(keyword: $1.keyword,
-                                        pattern: definition.pattern,
-                                        regex: regex,
-                                        matchesParameter: definition.matchesParameter,
-                                        captures: definition.captures,
-                                        variables: variables)
-                    $0.append(($1, method))
-                    lookup[definition.pattern] = method
-                }
-            }
-
-        return methods.map { step, method in
-            let canMatchAll = implementedSteps.allSatisfy { $0.match.matches(for: method.regex).isEmpty }
-            let overwrittenSteps = implementedSteps.filter { method.keyword.contains($0.keyword) && !$0.match.matches(for: method.regex).isEmpty }
-            if !overwrittenSteps.isEmpty {
-                method.comment = "//FIXME: WARNING: This will overwite your implementation for the step(s):\n"
-                method.comment += overwrittenSteps.map { "//                \($0.keyword.toString()) \($0.match)" }.joined(separator: "\n")
-                method.comment += "\n"
-            }
-            return (step, method.generateSwift(matchAllAllowed: canMatchAll))
+    /// The step definition CucumberSwift suggests for a step with `match` and `keyword` that no step
+    /// definition matches. It binds `step` when the step has a data table or a doc string, to read them.
+    static func method(for match: String, keyword: Step.Keyword, hasDataTable: Bool, hasDocString: Bool, style: Style) -> Method {
+        let tokens = StubGenerator.Lexer(match).lex()
+        let regex = regexForTokens(tokens)
+        let definition: Definition
+        switch style {
+            case .cucumberExpression: definition = cucumberExpressionDefinition(regex: regex, tokens: tokens)
+            case .regexLiteral(let regexLiteralStyle):
+                definition = regexLiteralDefinition(regex: regex, tokens: tokens, style: regexLiteralStyle)
         }
+        let variables = [
+            (type: "dataTable", count: hasDataTable ? 1 : 0),
+            (type: "docString", count: hasDocString ? 1 : 0)
+        ]
+        return Method(keyword: keyword,
+                      pattern: definition.pattern,
+                      regex: regex,
+                      matchesParameter: definition.matchesParameter,
+                      captures: definition.captures,
+                      variables: variables)
     }
 }
