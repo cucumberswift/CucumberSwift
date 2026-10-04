@@ -72,6 +72,8 @@ open class CucumberTest: XCTestCase {
         return "CucumberSwift found no features to run. It looks for a folder named Features (case sensitive) in \(bundle.bundleURL.path), "
             + "the bundle your StepImplementation's `bundle` returns. "
             + "With Swift Package Manager, add `resources: [.copy(\"Features\")]` to your test target and return `Bundle.module`. "
+            + "With Bazel, add the folder as `structured_resources` of an `apple_resource_group`, "
+            + "with `strip_structured_resources_prefixes` set so that it lands at the bundle's root as Features. "
             + "If you use the DSL, define your features in `setupSteps()`."
     }
 
@@ -217,7 +219,7 @@ open class CucumberTest: XCTestCase {
     /// The failure for a step that more than one step definition matches. None of them runs, because
     /// CucumberSwift cannot tell which one the step means; the message says where each one is.
     static func ambiguousStepMessage(for step: Step) -> String {
-        ambiguousStepMessage(step: "\(step.keyword.toString()) \(step.match)", definitions: step.matchingDefinitions)
+        ambiguousStepMessage(step: "\(step.keywordText) \(step.match)", definitions: step.matchingDefinitions)
     }
 
     static func ambiguousStepMessage(step: String, definitions: [Step.Definition]) -> String {
@@ -323,7 +325,7 @@ extension Step {
     func method(at index: Int, of count: Int) -> TestCaseMethod? {
         let readable = FeatureFlags.isReadableTestNames
         // Readable names show the keyword as written; camel-case names keep the ones tests already have.
-        let text = "\(readable ? writtenKeyword : keyword.toString()) \(match)"
+        let text = "\(readable ? writtenKeyword : keywordText) \(match)"
         return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
             guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }),
                   !StepTestCase.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }

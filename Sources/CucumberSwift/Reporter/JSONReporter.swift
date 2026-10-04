@@ -143,13 +143,13 @@ extension CucumberJSONReporter {
         var result = Reporter.Result.pending
         var duration: Measurement<UnitDuration>?
         var name: String
-        var keyword: CucumberSwift.Step.Keyword
+        var keyword: String
         var line: UInt
         var arguments: [String]
 
         init(_ step: CucumberSwift.Step) {
             name = step.match
-            keyword = step.keyword
+            keyword = step.keywordText
             line = step.location.line
             arguments = []
         }
@@ -178,7 +178,7 @@ extension CucumberJSONReporter {
 
             try container.encode(name, forKey: .name)
 //            #warning("Fix this")
-            try container.encode(keyword.toString(), forKey: .keyword)
+            try container.encode(keyword, forKey: .keyword)
             try container.encode(line, forKey: .line)
             try container.encode(arguments, forKey: .arguments)
         }

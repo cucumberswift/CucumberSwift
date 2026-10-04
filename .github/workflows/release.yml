@@ -148,8 +148,13 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      # The same iOS Simulator run as CI's `test` job. CI.yml holds the test count
+      # floor and has checked this commit, so here it only fails a run where no
+      # test ran.
       - name: Run tests
-        run: fastlane unit_test
+        env:
+          MIN_TESTS: 1
+        run: .github/scripts/xcode-test.sh -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest'
 
   # The only job that writes to the repository's code. It runs no project or
   # dependency code: only the release script, git and the gh CLI.
@@ -191,8 +196,9 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_BOT: ${{ steps.app.outputs.app-slug }}[bot]
-          # What the source archive must contain. Add the Bazel files once they ship.
-          ARCHIVE_REQUIRES: Package.swift Sources/
+          # What the source archive must contain: the Swift package, and the Bazel module
+          # and its test module, which the Bazel registry entry uses.
+          ARCHIVE_REQUIRES: Package.swift Sources/ MODULE.bazel BUILD.bazel REPO.bazel Tests/MODULE.bazel Tests/BUILD.bazel Tests/consumer_tests.bzl
         run: python3 .github/scripts/release.py publish
 
   # DocC runs project and dependency code, so it builds with read access only.

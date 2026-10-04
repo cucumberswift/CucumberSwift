@@ -54,19 +54,8 @@ Fixtures/*/.swiftpm/
 
 Carthage/Build
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/#source-control
-
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots
-fastlane/test_output
-fastlane/reports
-fastlane/xcov_report
+# The xcodebuild output .github/scripts/xcode-test.sh writes
+xcode-test.log
 
 node_modules
 npm-debug.log
@@ -86,8 +75,8 @@ __pycache__/
 Tuist/.build/
 .package.resolved
 
-# Tuist also generates a workspace. Nothing consumes it: Carthage, fastlane and
-# CI all build CucumberSwift.xcodeproj directly, and the project carries its own
+# Tuist also generates a workspace. Nothing consumes it: Carthage and CI both
+# build CucumberSwift.xcodeproj directly, and the project carries its own
 # Package.resolved. Committing it would mean keeping a second generated artifact
 # in step for no benefit.
 CucumberSwift.xcworkspace/
@@ -97,3 +86,10 @@ CucumberSwift.xcworkspace/
 # schemes it finds in CucumberSwift.xcodeproj/xcshareddata/xcschemes/. It has
 # no way to run `tuist generate` first, so the generated project and its shared
 # schemes must stay in version control. See CONTRIBUTING.md.
+
+# Bazel
+# Bazel's output symlinks. MODULE.bazel.lock is not committed: CucumberSwift is a
+# library, and a lockfile only applies when the module is the root of a build.
+/bazel-*
+/Tests/bazel-*
+MODULE.bazel.lock

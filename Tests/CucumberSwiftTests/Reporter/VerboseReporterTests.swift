@@ -67,6 +67,31 @@ final class VerboseReporterTests: XCTestCase {
         ])
     }
 
+    // A step's keyword is written in its own feature file's language, not the last parsed file's (#290).
+    func testWritesEachStepsKeywordInItsFeatureFilesLanguage() throws {
+        var lines = [String]()
+        let reporter = VerboseReporter { lines.append($0) }
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Cuando como 2 pepinos
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        steps.forEach { reporter.didStart(step: $0, at: Date()) }
+
+        XCTAssertEqual(lines, [
+            "[CucumberSwift]     Given I have 3 cukes",
+            "[CucumberSwift]     Cuando como 2 pepinos"
+        ])
+    }
+
     func testStaysQuietUntilEnabled() throws {
         var enabled = false
         var lines = [String]()

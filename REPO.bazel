@@ -1,0 +1,5 @@
+# Tests/ is a separate Bazel module that depends on this one, as a consumer would.
+# Ignoring it keeps `bazel build @cucumberswift//...` from loading its BUILD file,
+# which needs rules_apple. .bazelignore does the same when this repository is the
+# root of the build.
+ignore_directories(["Tests"])
