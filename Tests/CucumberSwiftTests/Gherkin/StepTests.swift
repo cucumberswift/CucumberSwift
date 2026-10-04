@@ -19,6 +19,11 @@ class StepTest: XCTestCase {
         Cucumber.shared.reset()
     }
 
+    func testAKeywordWithoutTextIsNamedInTheCurrentLanguage() {
+        XCTAssertEqual(Step.Keyword.given.toString(), Scope.language.given)
+        XCTAssertEqual(Step.Keyword.but.toString(), Scope.language.but)
+    }
+
     func testAsteriskMatchesToGiven() {
         Cucumber.shared.features.removeAll()
         Cucumber.shared.parseIntoFeatures("""
