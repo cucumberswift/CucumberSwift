@@ -72,7 +72,6 @@ enum ScenarioOutlineParser {
 
             // Build textual content from tokens on this line (only `.description` tokens)
             let buffer = line.compactMap { tok -> String? in
-                if tok.isNewline() { return nil }
                 if case let .description(_, t) = tok { return t.description }
                 return nil
             }
@@ -115,17 +114,6 @@ enum ScenarioOutlineParser {
             }
             return nil
         })
-    }
-
-    /// The outline's title as written, with its `<placeholders>`.
-    static func title(of scenarioOutlineNode: AST.ScenarioOutlineNode) -> String {
-        scenarioOutlineNode.tokens.groupedByLine().first?.reduce(into: "") {
-            if case Lexer.Token.tableHeader(_, let headerText) = $1 {
-                $0 += "<\(headerText)>"
-            } else if case Lexer.Token.title(_, let titleText) = $1 {
-                $0 += titleText
-            }
-        } ?? ""
     }
 
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
