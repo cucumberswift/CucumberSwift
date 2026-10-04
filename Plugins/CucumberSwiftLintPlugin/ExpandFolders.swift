@@ -15,6 +15,6 @@ func expand(_ path: String) -> [String] {
     guard isDirectory.boolValue else { return [path] }
     guard let enumerator = FileManager.default.enumerator(atPath: path) else { return [] }
     return enumerator.compactMap { $0 as? String }
-        .filter { !$0.hasPrefix(".build/") && !$0.contains("/.build/") }
+        .filter { !URL(fileURLWithPath: $0).pathComponents.contains(".build") }
         .map { URL(fileURLWithPath: path).appendingPathComponent($0).path }
 }
