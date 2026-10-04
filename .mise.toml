@@ -34,22 +34,42 @@ description = "Build and test every project in Fixtures/"
 # (Project.swift) whose project and scheme are named after its folder. See "Fixtures" in
 # CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later. A Tuist
 # fixture runs on macOS unless its xcodebuild-destination file names another destination.
+# A fixture's expected-warnings file lists warnings its build must print, which show that the
+# CucumberSwiftLint plugin ran. The plugin only runs when its inputs change, so its stamps are
+# deleted first.
 run = '''
 set -e
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
+  log=$(mktemp)
   if [ -f "$fixture/Package.swift" ]; then
-    swift test --package-path "$fixture"
+    find "$fixture/.build" -name '*.lint-stamp' -delete 2>/dev/null || true
+    swift test --package-path "$fixture" > "$log" 2>&1 || { cat "$log"; exit 1; }
   fi
   if [ -f "$fixture/Project.swift" ]; then
     destination='platform=macOS'
     if [ -f "$fixture/xcodebuild-destination" ]; then
       destination=$(cat "$fixture/xcodebuild-destination")
     fi
+    derived="$fixture/Derived/xcodebuild"
+    find "$derived" -name '*.lint-stamp' -delete 2>/dev/null || true
     tuist generate --no-open --path "$fixture"
     xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
-      -skipMacroValidation CODE_SIGNING_ALLOWED=NO
+      -derivedDataPath "$derived" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 \
+      || { cat "$log"; exit 1; }
   fi
+  cat "$log"
+  if [ -f "$fixture/expected-warnings" ]; then
+    grep -v '^#' "$fixture/expected-warnings" | while IFS= read -r warning; do
+      [ -z "$warning" ] && continue
+      if ! grep -qF "$warning" "$log"; then
+        echo "error: $name: the build did not print the warning CucumberSwiftLint should report: $warning"
+        exit 1
+      fi
+    done
+    echo "$name: CucumberSwiftLint reported every expected warning."
+  fi
+  rm -f "$log"
 done
 '''
 

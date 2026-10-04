@@ -18,6 +18,8 @@ let package = Package(
         .testTarget(
             name: "StepDefinitionMacrosPackageTests",
             dependencies: [.product(name: "CucumberSwiftMacros", package: "CucumberSwift")],
-            resources: [.copy("Features")])
+            resources: [.copy("Features")],
+            // Checks the feature files and step definitions on every build.
+            plugins: [.plugin(name: "CucumberSwiftLint", package: "CucumberSwift")])
     ]
 )

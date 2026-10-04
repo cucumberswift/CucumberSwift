@@ -43,7 +43,8 @@ let package = Package(
         .testTarget(
             name: "MyAppTests",
             dependencies: [.product(name: "CucumberSwiftMacros", package: "CucumberSwift")],
-            resources: [.copy("Features")])
+            resources: [.copy("Features")],
+            plugins: [.plugin(name: "CucumberSwiftLint", package: "CucumberSwift")])
     ]
 )
 ```
@@ -64,7 +65,10 @@ let project = Project(
         .target(
             name: "MyAppTests",
             // …
-            dependencies: [.package(product: "CucumberSwiftMacros")])
+            dependencies: [
+                .package(product: "CucumberSwiftMacros"),
+                .package(product: "CucumberSwiftLint", type: .plugin)
+            ])
     ]
 )
 ```
@@ -103,7 +107,7 @@ Its only source file, `Sources/StepDefinitionMacros/Exports.swift`, re-exports t
 @_exported import CucumberSwiftMacros
 ```
 
-Add the folder to your project as a local package (in Xcode, **File > Add Package Dependencies… > Add Local…**; in Tuist, `.package(path: "StepDefinitionMacros")` in `Project.packages`), add its `StepDefinitionMacros` product to your test target, and `import StepDefinitionMacros` where you write step definitions. Keep CucumberSwift itself in the project, without the trait, if a target needs anything else from it, such as a plugin: SwiftPM turns the trait on for the whole package as long as one dependency asks for it.
+Add the folder to your project as a local package (in Xcode, **File > Add Package Dependencies… > Add Local…**; in Tuist, `.package(path: "StepDefinitionMacros")` in `Project.packages`), add its `StepDefinitionMacros` product to your test target, and `import StepDefinitionMacros` where you write step definitions. Keep CucumberSwift itself in the project, without the trait, for its plugins, such as `CucumberSwiftLint`: SwiftPM turns the trait on for the whole package as long as one dependency asks for it.
 
 For the Swift Testing runner, depend on `CucumberSwiftTestingMacros` and re-export it instead; see <doc:Running-Feature-Files-With-Swift-Testing>.
 

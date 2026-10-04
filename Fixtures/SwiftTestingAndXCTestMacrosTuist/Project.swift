@@ -43,7 +43,9 @@ let project = Project(
             dependencies: [
                 .target(name: "BasketApp"),
                 .package(product: "UnitStepDefinitionMacros"),
-                .package(product: "CucumberSwiftTestingPlugin", type: .plugin)
+                .package(product: "CucumberSwiftTestingPlugin", type: .plugin),
+                // Checks the feature files and step definitions on every build.
+                .package(product: "CucumberSwiftLint", type: .plugin)
             ],
             settings: settings
         ),
@@ -60,7 +62,9 @@ let project = Project(
             resources: [.folderReference(path: "UITests/Features")],
             dependencies: [
                 .target(name: "BasketApp"),
-                .package(product: "UIStepDefinitionMacros")
+                .package(product: "UIStepDefinitionMacros"),
+                // Checks the feature files and step definitions on every build.
+                .package(product: "CucumberSwiftLint", type: .plugin)
             ],
             settings: settings
         )

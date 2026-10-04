@@ -20,6 +20,11 @@ let package = Package(
             dependencies: [.product(name: "CucumberSwiftTestingMacros", package: "CucumberSwift")],
             // The plugin reads the feature files when the tests build; the tests don't need them.
             exclude: ["Features"],
-            plugins: [.plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift")])
+            plugins: [
+                // Generates a Swift Testing test for each scenario.
+                .plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift"),
+                // Checks the feature files and step definitions on every build.
+                .plugin(name: "CucumberSwiftLint", package: "CucumberSwift")
+            ])
     ]
 )
