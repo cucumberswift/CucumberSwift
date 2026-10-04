@@ -66,13 +66,13 @@ Finding an existing attempt doesn't automatically mean stop. If it's gone stale,
 
 ### Checks before each commit
 
-The git hooks in `.githooks` run CI's quick checks before each commit and each push, so a problem shows up in seconds instead of after a CI run. They need [mise](https://mise.jdx.dev), set up as in [The Xcode project](#setting-up-1). Then, once per clone:
+The git hooks in `.githooks` run CI's quick checks before each commit and each push, so a problem shows up in seconds instead of after a CI run. They need [mise](https://mise.jdx.dev), set up as in [The Xcode project](#setting-up-1). Then turn them on once per clone:
 
 ```bash
-mise trust && mise install
-MISE_ENV=lint mise install
 git config core.hooksPath .githooks
 ```
+
+The first commit installs the tools they run, at the versions `.mise.lint.toml` pins. In a git worktree, each branch runs its own copy of the hooks, even when the worktree's `core.hooksPath` names another checkout's `.githooks`; a branch from before a hook existed runs none.
 
 Before each commit, on what the commit changes:
 
@@ -208,7 +208,7 @@ Only if your change adds, removes or renames a file, or changes a target, a buil
 We pin the tool versions with [mise](https://mise.jdx.dev), a per-project tool version manager. `.mise.toml` says which version of Tuist this repository needs, much like `.nvmrc` does for Node. Tuist is pinned to an exact version and only changes in a pull request that updates it.
 
 1. Install mise, for example with `brew install mise`. You need mise 2026.9.1 or later; `.mise.toml` checks this.
-2. Trust the repository: `mise trust`. mise won't use a repository's `.mise.toml` until you do, because the file can set environment variables and define tasks that run commands. Read it first. Ours pins Tuist and defines three tasks, `generate`, `check-project` and `test-swiftpm`. Trust applies to that directory only.
+2. Trust the repository: `mise trust`. mise won't use a repository's `.mise.toml` until you do, because the file can set environment variables and define tasks that run commands. Read it first. Ours pins Tuist and defines tasks that generate and check the Xcode project and run the tests; `mise tasks ls` lists them. `.mise.lint.toml` pins the linters the git hooks run (see [Checks before each commit](#checks-before-each-commit)). Trust applies to that directory only.
 3. Install the pinned Tuist: `mise install`. It downloads Tuist from its GitHub release and checks it against the release's published checksums.
 
 You don't have to activate mise in your shell. The commands below all go through `mise run` or `mise exec`.
