@@ -1,0 +1,114 @@
+# Trunk runs the checks below from the git hooks in .githooks, so problems CI would catch are
+# caught before a commit or a push. See "Checks before each commit" in CONTRIBUTING.md.
+#
+# Downloads: the Trunk CLI from trunk.io, checked against the checksums below, and Trunk's
+# base plugin from GitHub, at the commit below. Each linter runs a binary that .mise.toml pins
+# and checks; Trunk downloads none. Trunk installs no git hooks, and sends nothing to its
+# services (`telemetry: off`).
+version: 0.1
+cli:
+  version: 1.25.0
+  # From https://trunk.io/releases/latest when 1.25.0 was current. The launcher checks the
+  # download against these.
+  sha256:
+    darwin_arm64: 2cff4f1cc63916db290359a058b88167beeac07a496682d9307a1804b498f225
+    darwin_x86_64: d0153b87a7eba4cd7d09a048b97bd60ac3ac15352def2bc3599d548875823ed3
+    linux_arm64: cc210d2185cf95bedbec06384be6ef342bdb7dcf3ff72dd08fe0e69859516887
+    linux_x86_64: 3845ff76a70cebb10e61a267ff719ffdccfa3ef6d877d51870a2c62b79603ab9
+
+# Without this, the CLI sends usage data and error reports to third-party services on every
+# run, even with TRUNK_TELEMETRY=off.
+telemetry: off
+
+# The CLI always loads its base plugin. This pins it to the commit of tag v1.2.1, the version
+# CLI 1.25.0 uses by default. None of its linters or actions are enabled.
+plugins:
+  sources:
+    - id: trunk
+      uri: https://github.com/trunk-io/plugins
+      ref: d1541d156cff2a095587dcd3adfbe1a5052a02f2
+
+lint:
+  files:
+    - name: swift-source
+      extensions: [swift]
+    - name: workflow
+      regexes: ['^\.github/workflows/[^/]+\.ya?ml$']
+    - name: dependency-manifest
+      filenames:
+        - Package.swift
+        - Package.resolved
+        - MODULE.bazel
+        - Project.swift
+        - project.pbxproj
+      regexes: ['Package@swift-[^/]+\.swift$']
+
+  # Named apart from the base plugin's actionlint and swiftlint, which download their own
+  # binaries.
+  definitions:
+    # Runs ShellCheck on each workflow's run: steps too.
+    - name: actionlint-pinned
+      files: [workflow]
+      environment:
+        - name: PATH
+          list: ["${env.PATH}"]
+      commands:
+        - name: lint
+          output: regex
+          parse_regex: '(?P<path>.*?):(?P<line>\d+):(?P<col>\d+): (?P<message>.*) \[(?P<code>[^\]]+)\]'
+          run: actionlint -oneline ${target}
+          success_codes: [0, 1]
+          batch: true
+
+    # The Xcode build runs SwiftLint too, and fails on its errors, not its warnings, so only
+    # errors block (see threshold below). --force-exclude keeps .swiftlint.yml's exclusions
+    # for files named on the command line.
+    - name: swiftlint-pinned
+      files: [swift-source]
+      environment:
+        - name: PATH
+          list: ["${env.PATH}"]
+      commands:
+        - name: lint
+          output: regex
+          parse_regex: '(?P<path>.*?):(?P<line>\d+):(?P<col>\d+): (?P<severity>.*?): (?P<message>.*) \((?P<code>.*?)\)'
+          run: swiftlint lint --quiet --force-exclude --config .swiftlint.yml ${target}
+          success_codes: [0, 2]
+          batch: true
+
+    # CI's "Manifests match their lockfiles" check, without --resolve.
+    - name: lockfiles
+      files: [dependency-manifest]
+      environment:
+        - name: PATH
+          list: ["${env.PATH}"]
+      commands:
+        - name: lint
+          output: pass_fail
+          target: .
+          run: python3 .github/scripts/check_lockfiles.py
+          success_codes: [0, 1]
+
+  enabled:
+    - actionlint-pinned
+    - swiftlint-pinned
+    - lockfiles
+
+  threshold:
+    - linters: [swiftlint-pinned]
+      level: high
+
+actions:
+  # Built in and on by default: they log in, upgrade the CLI or suggest sharing. Only
+  # trunk-cache-prune, which tidies Trunk's local cache, stays on.
+  disabled:
+    - trunk-announce
+    - trunk-check-pre-commit
+    - trunk-check-pre-push
+    - trunk-check-pre-push-always
+    - trunk-fmt-pre-commit
+    - trunk-share-with-everyone
+    - trunk-single-player-auto-on-upgrade
+    - trunk-single-player-auto-upgrade
+    - trunk-upgrade-available
+    - trunk-whoami

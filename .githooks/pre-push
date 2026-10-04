@@ -1,0 +1,17 @@
+#!/bin/sh
+# Runs Trunk's linters (.trunk/trunk.yaml) on every commit being pushed, which catches a
+# commit made with --no-verify, and the Python script tests. See .githooks/pre-commit.
+# Skip them for one push with git push --no-verify.
+set -e
+
+# Git passes the refs being pushed on stdin; Trunk reads them from a file.
+refs=$(mktemp)
+trap 'rm -f "$refs"' EXIT
+cat > "$refs"
+
+MISE_ENV=lint mise exec -- trunk check --no-fix --no-progress -t git-push \
+  --commit-ref-from-pre-push "$refs"
+
+# Without git's hook variables: some tests run git in repositories of their own.
+# shellcheck disable=SC2046 # one variable name per word
+(unset $(git rev-parse --local-env-vars); python3 -m unittest discover -s .github/scripts)
