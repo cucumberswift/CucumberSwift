@@ -15,7 +15,7 @@ toolchain, so swift-syntax is left out of the comparison (see UNPINNED). CI
 builds against the newest version in its range.
 
 The Xcode side is read from project.pbxproj, which is what xcodebuild resolves
-from. The project_drift job in CI.yml checks that it matches Project.swift.
+from. The Project checks job in CI.yml checks that it matches Project.swift.
 
 This fails when:
 
