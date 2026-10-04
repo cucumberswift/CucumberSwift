@@ -98,6 +98,11 @@ class Repository(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
         self.addCleanup(patcher.stop)
+        # Git sets GIT_DIR, GIT_INDEX_FILE and others when it runs a hook, and the git hooks
+        # run these tests. Left set, they would point this test's git commands at the
+        # repository being committed to. The patcher puts them back afterwards.
+        for name in self.git("rev-parse", "--local-env-vars").split():
+            os.environ.pop(name, None)
         self.git("init", "-q", "-b", "main")
         self.write("README.md", "# CucumberSwift\n")
         self.write("Sources/CucumberSwift/Cucumber.swift", "public class Cucumber {}\n")

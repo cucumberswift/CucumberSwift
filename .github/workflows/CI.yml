@@ -4,6 +4,13 @@ name: CI
 # long-lived branches: main and the support/N.x release lines. Any other branch
 # runs CI only through a pull request. The merge queue runs it on the merge_group
 # event, on a temporary branch holding the pull request on top of main.
+#
+# A pull request runs each check once, on the newest toolchain. The merge queue,
+# main, support/N.x, the nightly run and manual runs add the older variants
+# (Xcode 16, the oldest Bazel), so every change is checked on all of them before
+# it merges. The parallel tests skip the merge queue, run when the code changes
+# on pull requests and main (the full matrix on main), and run the full matrix on
+# every nightly and manual run (see parallel_tests).
 on:
   pull_request:
   merge_group:
@@ -11,6 +18,9 @@ on:
     branches:
       - main
       - 'support/**'
+  schedule:
+    # Nightly at 04:23 UTC, off the hour to avoid GitHub's scheduling peak.
+    - cron: '23 4 * * *'
   workflow_dispatch:
 
 # A new push to a pull request cancels the run it replaces, so the old run stops
@@ -28,12 +38,18 @@ permissions:
 
 env:
   # The fewest tests the CucumberSwift scheme's test bundles may run together, on
-  # the iOS Simulator (`test`) and on Mac Catalyst (`test_catalyst`). A test that
+  # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (419 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 508
+  # run today (420 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 509
 
+# Job names are the check names that pull requests and rulesets show: short, in
+# sentence case, "<what> tests" for a job that runs tests. A variant that runs
+# only outside pull requests adds what differs in parentheses, such as
+# "Carthage tests (Xcode 16)". The required checks are iOS tests, Project checks,
+# SwiftPM tests and Fixture tests: renaming one means changing the main ruleset
+# at the same time, or every pull request waits for a check that never reports.
 jobs:
   # Works out whether this run only changes documentation, with
   # .github/scripts/docs_only.py, which says what counts. On a docs-only pull
@@ -43,9 +59,11 @@ jobs:
   # `!cancelled()`, so if this job fails they run rather than skip. Path filters
   # on the whole workflow are not used: they would leave required checks waiting.
   # A matrix job skipped this way reports one check with its name unexpanded,
-  # such as "Bazel tests (${{ matrix.label }})", so a required check that a
+  # such as "Bazel tests${{ matrix.variant }}", so a required check that a
   # matrix job reports would wait forever on a docs-only run. Make it a job
   # without a matrix before requiring it.
+  #
+  # It also works out whether the parallel tests run (see parallel_tests).
   changes:
     name: Changed files
     runs-on: ubuntu-24.04
@@ -54,8 +72,9 @@ jobs:
       contents: read
     outputs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
+      parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
     steps:
-      # The full history, for the merge base, but only the paths: the diff reads
+      # The full history, for the merge base, but only the paths: the diffs read
       # no file contents.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,6 +85,31 @@ jobs:
       - name: Decide whether this run only changes documentation
         id: changes
         run: python3 .github/scripts/docs_only.py
+      # Never in the merge queue: the parallel tests are not required checks, and the
+      # pull request has run them. On a pull request or a push, only when the code, the
+      # fixtures, the package manifests, the tool versions or this workflow change, not
+      # the documentation, which lives in Sources too. Always on a nightly or manual run.
+      - name: Decide whether the parallel tests run
+        id: parallel
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/parallel-fixture\.sh$)'
+          if [ "$EVENT" = merge_group ]; then
+            run=false
+          elif [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Parallel tests run: $run"
+          echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
 
   # Builds the DocC catalog as the Release workflow does, on every change,
   # docs-only or not. --warnings-as-errors fails on anything DocC warns about,
@@ -86,14 +130,14 @@ jobs:
         run: swift package generate-documentation --target CucumberSwift --warnings-as-errors
 
   # codecov/patch is a required check that Codecov posts only after an upload,
-  # and the `test` job, which uploads coverage, is skipped on a docs-only run.
+  # and iOS tests, which uploads coverage, is skipped on a docs-only run.
   # This tells Codecov the commit has no coverage to report, and Codecov passes
   # its checks. `force`, because without it Codecov passes only when it counts
   # every changed file as untestable itself, which LICENSE and DocC tutorials are
   # not, and it reads those files from a pull request, which a merge queue commit
   # does not have.
-  codecov_docs_only:
-    name: Codecov (docs only)
+  coverage_docs_only:
+    name: Coverage (docs only)
     needs: changes
     if: ${{ needs.changes.outputs.docs_only == 'true' }}
     runs-on: ubuntu-24.04
@@ -113,10 +157,11 @@ jobs:
           fail_ci_if_error: true
 
   # The iOS Simulator run, and the coverage report codecov/patch reads. A required
-  # check: keep the job name. Name the destination: the scheme also builds for Mac
-  # Catalyst, which test_catalyst covers. OS=latest is the newest iOS Simulator
-  # runtime on the runner image.
-  test:
+  # check. Name the destination: the scheme also builds for Mac Catalyst, which
+  # Catalyst tests covers. OS=latest is the newest iOS Simulator runtime on the
+  # runner image.
+  ios_tests:
+    name: iOS tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
@@ -138,9 +183,26 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
 
-  # Needs nothing from `test`, so it starts alongside it instead of waiting for a
-  # second macOS runner afterwards. A required check: keep the job name.
-  build_for_package_managers:
+  # Three quick checks of the package and the Xcode project, in one job so they
+  # share one macOS runner. A required check. Each check runs even when one
+  # before it failed, so one run reports every problem.
+  #
+  # - The Xcode project matches Project.swift. CucumberSwift.xcodeproj is
+  #   generated from Project.swift and committed for Carthage. This fails when
+  #   the two disagree, for example after a hand edit to the project or a new
+  #   source file committed without regenerating. It runs the same
+  #   `mise run check-project` task as the optional pre-commit hook. First, while
+  #   the checkout is clean.
+  # - The manifests match their lockfiles. Package.swift and the Xcode project
+  #   each have a lockfile. This fails when a manifest's lower bound is not the
+  #   version its lockfile pins, when a lockfile is stale or does not satisfy its
+  #   manifest, or when the two lockfiles pin a shared package differently.
+  #   Dependabot updates only Package.swift and Package.resolved, so its pull
+  #   requests fail here until the Xcode side is updated to match.
+  # - The package builds for release with SwiftPM, from only the versions
+  #   Package.resolved pins.
+  project_checks:
+    name: Project checks
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
@@ -149,14 +211,37 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Show the toolchain
-        run: swift --version
-      # Only the versions Package.resolved pins, which the lockfiles job checks.
-      - name: Validate SwiftPM BUILDs
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Check the Xcode project matches Project.swift
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run check-project
+      - name: Check each manifest against its lockfile
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/check_lockfiles.py --resolve
+      - name: Build the package for release with SwiftPM
+        if: ${{ !cancelled() }}
         run: swift build --configuration release --build-path ./build --force-resolved-versions
 
-  release_script:
-    name: Release script tests
+  # The tests of the Python scripts in .github/scripts: the release script, the
+  # lockfile check and the docs-only check.
+  script_tests:
+    name: Script tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04
@@ -168,34 +253,70 @@ jobs:
         with:
           persist-credentials: false
           sparse-checkout: .github/scripts
-      - name: Run the release script tests
+      - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
+
+  # The pre-commit hook runs actionlint too, but a commit can skip it. The versions
+  # are the ones .mise.lint.toml pins. Each download is checked against the digest
+  # GitHub publishes for it, as mise does.
+  workflow_checks:
+    name: Workflow checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the pinned actionlint and ShellCheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          pinned() { sed -n "s|^\"aqua:$1\" = \"\(.*\)\"$|\1|p" .mise.lint.toml; }
+          download() { # repository, tag, asset
+            gh release download "$2" --repo "$1" --pattern "$3" --dir "$RUNNER_TEMP"
+            digest=$(gh api "repos/$1/releases/tags/$2" --jq ".assets[] | select(.name == \"$3\") | .digest")
+            echo "${digest#sha256:}  $RUNNER_TEMP/$3" | sha256sum --check
+            tar -xf "$RUNNER_TEMP/$3" -C "$RUNNER_TEMP/bin"
+          }
+          mkdir "$RUNNER_TEMP/bin"
+          actionlint=$(pinned rhysd/actionlint)
+          shellcheck=$(pinned koalaman/shellcheck)
+          download rhysd/actionlint "v$actionlint" "actionlint_${actionlint}_linux_amd64.tar.gz"
+          download koalaman/shellcheck "v$shellcheck" "shellcheck-v$shellcheck.linux.x86_64.tar.xz"
+          mv "$RUNNER_TEMP/bin/shellcheck-v$shellcheck/shellcheck" "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Check the workflows
+        run: |
+          actionlint --version
+          shellcheck --version
+          actionlint
 
   # Carthage builds CucumberSwift from the committed Xcode project and its shared
   # CucumberSwift scheme, with no chance to run a generator first. Nothing else in
   # CI builds that path, so this job is the only check that Carthage consumers can
   # still install the framework. It needs no Tuist: consumers never do.
   #
-  # Several Xcode versions, because consumers build with whatever Xcode they have,
-  # so a new Xcode that breaks this path should show up here first. `default` is
-  # the runner image's own Xcode, and the macos-15 image's (Xcode 16) is the oldest
-  # Xcode CI builds with. That image also carries Xcode 26.
-  carthage:
-    name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }})
+  # Two Xcode versions, because consumers build with whatever Xcode they have.
+  # Pull requests run Xcode 26, which a new release most likely breaks. The merge
+  # queue and main also run the macos-15 image's own Xcode (`default`, Xcode 16),
+  # the oldest Xcode CI builds with.
+  carthage_tests:
+    name: Carthage tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-15
     timeout-minutes: 30
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-15
-            xcode: default
-          - os: macos-15
-            xcode: '26.2'
+        include: ${{ fromJSON(github.event_name == 'pull_request'
+          && '[{"xcode":"26.2","variant":""}]'
+          || '[{"xcode":"26.2","variant":""},{"xcode":"default","variant":" (Xcode 16)"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -252,73 +373,17 @@ jobs:
         run: |
           grep -E '(^|[ /:])error: |\*\* (ARCHIVE|BUILD) (FAILED|SUCCEEDED)' carthage-build.log | sort -u | head -20 || true
 
-  # CucumberSwift.xcodeproj is generated from Project.swift and committed for
-  # Carthage. This fails when the two disagree, for example after a hand edit to the
-  # project or a new source file committed without regenerating. It runs the same
-  # `mise run check-project` task as the optional pre-commit hook.
-  project_drift:
-    name: Xcode project matches Project.swift
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
-    runs-on: macos-15
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Install mise
-        run: command -v mise || brew install mise
-      - name: Install the pinned Tuist
-        env:
-          # mise verifies the download's checksum through the GitHub API.
-          GITHUB_TOKEN: ${{ github.token }}
-          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-        run: |
-          mise --version
-          mise install
-      - name: Regenerate and compare
-        env:
-          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-        run: mise run check-project
-
-  # Package.swift and the Xcode project each have a lockfile. This fails when a
-  # manifest's lower bound is not the version its lockfile pins, when a lockfile is
-  # stale or does not satisfy its manifest, or when the two lockfiles pin a shared
-  # package differently. Dependabot updates only Package.swift and Package.resolved,
-  # so its pull requests fail here until the Xcode side is updated to match. No
-  # path filter, so it reports on every pull request (Skipped when docs-only)
-  # and can be a required check.
-  lockfiles:
-    name: Manifests match their lockfiles
-    needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
-    runs-on: macos-15
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Show the toolchain
-        run: |
-          xcodebuild -version
-          swift --version
-      - name: Check each manifest against its lockfile
-        run: python3 .github/scripts/check_lockfiles.py --resolve
-
   # The test command CONTRIBUTING.md gives contributors runs on Mac Catalyst, but
-  # the `test` job above runs on an iOS Simulator and never exercises Catalyst.
-  # The two destinations run test suites in a different order, which hid an
+  # iOS tests runs on an iOS Simulator and never exercises Catalyst. The two
+  # destinations run test suites in a different order, which hid an
   # order-dependent failure on the Simulator for years (#183), so run the
   # documented command as written.
   #
-  # Xcode 26 runs on macos-26: the macos-15 image carries Xcode 26 too, but its host
-  # is macOS 15, and Xcode 26 will not run Catalyst tests there.
-  test_catalyst:
-    name: Catalyst tests (${{ matrix.os }})
+  # Pull requests run Xcode 26, on macos-26: the macos-15 image carries Xcode 26
+  # too, but its host is macOS 15, and Xcode 26 will not run Catalyst tests there.
+  # The merge queue and main also run Xcode 16, on macos-15.
+  catalyst_tests:
+    name: Catalyst tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ${{ matrix.os }}
@@ -328,7 +393,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-26]
+        include: ${{ fromJSON(github.event_name == 'pull_request'
+          && '[{"os":"macos-26","variant":""}]'
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","variant":" (Xcode 16)"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -340,51 +407,18 @@ jobs:
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
-  # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst. Every combination runs
-  # with Xcode 26 on macos-26; iOS and Mac Catalyst run with Xcode 16 on macos-15 too.
+  # and UI tests, on iOS and tvOS Simulators, macOS and Mac Catalyst.
   # .github/scripts/parallel-fixture.sh runs one combination and says when it fails.
   #
-  # They fail fast, because they need many macOS runners: they run only when a change could
-  # affect them, never in the merge queue (they are not required checks, and the pull request
-  # has run them), the rest wait for one quick combination to pass, and the first failure
-  # cancels the others.
-  parallel_changes:
-    name: Parallel tests needed
-    if: github.event_name != 'merge_group'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      needed: ${{ steps.diff.outputs.needed }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Check what changed
-        id: diff
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD: ${{ github.sha }}
-        run: |
-          # The code, the fixtures, the package manifests, the tool versions or this workflow; not
-          # the documentation, which lives in Sources too.
-          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/parallel-fixture\.sh$)'
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            needed=true
-          elif git diff --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
-            needed=true
-          else
-            needed=false
-          fi
-          echo "Parallel tests needed: $needed"
-          echo "needed=$needed" >> "$GITHUB_OUTPUT"
-
+  # They need many macOS runners, so they run only when the changes job says so (never in
+  # the merge queue), the rest wait for the macOS hostless combination here to pass, and
+  # the first failure cancels the others. A pull request runs the hosted tests on each
+  # platform with Xcode 26. Main, nightly and manual runs run every combination with
+  # Xcode 26 on macos-26, and iOS and Mac Catalyst with Xcode 16 on macos-15 too.
   parallel_smoke:
-    name: Parallel tests (Hostless, macOS, macos-26)
-    needs: parallel_changes
-    if: needs.parallel_changes.outputs.needed == 'true'
+    name: Parallel tests (macOS, hostless)
+    needs: changes
+    if: needs.changes.outputs.parallel_tests == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     permissions:
@@ -411,42 +445,32 @@ jobs:
           KIND: Hostless
         run: .github/scripts/parallel-fixture.sh
 
-  parallel_test:
-    name: Parallel tests (${{ matrix.kind }}, ${{ matrix.platform }}, ${{ matrix.os }})
-    needs: [parallel_changes, parallel_smoke]
-    if: needs.parallel_changes.outputs.needed == 'true'
-    runs-on: ${{ matrix.os }}
+  parallel_tests:
+    name: Parallel tests (${{ matrix.platform }}, ${{ matrix.kind }}${{ matrix.xcode == '16' && ', Xcode 16' || '' }})
+    needs: [changes, parallel_smoke]
+    if: needs.changes.outputs.parallel_tests == 'true'
+    runs-on: ${{ matrix.xcode == '16' && 'macos-15' || 'macos-26' }}
     timeout-minutes: 40
     permissions:
       contents: read
     strategy:
       fail-fast: true
+      # The values are what the check names show; the steps turn them into what
+      # parallel-fixture.sh takes. No `include`: an entry that matches no
+      # combination, as on a pull request, would add a job of its own.
       matrix:
-        os: [macos-15, macos-26]
-        platform: [iOS Simulator, tvOS Simulator, macOS, Mac Catalyst]
-        kind: [Hostless, Hosted, UI]
+        xcode: ${{ fromJSON(github.event_name == 'pull_request' && '["26"]' || '["16","26"]') }}
+        platform: [iOS, tvOS, macOS, Catalyst]
+        kind: ${{ fromJSON(github.event_name == 'pull_request' && '["hosted"]' || '["hostless","hosted","UI"]') }}
         exclude:
-          - os: macos-15
-            platform: tvOS Simulator
-          - os: macos-15
+          - xcode: '16'
+            platform: tvOS
+          - xcode: '16'
             platform: macOS
           # Run first, by parallel_smoke.
-          - os: macos-26
+          - xcode: '26'
             platform: macOS
-            kind: Hostless
-        include:
-          # Two workers on a Simulator, not three: booting a third clone on a busy runner timed out.
-          - platform: iOS Simulator
-            workers: 2
-          - platform: tvOS Simulator
-            workers: 2
-          # UI tests on a Mac have only been tried with one worker.
-          - platform: Mac Catalyst
-            kind: UI
-            workers: 1
-          - platform: macOS
-            kind: UI
-            workers: 1
+            kind: hostless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -465,18 +489,21 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run generate-fixtures
+      # Two workers on a Simulator, not three: booting a third clone on a busy runner timed
+      # out. UI tests on a Mac have only been tried with one worker.
       - name: Run the parallel fixture
         env:
-          PLATFORM: ${{ matrix.platform }}
-          KIND: ${{ matrix.kind }}
-          WORKERS: ${{ matrix.workers || 3 }}
+          PLATFORM: ${{ matrix.platform == 'iOS' && 'iOS Simulator' || matrix.platform == 'tvOS' && 'tvOS Simulator' || matrix.platform == 'Catalyst' && 'Mac Catalyst' || 'macOS' }}
+          KIND: ${{ matrix.kind == 'hostless' && 'Hostless' || matrix.kind == 'hosted' && 'Hosted' || 'UI' }}
+          WORKERS: ${{ (matrix.platform == 'iOS' || matrix.platform == 'tvOS') && 2 || matrix.kind == 'UI' && 1 || 3 }}
         run: .github/scripts/parallel-fixture.sh
 
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
   # SwiftPM links all of a package's test targets into one test bundle, and each
   # consumer test target declares its own `extension Cucumber: StepImplementation`,
   # so each consumer test folder is a package of its own and runs separately.
-  swift_test:
+  # A required check.
+  swiftpm_tests:
     name: SwiftPM tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
@@ -501,15 +528,15 @@ jobs:
       - name: Run the Swift 6 language mode consumer tests
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
       # Uses the step definition macros as a project would: the Macros trait turned on from its own
-      # Package.swift, on the oldest Swift that has traits. The Fixtures job runs it on a newer one.
+      # Package.swift, on the oldest Swift that has traits. Fixture tests runs it on a newer one.
       - name: Run the step definition macros package fixture
         run: swift test --package-path Fixtures/StepDefinitionMacrosPackage
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
-  # package trait only compiles with Xcode 26.4 or later.
-  fixtures:
-    name: Fixtures
+  # package trait only compiles with Xcode 26.4 or later. A required check.
+  fixture_tests:
+    name: Fixture tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-26
@@ -546,8 +573,8 @@ jobs:
   # - from Tests/, a separate module that depends on this one;
   # - on every Bazel major that MODULE.bazel's bazel_compatibility allows, and
   #   on macOS and an iOS simulator, at the lowest OS versions consumers use.
-  bazel:
-    name: Bazel tests (${{ matrix.label }})
+  bazel_tests:
+    name: Bazel tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
@@ -556,15 +583,14 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      # The labels are the check names, which rulesets require, so they hold no
-      # version number. An empty version means Bazelisk runs .bazelversion.
-      # The oldest major that bazel_compatibility in MODULE.bazel allows, 8.x, runs
-      # in the merge queue and on main only, to save macOS runners on every pull
-      # request push. It still checks every change before it merges.
+      # The check names hold no version number, so they stay the same when the
+      # versions change. An empty version means Bazelisk runs .bazelversion. The
+      # oldest major that bazel_compatibility in MODULE.bazel allows, 8.x, runs
+      # outside pull requests only.
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"label":"pinned Bazel","bazel":""}]'
-          || '[{"label":"pinned Bazel","bazel":""},{"label":"oldest Bazel","bazel":"8.x"}]') }}
+          && '[{"bazel":"","variant":""}]'
+          || '[{"bazel":"","variant":""},{"bazel":"8.x","variant":" (oldest Bazel)"}]') }}
     env:
       # The runner's `bazel` is Bazelisk, which runs this version, or .bazelversion.
       USE_BAZEL_VERSION: ${{ matrix.bazel }}

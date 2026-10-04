@@ -10,12 +10,15 @@ The repository has two kinds of manifest, each with its own lockfile:
 
 A newer toolchain reads the version-specific manifest, Package@swift-6.1.swift,
 instead of Package.swift. It adds swift-syntax behind the Macros package trait.
-Whether SwiftPM pins a dependency that only a trait uses depends on the
-toolchain, so swift-syntax is left out of the comparison (see UNPINNED). CI
-builds against the newest version in its range.
+Package.resolved must pin it (see TRAIT_ONLY), because CI's release build on
+Swift 6.1 uses --force-resolved-versions, which fails without the pin.
 
 The Xcode side is read from project.pbxproj, which is what xcodebuild resolves
-from. The project_drift job in CI.yml checks that it matches Project.swift.
+from. The Project checks job in CI.yml checks that it matches Project.swift.
+
+The Bazel side is MODULE.bazel and Tests/MODULE.bazel, which have no lockfile:
+a bazel_dep's version is the one Bazel uses, unless another module needs a
+newer one.
 
 This fails when:
 
@@ -24,12 +27,18 @@ This fails when:
      outside the range;
   2. the two lockfiles pin a different version or revision of a package that
      both contain;
-  3. with --resolve, a lockfile is stale or does not satisfy its manifest.
+  3. MODULE.bazel depends on a package Package.swift also requires (see
+     BAZEL_MODULES) at a version other than Package.swift's lower bound, or
+     MODULE.bazel and Tests/MODULE.bazel depend on one module at different
+     versions;
+  4. with --resolve, a lockfile is stale or does not satisfy its manifest.
 
 Run from the repository root:
 
-  python3 .github/scripts/check_lockfiles.py            # checks 1 and 2
-  python3 .github/scripts/check_lockfiles.py --resolve  # and 3 (needs swift and xcodebuild)
+  python3 .github/scripts/check_lockfiles.py            # checks 1 to 3
+  python3 .github/scripts/check_lockfiles.py --resolve  # and 4 (needs swift and xcodebuild)
+
+The pre-commit hook runs the first form, through Trunk (.trunk/trunk.yaml).
 
 Only the standard library is used.
 """
@@ -46,18 +55,32 @@ PACKAGE_RESOLVED = "Package.resolved"
 XCODE_PROJECT = "CucumberSwift.xcodeproj"
 PBXPROJ = f"{XCODE_PROJECT}/project.pbxproj"
 XCODE_RESOLVED = f"{XCODE_PROJECT}/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+MODULE_BAZEL = "MODULE.bazel"
+TESTS_MODULE_BAZEL = "Tests/MODULE.bazel"
 
 # How to fix each side, for the error messages.
 # A plain resolve: Swift 6.1's `swift package` has no trait options.
 RESOLVE_SWIFTPM = ("swift", "package", "resolve")
-# Dependencies that only a package trait uses. Toolchains disagree on whether the root
-# package's Package.resolved pins them: Swift 6.1.2 adds a pin, Swift 6.2.3 removes it,
-# even with every trait on. So a missing pin is expected, and a pin that resolving adds or
-# removes does not make the lockfile stale. A pin that is there is still checked against
-# the manifest's range.
-UNPINNED = {"swift-syntax"}
+# Dependencies that only a package trait uses. Toolchains disagree on whether to pin them
+# when they resolve: Swift 6.1 adds the pin, and Swift 6.2 drops it on a plain resolve that
+# re-resolves anything, unless every trait is on. Swift 6.1's `swift build
+# --force-resolved-versions`, CI's release build, fails without the pin, so it is required.
+# A pin that resolving adds or removes does not make the lockfile stale, since that depends
+# on the toolchain that resolved.
+TRAIT_ONLY = {"swift-syntax"}
 FIX_SWIFTPM = (f"Edit {PACKAGE_SWIFT} and each {VERSIONED_PACKAGE_SWIFT} alike, then run "
-               f"`{' '.join(RESOLVE_SWIFTPM)}` and commit {PACKAGE_RESOLVED}.")
+               f"`{' '.join(RESOLVE_SWIFTPM)}` with Swift 6.1, or `swift package "
+               f"--enable-all-traits resolve` with Swift 6.2 or later, and commit "
+               f"{PACKAGE_RESOLVED}.")
+FIX_TRAIT_ONLY = ("CI's release build, `swift build --force-resolved-versions` with Swift 6.1, "
+                  "fails without this pin. A plain `swift package resolve` with Swift 6.2 or "
+                  "later drops it. Put it back with `swift package --enable-all-traits update "
+                  "{name}` (Swift 6.2 or later) or `swift package resolve` (Swift 6.1), and "
+                  f"commit {PACKAGE_RESOLVED}.")
+# Bazel modules that are also SwiftPM dependencies: the bazel_dep name in MODULE.bazel, and
+# the package identity in Package.swift. MODULE.bazel must depend on the version Package.swift
+# starts from, so Bazel builds against what CI's SwiftPM and Xcode jobs test.
+BAZEL_MODULES = {"cucumberswift_expressions": "cucumberswiftexpressions"}
 FIX_XCODE = (f"Edit Project.swift and run `mise run generate`, then run "
              f"`xcodebuild -resolvePackageDependencies -project {XCODE_PROJECT}` and commit "
              f"the project and {XCODE_RESOLVED}.")
@@ -83,6 +106,9 @@ PBX_REFERENCE = re.compile(
     r"isa = XCRemoteSwiftPackageReference;\s*repositoryURL = " + PBX_VALUE + r";\s*"
     r"requirement = \{([^{}]*)\};")
 PBX_FIELD = re.compile(r"(\w+) = " + PBX_VALUE + ";")
+# A Starlark bazel_dep call, and a keyword argument in it with a string value.
+BAZEL_DEP = re.compile(r"\bbazel_dep\s*\(([^()]*)\)")
+STARLARK_ARGUMENT = re.compile(r"""\b(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 
 
 class CheckError(Exception):
@@ -209,6 +235,27 @@ def parse_pbxproj(text):
     return dependencies
 
 
+def parse_module_bazel(text, path):
+    """Return {module name: version or None} for each bazel_dep. Comments are dropped
+    first; a `#` inside a string would be read as one, which MODULE.bazel has none of."""
+    dependencies = {}
+    text = re.sub(r"#[^\n]*", "", text)
+    # Bazel reads an included file's bazel_dep calls as part of this file. Fail rather than
+    # skip them.
+    if re.search(r"\binclude\s*\(", text):
+        raise CheckError(f"{path} uses include(), whose bazel_dep calls this check cannot "
+                         f"read. Declare the dependencies in {path} itself.")
+    for call in BAZEL_DEP.finditer(text):
+        arguments = {key: double or single
+                     for key, double, single in STARLARK_ARGUMENT.findall(call.group(1))}
+        if "name" not in arguments:
+            raise CheckError(f"{path}: this check cannot read the name of "
+                             f"`bazel_dep({' '.join(call.group(1).split())})`. Write it as a "
+                             f"string literal, `name = \"...\"`.")
+        dependencies[arguments["name"]] = arguments.get("version")
+    return dependencies
+
+
 def parse_resolved(text, path):
     """Return {identity: {url, version, revision}} for each pin, from any lockfile format."""
     try:
@@ -245,9 +292,10 @@ def check_bounds(manifest, dependencies, lockfile, pins, fix):
     errors = []
     for name, (url, bound, upper) in sorted(dependencies.items()):
         pin = pins.get(name)
-        if pin is None and lockfile == PACKAGE_RESOLVED and name in UNPINNED:
-            continue
-        if pin is None:
+        if pin is None and lockfile == PACKAGE_RESOLVED and name in TRAIT_ONLY:
+            errors.append(f"{lockfile} has no pin for {url}, which {manifest} requires. "
+                          + FIX_TRAIT_ONLY.format(name=name))
+        elif pin is None:
             errors.append(f"{lockfile} has no pin for {url}, which {manifest} requires. {fix}")
         elif not same_repository(pin["url"], url):
             errors.append(f"{manifest} requires {url}, but {lockfile} pins {pin['url']}, a "
@@ -286,6 +334,32 @@ def check_shared(swiftpm_pins, xcode_pins):
     return errors
 
 
+def check_bazel(swiftpm_dependencies, modules, tests_modules):
+    """Errors for each Bazel module that is also a SwiftPM dependency at another version,
+    and for each module the two MODULE.bazel files depend on at different versions."""
+    errors = []
+    for module, name in sorted(BAZEL_MODULES.items()):
+        if name not in swiftpm_dependencies:
+            continue
+        url, bound, _ = swiftpm_dependencies[name]
+        version = modules.get(module)
+        if module not in modules:
+            errors.append(f"{MODULE_BAZEL} has no bazel_dep for {module}, which {PACKAGE_SWIFT} "
+                          f"requires as {url}. Add `bazel_dep(name = \"{module}\", version = "
+                          f"\"{bound}\")`.")
+        elif version != bound:
+            errors.append(f"{PACKAGE_SWIFT} requires {url} from {bound}, but {MODULE_BAZEL} "
+                          f"depends on {module} {version}. Set its version to \"{bound}\" in "
+                          f"{MODULE_BAZEL}, the version CI builds against.")
+    for module in sorted(modules.keys() & tests_modules.keys()):
+        ours, theirs = modules[module], tests_modules[module]
+        if ours != theirs:
+            errors.append(f"{MODULE_BAZEL} depends on {module} {ours or 'with no version'}, but "
+                          f"{TESTS_MODULE_BAZEL} depends on {theirs or 'it with no version'}. Use "
+                          f"the same version in both.")
+    return errors
+
+
 def read(path):
     with open(path, encoding="utf-8") as handle:
         return handle.read()
@@ -297,7 +371,7 @@ def swiftpm_manifests():
 
 
 def check_files():
-    """Checks 1 and 2, on the files in the working directory."""
+    """Checks 1 to 3, on the files in the working directory."""
     swiftpm_pins = parse_resolved(read(PACKAGE_RESOLVED), PACKAGE_RESOLVED)
     xcode_pins = parse_resolved(read(XCODE_RESOLVED), XCODE_RESOLVED)
     swiftpm_errors = []
@@ -307,7 +381,10 @@ def check_files():
     return (swiftpm_errors
             + check_bounds("Project.swift", parse_pbxproj(read(PBXPROJ)),
                            XCODE_RESOLVED, xcode_pins, FIX_XCODE)
-            + check_shared(swiftpm_pins, xcode_pins))
+            + check_shared(swiftpm_pins, xcode_pins)
+            + check_bazel(parse_package_swift(read(PACKAGE_SWIFT)),
+                          parse_module_bazel(read(MODULE_BAZEL), MODULE_BAZEL),
+                          parse_module_bazel(read(TESTS_MODULE_BAZEL), TESTS_MODULE_BAZEL)))
 
 
 def run(*args):
@@ -317,13 +394,13 @@ def run(*args):
 
 
 def checked_pins(text):
-    """Package.resolved's pins, without those in UNPINNED."""
+    """Package.resolved's pins, without those in TRAIT_ONLY."""
     return {name: pin for name, pin in parse_resolved(text, PACKAGE_RESOLVED).items()
-            if name not in UNPINNED}
+            if name not in TRAIT_ONLY}
 
 
 def check_resolve():
-    """Check 3: resolve each lockfile against its manifest, and fail if it changes."""
+    """Check 4: resolve each lockfile against its manifest, and fail if it changes."""
     errors = []
     command = " ".join(RESOLVE_SWIFTPM)
     before = read(PACKAGE_RESOLVED)
@@ -331,7 +408,7 @@ def check_resolve():
         errors.append(f"`{command}` failed, so {PACKAGE_RESOLVED} cannot satisfy "
                       f"{PACKAGE_SWIFT}. {FIX_SWIFTPM}")
     else:
-        # Compare the pins rather than the file, so that a pin in UNPINNED, or the
+        # Compare the pins rather than the file, so that a pin in TRAIT_ONLY, or the
         # originHash that changes with it, does not count.
         try:
             stale = checked_pins(before) != checked_pins(read(PACKAGE_RESOLVED))
@@ -365,7 +442,8 @@ def main(argv):
         print(f"::error::{error}")
     if errors:
         return 1
-    print("Every manifest agrees with its lockfile, and the two lockfiles agree.")
+    print("Every manifest agrees with its lockfile, the two lockfiles agree, and MODULE.bazel "
+          "agrees with Package.swift.")
     return 0
 
 
