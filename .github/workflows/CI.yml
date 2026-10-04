@@ -27,7 +27,82 @@ permissions:
   contents: read
 
 jobs:
+  # Works out whether this run only changes documentation, with
+  # .github/scripts/docs_only.py, which says what counts. On a docs-only pull
+  # request or merge queue run, the jobs that build and test code are skipped,
+  # and a skipped job reports Skipped, which counts as passing for a required
+  # check. Pushes and manual runs always run everything. Each skipped job checks
+  # `!cancelled()`, so if this job fails they run rather than skip. Path filters
+  # on the whole workflow are not used: they would leave required checks waiting.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      # The full history, for the merge base, but only the paths: the diff reads
+      # no file contents.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/scripts
+      - name: Decide whether this run only changes documentation
+        id: changes
+        run: python3 .github/scripts/docs_only.py
+
+  # Builds the DocC catalog as the Release workflow does, on every change,
+  # docs-only or not. --warnings-as-errors fails on anything DocC warns about,
+  # such as a broken symbol or page link, a missing image or a malformed directive.
+  docs:
+    name: Docs
+    runs-on: macos-15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: swift --version
+      - name: Build the documentation
+        run: swift package generate-documentation --target CucumberSwift --warnings-as-errors
+
+  # codecov/patch is a required check that Codecov posts only after an upload,
+  # and the `test` job, which uploads coverage, is skipped on a docs-only run.
+  # This tells Codecov the commit has no coverage to report, and Codecov passes
+  # its checks. `force`, because without it Codecov passes only when it counts
+  # every changed file as untestable itself, which LICENSE and DocC tutorials are
+  # not, and it reads those files from a pull request, which a merge queue commit
+  # does not have.
+  codecov_docs_only:
+    name: Codecov (docs only)
+    needs: changes
+    if: ${{ needs.changes.outputs.docs_only == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # The uploader reads the pull request's head commit from the checkout.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          run_command: empty-upload
+          force: true
+          fail_ci_if_error: true
+
   test:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     permissions:
       contents: read
@@ -46,6 +121,8 @@ jobs:
   # Needs nothing from `test`, so it starts alongside it instead of waiting for a
   # second macOS runner afterwards. A required check: keep the job name.
   build_for_package_managers:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     permissions:
       contents: read
@@ -56,6 +133,8 @@ jobs:
 
   release_script:
     name: Release script tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -79,6 +158,8 @@ jobs:
   # Xcode CI builds with. That image also carries Xcode 26.
   carthage:
     name: Carthage build (${{ matrix.os }}, Xcode ${{ matrix.xcode }})
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -162,6 +243,8 @@ jobs:
   # `mise run check-project` task as the optional pre-commit hook.
   project_drift:
     name: Xcode project matches Project.swift
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -190,9 +273,12 @@ jobs:
   # stale or does not satisfy its manifest, or when the two lockfiles pin a shared
   # package differently. Dependabot updates only Package.swift and Package.resolved,
   # so its pull requests fail here until the Xcode side is updated to match. No
-  # path filter, so it runs on every pull request and can be a required check.
+  # path filter, so it reports on every pull request (Skipped when docs-only)
+  # and can be a required check.
   lockfiles:
     name: Manifests match their lockfiles
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     timeout-minutes: 15
     permissions:
@@ -218,6 +304,8 @@ jobs:
   # is macOS 15, and Xcode 26 will not run Catalyst tests there.
   test_catalyst:
     name: Catalyst tests (${{ matrix.os }})
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -272,6 +360,8 @@ jobs:
   # so each consumer test folder is a package of its own and runs separately.
   swift_test:
     name: SwiftPM tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -302,6 +392,8 @@ jobs:
   # package trait only compiles with Xcode 26.4 or later.
   fixtures:
     name: Fixtures
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-26
     timeout-minutes: 30
     permissions:
@@ -338,6 +430,8 @@ jobs:
   #   on macOS and an iOS simulator, at the lowest OS versions consumers use.
   bazel:
     name: Bazel tests (${{ matrix.label }})
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
