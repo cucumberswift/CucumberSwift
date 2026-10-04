@@ -158,6 +158,27 @@ final class FeatureFileTests: XCTestCase {
         XCTAssertEqual(feature.scenarios.first?.steps.first?.keywords, [.given])
     }
 
+    func testFilesParsedAtTheSameTimeKeepTheirOwnLanguageAndProblems() {
+        let texts = [
+            ("en.feature", "Feature: F\n  Scenario: S\n    Given a step\n"),
+            ("es.feature", "# language: es\nCaracterística: Comer\n  Escenario: Uno\n    Dado un paso\n"),
+            ("xx.feature", "# language: xx\nFeature: F\n  Scenario: S\n    Given a step\n")
+        ]
+        let expected = texts.map { FeatureFile(parsing: $0.1, uri: $0.0) }
+        let lock = NSLock()
+        var results = [FeatureFile?](repeating: nil, count: 90)
+        DispatchQueue.concurrentPerform(iterations: results.count) { iteration in
+            let (uri, text) = texts[iteration % texts.count]
+            let file = FeatureFile(parsing: text, uri: uri)
+            lock.lock()
+            results[iteration] = file
+            lock.unlock()
+        }
+        for (iteration, file) in results.enumerated() {
+            XCTAssertEqual(file, expected[iteration % texts.count], "Iteration \(iteration)")
+        }
+    }
+
     func testAnUnsupportedLanguageIsAProblem() {
         let file = FeatureFile(parsing: "# language: xx\nFeature: F\n  Scenario: S\n    Given a step\n", uri: "Test.feature")
         XCTAssertEqual(file.problems, ["File: Test.feature declares an unsupported language"])

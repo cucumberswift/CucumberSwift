@@ -20,7 +20,8 @@ public struct FeatureFile: Equatable, Sendable {
     /// reports them.
     public let problems: [String]
 
-    /// Parses `text`. `uri` names the file in problems.
+    /// Parses `text`. `uri` names the file in problems. Safe to call from several threads at once: one
+    /// file is parsed at a time.
     public init(parsing text: String, uri: String) {
         let parsed = Gherkin.parsing {
             // The lexer sets the language from the file's `# language:` comment, and the steps must
@@ -105,9 +106,16 @@ extension FeatureFile {
 
 // MARK: - Reading the parser's nodes
 
+/// Parsing uses state the whole parser shares, `Scope.language` and `Gherkin.errors`, so one file is
+/// parsed at a time.
+private let parsingLock = NSLock()
+
 extension Gherkin {
-    /// Runs `body`, and returns what it returns with the problems the parser recorded meanwhile.
+    /// Runs `body`, and returns what it returns with the problems the parser recorded meanwhile. No
+    /// other file is parsed until it returns.
     fileprivate static func parsing<T>(_ body: () -> T) -> (result: T, problems: [String]) {
+        parsingLock.lock()
+        defer { parsingLock.unlock() }
         errors.removeAll()
         let result = body()
         let problems = errors.snapshot
