@@ -46,8 +46,10 @@ public struct GherkinStep: Sendable {
 public struct GherkinExample: Sendable, CustomTestStringConvertible, CustomTestArgumentEncodable {
     public let scenario: GherkinScenario
 
-    /// How Xcode and `swift test` name the test case: as CucumberSwift names the example's scenario.
-    public var testDescription: String { scenario.title }
+    /// How Xcode and `swift test` name the test case: by its row's line, not its values. Xcode keeps
+    /// the name from the first run after it indexes the tests, and shows a later result only on a
+    /// row with the same name, so a name with the values would keep a stale row when one changes.
+    public var testDescription: String { "Example (line \(scenario.line))" }
 
     public init(_ scenario: GherkinScenario) {
         self.scenario = scenario

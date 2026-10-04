@@ -21,8 +21,8 @@ import Testing
         column: 7,
         steps: []))
 
-    @Test func anExampleIsNamedAsCucumberSwiftNamesItsScenario() {
-        #expect(example.testDescription == "Eat 5 (left: 7)")
+    @Test func anExampleIsNamedAfterItsRowsLineNotItsValues() {
+        #expect(example.testDescription == "Example (line 12)")
     }
 
     @Test func anExampleIsIdentifiedByItsLineOnly() throws {
