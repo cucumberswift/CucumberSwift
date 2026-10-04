@@ -93,16 +93,17 @@ final class CucumberTests {
 
     #if compiler(>=6.2)
     /// `filterIssues` sees the issue after `reportedInFeatureFiles` has moved it, and drops it only if it is
-    /// at the step's line with the comment. Any other issue fails the test.
+    /// at the step's line with the step as it ran and where it was recorded. Any other issue fails the test.
     @Test(.filterIssues { issue in
         !(issue.sourceLocation?.fileName == "Test.feature" && issue.sourceLocation?.line == 7
+            && issue.comments.map(\.rawValue).suffix(2).first == "Given the basket has 4 cukes"
             && issue.comments.contains { $0.rawValue.hasPrefix("Recorded at CucumberTests.swift:") })
     }, .reportedInFeatureFiles)
     func aFailedExpectationInAStepIsReportedAtTheStepsLine() async {
-        Then("a result") { _, _ in
+        Given("the basket has {int} cukes") { _, _ in
             #expect(Bool(false), "deliberately")
         }
-        await Cucumber.shared.run(scenario([step(.then, "a result", line: 7)]))
+        await Cucumber.shared.run(scenario([step(.given, "the basket has 4 cukes", line: 7)]))
     }
     #endif
 

@@ -100,16 +100,17 @@ public final class Cucumber {
             Issue.record(Comment(rawValue: message), sourceLocation: location)
             return false
         }
-        guard await runHooks(beforeStepHooks, with: step, at: step.location, in: file) else { return false }
+        let ran = "\(step.keywordName) \(step.match)"
+        guard await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran) else { return false }
         var passed = true
-        RunningLocation.shared.current = location
+        RunningLocation.shared.current = .init(location: location, step: ran)
         do {
             try await match.body(step)
         } catch {
-            Issue.record(error, Comment(rawValue: "\(step.keywordName) \(step.match)"), sourceLocation: location)
+            Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
             passed = false
         }
-        let afterHooksPassed = await runHooks(afterStepHooks, with: step, at: step.location, in: file)
+        let afterHooksPassed = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran)
         return passed && afterHooksPassed
     }
 
@@ -119,10 +120,11 @@ public final class Cucumber {
         _ hooks: [Hook<Argument>],
         with argument: Argument,
         at location: Location,
-        in file: String
+        in file: String,
+        step: String? = nil
     ) async -> Bool {
         for hook in hooks.inPriorityOrder() {
-            RunningLocation.shared.current = Self.sourceLocation(file, location)
+            RunningLocation.shared.current = .init(location: Self.sourceLocation(file, location), step: step)
             do {
                 try await hook.body(argument)
             } catch {

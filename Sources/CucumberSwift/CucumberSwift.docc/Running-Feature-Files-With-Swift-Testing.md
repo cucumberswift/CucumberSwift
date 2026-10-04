@@ -135,7 +135,7 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 
 In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do.
 
-A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook, as CucumberSwift reports a failed XCTest assertion. Its message says where it was recorded, such as `Recorded at StepDefinitions.swift:31`. The scenario goes on after a failed `#expect`. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
+A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook, as CucumberSwift reports a failed XCTest assertion. Its message gives the step as it ran, with an example's values, such as `Then the basket has 3 cukes`, and where it was recorded, such as `Recorded at StepDefinitions.swift:31`. A step definition that throws gets the step in its message too. The scenario goes on after a failed `#expect`. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
 
 ## Move unit tests to Swift Testing
 
