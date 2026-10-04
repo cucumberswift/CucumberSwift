@@ -1,8 +1,8 @@
 # CucumberSwift+UIUTest
 
-A colleague of mine wrote [UIUTest](https://github.com/nallick/UIUTest) which allows for UI testing in a unit testing bundle. It drastically speeds up UI tests but gives a lot of the same functionality, like making sure elements are not covered, able to be tapped etc...
+A colleague of mine wrote UIUTest which allows for UI testing in a unit testing bundle. It drastically speeds up UI tests but gives a lot of the same functionality, like making sure elements are not covered, able to be tapped etc...
 
-So in many of our projects that have to function at a large scale and have quite a bit of gherkin we combined CucumberSwift and UIUTest for some really cool results!
+So in many of our projects that have to function at a large scale and have quite a bit of gherkin we combined CucumberSwift and [UIUTest](https://github.com/nallick/UIUTest) for some really cool results!
 
 ### SETUP:
 
