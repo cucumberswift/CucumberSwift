@@ -73,7 +73,7 @@ def docs_only(paths):
 
 
 def git(*args):
-    result = subprocess.run(("git",) + args, capture_output=True, text=True)
+    result = subprocess.run(["git", *args], capture_output=True, text=True)
     if result.returncode != 0:
         raise ChangesError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout

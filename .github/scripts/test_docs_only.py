@@ -104,7 +104,7 @@ class Repository(unittest.TestCase):
         self.root = self.commit("root")
 
     def git(self, *args):
-        return subprocess.run(("git",) + args, check=True, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout.strip()
 
     def write(self, path, text):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
