@@ -10,11 +10,23 @@ import Foundation
 
 extension Step {
     public struct Keyword: OptionSet, Hashable, Sendable {
+        enum KeywordError: Error {
+            case notPrimaryKeyword
+        }
+
+        public static let given = Keyword(rawValue: 1 << 0)
+        public static let when = Keyword(rawValue: 1 << 1)
+        public static let then = Keyword(rawValue: 1 << 2)
+        public static let and = Keyword(rawValue: 1 << 3)
+        public static let but = Keyword(rawValue: 1 << 4)
+        public static let primaryKeywords: Keyword = [.given, .when, .then]
+
         public let rawValue: Int
         var primaryKeywords: Keyword {
             intersection(Self.primaryKeywords)
         }
         private var stringValue: String?
+
         public init(rawValue: Int) {
             self.rawValue = rawValue
         }
@@ -53,17 +65,6 @@ extension Step {
         public func hasMultipleValues() -> Bool {
             guard rawValue > 2 else { return false }
             return ceil(log2(Double(rawValue))) != floor(log2(Double(rawValue)))
-        }
-
-        public static let given = Keyword(rawValue: 1 << 0)
-        public static let when = Keyword(rawValue: 1 << 1)
-        public static let then = Keyword(rawValue: 1 << 2)
-        public static let and = Keyword(rawValue: 1 << 3)
-        public static let but = Keyword(rawValue: 1 << 4)
-        public static let primaryKeywords: Keyword = [.given, .when, .then]
-
-        enum KeywordError: Error {
-            case notPrimaryKeyword
         }
     }
 }
