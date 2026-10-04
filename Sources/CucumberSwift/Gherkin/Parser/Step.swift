@@ -209,14 +209,6 @@ extension Step {
             return toString(in: Scope.language)
         }
 
-        /// This keyword with `other`'s keywords added, still written as this one is. `insert` would forget how
-        /// it is written, as every set operation does.
-        func adding(_ other: Keyword) -> Keyword {
-            var keyword = union(other)
-            keyword.stringValue = stringValue
-            return keyword
-        }
-
         public func hasMultipleValues() -> Bool {
             guard rawValue > 2 else { return false }
             return ceil(log2(Double(rawValue))) != floor(log2(Double(rawValue)))
@@ -236,6 +228,14 @@ extension Step {
 }
 
 extension Step.Keyword {
+    /// This keyword with `other`'s keywords added, still written as this one is. `insert` would forget how
+    /// it is written, as every set operation does.
+    func adding(_ other: Step.Keyword) -> Step.Keyword {
+        var keyword = union(other)
+        keyword.stringValue = stringValue
+        return keyword
+    }
+
     /// The keyword named in the given language.
     func toString(in language: Language) -> String {
         if contains(.given) {
