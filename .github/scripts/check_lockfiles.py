@@ -14,7 +14,7 @@ Package.resolved must pin it (see TRAIT_ONLY), because CI's release build on
 Swift 6.1 uses --force-resolved-versions, which fails without the pin.
 
 The Xcode side is read from project.pbxproj, which is what xcodebuild resolves
-from. The project_drift job in CI.yml checks that it matches Project.swift.
+from. The Project checks job in CI.yml checks that it matches Project.swift.
 
 The Bazel side is MODULE.bazel and Tests/MODULE.bazel, which have no lockfile:
 a bazel_dep's version is the one Bazel uses, unless another module needs a

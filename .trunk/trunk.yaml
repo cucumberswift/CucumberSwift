@@ -76,7 +76,7 @@ lint:
           success_codes: [0, 2]
           batch: true
 
-    # CI's "Manifests match their lockfiles" check, without --resolve.
+    # The manifest and lockfile check in CI's Project checks job, without --resolve.
     - name: lockfiles
       files: [dependency-manifest]
       environment:
