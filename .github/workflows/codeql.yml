@@ -11,18 +11,41 @@ on:
     - cron: '17 7 * * 1'
   workflow_dispatch:
 
-# Least privilege: the analyze job only needs to read the code and upload results.
+# Least privilege: read-only by default. The analyze job adds the
+# security-events write it needs to upload results.
 permissions:
   contents: read
-  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Whether this run only changes documentation; Analyze Swift is skipped if so.
+  # The same job and script as in CI.yml, which explains them.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      docs_only: ${{ steps.changes.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github/scripts
+      - name: Decide whether this run only changes documentation
+        id: changes
+        run: python3 .github/scripts/docs_only.py
+
   analyze:
     name: Analyze Swift
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     # Swift analysis requires a macOS runner; matches the other workflows.
     runs-on: macos-15
     timeout-minutes: 60

@@ -181,6 +181,22 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             macros: macros)
     }
 
+    func testAVariablePatternIsAnError() {
+        assertMacroExpansion(
+            """
+            #Given(pattern) { }
+            """,
+            expandedSource: """
+            #Given(pattern) { }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "The step definition's pattern must be a string literal, so it can be checked when it compiles.",
+                               line: 1,
+                               column: 8)
+            ],
+            macros: macros)
+    }
+
     /// The message the macro reports for a pattern that does not parse.
     private func problemMessage(_ pattern: String) -> String {
         do {

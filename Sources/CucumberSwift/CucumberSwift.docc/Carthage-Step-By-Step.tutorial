@@ -31,6 +31,8 @@
             @Step {
                 @Image(source: "Carthage-Validate-Workspace.png", alt: "The validate workspace setting being set to yes")
                 Make sure "validate workspace" is set to "yes" under "Build Settings"
+
+                Then add `$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules` to "Import Paths" (`SWIFT_INCLUDE_PATHS`) under "Swift Compiler - Search Paths". CucumberSwift's step definitions use types from CucumberSwiftExpressions, whose module is inside the framework, and this is where Xcode finds it.
             }
             
             @Step {
