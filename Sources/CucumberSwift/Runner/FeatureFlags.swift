@@ -44,6 +44,11 @@ enum FeatureFlags {
         value(Cucumber.generateRegexLiterals, environmentVariable: "CUCUMBER_GENERATE_REGEX_LITERALS", default: false)
     }
 
+    /// Whether Xcode's parallel testing may run each scenario in a worker of its own. Off by default.
+    static var isParallelTesting: Bool {
+        value(Cucumber.parallelTesting, environmentVariable: "CUCUMBER_PARALLEL_TESTING", default: false)
+    }
+
     static let storage = Storage()
 
     static func value(_ staticValue: Bool?, environmentVariable name: String, default defaultValue: Bool) -> Bool {
@@ -94,5 +99,19 @@ extension Cucumber {
     public static var generateRegexLiterals: Bool? {
         get { FeatureFlags.storage["generateRegexLiterals"] }
         set { FeatureFlags.storage["generateRegexLiterals"] = newValue }
+    }
+
+    /// Experimental: whether Xcode's parallel testing ("Execute in parallel") may spread the scenarios
+    /// across its parallel workers, each scenario running whole in one of them. Off by default, and with
+    /// it off CucumberSwift's scenarios don't run correctly in parallel. Set this to `true`, or the
+    /// environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`, to try it. This variable,
+    /// when set, wins over the environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    ///
+    /// It applies to a test per step, the default, not to ``oneTestPerScenario``. Each worker is a process
+    /// of its own, so state your step definitions share, a feature's hooks and the JSON report are per
+    /// worker: see <doc:Running-Tests-In-Xcode#Parallel-testing> before you turn it on.
+    public static var parallelTesting: Bool? {
+        get { FeatureFlags.storage["parallelTesting"] }
+        set { FeatureFlags.storage["parallelTesting"] = newValue }
     }
 }
