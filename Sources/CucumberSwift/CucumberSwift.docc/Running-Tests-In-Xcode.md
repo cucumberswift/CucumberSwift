@@ -6,6 +6,10 @@ Find your scenarios in Xcode's test navigator, go from a failure to its step, an
 
 CucumberSwift reads your feature files when the test bundle starts and creates the tests then, so Xcode's test navigator shows them only after the first run. By default, each scenario becomes a test class named after its feature and scenario, such as `Checkout › Pay with a gift card`, and each of its steps becomes a test in that class, such as `3 › Then the order total is 99`. The steps are numbered so that they run in the order of the feature file. The test navigator lists a class's failed tests first, and then the most recently run first, so read the numbers for the order.
 
+### Check feature files while you build
+
+Add the `CucumberSwiftLint` build tool plugin to your test target, under **Build Phases > Run Build Tool Plug-ins**. Each time the target builds, it checks your feature files and step definitions and shows each problem as a warning on its line, in Xcode and in your CI's build log. See <doc:Checking-Feature-Files>.
+
 ### Settings
 
 These settings change how your tests appear in Xcode, and the step definitions CucumberSwift suggests for steps that have none. Set each one in code, with a static variable on `Cucumber`, or without changing code, with an environment variable in a scheme or test plan. When both are set, the static variable wins.

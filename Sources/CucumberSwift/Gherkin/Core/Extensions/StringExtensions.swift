@@ -128,3 +128,17 @@ extension String {
                 .contains { !CharacterSet.docStrings.contains($0) }
     }
 }
+
+extension String {
+    /// The text as a Swift type name, as CucumberSwift names the classes of the tests it generates:
+    /// `Pay with a gift card` is `PayWithAGiftCard`.
+    func toClassString() -> String {
+        camelCasingString()
+            .lazy
+            .drop { !$0.isLetter }
+            .filter { $0.isLetter || $0.isNumber || $0 == "_" }
+            .map(String.init)
+            .joined()
+            .capitalizingFirstLetter()
+    }
+}

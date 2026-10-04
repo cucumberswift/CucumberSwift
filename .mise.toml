@@ -42,21 +42,60 @@ fi
 description = "Build and test every project in Fixtures/"
 # Each fixture is a Swift package (Package.swift), tested with `swift test`, or a Tuist project
 # (Project.swift) whose project and scheme are named after its folder. See "Fixtures" in
-# CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later.
+# CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later. A Tuist
+# fixture runs on macOS unless its xcodebuild-destination file names another destination.
+# A fixture's expected-warnings lists warnings its build must print, which show that the
+# CucumberSwiftLint plugin ran; the plugin only runs when its inputs change, so its stamps are
+# deleted first. A fixture with expected-failures must fail its tests, with each failure it lists.
 run = '''
 set -e
+# Fails unless every line of $1, other than comments and blank lines, is in the output $2.
+expect_all() {
+  grep -v '^#' "$1" | while IFS= read -r expected; do
+    [ -z "$expected" ] && continue
+    if ! grep -qF "$expected" "$2"; then
+      echo "error: $name: the output does not contain, as $(basename "$1") requires: $expected"
+      exit 1
+    fi
+  done
+}
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
+  log=$(mktemp)
+  status=0
   if [ -f "$fixture/Package.swift" ]; then
-    swift test --package-path "$fixture"
+    find "$fixture/.build" -name '*.lint-stamp' -delete 2>/dev/null || true
+    swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
   fi
   if [ -f "$fixture/Project.swift" ]; then
+    destination='platform=macOS'
+    if [ -f "$fixture/xcodebuild-destination" ]; then
+      destination=$(cat "$fixture/xcodebuild-destination")
+    fi
+    derived="$fixture/Derived/xcodebuild"
+    find "$derived" -name '*.lint-stamp' -delete 2>/dev/null || true
     tuist generate --no-open --path "$fixture"
-    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination 'platform=macOS' \
-      -skipMacroValidation CODE_SIGNING_ALLOWED=NO
+    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
+      -derivedDataPath "$derived" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
   fi
+  cat "$log"
+  if [ -f "$fixture/expected-failures" ]; then
+    if [ "$status" -eq 0 ]; then
+      echo "error: $name: its tests passed, but they should fail with each failure in expected-failures"
+      exit 1
+    fi
+    expect_all "$fixture/expected-failures" "$log"
+    echo "$name: the tests failed with every expected failure."
+  elif [ "$status" -ne 0 ]; then
+    exit "$status"
+  fi
+  if [ -f "$fixture/expected-warnings" ]; then
+    expect_all "$fixture/expected-warnings" "$log"
+    echo "$name: CucumberSwiftLint reported every expected warning."
+  fi
+  rm -f "$log"
 done
 '''
 

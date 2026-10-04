@@ -37,6 +37,10 @@ The plugin checks the `.feature` files in the target, including those in a folde
 
 The first time Xcode builds a target that uses a package plugin, it asks you to trust it. Choose **Trust & Enable**. On a CI machine, where nobody can answer, pass `-skipPackagePluginValidation` to `xcodebuild`. `swift build` and `swift test` don't ask.
 
+### Keep it on in CI
+
+Leave the plugin on for every build, on your Mac and in CI. It only reports warnings and never fails a build, so a CI build that compiles your tests checks every feature file too, and its log lists each problem as `file:line:column: warning: …`, which Xcode Cloud and most CI services show with the build's other warnings. On a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild`, as above.
+
 ### What it checks
 
 In every feature file:

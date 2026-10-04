@@ -27,7 +27,20 @@ let package = Package(
         // Step definition macros, checked at compile time. Needs the Macros trait.
         .library(
             name: "CucumberSwiftMacros",
-            targets: ["CucumberSwiftMacros"])
+            targets: ["CucumberSwiftMacros"]),
+        // Runs feature files with Swift Testing, in unit test targets: the step definition API, and the
+        // runner the generated tests call.
+        .library(
+            name: "CucumberSwiftTesting",
+            targets: ["CucumberSwiftTesting"]),
+        // The step definition macros for CucumberSwiftTesting. Needs the Macros trait.
+        .library(
+            name: "CucumberSwiftTestingMacros",
+            targets: ["CucumberSwiftTestingMacros"]),
+        // Generates a Swift Testing test for each scenario in a test target's feature files.
+        .plugin(
+            name: "CucumberSwiftTestingPlugin",
+            targets: ["CucumberSwiftTestingPlugin"])
     ],
     traits: [
         .trait(name: "Macros", description: "Builds the CucumberSwiftMacros product, which depends on swift-syntax.")
@@ -100,6 +113,33 @@ let package = Package(
             name: "CucumberSwiftMacros",
             dependencies: ["CucumberSwift", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],
             path: "Sources/CucumberSwiftMacros"),
+        // The Swift Testing runner. No XCTest, and none of CucumberSwift: a test target uses one runner or
+        // the other.
+        .target(
+            name: "CucumberSwiftTesting",
+            dependencies: ["CucumberSwiftExpressions"],
+            path: "Sources/CucumberSwiftTesting"),
+        // StepDefinitionMacros.swift is a symlink to CucumberSwiftMacros' declarations.
+        .target(
+            name: "CucumberSwiftTestingMacros",
+            dependencies: ["CucumberSwiftTesting", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],
+            path: "Sources/CucumberSwiftTestingMacros"),
+        // The tool CucumberSwiftTestingPlugin runs. It builds for the Mac that builds the tests.
+        .executableTarget(
+            name: "CucumberSwiftTestingGenerator",
+            dependencies: ["CucumberSwiftGherkin"],
+            path: "Sources/CucumberSwiftTestingGenerator"),
+        .plugin(
+            name: "CucumberSwiftTestingPlugin",
+            capability: .buildTool(),
+            dependencies: ["CucumberSwiftTestingGenerator"],
+            path: "Plugins/CucumberSwiftTestingPlugin"),
+        .testTarget(
+            name: "CucumberSwiftTestingGeneratorTests",
+            dependencies: ["CucumberSwiftTestingGenerator"]),
+        .testTarget(
+            name: "CucumberSwiftTestingTests",
+            dependencies: ["CucumberSwiftTesting"]),
         .testTarget(
             name: "CucumberSwiftMacrosTests",
             dependencies: [

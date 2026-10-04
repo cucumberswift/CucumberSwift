@@ -16,6 +16,7 @@ final class ParserParityTests: XCTestCase {
 
     struct RunnableStep: Equatable {
         let keywords: [String]
+        let keywordName: String
         let text: String
         let line: Int
         let column: Int
@@ -23,7 +24,11 @@ final class ParserParityTests: XCTestCase {
         let rawDocString: String?
         let contentType: String?
         let dataTable: [[String]]?
+        /// The step definition suggested when no step definition matches the step.
+        let suggestion: String
     }
+
+    static let failure = "XCTFail(\"Step not implemented: replace this line with your test code\")"
 
     /// Every feature file in the repository's tests, including the Gherkin test data, good and bad.
     var featureFiles: [URL] {
@@ -79,13 +84,15 @@ final class ParserParityTests: XCTestCase {
     func runnable(_ step: FeatureFile.Step) -> RunnableStep {
         RunnableStep(
             keywords: step.keywords.map(\.rawValue).sorted(),
+            keywordName: step.keywordName,
             text: step.text,
             line: step.line,
             column: step.column,
             docString: step.docString?.literal,
             rawDocString: step.docString?.rawLiteral,
             contentType: step.docString?.contentType,
-            dataTable: step.dataTable)
+            dataTable: step.dataTable,
+            suggestion: step.suggestedStepDefinition(failure: Self.failure))
     }
 
     func runnable(_ feature: Feature) -> [RunnableScenario] {
@@ -101,14 +108,22 @@ final class ParserParityTests: XCTestCase {
 
     func runnable(_ step: Step) -> RunnableStep {
         let keywords: [(String, Step.Keyword)] = [("given", .given), ("when", .when), ("then", .then), ("and", .and), ("but", .but)]
+        let suggestion = StubGenerator.method(
+            for: step.match,
+            keyword: step.keyword,
+            hasDataTable: step.dataTable != nil,
+            hasDocString: step.docString != nil,
+            style: .cucumberExpression)
         return RunnableStep(
             keywords: keywords.filter { step.keyword.contains($0.1) }.map(\.0).sorted(),
+            keywordName: step.keywordText,
             text: step.match,
             line: Int(step.location.line),
             column: Int(step.location.column),
             docString: step.docString?.literal,
             rawDocString: step.docString?.rawLiteral,
             contentType: step.docString?.contentType,
-            dataTable: step.dataTable?.rows)
+            dataTable: step.dataTable?.rows,
+            suggestion: suggestion.generateSwift())
     }
 }

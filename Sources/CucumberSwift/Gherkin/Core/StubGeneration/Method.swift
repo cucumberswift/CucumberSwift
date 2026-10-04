@@ -8,6 +8,9 @@
 
 import Foundation
 class Method {
+    /// What makes an XCTest step definition fail until it is filled in.
+    static let xcTestFailure = "XCTFail(\"Step not implemented: replace this line with your test code\")"
+
     var keyword: Step.Keyword = []
     var keywords: [Step.Keyword] = []
     var comment = ""
@@ -60,7 +63,8 @@ class Method {
         return keywordStrings.uniqueElements
     }
 
-    func generateSwift(matchAllAllowed: Bool = true) -> String {
+    /// The step definition as Swift. `failure` is its last line, which fails the step until it is filled in.
+    func generateSwift(matchAllAllowed: Bool = true, failure: String = xcTestFailure) -> String {
         Scope.language ?= Language()
         var methodStrings = [String]()
         for keywordString in getKeywordStrings(matchAllAllowed: matchAllAllowed) {
@@ -78,7 +82,7 @@ class Method {
                 methodString += "    let \(Self.variableName(type: variable.type, number: 1)) = step.\(variable.type)\n"
             }
             // An empty step would pass, so the stub fails until it is filled in.
-            methodString += "    XCTFail(\"Step not implemented: replace this line with your test code\")\n"
+            methodString += "    \(failure)\n"
             methodString += "}"
             methodStrings.append(methodString)
         }

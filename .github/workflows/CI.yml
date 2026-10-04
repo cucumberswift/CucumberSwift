@@ -531,6 +531,10 @@ jobs:
       # Package.swift, on the oldest Swift that has traits. Fixture tests runs it on a newer one.
       - name: Run the step definition macros package fixture
         run: swift test --package-path Fixtures/StepDefinitionMacrosPackage
+      # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
+      # on the oldest Swift that has traits. The Fixtures job runs it on a newer one.
+      - name: Run the Swift Testing package fixture
+        run: swift test --package-path Fixtures/SwiftTestingPackage
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
