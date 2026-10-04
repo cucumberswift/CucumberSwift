@@ -19,8 +19,10 @@ final class SwiftTestingSourceTests: XCTestCase {
         //
         // One suite holds every feature in the target. It is serialized, because CucumberSwift runs one
         // scenario at a time, and step definitions often share state, and a failed expectation is reported
-        // in the feature file. This comment is here rather than on the suite, where Swift Testing would show
-        // it with each failure.
+        // in the feature file. Each test takes two lines, and the scenarios' contents come after all the
+        // tests, so that editing a feature file moves no test: Xcode lists the tests from a copy of this
+        // file that it doesn't always update, and matches results to them by line. These comments are here
+        // rather than on the suite, where Swift Testing would show them with each failure.
 
         import CucumberSwiftTesting
         import Testing
@@ -28,34 +30,39 @@ final class SwiftTestingSourceTests: XCTestCase {
         @MainActor
         @Suite("Features", .serialized, .reportedInFeatureFiles)
         struct CucumberFeatures {
+            @Test("Feature files are valid Gherkin")
+            func gherkin() { cucumberGherkinProblems() }
+
             @MainActor
             @Suite("Eat fruit")
             struct EatFruit {
-                @Test("Eat an apple", .enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(["fruit"])))
-                func EatAnApple() async {
-                    await CucumberSwiftTesting.Cucumber.shared.run(
-                        CucumberSwiftTesting.GherkinScenario(
-                            featureTitle: "Eat fruit",
-                            featureTags: ["fruit"],
-                            title: "Eat an apple",
-                            tags: ["fruit"],
-                            file: "/Features/Test.feature",
-                            line: 3,
-                            column: 3,
-                            steps: [
-                                CucumberSwiftTesting.GherkinStep(
-                                    keyword: [.given],
-                                    keywordName: "Given",
-                                    text: "an apple",
-                                    line: 4,
-                                    column: 5,
-                                    suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
-                            ]))
-                }
-
+                @Test("Eat an apple", .enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(cucumberScenario1.tags)))
+                func EatAnApple() async { await CucumberSwiftTesting.Cucumber.shared.run(cucumberScenario1) }
             }
-
         }
+
+        // MARK: - What the tests run
+
+        private func cucumberGherkinProblems() {
+        }
+
+        private let cucumberScenario1 = CucumberSwiftTesting.GherkinScenario(
+            featureTitle: "Eat fruit",
+            featureTags: ["fruit"],
+            title: "Eat an apple",
+            tags: ["fruit"],
+            file: "/Features/Test.feature",
+            line: 3,
+            column: 3,
+            steps: [
+                CucumberSwiftTesting.GherkinStep(
+                    keyword: [.given],
+                    keywordName: "Given",
+                    text: "an apple",
+                    line: 4,
+                    column: 5,
+                    suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
+            ])
 
         """#)
     }
@@ -73,10 +80,11 @@ final class SwiftTestingSourceTests: XCTestCase {
               | 12    | 5     | 7    |
               | 20    | 5     | 15   |
         """)
-        XCTAssertTrue(source.contains(#"@Test("Eat <eaten>", arguments: ["#), source)
-        XCTAssertTrue(source.contains(#"].filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })"#), source)
-        XCTAssertTrue(source.contains("func EatEaten(_ example: CucumberSwiftTesting.GherkinExample) async {"), source)
-        XCTAssertTrue(source.contains("await CucumberSwiftTesting.Cucumber.shared.run(example.scenario)"), source)
+        XCTAssertTrue(source.contains(#"""
+                @Test("Eat <eaten>", arguments: cucumberExamples1.filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })
+                func EatEaten(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
+        """#), source)
+        XCTAssertTrue(source.contains("private let cucumberExamples1 = [\n"), source)
         XCTAssertEqual(source.components(separatedBy: "CucumberSwiftTesting.GherkinExample(\n").count - 1, 2)
         XCTAssertTrue(source.contains(#"title: "Eat 5 (start: 12, left: 7)","#), source)
         XCTAssertTrue(source.contains(#"title: "Eat 5 (start: 20, left: 15)","#), source)
@@ -84,6 +92,41 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(#"dataTable: [["left"], ["15"]],"#), source)
         XCTAssertTrue(source.contains("line: 9,"), source)
         XCTAssertTrue(source.contains("line: 10,"), source)
+    }
+
+    func testEditingAFeatureFileMovesNoTest() {
+        func tests(_ source: String) -> Substring {
+            source[..<source.range(of: "// MARK: - What the tests run")!.lowerBound]
+        }
+        let before = generate("""
+        Feature: Cukes
+          Scenario: Add cukes
+            Given I have 1 cuke
+          Scenario Outline: Eat cukes
+            Given I eat <n>
+            Examples:
+              | n |
+              | 1 |
+        """)
+        let after = generate("""
+        @edited
+        Feature: Cukes
+          Add a description, a background, steps and examples.
+          Background:
+            Given a basket
+          Scenario: Add cukes
+            Given I have 1 cuke
+            And I add 2 cukes
+            Then I have 3 cukes
+          Scenario Outline: Eat cukes
+            Given I eat <n>
+            Then I'm full
+            Examples:
+              | n |
+              | 1 |
+              | 2 |
+        """)
+        XCTAssertEqual(tests(before), tests(after))
     }
 
     func testStepsHaveTheirDocStringsAndContinuedKeywords() {
@@ -113,6 +156,10 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains("func Uno() async {"), source)
         XCTAssertTrue(source.contains("keyword: [.given],"), source)
         XCTAssertTrue(source.contains(#"text: "un paso","#), source)
+    }
+
+    func testValidFeatureFilesStillHaveTheGherkinTest() {
+        XCTAssertTrue(generate("Feature: F\n").contains(#"@Test("Feature files are valid Gherkin")"#))
     }
 
     func testProblemsInAFeatureFileFailATest() {

@@ -39,8 +39,10 @@ enum SwiftTestingSource {
         //
         // One suite holds every feature in the target. It is serialized, because CucumberSwift runs one
         // scenario at a time, and step definitions often share state, and a failed expectation is reported
-        // in the feature file. This comment is here rather than on the suite, where Swift Testing would show
-        // it with each failure.
+        // in the feature file. Each test takes two lines, and the scenarios' contents come after all the
+        // tests, so that editing a feature file moves no test: Xcode lists the tests from a copy of this
+        // file that it doesn't always update, and matches results to them by line. These comments are here
+        // rather than on the suite, where Swift Testing would show them with each failure.
 
         import CucumberSwiftTesting
         import Testing
@@ -48,59 +50,68 @@ enum SwiftTestingSource {
         @MainActor
         @Suite("Features", .serialized, .reportedInFeatureFiles)
         struct CucumberFeatures {
+            @Test("Feature files are valid Gherkin")
+            func gherkin() { cucumberGherkinProblems() }
 
         """
-        let problems = inputs.flatMap { input in input.file.problems.map { (path: input.path, problem: $0) } }
-        if !problems.isEmpty {
-            source += gherkinTest(problems)
-        }
+        var data = Data()
         var suiteNames = Set<String>()
         for input in inputs {
             for feature in input.file.features where !feature.scenarios.isEmpty {
                 let name = uniqueName(FeatureFile.typeName(for: feature.title), fallback: "Feature", in: &suiteNames)
-                source += suite(for: feature, named: name, path: input.path)
+                source += "\n" + suite(for: feature, named: name, path: input.path, data: &data)
             }
         }
-        return source + "}\n"
+        let problems = inputs.flatMap { input in input.file.problems.map { (path: input.path, problem: $0) } }
+        return source + "}\n\n" + "// MARK: - What the tests run\n\n" + gherkinProblems(problems) + data.source
     }
 
-    /// A test that fails with each problem in the feature files, as CucumberSwift's `testGherkin()` does.
-    private static func gherkinTest(_ problems: [(path: String, problem: String)]) -> String {
+    /// The constants that the tests run, in the order of the tests.
+    private struct Data {
+        var source = ""
+        var count = 0
+
+        mutating func add(_ kind: String, _ value: String) -> String {
+            count += 1
+            let name = "cucumber\(kind)\(count)"
+            source += "\nprivate let \(name) = \(value)\n"
+            return name
+        }
+    }
+
+    /// Records each problem in the feature files, as CucumberSwift's `testGherkin()` does.
+    private static func gherkinProblems(_ problems: [(path: String, problem: String)]) -> String {
         let issues = problems.map { problem in
             let fileID = literal("Features/" + URL(fileURLWithPath: problem.path).lastPathComponent)
             let location = "SourceLocation(fileID: \(fileID), filePath: \(literal(problem.path)), line: 1, column: 1)"
-            return "        Issue.record(\(literal(problem.problem)), sourceLocation: \(location))"
+            return "    Issue.record(\(literal(problem.problem)), sourceLocation: \(location))\n"
         }
-        return """
-            @Test("Feature files are valid Gherkin")
-            func gherkin() {
-        \(issues.joined(separator: "\n"))
-            }
-
-
-        """
+        return "private func cucumberGherkinProblems() {\n" + issues.joined() + "}\n"
     }
 
-    private static func suite(for feature: FeatureFile.Feature, named name: String, path: String) -> String {
-        var source = """
+    private static func suite(for feature: FeatureFile.Feature, named name: String, path: String, data: inout Data) -> String {
+        var testNames = Set<String>()
+        let tests = feature.scenarios.map { scenario in
+            let testName = uniqueName(FeatureFile.typeName(for: scenario.title), fallback: "Scenario", in: &testNames)
+            return test(for: scenario, named: testName, in: feature, path: path, data: &data)
+        }
+        return """
             @MainActor
             @Suite\(displayName(feature.title))
             struct \(name) {
+        \(tests.joined(separator: "\n\n"))
+            }
 
         """
-        var testNames = Set<String>()
-        for scenario in feature.scenarios {
-            let testName = uniqueName(FeatureFile.typeName(for: scenario.title), fallback: "Scenario", in: &testNames)
-            source += test(for: scenario, named: testName, in: feature, path: path)
-        }
-        return source + "    }\n\n"
     }
 
+    /// The test, in two lines, and its scenario or examples, which are added to `data` as a constant.
     private static func test(
         for scenario: FeatureFile.Scenario,
         named name: String,
         in feature: FeatureFile.Feature,
-        path: String
+        path: String,
+        data: inout Data
     ) -> String {
         let displayName = scenario.title.isEmpty ? "" : literal(scenario.title) + ", "
         guard let examples = scenario.examples else {
@@ -110,29 +121,20 @@ enum SwiftTestingSource {
                 line: scenario.line,
                 column: scenario.column,
                 steps: scenario.steps)
+            let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
-                    @Test(\(displayName).enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(\(array(scenario.tags)))))
-                    func \(name)() async {
-                        await CucumberSwiftTesting.Cucumber.shared.run(
-            \(gherkinScenario(parts, of: feature, path: path, indent: 16)))
-                    }
-
-
+                    @Test(\(displayName).enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(\(constant).tags)))
+                    func \(name)() async { await CucumberSwiftTesting.Cucumber.shared.run(\(constant)) }
             """
         }
         let arguments = examples.map { example in
             let parts = ScenarioParts(title: example.title, tags: example.tags, line: example.line, column: example.column, steps: example.steps)
-            return "            CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 16) + ")"
+            return "    CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 8) + ")"
         }
+        let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
         return """
-                @Test(\(displayName)arguments: [
-        \(arguments.joined(separator: ",\n"))
-                ].filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })
-                func \(name)(_ example: CucumberSwiftTesting.GherkinExample) async {
-                    await CucumberSwiftTesting.Cucumber.shared.run(example.scenario)
-                }
-
-
+                @Test(\(displayName)arguments: \(constant).filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })
+                func \(name)(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
         """
     }
 
