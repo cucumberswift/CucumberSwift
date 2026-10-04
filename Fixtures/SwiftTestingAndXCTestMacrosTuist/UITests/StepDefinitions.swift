@@ -6,7 +6,7 @@
 //  and tap its buttons with XCUITest.
 //
 
-import UIStepDefinitionMacros
+import CucumberSwiftMacros
 import XCTest
 
 /// Drives the app with XCUITest. Synchronous, as XCUITest expects: its calls wait on the main run loop

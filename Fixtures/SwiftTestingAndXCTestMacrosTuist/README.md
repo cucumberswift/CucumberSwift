@@ -9,9 +9,11 @@
   `CucumberSwiftTestingMacros`.
 
 The macros need CucumberSwift's `Macros` package trait. An Xcode project can turn on a package's traits
-itself only from Xcode 26.4, so this one gets the macros through `StepDefinitionMacros`, a local Swift
-package that turns the trait on in its own `Package.swift` and re-exports each runner's macros. That works
-with any Xcode that has Swift 6.1. The project also depends on CucumberSwift directly, for the plugin.
+itself only from Xcode 26.4, so this one also depends on `MacrosTrait`, a local Swift package that turns
+the trait on in its own `Package.swift` and does nothing else. That works with any Xcode that has Swift
+6.1. The test targets link and import `CucumberSwiftMacros` and `CucumberSwiftTestingMacros` from
+CucumberSwift itself, as they would with Xcode 26.4 and the trait set in the project, so moving to that
+needs no change to the step definitions.
 
 Each test target links one runner and has its own feature files and step definitions. One scheme tests
 both. If the macros stop compiling for either runner, or the trait stops reaching CucumberSwift through

@@ -90,39 +90,36 @@ Tuist writes the trait into the Xcode project it generates, so it needs the same
 
 ### Use the macros in an Xcode project before Xcode 26.4
 
-Before Xcode 26.4, an Xcode project can't turn on a package's traits, but a Swift package that the project depends on can, in its own `Package.swift`, with any Xcode that has Swift 6.1. So add a small local package that turns the trait on and passes the macros through:
+Before Xcode 26.4, an Xcode project can't turn on a package's traits, but a Swift package that the project depends on can, in its own `Package.swift`, with any Xcode that has Swift 6.1. SwiftPM then builds CucumberSwift with the trait for the whole project. So add a small local package that does only that:
 
 ```swift
 // swift-tools-version:6.1
-// StepDefinitionMacros/Package.swift, next to your Xcode project.
+// MacrosTrait/Package.swift, next to your Xcode project.
 import PackageDescription
 
 let package = Package(
-    name: "StepDefinitionMacros",
+    name: "MacrosTrait",
     platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13)],
     products: [
-        .library(name: "StepDefinitionMacros", targets: ["StepDefinitionMacros"])
+        .library(name: "MacrosTrait", targets: ["MacrosTrait"])
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0", traits: ["Macros"])
     ],
     targets: [
+        // Depends on a CucumberSwift product, so that SwiftPM counts the dependency, and its trait, as used.
         .target(
-            name: "StepDefinitionMacros",
+            name: "MacrosTrait",
             dependencies: [.product(name: "CucumberSwiftMacros", package: "CucumberSwift")])
     ]
 )
 ```
 
-Its only source file, `Sources/StepDefinitionMacros/Exports.swift`, re-exports the macros:
+Its target needs one source file, which can be empty, such as `Sources/MacrosTrait/MacrosTrait.swift`.
 
-```swift
-@_exported import CucumberSwiftMacros
-```
+Add the folder to your project as a local package: in Xcode, **File > Add Package Dependencies… > Add Local…**, without adding its product to any target; in Tuist, `.package(path: "MacrosTrait")` in `Project.packages`. Then add CucumberSwift to the project as usual, without the trait, add `CucumberSwiftMacros` to your test target, and `import CucumberSwiftMacros`, exactly as with Xcode 26.4. When you move to Xcode 26.4 or later, remove `MacrosTrait` and turn the trait on in the project instead; your step definitions don't change.
 
-Add the folder to your project as a local package (in Xcode, **File > Add Package Dependencies… > Add Local…**; in Tuist, `.package(path: "StepDefinitionMacros")` in `Project.packages`), add its `StepDefinitionMacros` product to your test target, and `import StepDefinitionMacros` where you write step definitions. Keep CucumberSwift itself in the project, without the trait, for its plugins, such as `CucumberSwiftLint`: SwiftPM turns the trait on for the whole package as long as one dependency asks for it.
-
-For the Swift Testing runner, depend on `CucumberSwiftTestingMacros` and re-export it instead; see <doc:Running-Feature-Files-With-Swift-Testing>.
+The same package turns the trait on for the Swift Testing runner's `CucumberSwiftTestingMacros`; see <doc:Running-Feature-Files-With-Swift-Testing>.
 
 The first time you build a macro, Xcode asks you to trust and enable it. Recent versions of Xcode and SwiftPM download swift-syntax prebuilt, so it does not slow the build down.
 

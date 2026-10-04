@@ -46,7 +46,7 @@ Fixtures/*/*.xcodeproj
 Fixtures/*/*.xcworkspace
 Fixtures/*/Derived/
 Fixtures/*/.swiftpm/
-# A local package inside a Tuist fixture, such as SwiftTestingAndXCTestMacrosTuist/StepDefinitionMacros.
+# A local package inside a Tuist fixture, such as SwiftTestingAndXCTestMacrosTuist/MacrosTrait.
 Fixtures/*/*/Package.resolved
 Fixtures/*/*/.swiftpm/
 

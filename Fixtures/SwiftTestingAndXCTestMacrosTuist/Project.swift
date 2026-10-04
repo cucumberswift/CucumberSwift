@@ -1,9 +1,9 @@
 import ProjectDescription
 
 // SwiftTestingAndXCTestTuist with step definitions written as macros: the UI tests use CucumberSwiftMacros
-// with CucumberSwift and XCTest, and the unit tests use CucumberSwiftTestingMacros with Swift Testing. They
-// come through StepDefinitionMacros, a local package that turns on CucumberSwift's Macros trait in its own
-// manifest, which works with any Xcode that has Swift 6.1. See README.md.
+// with CucumberSwift and XCTest, and the unit tests use CucumberSwiftTestingMacros with Swift Testing.
+// MacrosTrait, a local package, turns on CucumberSwift's Macros trait in its own manifest, which works with
+// any Xcode that has Swift 6.1. See README.md.
 let settings: Settings = .settings(base: [
     "SWIFT_VERSION": "6.0",
     // Builds and runs without a signing team.
@@ -13,10 +13,11 @@ let settings: Settings = .settings(base: [
 let project = Project(
     name: "SwiftTestingAndXCTestMacrosTuist",
     packages: [
-        // For the CucumberSwiftTestingPlugin build tool plugin.
+        // For the macros, the runners and the plugins. With Xcode 26.4 or later, this could be
+        // `.package(path: "../..", traits: ["Macros"])`, without MacrosTrait.
         .package(path: "../.."),
-        // For the macros, with the Macros trait on.
-        .package(path: "StepDefinitionMacros")
+        // Only turns on CucumberSwift's Macros trait. Nothing links it.
+        .package(path: "MacrosTrait")
     ],
     targets: [
         .target(
@@ -42,7 +43,7 @@ let project = Project(
             resources: [.folderReference(path: "UnitTests/Features")],
             dependencies: [
                 .target(name: "BasketApp"),
-                .package(product: "UnitStepDefinitionMacros"),
+                .package(product: "CucumberSwiftTestingMacros"),
                 .package(product: "CucumberSwiftTestingPlugin", type: .plugin),
                 // Checks the feature files and step definitions on every build.
                 .package(product: "CucumberSwiftLint", type: .plugin)
@@ -62,7 +63,7 @@ let project = Project(
             resources: [.folderReference(path: "UITests/Features")],
             dependencies: [
                 .target(name: "BasketApp"),
-                .package(product: "UIStepDefinitionMacros"),
+                .package(product: "CucumberSwiftMacros"),
                 // Checks the feature files and step definitions on every build.
                 .package(product: "CucumberSwiftLint", type: .plugin)
             ],
