@@ -372,6 +372,20 @@ class BazelTests(Repository):
         self.assertIn("MODULE.bazel: this check cannot read the name of `bazel_dep(name = NAME)`",
                       error)
 
+    def test_an_include_fails(self):
+        self.write(check_lockfiles.TESTS_MODULE_BAZEL,
+                   tests_module_bazel() + 'include("//:deps.MODULE.bazel")\n')
+        status, output = self.main()
+        self.assertEqual(status, 1)
+        [error] = self.errors(output)
+        self.assertIn("Tests/MODULE.bazel uses include(), whose bazel_dep calls this check "
+                      "cannot read.", error)
+
+    def test_an_include_in_a_comment_is_ignored(self):
+        self.write(check_lockfiles.MODULE_BAZEL,
+                   module_bazel() + '# include("//:deps.MODULE.bazel")\n')
+        self.assertEqual(check_lockfiles.check_files(), [])
+
     def test_a_missing_module_bazel_fails(self):
         os.remove(check_lockfiles.TESTS_MODULE_BAZEL)
         status, output = self.main()

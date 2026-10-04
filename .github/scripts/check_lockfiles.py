@@ -240,6 +240,11 @@ def parse_module_bazel(text, path):
     first; a `#` inside a string would be read as one, which MODULE.bazel has none of."""
     dependencies = {}
     text = re.sub(r"#[^\n]*", "", text)
+    # Bazel reads an included file's bazel_dep calls as part of this file. Fail rather than
+    # skip them.
+    if re.search(r"\binclude\s*\(", text):
+        raise CheckError(f"{path} uses include(), whose bazel_dep calls this check cannot "
+                         f"read. Declare the dependencies in {path} itself.")
     for call in BAZEL_DEP.finditer(text):
         arguments = {key: double or single
                      for key, double, single in STARLARK_ARGUMENT.findall(call.group(1))}
