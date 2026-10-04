@@ -31,8 +31,8 @@ env:
   # the iOS Simulator (`test`) and on Mac Catalyst (`test_catalyst`). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (419 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 508
+  # run today (420 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 509
 
 jobs:
   # Works out whether this run only changes documentation, with
