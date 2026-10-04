@@ -173,6 +173,35 @@ class StepTest: XCTestCase {
         XCTAssertTrue(kw.hasMultipleValues())
     }
 
+    func testAKeywordIsNamedInTheLanguageItIsGiven() throws {
+        let spanish = try XCTUnwrap(Language("es"))
+        XCTAssertEqual(Step.Keyword.given.toString(in: spanish), "Dadas")
+        XCTAssertEqual(Step.Keyword.when.toString(in: spanish), "Cuando")
+        XCTAssertEqual(Step.Keyword.then.toString(in: spanish), "Entonces")
+        XCTAssertEqual(Step.Keyword.and.toString(in: spanish), "E")
+        XCTAssertEqual(Step.Keyword.but.toString(in: spanish), "Pero")
+        let noKeyword: Step.Keyword = []
+        XCTAssertEqual(noKeyword.toString(in: spanish), "UNKNOWN")
+    }
+
+    // A step describes itself in its own feature file's language, not the last parsed file's (#290).
+    func testAStepsDescriptionUsesItsFeatureFilesLanguage() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Cuando como 2 pepinos
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        XCTAssertEqual(steps.map(\.description), ["TAGS:[]\nGiven: I have 3 cukes", "TAGS:[]\nCuando: como 2 pepinos"])
+    }
+
     /// Regression test for #135: a step built by the Swift DSL used to compile the empty pattern
     /// `""` on every execution, which always throws. An uncompilable pattern is now recorded in
     /// `RegularExpression.errors`, so that is where the bug would show if it came back.

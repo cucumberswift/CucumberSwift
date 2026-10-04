@@ -12,7 +12,7 @@ import Foundation
 public class StepDSL: Step {
     public init(line: Int,
                 file: StaticString) {
-        super.init(with: AST.StepNode())
+        super.init(with: AST.StepNode(), language: .default)
         sourceLine = line
         sourceFile = file
     }
