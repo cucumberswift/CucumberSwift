@@ -16,7 +16,7 @@ import CucumberSwift
 enum ParallelFixtureSupport {
     /// Turns on experimental parallel testing and adds the hooks that check each scenario and record it.
     static func setUp() {
-        Cucumber.experimentalParallelTesting = true
+        Cucumber.parallelTesting = true
 
         var stepsRun = [Int]()
         BeforeScenario { _ in

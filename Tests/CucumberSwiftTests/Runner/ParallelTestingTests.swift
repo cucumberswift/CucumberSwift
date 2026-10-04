@@ -13,7 +13,7 @@ import XCTest
 
 class ParallelTestingTests: XCTestCase {
     private static func reset() {
-        Cucumber.experimentalParallelTesting = nil
+        Cucumber.parallelTesting = nil
         Cucumber.oneTestPerScenario = nil
         Cucumber.shared.reset()
         CucumberTest.resetSetUp()
@@ -142,7 +142,7 @@ class ParallelTestingTests: XCTestCase {
     @MainActor
     func testPreparingMakesTheScenarioClassesWhenTheFlagIsOn() {
         let title = parseFeature()
-        Cucumber.experimentalParallelTesting = true
+        Cucumber.parallelTesting = true
 
         ParallelTesting.prepare()
 
@@ -154,7 +154,7 @@ class ParallelTestingTests: XCTestCase {
     @MainActor
     func testPreparingDoesNothingOnceXCTestHasBuiltTheSuite() {
         _ = parseFeature()
-        Cucumber.experimentalParallelTesting = true
+        Cucumber.parallelTesting = true
         _ = CucumberTest.defaultTestSuite
 
         ParallelTesting.prepare()
@@ -166,7 +166,7 @@ class ParallelTestingTests: XCTestCase {
     @MainActor
     func testPreparingDoesNothingWithOneTestPerScenario() {
         _ = parseFeature()
-        Cucumber.experimentalParallelTesting = true
+        Cucumber.parallelTesting = true
         Cucumber.oneTestPerScenario = true
 
         ParallelTesting.prepare()

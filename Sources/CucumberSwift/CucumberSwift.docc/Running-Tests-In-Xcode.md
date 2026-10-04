@@ -15,7 +15,7 @@ These settings change how your tests appear in Xcode, and the step definitions C
 | Name tests as you wrote them | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On |
 | One test per scenario | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step |
 | Suggest regex literals for undefined steps (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>) | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions |
-| Experimental parallel testing (see <doc:Running-Tests-In-Xcode#Experimental-parallel-testing>) | `Cucumber.experimentalParallelTesting` | `CUCUMBER_EXPERIMENTAL_PARALLEL_TESTING` | Off |
+| Parallel testing, experimental (see <doc:Running-Tests-In-Xcode#Parallel-testing>) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off |
 
 Set the static variables in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
 
@@ -172,11 +172,11 @@ To remove them, run the script with `uninstall`, then quit and reopen Xcode:
 CucumberSwift/Tools/Xcode/gherkin-highlighting.sh uninstall
 ```
 
-### Experimental parallel testing
+### Parallel testing
 
 Xcode's parallel testing, the **Execute in parallel** option on a test target in a scheme or test plan, or `xcodebuild -parallel-testing-enabled YES`, runs tests in several worker processes, on clones of the simulator for iOS. It hands each worker whole test classes. By default CucumberSwift's scenarios don't run correctly in parallel: depending on the setup, each one runs in every worker, or not at all, and the run can still pass. Leave parallel testing off for a CucumberSwift test target unless you turn on this experiment.
 
-With `Cucumber.experimentalParallelTesting = true` in `setupSteps()`, or `CUCUMBER_EXPERIMENTAL_PARALLEL_TESTING` set to `YES`, each scenario is a test class of its own, which Xcode hands to one worker. The scenario's steps run in order in that worker, as they do in a serial run. A serial run doesn't change.
+With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES`, each scenario is a test class of its own, which Xcode hands to one worker. The scenario's steps run in order in that worker, as they do in a serial run. A serial run doesn't change.
 
 It is experimental. Before you rely on it:
 

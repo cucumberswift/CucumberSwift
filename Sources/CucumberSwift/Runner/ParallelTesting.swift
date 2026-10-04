@@ -8,7 +8,7 @@
 //  so without this a parallel run drops the scenarios, or runs them all in every worker that is handed
 //  CucumberTest or a subclass of it.
 //
-//  With `Cucumber.experimentalParallelTesting`, each scenario's class is made as soon as XCTest has
+//  With `Cucumber.parallelTesting`, each scenario's class is made as soon as XCTest has
 //  loaded the test bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
@@ -59,7 +59,7 @@ enum ParallelTesting {
         guard !CucumberTest.hasBeenBuilt, !scenarioClassesMade, Cucumber.shared is StepImplementation else { return }
         // The flag can be set in setupSteps(), so the features and steps are loaded first.
         CucumberTest.loadFeaturesIfNeeded()
-        guard FeatureFlags.isExperimentalParallelTesting,
+        guard FeatureFlags.isParallelTesting,
               !FeatureFlags.isOneTestPerScenario,
               !Cucumber.shared.features.isEmpty else { return }
         makeScenarioClasses()
