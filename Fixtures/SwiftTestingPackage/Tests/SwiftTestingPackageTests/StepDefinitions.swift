@@ -31,9 +31,14 @@ extension Cucumber: @retroactive StepImplementation {
             World.prices = [:]
             World.scenarios.append(scenario.title)
         }
+        macroSteps()
+        dslSteps()
+        localizedSteps()
+    }
 
-        // The step definition macros: typed closure parameters, checked against the expression when
-        // the tests compile.
+    /// The step definition macros: typed closure parameters, checked against the expression when the
+    /// tests compile.
+    private func macroSteps() {
         #Given("I have an apple tree") {
         }
         #When("I pick a {string} apple") { (color: String) in
@@ -51,8 +56,10 @@ extension Cucumber: @retroactive StepImplementation {
         #Then("I have {int} cukes") { (count: Int) in
             #expect(World.cukes == count)
         }
+    }
 
-        // CucumberSwift's plain DSL, which the macros expand to.
+    /// CucumberSwift's plain DSL, which the macros expand to.
+    private func dslSteps() {
         But("I still have {int} cukes") { match, _ in
             let count = try match.first(\.int)
             #expect(World.cukes == count)
@@ -70,8 +77,10 @@ extension Cucumber: @retroactive StepImplementation {
             #expect(World.prices["cukes"] == match[\.int, index: 1])
             #expect(step.scenario?.title == "A shopping list")
         }
+    }
 
-        // A localized feature file: its steps match by their text, whatever the keyword's language.
+    /// A localized feature file: its steps match by their text, whatever the keyword's language.
+    private func localizedSteps() {
         Given("tengo {int} pepinos") { match, _ in
             World.cukes = try match.first(\.int)
         }

@@ -25,6 +25,19 @@ enum SwiftTestingSource {
         let steps: [FeatureFile.Step]
     }
 
+    /// The constants that the tests run, in the order of the tests.
+    private struct Data {
+        var source = ""
+        var count = 0
+
+        mutating func add(_ kind: String, _ value: String) -> String {
+            count += 1
+            let name = "cucumber\(kind)\(count)"
+            source += "\nprivate let \(name) = \(value)\n"
+            return name
+        }
+    }
+
     /// The last line of a suggested step definition, which fails the step until it is filled in.
     static let failure = "Issue.record(\"Step not implemented: replace this line with your test code\")"
 
@@ -64,19 +77,6 @@ enum SwiftTestingSource {
         }
         let problems = inputs.flatMap { input in input.file.problems.map { (path: input.path, problem: $0) } }
         return source + "}\n\n" + "// MARK: - What the tests run\n\n" + gherkinProblems(problems) + data.source
-    }
-
-    /// The constants that the tests run, in the order of the tests.
-    private struct Data {
-        var source = ""
-        var count = 0
-
-        mutating func add(_ kind: String, _ value: String) -> String {
-            count += 1
-            let name = "cucumber\(kind)\(count)"
-            source += "\nprivate let \(name) = \(value)\n"
-            return name
-        }
     }
 
     /// Records each problem in the feature files, as CucumberSwift's `testGherkin()` does.
