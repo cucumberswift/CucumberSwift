@@ -1,0 +1,1 @@
+../../SwiftTestingAndXCTestTuist/UITests/BasketUI.swift

@@ -1,8 +1,9 @@
 //
 //  BasketApp.swift
-//  SwiftTestingAndXCTestTuist
+//  BasketApp
 //
 //  The app under test: a basket of cukes. Its unit tests check `Basket`, and its UI tests tap the buttons.
+//  Shared by SwiftTestingAndXCTestTuist and SwiftTestingAndXCTestMacrosTuist, which links to this file.
 //
 
 import SwiftUI
