@@ -108,7 +108,7 @@ PBX_REFERENCE = re.compile(
 PBX_FIELD = re.compile(r"(\w+) = " + PBX_VALUE + ";")
 # A Starlark bazel_dep call, and a keyword argument in it with a string value.
 BAZEL_DEP = re.compile(r"\bbazel_dep\s*\(([^()]*)\)")
-STARLARK_ARGUMENT = re.compile(r"""(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+STARLARK_ARGUMENT = re.compile(r"""\b(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 
 
 class CheckError(Exception):
@@ -348,9 +348,10 @@ def check_bazel(swiftpm_dependencies, modules, tests_modules):
                           f"{MODULE_BAZEL}, the version CI builds against.")
     for module in sorted(modules.keys() & tests_modules.keys()):
         ours, theirs = modules[module], tests_modules[module]
-        if ours and theirs and ours != theirs:
-            errors.append(f"{MODULE_BAZEL} depends on {module} {ours}, but {TESTS_MODULE_BAZEL} "
-                          f"depends on {theirs}. Use the same version in both.")
+        if ours != theirs:
+            errors.append(f"{MODULE_BAZEL} depends on {module} {ours or 'with no version'}, but "
+                          f"{TESTS_MODULE_BAZEL} depends on {theirs or 'it with no version'}. Use "
+                          f"the same version in both.")
     return errors
 
 
