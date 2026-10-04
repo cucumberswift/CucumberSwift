@@ -180,7 +180,12 @@ With `Cucumber.experimentalParallelTesting = true` in `setupSteps()`, or `CUCUMB
 
 It is experimental. Before you rely on it:
 
-- **Only some setups have been tried:** unit test targets without a host app, on Mac Catalyst, with Xcode 26.2. UI test targets, and unit tests hosted in an app, haven't been tried.
+- **What has been tried.** On the iOS and tvOS Simulators, macOS and Mac Catalyst, with Xcode 26, and with Xcode 16 on the iOS Simulator and Mac Catalyst:
+  - **Unit tests without a host app** run in parallel on all of them.
+  - **Unit tests hosted in an app** run correctly on all of them, but in parallel only on macOS. On the Simulators and Mac Catalyst, Xcode runs the tests of a target hosted in an app in one worker, plain XCTest tests too.
+  - **UI tests** run in parallel on the iOS and tvOS Simulators. On macOS and Mac Catalyst they have been tried with one worker only.
+
+  Devices haven't been tried.
 - **Check the number of tests that ran** against a serial run. It depends on when XCTest lists the classes it hands out, which a new Xcode can change.
 - **Each worker is a process of its own.** State your step definitions share between scenarios, such as a variable that counts them, is per worker.
 - **Feature hooks run per worker.** `BeforeFeature` runs in each worker that runs one of the feature's scenarios. `AfterFeature` runs in the worker that runs the feature's last scenario, which can finish before the feature's other scenarios have finished in other workers. Scenario and step hooks run as they do in a serial run.

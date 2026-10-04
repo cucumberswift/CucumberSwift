@@ -440,7 +440,7 @@ jobs:
             workers: 2
           - platform: tvOS Simulator
             workers: 2
-          # UI tests on a Mac drive the one copy of the app a Mac can run.
+          # UI tests on a Mac have only been tried with one worker.
           - platform: Mac Catalyst
             kind: UI
             workers: 1
