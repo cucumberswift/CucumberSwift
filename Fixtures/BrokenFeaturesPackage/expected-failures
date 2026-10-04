@@ -1,0 +1,10 @@
+# Failures `mise run test-fixtures` expects in this fixture's test output, one per line, as text each
+# one contains. The tests must fail, and with each of these.
+# The XCTest runner: the step that no step definition matches, and the unsupported language.
+Features/Broken.feature:6: error: -[Broken features › Problems in a scenario 2 › When a step that no step definition matches] : No CucumberSwift expression found that matches this step.
+error: -[CucumberSwift.CucumberTest testGherkin] : failed - File: Unsupported.feature declares an unsupported language
+# The Swift Testing runner: the same two problems, at their lines in the feature files.
+✘ Test "Problems in a scenario" recorded an issue at Broken.feature:6:5
+↳ No CucumberSwift expression found that matches this step.
+✘ Test "Feature files are valid Gherkin" recorded an issue at Unsupported.feature:1:1
+↳ File: Unsupported.feature declares an unsupported language
