@@ -24,9 +24,22 @@ The closure takes one argument per parameter in the expression, already converte
 
 Each macro expands to the step definition you would otherwise write by hand, so nothing about how steps match or run changes. Feature files, hooks and the step definitions you already have keep working, and you can mix both styles in one target.
 
+## Requirements
+
+| | In a Swift package | In an Xcode project, or one Tuist generates |
+|---|---|---|
+| Xcode | 16.3 (Swift 6.1) or later | 26.4 or later |
+| macOS to build on | 15.2 or later | 26.2 or later |
+| Where the tests run | iOS 13, macOS 10.15 and tvOS 13 or later | iOS 13, macOS 10.15 and tvOS 13 or later |
+
+- **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
+- **In an Xcode project**, you need Xcode 26.4, the first to turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as described in <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>, or run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
+- **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
+- **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
+
 ## Add the macros to your package
 
-The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros`. They need Swift 6.1 (Xcode 16.3) or later, and the swift-syntax package, which SwiftPM downloads only when the trait is on. A package that does not turn the trait on never downloads swift-syntax.
+The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros` (see <doc:Checking-Step-Definitions#Requirements>). They need the swift-syntax package, which SwiftPM downloads only when the trait is on. A package that does not turn the trait on never downloads swift-syntax.
 
 In your `Package.swift`, turn the trait on and depend on the product:
 
@@ -51,7 +64,7 @@ let package = Package(
 
 Then `import CucumberSwiftMacros` where you write step definitions. It imports CucumberSwift and CucumberSwiftExpressions as well.
 
-In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, turn the trait on from a local package instead: see <doc:#Use-the-macros-in-an-Xcode-project-before-Xcode-264>.
+In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. This needs Xcode 26.4 or later: see <doc:Checking-Step-Definitions#Requirements>. With an earlier Xcode, turn the trait on from a local package instead: see <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>.
 
 In a project that Tuist generates, turn the trait on where the project lists its packages, and depend on the product:
 
@@ -73,7 +86,7 @@ let project = Project(
 )
 ```
 
-Tuist writes the trait into the Xcode project it generates, so the same Xcode 26.4 or later is needed. If the trait is off, or your Xcode does not apply it, each macro you use is an error that says to turn the `Macros` trait on.
+Tuist writes the trait into the Xcode project it generates, so it needs the same Xcode as any Xcode project. If the trait is off, or your Xcode does not apply it, each macro you use is an error that says to turn the `Macros` trait on.
 
 ### Use the macros in an Xcode project before Xcode 26.4
 
@@ -110,8 +123,6 @@ Its only source file, `Sources/StepDefinitionMacros/Exports.swift`, re-exports t
 Add the folder to your project as a local package (in Xcode, **File > Add Package Dependencies… > Add Local…**; in Tuist, `.package(path: "StepDefinitionMacros")` in `Project.packages`), add its `StepDefinitionMacros` product to your test target, and `import StepDefinitionMacros` where you write step definitions. Keep CucumberSwift itself in the project, without the trait, for its plugins, such as `CucumberSwiftLint`: SwiftPM turns the trait on for the whole package as long as one dependency asks for it.
 
 For the Swift Testing runner, depend on `CucumberSwiftTestingMacros` and re-export it instead; see <doc:Running-Feature-Files-With-Swift-Testing>.
-
-> Note: Macros are only available through Swift Package Manager. Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
 
 The first time you build a macro, Xcode asks you to trust and enable it. Recent versions of Xcode and SwiftPM download swift-syntax prebuilt, so it does not slow the build down.
 
@@ -167,7 +178,7 @@ Every localized step definition has a macro too, with the same name: `#ES_Dado` 
 
 Each mistake is an error on its own line. Click the error's icon to see the whole message and, where there is one, the fix: click **Apply** to make the change.
 
-![A Swift file in Xcode with three step definition macros marked as errors. The popover for the first, a closure that takes one argument for a pattern with two parameters, offers to change the closure's parameters to "(count: Int, string: String)", with an Apply button. The others show "The parameter {int is missing its closing '}'" and that a pattern ending in "$" is treated as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
+![A Swift file in Xcode with four step definition macros marked as errors, each message shown on its line: the pattern has 2 parameters but the closure takes 1 argument; {int} gives Int but 'count' is declared as String; the '{' does not have a matching '}'; and a pattern ending in "$" is treated as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
 
 | Mistake | Example | Fix |
 |---|---|---|
