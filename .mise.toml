@@ -25,8 +25,12 @@ run = "tuist generate --path Tests/ParallelFixtures --no-open"
 description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
 # Compares the regenerated project with the index, so a regenerated project that is
 # already staged passes. CI and the pre-commit hook both run this.
+# Git runs hooks with GIT_INDEX_FILE, GIT_DIR and others set. Tuist resolves packages by
+# running git in each package's checkout, where those would make it read this repository's
+# index and fail with "unable to read tree", so they are cleared for Tuist only. The git
+# checks below keep them, so they compare against the index being committed.
 run = """
-tuist generate --no-open
+(unset $(git rev-parse --local-env-vars); tuist generate --no-open)
 if ! git diff --quiet -- CucumberSwift.xcodeproj || [ -n "$(git ls-files --others --exclude-standard -- CucumberSwift.xcodeproj)" ]; then
   git status --short -- CucumberSwift.xcodeproj
   echo "CucumberSwift.xcodeproj does not match Project.swift. Run 'mise run generate' and commit the result."
