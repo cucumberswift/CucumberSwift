@@ -345,6 +345,38 @@ class StepGenerationTests: XCTestCase {
         XCTAssertEqual(actual, expected)
     }
 
+    // The warning names an overwritten step as written in its own feature file, not in the last parsed file's language (#311).
+    func testGeneratedOverwriteCommentNamesStepsAsWrittenInTheirFeatureFile() {
+        defer { Scope.language = .default }
+        Cucumber.shared.features.removeAll()
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some terse yet descriptive text of what is desired
+           Scenario: Some determinable business situation
+             Given I login as "Anne"
+             Given I login as "Robert Downey Jr"
+        """)
+        Cucumber.shared.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Dado que tengo 3 pepinos
+        """)
+        Given("I login as \"Robert Downey Jr\"") { _, _ in }
+        Given("que tengo 3 pepinos") { _, _ in }
+        let actual = StubGenerator.getStubs(for: Cucumber.shared.features)
+            .map(\.generatedSwift)
+            .joined(separator: "\n")
+        let expected = #"""
+        //FIXME: WARNING: This will overwite your implementation for the step(s):
+        //                Given I login as "Robert Downey Jr"
+        Given(#/^I login as \"(.*?)\"$/#) { matches, _ in
+            let string = matches.1
+            XCTFail("Step not implemented: replace this line with your test code")
+        }
+        """#
+        XCTAssertEqual(actual, expected)
+    }
+
     func testGeneratedImplementationWhenStepContainsADataTable() {
         Cucumber.shared.features.removeAll()
         Cucumber.shared.parseIntoFeatures("""

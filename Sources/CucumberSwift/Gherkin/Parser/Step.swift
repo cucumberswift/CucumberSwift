@@ -200,8 +200,9 @@ extension Step {
         }
 
         /// The keyword as it is written in the feature file it was read from, such as `Given`, `And` or `Dado`.
-        /// A keyword that was not read from a feature file, such as ``given`` or the result of combining
-        /// keywords, is named in the language of the feature file the lexer last read.
+        /// A step's `And` or `But` keyword stays as written after the parser adds the keyword it continues.
+        /// A keyword with no written form, such as ``given`` or one built by a set operation like `union`, is
+        /// named in the language of the feature file the lexer last read.
         public func toString() -> String {
             if let str = stringValue {
                 return str
