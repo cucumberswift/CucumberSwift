@@ -19,8 +19,8 @@
 #   MIN_TESTS  the fewest tests the scheme's test bundles may run together
 set -u
 
-if [ -z "${MIN_TESTS:-}" ]; then
-  echo "::error::Set MIN_TESTS to the number of tests the CucumberSwift scheme runs."
+if [[ -z "${MIN_TESTS:-}" ]]; then
+  echo "::error::Set MIN_TESTS to the number of tests the CucumberSwift scheme runs." >&2
   exit 1
 fi
 
@@ -44,11 +44,11 @@ echo "Tests run by each bundle: $(echo "$totals" | paste -sd' ' -), $total in al
 # worker, so a parallel bundle drops them (#231). Only a parallel run prints
 # "Test suite '…' started on '<device>'".
 if grep -qE "^Test suite '.*' started on '" "$log"; then
-  echo "::error::A test bundle ran in parallel, which skips every Cucumber scenario. Do not mark a target parallelizable in CucumberSwift.xctestplan."
+  echo "::error::A test bundle ran in parallel, which skips every Cucumber scenario. Do not mark a target parallelizable in CucumberSwift.xctestplan." >&2
   status=1
 fi
-if [ "$status" -eq 0 ] && [ "$total" -lt "$MIN_TESTS" ]; then
-  echo "::error::Only $total tests ran; at least $MIN_TESTS were expected. If you removed tests on purpose, lower MIN_TESTS in CI.yml."
+if [[ "$status" -eq 0 && "$total" -lt "$MIN_TESTS" ]]; then
+  echo "::error::Only $total tests ran; at least $MIN_TESTS were expected. If you removed tests on purpose, lower MIN_TESTS in CI.yml." >&2
   status=1
 fi
 exit $status

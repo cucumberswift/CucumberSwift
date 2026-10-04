@@ -70,8 +70,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Show the toolchain
         run: swift --version
+      # Only the versions Package.resolved pins, which the lockfiles job checks.
       - name: Validate SwiftPM BUILDs
-        run: swift build --configuration release --build-path ./build
+        run: swift build --configuration release --build-path ./build --force-resolved-versions
 
   release_script:
     name: Release script tests
