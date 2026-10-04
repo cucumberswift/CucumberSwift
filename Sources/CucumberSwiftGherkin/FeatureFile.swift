@@ -142,7 +142,7 @@ extension FeatureFile.Feature {
                     let outlineStepNodes = outlineNode.children.compactMap { $0 as? AST.StepNode }
                     let description = ScenarioOutlineParser.extractOutlineDescription(outlineNode, stepNodes: outlineStepNodes)
                     return FeatureFile.Scenario(
-                        title: ScenarioOutlineParser.title(of: outlineNode),
+                        title: outlineTitle(outlineNode),
                         description: description,
                         tags: ScenarioOutlineParser.tags(of: outlineNode, featureTags: featureTags),
                         position: outlineNode.tokens.first?.position ?? .start,
@@ -216,4 +216,15 @@ extension Step.Keyword {
             case .but: self = .but
         }
     }
+}
+
+/// The outline's title as written, with its `<placeholders>`.
+private func outlineTitle(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> String {
+    scenarioOutlineNode.tokens.groupedByLine().first?.reduce(into: "") {
+        if case Lexer.Token.tableHeader(_, let headerText) = $1 {
+            $0 += "<\(headerText)>"
+        } else if case Lexer.Token.title(_, let titleText) = $1 {
+            $0 += titleText
+        }
+    } ?? ""
 }

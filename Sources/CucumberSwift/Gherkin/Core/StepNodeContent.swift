@@ -37,16 +37,13 @@ struct StepNodeContent {
             .filter { $0.isTableCell() || $0.isNewline() }
             .groupedByLine()
             .map { line -> [String] in
-                line.filter { $0.isTableCell() }
-                    .map { token -> String in
-                        if case Lexer.Token.tableCell(_, let cellToken) = token {
-                            if case Lexer.Token.tableHeader = cellToken {
-                                return "<\(cellToken.valueDescription)>"
-                            }
-                            return cellToken.valueDescription
-                        }
-                        return ""
+                line.compactMap { token -> String? in
+                    guard case Lexer.Token.tableCell(_, let cellToken) = token else { return nil }
+                    if case Lexer.Token.tableHeader = cellToken {
+                        return "<\(cellToken.valueDescription)>"
                     }
+                    return cellToken.valueDescription
+                }
             }
         match = match.trimmingCharacters(in: .whitespaces)
     }
