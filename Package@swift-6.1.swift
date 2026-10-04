@@ -46,7 +46,7 @@ let package = Package(
         .trait(name: "Macros", description: "Builds the CucumberSwiftMacros product, which depends on swift-syntax.")
     ],
     dependencies: [
-        .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.0"),
+        .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.1"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
         // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
         .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0"),

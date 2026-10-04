@@ -112,6 +112,11 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
     }
 
     func testInvalidRegularExpressionIsAnErrorThatCanBecomeAnExpression() {
+        // #310: Foundation describes this pattern's problem with a full stop of its own.
+        let message = problemMessage("I have {int} cukes$")
+        XCTAssert(message.hasSuffix(". Remove the anchors, or write a valid regular expression."), message)
+        XCTAssertFalse(message.contains(".."), message)
+
         assertMacroExpansion(
             """
             #Given("I have {int} cukes$") { (count: Int) in }
@@ -120,7 +125,7 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             #Given("I have {int} cukes$") { (count: Int) in }
             """,
             diagnostics: [
-                DiagnosticSpec(message: problemMessage("I have {int} cukes$"),
+                DiagnosticSpec(message: message,
                                line: 1,
                                column: 8,
                                fixIts: [FixItSpec(message: "Use it as a Cucumber Expression")])
