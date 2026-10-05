@@ -14,7 +14,7 @@ struct OutlineExample {
     /// The outline's title with the row's values, made unique among the outline's examples.
     let title: String
     let description: String
-    /// The feature's and the outline's tags, and those of its Examples blocks.
+    /// The feature's and the outline's tags, then those of the row's own Examples block.
     let tags: [String]
     /// Where the row is.
     let position: Lexer.Position
@@ -23,6 +23,14 @@ struct OutlineExample {
 }
 
 enum ScenarioOutlineParser {
+    /// One Examples block of a Scenario Outline.
+    private struct ExamplesBlock {
+        /// The tags written above the block's `Examples` line.
+        let tags: [String]
+        /// The block's tokens, from its `Examples` line on.
+        var tokens: [Lexer.Token]
+    }
+
     /// What every example of one Scenario Outline shares.
     private struct Outline {
         let titleLine: [Lexer.Token]?
@@ -102,22 +110,43 @@ enum ScenarioOutlineParser {
                               uri: uri)
         // Shared by every Examples block, so no two examples of the outline get the same title.
         var usedTitles = Set<String>()
-        return getExamplesFrom(scenarioOutlineNode)
+        return examplesBlocks(of: scenarioOutlineNode)
             .flatMap { parseExample($0, of: outline, usedTitles: &usedTitles) }
     }
 
-    /// The feature's tags, then the outline's and those of its Examples blocks. Every example has them all.
+    /// The feature's tags, then the outline's. Each example also has its own Examples block's tags.
     static func tags(of scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String]) -> [String] {
-        featureTags.appending(contentsOf: scenarioOutlineNode.tokens.compactMap {
-            if case Lexer.Token.tag(_, let tag) = $0 {
-                return tag
-            }
-            return nil
-        })
+        // The parser puts a node's tags before its other tokens, and an Examples block's later on.
+        var tags = featureTags
+        for token in scenarioOutlineNode.tokens {
+            guard case Lexer.Token.tag(_, let tag) = token else { break }
+            tags.append(tag)
+        }
+        return tags
     }
 
     static func getExamplesFrom(_ scenarioOutlineNode: AST.ScenarioOutlineNode) -> [[Lexer.Token]] {
-        scenarioOutlineNode.tokens.drop { !$0.isExampleScope() }.groupedByExample()
+        examplesBlocks(of: scenarioOutlineNode).map(\.tokens)
+    }
+
+    /// The outline's Examples blocks, in order. The parser puts the tags written above an `Examples`
+    /// line just before its token, so the tags that come straight before it are that block's.
+    private static func examplesBlocks(of scenarioOutlineNode: AST.ScenarioOutlineNode) -> [ExamplesBlock] {
+        var blocks = [ExamplesBlock]()
+        var tags = [String]()
+        for token in scenarioOutlineNode.tokens {
+            if case Lexer.Token.tag(_, let tag) = token {
+                tags.append(tag)
+                continue
+            }
+            if token.isExampleScope() {
+                blocks.append(ExamplesBlock(tags: tags, tokens: [token]))
+            } else if !blocks.isEmpty {
+                blocks[blocks.count - 1].tokens.append(token)
+            }
+            tags.removeAll()
+        }
+        return blocks
     }
 
     private static func validateTable(_ lines: [[Lexer.Token]], uri: String) {
@@ -127,10 +156,11 @@ enum ScenarioOutlineParser {
         }
     }
 
-    private static func parseExample(_ tokens: [Lexer.Token], of outline: Outline, usedTitles: inout Set<String>) -> [OutlineExample] {
+    private static func parseExample(_ block: ExamplesBlock, of outline: Outline, usedTitles: inout Set<String>) -> [OutlineExample] {
         let titleLine = outline.titleLine
+        let tags = outline.tags + block.tags
         var examples = [OutlineExample]()
-        let lines = tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
+        let lines = block.tokens.filter { $0.isTableCell() || $0.isNewline() }.groupedByLine()
         validateTable(lines, uri: outline.uri)
         let headerLookup: [String: Int]? = lines.first?.enumerated().reduce(into: [:]) {
             if case Lexer.Token.tableCell(_, let headerText) = $1.element {
@@ -170,7 +200,7 @@ enum ScenarioOutlineParser {
             examples.append(OutlineExample(
                 title: exampleTitle,
                 description: outline.description,
-                tags: outline.tags,
+                tags: tags,
                 position: line.first?.position ?? .start,
                 stepNodes: stepNodes))
         }
@@ -224,24 +254,5 @@ enum ScenarioOutlineParser {
             }
         }
         return node
-    }
-}
-
-extension Sequence where Element == Lexer.Token {
-    fileprivate func groupedByExample() -> [[Lexer.Token]] {
-        var examples = [[Lexer.Token]]()
-        var example = [Lexer.Token]()
-        for token in self {
-            if token.isExampleScope() && !example.isEmpty {
-                examples.append(example)
-                example.removeAll()
-            } else {
-                example.append(token)
-            }
-        }
-        if !example.isEmpty {
-            examples.append(example)
-        }
-        return examples
     }
 }
