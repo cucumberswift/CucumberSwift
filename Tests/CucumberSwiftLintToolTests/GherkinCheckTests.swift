@@ -225,6 +225,19 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["1:1 CucumberSwift doesn't support the language 'xx'"])
     }
 
+    func testAnUnsupportedLanguageKeepsTheLanguageBeforeIt() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+        # language: xx
+            Soit les articles suivants
+              | nom   |
+              | pomme |
+        """)
+        XCTAssertEqual(messages, ["4:1 CucumberSwift doesn't support the language 'xx'"])
+    }
+
     func testTheRepositorysValidFeatureFilesHaveNoWarnings() throws {
         let good = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
