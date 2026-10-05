@@ -58,6 +58,29 @@ class ReadableTestNameTests: XCTestCase {
         return suite.tests.compactMap { $0 as? XCTestSuite }.flatMap { $0.tests.map(\.name) }
     }
 
+    /// The generated step tests' names for a Spanish feature file whose steps use keyword forms other than
+    /// the language's last ones (#332).
+    private static func generatedTestNamesForSpanishKeywordForms(readable: Bool) -> [String] {
+        Cucumber.shared.reset()
+        Cucumber.readableTestNames = readable
+        defer {
+            Cucumber.readableTestNames = nil
+            Cucumber.shared.reset()
+            Scope.language = .default
+        }
+        Cucumber.shared.parseIntoFeatures("""
+        # language: es
+        Característica: Una cesta de pepinos
+          Escenario: Llenar la cesta
+            Dado tengo 4 pepinos en mi "cesta"
+            Y como 1 pepino
+            Entonces la cesta tiene 3 pepinos
+        """)
+        let suite = XCTestSuite(name: "Spanish keyword forms")
+        CucumberTest.generateAlltests(suite)
+        return suite.tests.compactMap { $0 as? XCTestSuite }.flatMap { $0.tests.map(\.name) }
+    }
+
     func testByDefaultANameIsCamelCased() {
         XCTAssertEqual(CucumberTest.generatedTestName("Sign in (email: bob@x.com)", readable: false), "SignInEmailBobXCom")
     }
@@ -155,6 +178,24 @@ class ReadableTestNameTests: XCTestCase {
             "Step000_GivenIHave3Cukes]", "Step001_WhenIEat2Cukes]", "Step003_ThenIHave1Cuke]",
             "Step000_CuandoComo2Pepinos]", "Step001_EntoncesQuedan3Pepinos]"
         ]
+        for expected in expectedNames {
+            XCTAssertTrue(names.contains { $0.hasSuffix(" \(expected)") }, "No test named \(expected) in \(names)")
+        }
+    }
+
+    // Spanish Given is Dado, Dada, Dados or Dadas, and And is Y or E: a step is named with the one it was written with (#332).
+    func testEachStepIsNamedWithItsKeywordAsWritten() {
+        let names = Self.generatedTestNamesForSpanishKeywordForms(readable: true)
+        let expectedNames = ["1 \u{203A} Dado tengo 4 pepinos en mi \"cesta\"]", "2 \u{203A} Y como 1 pepino]", "3 \u{203A} Entonces la cesta tiene 3 pepinos]"]
+        for expected in expectedNames {
+            XCTAssertTrue(names.contains { $0.hasSuffix(" \(expected)") }, "No test named \(expected) in \(names)")
+        }
+    }
+
+    // Camel-case names keep the names tests already have, so they still use the language's last forms.
+    func testCamelCasedStepNamesKeepTheLanguagesNamesForTheirKeywords() {
+        let names = Self.generatedTestNamesForSpanishKeywordForms(readable: false)
+        let expectedNames = ["Step000_DadasTengo4PepinosEnMiCesta]", "Step001_DadasComo1Pepino]", "Step002_EntoncesLaCestaTiene3Pepinos]"]
         for expected in expectedNames {
             XCTAssertTrue(names.contains { $0.hasSuffix(" \(expected)") }, "No test named \(expected) in \(names)")
         }

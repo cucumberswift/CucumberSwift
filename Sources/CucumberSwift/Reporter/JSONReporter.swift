@@ -149,7 +149,7 @@ extension CucumberJSONReporter {
 
         init(_ step: CucumberSwift.Step) {
             name = step.match
-            keyword = step.keywordText
+            keyword = step.writtenKeyword
             line = step.location.line
             arguments = []
         }

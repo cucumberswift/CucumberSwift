@@ -152,6 +152,27 @@ final class FeatureFileTests: XCTestCase {
         XCTAssertEqual(steps.map(\.keywords), [[.given], [.and, .given], [.then]])
     }
 
+    // Swift Testing's messages name a step with its keyword as written, as CucumberSwift's do (#332).
+    func testAStepsKeywordNameIsItsKeywordAsWritten() throws {
+        let english = try parse("""
+        Feature: F
+          Scenario: S
+            Given a step
+            And another
+            But not this
+        """)
+        XCTAssertEqual(english.scenarios.first?.steps.map(\.keywordName), ["Given", "And", "But"])
+        let spanish = try parse("""
+        # language: es
+        Característica: Una cesta de pepinos
+          Escenario: Llenar la cesta
+            Dado tengo 4 pepinos en mi "cesta"
+            Y como 1 pepino
+            * tengo hambre
+        """)
+        XCTAssertEqual(spanish.scenarios.first?.steps.map(\.keywordName), ["Dado", "Y", "*"])
+    }
+
     func testTheNextFileStartsInEnglishAgain() throws {
         _ = FeatureFile(parsing: "# language: es\nCaracterística: Comer\n  Escenario: Uno\n    Dado un paso\n", uri: "es.feature")
         let feature = try parse("Feature: F\n  Scenario: S\n    Given a step\n")

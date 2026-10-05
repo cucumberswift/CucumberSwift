@@ -236,7 +236,7 @@ open class CucumberTest: XCTestCase {
     /// The failure for a step that more than one step definition matches. None of them runs, because
     /// CucumberSwift cannot tell which one the step means; the message says where each one is.
     static func ambiguousStepMessage(for step: Step) -> String {
-        ambiguousStepMessage(step: "\(step.keywordText) \(step.match)", definitions: step.matchingDefinitions)
+        ambiguousStepMessage(step: "\(step.writtenKeyword) \(step.match)", definitions: step.matchingDefinitions)
     }
 
     static func ambiguousStepMessage(step: String, definitions: [Step.Definition]) -> String {

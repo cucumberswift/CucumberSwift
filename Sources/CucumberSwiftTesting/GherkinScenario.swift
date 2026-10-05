@@ -11,7 +11,7 @@ import Testing
 /// A step as its feature file describes it.
 public struct GherkinStep: Sendable {
     public let keyword: Step.Keyword
-    /// The keyword in the feature file's language, for messages.
+    /// The keyword as written in the feature file, such as `Dado` or `And`, for messages.
     public let keywordName: String
     public let text: String
     public let line: Int
