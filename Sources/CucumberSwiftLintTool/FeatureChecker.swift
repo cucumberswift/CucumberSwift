@@ -160,9 +160,12 @@ final class FeatureChecker {
     private func checkOtherText(_ text: String, line: Int, column: Int) {
         // Examples may have a description before their table.
         tableAllowed = section == .examples && exampleHeader == nil
-        // A header of more than one word is matched whole, so "Scenaro Outline" isn't "Scenario: Outline".
-        let multiWord = Self.multiWordHeader(in: text)
-        let header = multiWord?.header ?? Self.headerWithoutColon(in: text)
+        // A header of more than one word is matched whole, so "Scenaro Outline" isn't "Scenario: Outline",
+        // unless the line starts with another header as it is written: "Scenarios Outline" is Scenarios.
+        let exact = Self.headerWithoutColon(in: text)
+        var multiWord = Self.multiWordHeader(in: text)
+        if let exact = exact, multiWord?.header.hasPrefix(exact) == false { multiWord = nil }
+        let header = multiWord?.header ?? exact
         let written = multiWord?.written ?? header.map { String(text.prefix($0.count)) }
             ?? String(text.prefix { !$0.isWhitespace && $0 != ":" })
         let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: written, strict: !sawStep)

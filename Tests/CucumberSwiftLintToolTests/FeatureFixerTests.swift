@@ -133,6 +133,19 @@ final class FeatureFixerTests: LintTestCase {
         """)
     }
 
+    func testAnotherHeaderIsNotReplacedByAHeaderOfMoreThanOneWord() throws {
+        // "Scenarios" is one edit from "Scenario", but is a header itself.
+        let result = try fix("""
+        Feature: F
+          Scenario Outline: O <a>
+            Given a <a>
+            Scenarios Outline
+              | a |
+              | b |
+        """)
+        XCTAssertEqual(result.changes, ["4: Scenarios Outline → Scenarios: Outline"])
+    }
+
     func testACorrectHeaderOfMoreThanOneWordIsNotChanged() throws {
         let feature = """
         Feature: F

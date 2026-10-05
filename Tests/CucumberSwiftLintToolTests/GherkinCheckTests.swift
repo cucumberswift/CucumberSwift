@@ -49,6 +49,18 @@ final class GherkinCheckTests: LintTestCase {
         ])
     }
 
+    func testAnotherHeaderIsNotReportedAsAHeaderOfMoreThanOneWord() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outline: O <a>
+            Given a <a>
+            Scenarios Outline
+              | a |
+              | b |
+        """)
+        XCTAssertEqual(messages, ["4:5 Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Scenarios:'?"])
+    }
+
     func testACorrectHeaderOfMoreThanOneWordIsNotReported() throws {
         let messages = try lint("""
         Feature: F
