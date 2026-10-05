@@ -43,14 +43,14 @@ Leave the plugin on for every build, on your Mac and in CI. It only reports warn
 
 ### What it checks
 
-In every feature file:
+In feature files:
 
-- **Keywords.** Text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion.
+- **Keywords.** In English only: text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion.
 - **Structure.** A step outside a scenario or background, a step after `Examples`, and `Examples` outside a scenario.
 - **Tables.** A row with a different number of cells from the first row of its table, and a table that doesn't follow a step or `Examples`.
 - **Doc strings.** A doc string that doesn't follow a step, or is never closed.
 
-In a feature file whose first line sets another language (`# language: fr`), it checks only tables and doc strings.
+A feature file in another language has a comment such as `# language: fr`. The plugin reads its headers and steps with that language's keywords, as CucumberSwift does, and checks everything except keywords: it says nothing about a line it can't read as a header or a step. CucumberSwift and the plugin both honour the comment on any line, from that line on, so put it on the first line. If CucumberSwift doesn't support the language, the plugin warns on the comment, and reads on in the language it was reading before, as CucumberSwift does.
 
 Against the target's step definitions:
 

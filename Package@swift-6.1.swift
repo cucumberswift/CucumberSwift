@@ -76,9 +76,10 @@ let package = Package(
             name: "CucumberSwiftGherkin",
             path: "Sources/CucumberSwiftGherkin"),
         // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
+        // CucumberSwiftGherkin for the keywords of feature files in other languages.
         .executableTarget(
             name: "CucumberSwiftLintTool",
-            dependencies: ["CucumberSwiftExpressions"],
+            dependencies: ["CucumberSwiftExpressions", "CucumberSwiftGherkin"],
             path: "Sources/CucumberSwiftLintTool"),
         .plugin(
             name: "CucumberSwiftLintPlugin",

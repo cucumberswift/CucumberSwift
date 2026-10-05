@@ -188,4 +188,20 @@ final class FeatureFileTests: XCTestCase {
         _ = FeatureFile(parsing: "# language: xx\nFeature: F\n", uri: "First.feature")
         XCTAssertEqual(FeatureFile(parsing: "Feature: F\n  Scenario: S\n    Given a step\n", uri: "Second.feature").problems, [])
     }
+
+    func testKeywordsReadALineAsCucumberSwiftDoes() throws {
+        let keywords = try XCTUnwrap(FeatureFile.Keywords(language: "fr"))
+        XCTAssertEqual(keywords.line("Fonctionnalité: Panier"), .feature)
+        XCTAssertEqual(keywords.line("Plan du scénario: Ajouter"), .scenarioOutline)
+        XCTAssertEqual(keywords.line("Exemples:"), .examples)
+        XCTAssertEqual(keywords.line("Soit un prix: 3"), .step(keyword: "Soit"))
+        XCTAssertEqual(keywords.line("* un panier"), .step(keyword: "*"))
+        XCTAssertNil(keywords.line("Une description"))
+        // CucumberSwift reads a header only with its colon.
+        XCTAssertNil(keywords.line("Fonctionnalité Panier"))
+    }
+
+    func testKeywordsAreNilForAnUnsupportedLanguage() {
+        XCTAssertNil(FeatureFile.Keywords(language: "xx"))
+    }
 }

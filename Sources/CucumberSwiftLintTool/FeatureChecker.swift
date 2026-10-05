@@ -1,8 +1,10 @@
+import CucumberSwiftGherkin
 import Foundation
 
 /// Checks one `.feature` file, line by line, for the mistakes that otherwise only show up when the
 /// tests run: text where a step should be, a misspelt keyword, a table with uneven rows, an
 /// unclosed doc string, and (when `definitions` is not nil) steps that no step definition matches.
+/// Keywords are only checked in English; the rest is checked in every language CucumberSwift reads.
 final class FeatureChecker {
     private enum Section { case none, feature, rule, background, scenario, outline, examples }
 
@@ -24,7 +26,8 @@ final class FeatureChecker {
     let definitions: [StepDefinition]?
 
     private var report: ((Diagnostic) -> Void)?
-    private var english = true
+    // The keywords of a file in another language than English, as CucumberSwift reads them.
+    private var keywords: FeatureFile.Keywords?
     private var section = Section.none
     private var sawStep = false
     private var tableAllowed = false
@@ -69,15 +72,17 @@ final class FeatureChecker {
         } else if text.isEmpty {
             table = nil
         } else if text.hasPrefix("#") {
-            checkComment(text)
+            checkComment(text, line: line, column: column)
         } else if text.hasPrefix("\"\"\"") || text.hasPrefix("```") {
             checkDocStringStart(text, line: line, column: column)
         } else if text.hasPrefix("|") {
             checkTableRow(text, line: line, column: column)
         } else {
             table = nil
-            guard !text.hasPrefix("@"), english else { return }
-            if let header = Self.headers.first(where: { text.hasPrefix($0 + ":") }) {
+            guard !text.hasPrefix("@") else { return }
+            if let keywords = keywords {
+                checkLine(text, keywords: keywords, line: line, column: column)
+            } else if let header = Self.headers.first(where: { text.hasPrefix($0 + ":") }) {
                 checkHeader(header, line: line, column: column)
             } else if let keyword = Self.stepKeyword(of: text) {
                 checkStep(String(text.dropFirst(keyword.count)), line: line, column: column)
@@ -87,10 +92,21 @@ final class FeatureChecker {
         }
     }
 
-    private func checkComment(_ text: String) {
+    /// A `# language:` comment sets the language from its line on, as in CucumberSwift. A language
+    /// CucumberSwift doesn't support leaves the language as it was.
+    private func checkComment(_ text: String, line: Int, column: Int) {
         let comment = text.dropFirst().trimmingCharacters(in: .whitespaces)
-        guard comment.hasPrefix("language:") else { return }
-        english = comment.dropFirst("language:".count).trimmingCharacters(in: .whitespaces) == "en"
+        guard comment.hasPrefix("language") else { return }
+        let rest = comment.dropFirst("language".count).trimmingCharacters(in: .whitespaces)
+        guard rest.hasPrefix(":") else { return }
+        let code = rest.dropFirst().trimmingCharacters(in: .whitespaces)
+        if code == "en" {
+            keywords = nil
+        } else if let language = FeatureFile.Keywords(language: code) {
+            keywords = language
+        } else {
+            warn(line, column, "CucumberSwift doesn't support the language '\(code)'")
+        }
     }
 
     private func checkDocStringStart(_ text: String, line: Int, column: Int) {
@@ -136,6 +152,22 @@ final class FeatureChecker {
         if section != .examples { finishScenario() }
         sawStep = false
         tableAllowed = section == .examples
+    }
+
+    /// A line in another language than English. Its headers and steps are checked as in English, but
+    /// keywords aren't, so other text is never reported.
+    private func checkLine(_ text: String, keywords: FeatureFile.Keywords, line: Int, column: Int) {
+        switch keywords.line(text) {
+            case .feature: checkHeader("Feature", line: line, column: column)
+            case .rule: checkHeader("Rule", line: line, column: column)
+            case .background: checkHeader("Background", line: line, column: column)
+            case .scenario: checkHeader("Scenario", line: line, column: column)
+            case .scenarioOutline: checkHeader("Scenario Outline", line: line, column: column)
+            case .examples: checkHeader("Examples", line: line, column: column)
+            case .step(let keyword): checkStep(String(text.dropFirst(keyword.count)), line: line, column: column)
+            // Examples may have a description before their table.
+            case nil: tableAllowed = section == .examples && exampleHeader == nil
+        }
     }
 
     private func checkStep(_ text: String, line: Int, column: Int) {
