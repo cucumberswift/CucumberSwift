@@ -121,7 +121,7 @@ Add the folder to your project as a local package: in Xcode, **File > Add Packag
 
 The same package turns the trait on for the Swift Testing runner's `CucumberSwiftTestingMacros`; see <doc:Running-Feature-Files-With-Swift-Testing>.
 
-The first time you build a macro, Xcode asks you to trust and enable it. Recent versions of Xcode and SwiftPM download swift-syntax prebuilt, so it does not slow the build down.
+The first time you build a macro, Xcode asks you to trust and enable it. A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead, but only when swift.org publishes one for both your toolchain and the swift-syntax version your package resolves, and not in every build even then. Swift 6.1 always compiles it.
 
 ## Write a step definition
 
