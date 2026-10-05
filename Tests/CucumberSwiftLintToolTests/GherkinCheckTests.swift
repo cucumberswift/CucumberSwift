@@ -32,6 +32,40 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["2:3 'Scenario' is not a Gherkin keyword. Did you mean 'Scenario:'?"])
     }
 
+    func testAMisspeltHeaderOfMoreThanOneWordIsReportedWhole() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outlne: A <n>
+            Given a step
+          Scenaro Outline: B <n>
+            Given a step
+          Scenaro Template C <n>
+            Given a step
+        """)
+        XCTAssertEqual(messages, [
+            "2:3 'Scenario Outlne' is not a Gherkin keyword. Did you mean 'Scenario Outline:'?",
+            "4:3 Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Scenario Outline:'?",
+            "6:3 Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Scenario Template:'?"
+        ])
+    }
+
+    func testACorrectHeaderOfMoreThanOneWordIsNotReported() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outline: A <n>
+            Given a step
+            Examples:
+              | n |
+              | 1 |
+          Scenario Template: B <n>
+            Given a step
+            Examples:
+              | n |
+              | 2 |
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
     func testDescriptionsAreAllowed() throws {
         let messages = try lint("""
         Feature: F
