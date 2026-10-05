@@ -172,6 +172,118 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, [])
     }
 
+    func testATableInAnotherLanguageIsAllowedAfterAStep() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+            Soit les articles suivants
+              | nom   | prix |
+              | pomme | 1    |
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
+    func testARowWithTheWrongNumberOfCellsIsReportedInAnotherLanguage() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+            Soit les articles suivants
+              | nom   | prix |
+              | pomme | 1    | 2 |
+        """)
+        XCTAssertEqual(messages, ["6:7 This row has 3 cells, but the table's first row (line 5) has 2"])
+    }
+
+    func testADocStringInAnotherLanguageIsAllowedAfterAStep() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+            Alors le panier contient
+              \"""
+              pomme
+              \"""
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
+    func testExamplesInAnotherLanguageHaveATable() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Plan du scénario: Ajouter un article
+            Soit un article nommé <nom>
+            Exemples:
+              Une description
+              | nom   |
+              | pomme |
+        """, steps: #"Given("un article nommé {word}") { _, _ in }"#)
+        XCTAssertEqual(messages, [])
+    }
+
+    func testATableMustFollowAStepInAnotherLanguage() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+            Une description
+            | nom |
+        """)
+        XCTAssertEqual(messages, ["5:5 A table must follow a step or an Examples line"])
+    }
+
+    func testAnUndefinedStepInAnotherLanguageIsReported() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Contexte:
+            Soit un panier vide
+          Plan du scénario: Ajouter un article
+            Quand j'ajoute <nom>
+            Exemples:
+              | nom   |
+              | pomme |
+        """, steps: #"Given("un panier vide") { _, _ in }"#)
+        XCTAssertEqual(messages, ["6:5 Undefined step: no step definition matches \"j'ajoute pomme\""])
+    }
+
+    func testTheLanguageIsSetFromItsCommentsLineOn() throws {
+        let messages = try lint("""
+        # Copyright
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+            Soit les articles suivants
+              | nom |
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
+    func testAnUnsupportedLanguageIsReported() throws {
+        let messages = try lint("""
+        #  language  :  xx
+        Feature: F
+          Scenario: S
+            Given a step
+        """)
+        XCTAssertEqual(messages, ["1:1 CucumberSwift doesn't support the language 'xx'"])
+    }
+
+    func testAnUnsupportedLanguageKeepsTheLanguageBeforeIt() throws {
+        let messages = try lint("""
+        # language: fr
+        Fonctionnalité: Panier
+          Scénario: Ajouter des articles
+        # language: xx
+            Soit les articles suivants
+              | nom   |
+              | pomme |
+        """)
+        XCTAssertEqual(messages, ["4:1 CucumberSwift doesn't support the language 'xx'"])
+    }
+
     func testTheRepositorysValidFeatureFilesHaveNoWarnings() throws {
         let good = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

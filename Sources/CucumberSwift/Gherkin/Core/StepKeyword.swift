@@ -32,20 +32,25 @@ extension Step {
         }
 
         public init?(_ str: String) {
+            self.init(str, in: Scope.language)
+        }
+
+        /// The keyword `str` names in `language`.
+        init?(_ str: String, in language: Language) {
             var set: Keyword = []
-            if Scope.language.matchesGiven(str) {
+            if language.matchesGiven(str) {
                 set.insert(.given)
             }
-            if Scope.language.matchesWhen(str) {
+            if language.matchesWhen(str) {
                 set.insert(.when)
             }
-            if Scope.language.matchesThen(str) {
+            if language.matchesThen(str) {
                 set.insert(.then)
             }
-            if Scope.language.matchesAnd(str) {
+            if language.matchesAnd(str) {
                 set.insert(.and)
             }
-            if Scope.language.matchesBut(str) {
+            if language.matchesBut(str) {
                 set.insert(.but)
             }
             guard !set.isEmpty else { return nil }
