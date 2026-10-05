@@ -160,20 +160,25 @@ final class FeatureChecker {
     private func checkOtherText(_ text: String, line: Int, column: Int) {
         // Examples may have a description before their table.
         tableAllowed = section == .examples && exampleHeader == nil
-        let header = Self.headerWithoutColon(in: text)
-        let firstWord = header.map { String(text.prefix($0.count)) }
+        // A header of more than one word is matched whole, so "Scenaro Outline" isn't "Scenario: Outline",
+        // unless the line starts with another header as it is written: "Scenarios Outline" is Scenarios.
+        let exact = Self.headerWithoutColon(in: text)
+        var multiWord = Self.multiWordHeader(in: text)
+        if let exact = exact, multiWord?.header.hasPrefix(exact) == false { multiWord = nil }
+        let header = multiWord?.header ?? exact
+        let written = multiWord?.written ?? header.map { String(text.prefix($0.count)) }
             ?? String(text.prefix { !$0.isWhitespace && $0 != ":" })
-        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: firstWord, strict: !sawStep)
+        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: written, strict: !sawStep)
         let inSteps = sawStep && [.background, .scenario, .outline].contains(section)
         let fix = suggestion.flatMap { suggestion -> Diagnostic.Fix? in
-            guard inSteps || section == .none || isMistake(firstWord, in: text, suggestion: suggestion, line: line) else { return nil }
-            return Self.fix(replacing: firstWord, in: text, with: suggestion)
+            guard inSteps || section == .none || isMistake(written, in: text, suggestion: suggestion, line: line) else { return nil }
+            return Self.fix(replacing: written, in: text, with: suggestion)
         }
         if inSteps {
             let hint = suggestion.map { " Did you mean '\($0)'?" } ?? ""
             warn(line, column, "Expected a step (Given, When, Then, And, But), a table or a doc string.\(hint)", fix: fix)
         } else if let suggestion = suggestion {
-            warn(line, column, "'\(firstWord)' is not a Gherkin keyword. Did you mean '\(suggestion)'?", fix: fix)
+            warn(line, column, "'\(written)' is not a Gherkin keyword. Did you mean '\(suggestion)'?", fix: fix)
         }
         // Read a header that is only missing its colon as that header, so the lines after it
         // aren't reported too.
@@ -258,6 +263,24 @@ extension FeatureChecker {
             let next = text.dropFirst(header.count).first
             return next.map { $0 == ":" || $0.isWhitespace } ?? true
         }
+    }
+
+    /// The header of more than one word that `text` starts with, and its words as written there, when
+    /// each word is at most one edit from the header's: `Scenaro Outline: O` or `Scenario Outlne O`.
+    private static func multiWordHeader(in text: String) -> (header: String, written: String)? {
+        headers.lazy.filter { $0.contains(" ") }.compactMap { header -> (header: String, written: String)? in
+            var rest = Substring(text)
+            for (index, keyword) in header.split(separator: " ").enumerated() {
+                if index > 0 {
+                    guard rest.first?.isWhitespace == true else { return nil }
+                    rest = rest.drop { $0.isWhitespace }
+                }
+                let word = rest.prefix { !$0.isWhitespace && $0 != ":" }
+                guard editDistance(word.lowercased(), keyword.lowercased()) <= 1 else { return nil }
+                rest = rest.dropFirst(word.count)
+            }
+            return (header, String(text.dropLast(rest.count)))
+        }.first
     }
 
     /// The fix that replaces `word`, at the start of `text`, with the keyword `suggestion`. A colon
