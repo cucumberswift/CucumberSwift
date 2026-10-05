@@ -207,6 +207,45 @@ class StepTest: XCTestCase {
         XCTAssertEqual(steps.map(\.description), ["TAGS:[]\nGiven: I have 3 cukes", "TAGS:[]\nCuando: como 2 pepinos"])
     }
 
+    // A step's keyword names itself as written in its own feature file, not in the last parsed file's language (#311).
+    func testAStepsKeywordIsNamedAsWrittenInItsFeatureFile() throws {
+        defer { Scope.language = .default }
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+                And I am hungry
+                When I eat 2 cukes
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Dado que tengo 3 pepinos
+                Y tengo hambre
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        XCTAssertEqual(steps.map { $0.keyword.toString() }, ["Given", "And", "When", "Dado", "Y"])
+        XCTAssert(steps[1].keyword.contains(.given), "An And step still continues the keyword before it")
+    }
+
+    // A keyword that was not read from a feature file is named in the last parsed file's language.
+    func testAKeywordNotReadFromAFeatureFileIsNamedInTheLastParsedFilesLanguage() throws {
+        defer { Scope.language = .default }
+        let cucumber = Cucumber(withString: """
+        # language: es
+        Característica: Pepinos
+            Escenario: Comer pepinos
+                Dado que tengo 3 pepinos
+        """)
+        let step = try XCTUnwrap(cucumber.features.first?.scenarios.first?.steps.first)
+
+        XCTAssertEqual(Step.Keyword.given.toString(), "Dadas")
+        XCTAssertEqual(step.keyword.primaryKeywords.toString(), "Dadas")
+        XCTAssertEqual(step.keyword, .given, "How a keyword is written does not change which keyword it is")
+    }
+
     /// Regression test for #135: a step built by the Swift DSL used to compile the empty pattern
     /// `""` on every execution, which always throws. An uncompilable pattern is now recorded in
     /// `RegularExpression.errors`, so that is where the bug would show if it came back.

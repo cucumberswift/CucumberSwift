@@ -131,7 +131,7 @@ public class Step: CustomStringConvertible {
         guard Keyword.primaryKeywords.contains(keyword) else {
             throw Keyword.KeywordError.notPrimaryKeyword
         }
-        self.keyword.insert(keyword)
+        self.keyword = self.keyword.adding(keyword)
     }
 
     func toJSON() -> [String: Any] {

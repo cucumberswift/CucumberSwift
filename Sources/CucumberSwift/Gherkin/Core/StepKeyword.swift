@@ -32,7 +32,6 @@ extension Step {
         }
 
         public init?(_ str: String) {
-            stringValue = str
             var set: Keyword = []
             if Scope.language.matchesGiven(str) {
                 set.insert(.given)
@@ -51,10 +50,13 @@ extension Step {
             }
             guard !set.isEmpty else { return nil }
             self = set
+            stringValue = str
         }
 
-        /// The keyword named in the language of the feature file the lexer last read. A step's own keyword
-        /// is named in its feature file's language.
+        /// The keyword as it is written in the feature file it was read from, such as `Given`, `And` or `Dado`.
+        /// A step's `And` or `But` keyword stays as written after the parser adds the keyword it continues.
+        /// A keyword with no written form, such as ``given`` or one built by a set operation like `union`, is
+        /// named in the language of the feature file the lexer last read.
         public func toString() -> String {
             if let str = stringValue {
                 return str
@@ -70,6 +72,14 @@ extension Step {
 }
 
 extension Step.Keyword {
+    /// This keyword with `other`'s keywords added, still written as this one is. `insert` would forget how
+    /// it is written, as every set operation does.
+    func adding(_ other: Step.Keyword) -> Step.Keyword {
+        var keyword = union(other)
+        keyword.stringValue = stringValue
+        return keyword
+    }
+
     /// The keyword named in the given language.
     func toString(in language: Language) -> String {
         if contains(.given) {
