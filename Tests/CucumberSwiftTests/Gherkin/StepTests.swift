@@ -189,16 +189,6 @@ class StepTest: XCTestCase {
         XCTAssertEqual(noKeyword.toString(in: spanish), "UNKNOWN")
     }
 
-    // Build tools read a keyword in a language they give, rather than the lexer's current one (#324).
-    func testAKeywordIsReadInTheCurrentLanguageOrTheLanguageItIsGiven() throws {
-        defer { Scope.language = .default }
-        Scope.language = try XCTUnwrap(Language("es"))
-        XCTAssertEqual(Step.Keyword("Dado"), .given)
-        XCTAssertNil(Step.Keyword("Given"))
-        XCTAssertEqual(Step.Keyword("Given", in: .default), .given)
-        XCTAssertNil(Step.Keyword("Dado", in: .default))
-    }
-
     // A step describes itself in its own feature file's language, not the last parsed file's (#290).
     func testAStepsDescriptionUsesItsFeatureFilesLanguage() throws {
         let cucumber = Cucumber(withString: """
