@@ -3,7 +3,6 @@ disabled_rules: # rule identifiers turned on by default to exclude from running
   - identifier_name
   - function_parameter_count
 opt_in_rules: # some rules are turned off by default, so you need to opt-in
-  - anyobject_protocol # https://realm.github.io/SwiftLint/anyobject_protocol.html
   - closure_body_length # https://realm.github.io/SwiftLint/closure_body_length.html
   - closure_end_indentation # https://realm.github.io/SwiftLint/closure_end_indentation.html
   - closure_spacing # https://realm.github.io/SwiftLint/closure_spacing.html
@@ -62,11 +61,13 @@ opt_in_rules: # some rules are turned off by default, so you need to opt-in
   - unavailable_function # https://realm.github.io/SwiftLint/unavailable_function.html
   - unneeded_parentheses_in_closure_argument # https://realm.github.io/SwiftLint/unneeded_parentheses_in_closure_argument.html
   - unowned_variable_capture # https://realm.github.io/SwiftLint/unowned_variable_capture.html
-  - unused_import # https://realm.github.io/SwiftLint/unused_import.html
   - vertical_parameter_alignment_on_call # https://realm.github.io/SwiftLint/vertical_parameter_alignment_on_call.html
   - vertical_whitespace_closing_braces # https://realm.github.io/SwiftLint/vertical_whitespace_closing_braces.html
   - vertical_whitespace_opening_braces # https://realm.github.io/SwiftLint/vertical_whitespace_opening_braces.html
   - yoda_condition # https://realm.github.io/SwiftLint/yoda_condition.html
+
+analyzer_rules: # rules that only `swiftlint analyze` runs, which needs a build log
+  - unused_import # https://realm.github.io/SwiftLint/unused_import.html
 
 included: # paths to include during linting. `--path` is ignored if present.
   - Sources
@@ -117,26 +118,18 @@ cyclomatic_complexity:
   ignores_case_statements: true
 
 type_contents_order:
-  order: [
-      [SwiftLintFramework.TypeContent.case],
-      [
-        SwiftLintFramework.TypeContent.typeAlias,
-        SwiftLintFramework.TypeContent.associatedType,
-      ],
-      [SwiftLintFramework.TypeContent.subtype],
-      [SwiftLintFramework.TypeContent.typeProperty],
-      [SwiftLintFramework.TypeContent.instanceProperty],
-      [SwiftLintFramework.TypeContent.typeMethod],
-      # [SwiftLintFramework.TypeContent.ibInspectable],
-      # [SwiftLintFramework.TypeContent.ibOutlet],
-      [SwiftLintFramework.TypeContent.initializer],
-      [SwiftLintFramework.TypeContent.deinitializer],
-      [SwiftLintFramework.TypeContent.viewLifeCycleMethod],
-      [
-        SwiftLintFramework.TypeContent.ibAction,
-        SwiftLintFramework.TypeContent.otherMethod,
-        SwiftLintFramework.TypeContent.subscript,
-      ],
-    ]
+  order:
+    - [case]
+    - [type_alias, associated_type]
+    - [subtype]
+    - [type_property]
+    - [instance_property]
+    - [type_method]
+    # - [ib_inspectable]
+    # - [ib_outlet]
+    - [initializer]
+    - [deinitializer]
+    - [view_life_cycle_method]
+    - [ib_action, other_method, subscript]
 
 reporter: "xcode" # reporter type (xcode, json, csv, checkstyle, codeclimate, junit, html, emoji, sonarqube, markdown, github-actions-logging)

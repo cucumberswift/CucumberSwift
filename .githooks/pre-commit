@@ -5,9 +5,18 @@
 #   - the Xcode project check, when a commit could change the project;
 #   - the Python script tests, when a script changes.
 # Opt in once per clone: git config core.hooksPath .githooks
-# Install the tools once: mise install && MISE_ENV=lint mise install
+# mise installs the pinned tools the first time a hook needs them.
 # CI runs the same checks. Skip them for one commit with git commit --no-verify.
 set -e
+
+# A worktree's core.hooksPath can name another checkout's .githooks, such as the main
+# checkout's. Each branch runs its own copy of this hook, and none on a branch without one.
+real() { (cd "$(dirname "$1")" 2>/dev/null && echo "$(pwd -P)/$(basename "$1")"); }
+own="$(git rev-parse --show-toplevel)/.githooks/$(basename "$0")"
+if [ "$(real "$0")" != "$(real "$own")" ]; then
+  if [ -x "$own" ]; then exec "$own" "$@"; fi
+  exit 0
+fi
 
 # The linters' versions are pinned in .mise.lint.toml.
 MISE_ENV=lint mise exec -- trunk check --no-fix --no-progress -t git-commit \

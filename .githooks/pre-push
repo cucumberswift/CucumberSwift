@@ -4,6 +4,14 @@
 # Skip them for one push with git push --no-verify.
 set -e
 
+# Each branch runs its own copy of this hook; see .githooks/pre-commit.
+real() { (cd "$(dirname "$1")" 2>/dev/null && echo "$(pwd -P)/$(basename "$1")"); }
+own="$(git rev-parse --show-toplevel)/.githooks/$(basename "$0")"
+if [ "$(real "$0")" != "$(real "$own")" ]; then
+  if [ -x "$own" ]; then exec "$own" "$@"; fi
+  exit 0
+fi
+
 # Git passes the refs being pushed on stdin; Trunk reads them from a file.
 refs=$(mktemp)
 trap 'rm -f "$refs"' EXIT
