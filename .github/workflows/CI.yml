@@ -326,16 +326,19 @@ jobs:
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
         run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
-      # The macos-15 image has Xcode 16.0's iOS 18.0 SDK but no iOS platform older than 18.5,
-      # and without its own platform Xcode 16.0 offers no iOS destination, so Carthage's iOS
-      # build fails. Installing it downloads about 8 GB, in about 4 minutes.
-      - name: Install the iOS platform for Xcode ${{ matrix.xcode }}
-        if: matrix.ios_platform
-        run: xcodebuild -downloadPlatform iOS
       - name: Show the toolchain
         run: |
           xcodebuild -version
           xcrun simctl list runtimes | grep -i ios || true
+      # The macos-15 image has Xcode 16.0's iOS 18.0 SDK but no iOS platform older than 18.5,
+      # and without its own platform Xcode 16.0 offers no iOS destination, so Carthage's iOS
+      # build fails. Installing it downloads about 8 GB, in about 4 minutes. The download fails
+      # with "Unable to connect to simulator" until simctl has started the simulator service.
+      - name: Install the iOS platform for Xcode ${{ matrix.xcode }}
+        if: matrix.ios_platform
+        run: |
+          xcrun simctl list runtimes > /dev/null
+          xcodebuild -downloadPlatform iOS
       - name: Install Carthage
         run: command -v carthage || brew install carthage
       - name: Install mise
