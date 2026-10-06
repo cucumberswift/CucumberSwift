@@ -129,7 +129,7 @@
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
             }
 
-            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. Its next sample, TestNavigator, shows how your scenarios read in Xcode's test navigator. See also <doc:Running-Tests-In-Xcode>.
+            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) show more setups, such as how your scenarios read in Xcode's test navigator. See also <doc:Running-Tests-In-Xcode>.
 
             CucumberSwift also runs in a UI test target. The setup is the same: add CucumberSwift, the `Features` folder and the step definitions to the UI test target, and drive your app from the steps with `XCUIApplication`. To test UIKit screens from a unit test target instead, see <doc:CucumberSwift+UIUTest>.
         }

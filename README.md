@@ -14,6 +14,7 @@ CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI 
 
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting Started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)
+* [Sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/)
 * [XCTest Integration](https://github.com/cucumberswift/CucumberSwift/wiki/xctest-integration)
 
 ### Community & Support
