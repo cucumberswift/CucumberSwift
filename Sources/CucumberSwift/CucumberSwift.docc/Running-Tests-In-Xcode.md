@@ -174,7 +174,7 @@ With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_
 
 It is experimental. Before you rely on it:
 
-- **What has been tried.** On the iOS and tvOS Simulators, macOS and Mac Catalyst, with Xcode 16.0 and Xcode 26:
+- **What has been tried.** On the iOS and tvOS Simulators, macOS and Mac Catalyst, with Xcode 16.4 and Xcode 26:
   - **Unit tests without a host app** run in parallel on all of them.
   - **Unit tests hosted in an app** run correctly on all of them, but in parallel only on macOS. On the Simulators and Mac Catalyst, Xcode runs the tests of a target hosted in an app in one worker, plain XCTest tests too.
   - **UI tests** run in parallel on the iOS and tvOS Simulators. On macOS and Mac Catalyst they have been tried with one worker only.

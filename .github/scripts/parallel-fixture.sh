@@ -19,14 +19,20 @@ case "$PLATFORM" in
   "Mac Catalyst") suffix=""; destination="platform=macOS,variant=Mac Catalyst" ;;
   "macOS") suffix="Mac"; destination="platform=macOS" ;;
   *)
-    # The newest runtime's first iPhone or Apple TV, so the job doesn't depend on a device name.
-    if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
-    udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" python3 -c '
+    # The first iPhone or Apple TV of the newest runtime whose major version isn't newer than the
+    # selected Xcode's SDK, or of the newest runtime if there is none, so the job doesn't depend on
+    # a device name. A runner can have runtimes of a newer major version than an older Xcode, such
+    # as iOS 26.2 beside Xcode 16.4, and that Xcode's UI tests fail to launch the app on them.
+    if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; sdk="appletvsimulator"; else suffix=""; runtime="iOS"; device="iPhone"; sdk="iphonesimulator"; fi
+    sdk_version=$(xcrun --sdk "$sdk" --show-sdk-version)
+    udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" SDK_VERSION="$sdk_version" python3 -c '
 import json, os, sys
 devices = json.load(sys.stdin)["devices"]
 prefix = ".SimRuntime." + os.environ["RUNTIME"] + "-"
-runtimes = sorted((r for r in devices if prefix in r),
-                  key=lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")], reverse=True)
+sdk_major = int(os.environ["SDK_VERSION"].split(".")[0])
+version = lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")]
+runtimes = sorted((r for r in devices if prefix in r), key=version, reverse=True)
+runtimes = [r for r in runtimes if version(r)[0] <= sdk_major] + [r for r in runtimes if version(r)[0] > sdk_major]
 print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith(os.environ["DEVICE"])), ""))
 ')
     if [[ -z "$udid" ]]; then
