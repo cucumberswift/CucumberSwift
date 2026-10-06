@@ -17,11 +17,11 @@ XCTest shows only the failures. When a scenario never reaches the step you expec
 [CucumberSwift] Feature "Greeting" failed (0.447s)
 ```
 
-Verbose output is off by default. Any one of the three switches below turns it on.
+Verbose output is off by default. Any one of the three switches below turns it on, and none of them can turn it off again: `Cucumber.verboseOutput` is a `Bool`, so it can't win over the environment variable, as the other settings' static variables do. See <doc:Settings>.
 
 ### Use an environment variable
 
-Set `CUCUMBER_VERBOSE` to `1` or `true`. Any other value leaves it off. This needs no code change, so it suits a one-off run or a CI job.
+Set `CUCUMBER_VERBOSE` to `1` or `true`, in any case. Any other value leaves it off, `YES` included. This needs no code change, so it suits a one-off run or a CI job.
 
 - **Xcode:** choose **Product → Scheme → Edit Scheme…**, select **Test**, open **Arguments**, and add `CUCUMBER_VERBOSE` with the value `1` under **Environment Variables**.
 - **Swift Package Manager or `xcodebuild`:** set it on the command line.

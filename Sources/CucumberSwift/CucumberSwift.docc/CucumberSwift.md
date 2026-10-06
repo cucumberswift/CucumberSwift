@@ -21,6 +21,8 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 ### Discussions
 - <doc:Tutorial-Table-of-Contents>
 - <doc:Sample-Projects>
+- <doc:Supported-Platforms>
+- <doc:Settings>
 - <doc:Running-Tests-In-Xcode>
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Feature-Files-With-Swift-Testing>
