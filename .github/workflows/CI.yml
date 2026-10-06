@@ -302,7 +302,8 @@ jobs:
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
   # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with.
+  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with, after
+  # installing its iOS platform, which the image doesn't have.
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
@@ -316,7 +317,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
           && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)"}]') }}
+          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)","ios_platform":true}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -329,6 +330,15 @@ jobs:
         run: |
           xcodebuild -version
           xcrun simctl list runtimes | grep -i ios || true
+      # The macos-15 image has Xcode 16.0's iOS 18.0 SDK but no iOS platform older than 18.5,
+      # and without its own platform Xcode 16.0 offers no iOS destination, so Carthage's iOS
+      # build fails. Installing it downloads about 8 GB, in about 4 minutes. The download fails
+      # with "Unable to connect to simulator" until simctl has started the simulator service.
+      - name: Install the iOS platform for Xcode ${{ matrix.xcode }}
+        if: matrix.ios_platform
+        run: |
+          xcrun simctl list runtimes > /dev/null
+          xcodebuild -downloadPlatform iOS
       - name: Install Carthage
         run: command -v carthage || brew install carthage
       - name: Install mise
@@ -348,6 +358,8 @@ jobs:
         env:
           CARTHAGE_LOG: carthage-build.log
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          # The pinned Tuist can't generate the fixture's project with Xcode 16.0.
+          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
         run: mise run test-carthage
       - name: Show what Carthage produced
         if: always()

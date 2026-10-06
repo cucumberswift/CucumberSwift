@@ -142,7 +142,14 @@ for binary in "$xcf"/*/CucumberSwift.framework/CucumberSwift; do
     exit 1
   fi
 done
-tuist generate --no-open --path Fixtures/CarthageXCFramework
+# The pinned Tuist can't compile the fixture's manifest with Xcode 16.0's Swift 6.0, so when CI tests
+# that Xcode, TUIST_DEVELOPER_DIR names a newer one for this step. The fixture still builds and
+# tests with the selected Xcode.
+if [ -n "${TUIST_DEVELOPER_DIR:-}" ]; then
+  DEVELOPER_DIR="$TUIST_DEVELOPER_DIR" tuist generate --no-open --path Fixtures/CarthageXCFramework
+else
+  tuist generate --no-open --path Fixtures/CarthageXCFramework
+fi
 simulator=$(xcrun simctl list devices available --json | python3 -c '
 import json, sys
 runtimes = json.load(sys.stdin)["devices"]
