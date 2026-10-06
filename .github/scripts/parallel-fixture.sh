@@ -54,8 +54,10 @@ if [[ -n "${udid:-}" ]]; then
   if kill -0 "$waiting" 2>/dev/null; then
     kill "$waiting"
     echo "::warning::The simulator hadn't finished booting after 5 minutes; running the tests anyway."
-  else
+  elif wait "$waiting"; then
     echo "Booted the simulator once first, in $(( $(date +%s) - start )) seconds"
+  else
+    echo "::warning::The simulator failed to boot before the tests; running them anyway."
   fi
   xcrun simctl shutdown "$udid" 2>/dev/null || true
 fi
