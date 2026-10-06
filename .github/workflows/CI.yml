@@ -390,13 +390,16 @@ jobs:
   # too, but its host is macOS 15, and Xcode 26 will not run Catalyst tests there.
   # The merge queue and main also run Xcode 16.0, on macos-15. In the nightly and
   # manual runs, that variant also builds Package.swift, which only Swift 6.0
-  # reads: Xcode 16.3 and later read Package@swift-6.1.swift.
+  # reads: Xcode 16.3 and later read Package@swift-6.1.swift. That variant also runs
+  # the Xcode project fixture that uses the macros through a local package, with
+  # Xcode 16.3, the oldest Xcode the docs give for that route (Fixture tests runs it
+  # with a newer one).
   catalyst_tests:
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     permissions:
       contents: read
     strategy:
@@ -423,6 +426,23 @@ jobs:
       - name: Build Package.swift with Swift 6.0
         if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: swift build --force-resolved-versions
+      - name: Install mise
+        if: matrix.xcode == '16.0'
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        if: matrix.xcode == '16.0'
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise install
+      # Installs Xcode 16.3's iOS 18.4 platform, which the image doesn't have: about 8 GB.
+      - name: Run the macros through a local package with Xcode 16.3
+        if: matrix.xcode == '16.0'
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+        run: mise exec -- .github/scripts/macros-trait-fixture.sh 16.3
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,

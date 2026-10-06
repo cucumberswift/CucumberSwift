@@ -21,3 +21,6 @@ the local package, or either runner stops working beside the other, this fixture
 
 Runs on the iOS simulator in `xcodebuild-destination`, with the Tuist version pinned in `.mise.toml`. Run
 every fixture with `mise run test-fixtures`.
+
+CI also runs it with Xcode 16.3, the oldest Xcode the docs give for the local package route, in
+`Catalyst tests (Xcode 16)`: `.github/scripts/macros-trait-fixture.sh 16.3`.
