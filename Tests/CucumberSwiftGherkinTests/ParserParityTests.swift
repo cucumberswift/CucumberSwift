@@ -116,7 +116,7 @@ final class ParserParityTests: XCTestCase {
             style: .cucumberExpression)
         return RunnableStep(
             keywords: keywords.filter { step.keyword.contains($0.1) }.map(\.0).sorted(),
-            keywordName: step.keywordText,
+            keywordName: step.writtenKeyword,
             text: step.match,
             line: Int(step.location.line),
             column: Int(step.location.column),

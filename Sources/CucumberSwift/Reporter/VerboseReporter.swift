@@ -46,7 +46,7 @@ final class VerboseReporter: CucumberTestObserver {
     }
 
     func didStart(step: Step, at _: Date) {
-        write("[CucumberSwift]     \(step.keywordText) \(step.match)")
+        write("[CucumberSwift]     \(step.writtenKeyword) \(step.match)")
     }
 
     func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {

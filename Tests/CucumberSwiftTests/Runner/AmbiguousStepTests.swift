@@ -167,6 +167,27 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertTrue(messages[1].hasPrefix("Ambiguous step 'Cuando como 2 pepinos': "), messages[1])
     }
 
+    // The failure names the step with its keyword as written: Dado or Y, not Spanish's last forms, Dadas and E (#332).
+    func testTheFailureNamesTheStepWithItsKeywordAsWritten() throws {
+        defer { Scope.language = .default }
+        Cucumber.shared.parseIntoFeatures("""
+        # language: es
+        Característica: Una cesta de pepinos
+           Escenario: Llenar la cesta
+             Dado tengo 4 pepinos
+             Y como 1 pepino
+        """)
+        MatchAll("^tengo (\\d+) pepinos$") { _, _ in }
+        Given("tengo {int} pepinos") { _, _ in }
+        MatchAll("^como (\\d+) pepino$") { _, _ in }
+        Given("como {int} pepino") { _, _ in }
+
+        XCTAssertEqual(steps.map(\.isAmbiguous), [true, true])
+        let messages = steps.map { CucumberTest.ambiguousStepMessage(for: $0) }
+        XCTAssertTrue(messages[0].hasPrefix("Ambiguous step 'Dado tengo 4 pepinos': "), messages[0])
+        XCTAssertTrue(messages[1].hasPrefix("Ambiguous step 'Y como 1 pepino': "), messages[1])
+    }
+
     func testTheFailureListsThreeDefinitions() throws {
         parseFeature(withSteps: "Given some precondition")
         let firstLine = #line + 1

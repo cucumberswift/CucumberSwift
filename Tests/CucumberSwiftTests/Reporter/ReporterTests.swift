@@ -158,6 +158,35 @@ class ReporterTests: XCTestCase {
         XCTAssertEqual(steps.map { $0.toJSON()["keyword"] as? String }, ["Given", "Cuando"])
     }
 
+    // As in other Cucumber implementations, a step's keyword is the one written in the feature file: the
+    // form of it the step uses, not the language's last one, and And or But, not the keyword it continues (#332).
+    func testTheJSONReportNamesEachStepsKeywordAsWritten() throws {
+        defer { Scope.language = .default }
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+                And I am hungry
+                But I am not greedy
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Una cesta de pepinos
+            Escenario: Llenar la cesta
+                Dado tengo 4 pepinos en mi "cesta"
+                Y como 1 pepino
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        let written = try steps.map { step -> String? in
+            let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(CucumberJSONReporter.Step(step))) as? [AnyHashable: Any]
+            return json?["keyword"] as? String
+        }
+
+        XCTAssertEqual(written, ["Given", "And", "But", "Dado", "Y"])
+        XCTAssertEqual(steps.map { $0.toJSON()["keyword"] as? String }, ["Given", "And", "But", "Dado", "Y"])
+    }
+
     func testReporterJsonConformsToCucumberJsonSchema() throws {
         let path = URL(fileURLWithPath: #file)
             .deletingLastPathComponent()

@@ -10,7 +10,7 @@ import Foundation
 import XCTest
 @testable import CucumberSwift
 
-class StepTest: XCTestCase {
+class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
     override func setUpWithError() throws {
         Cucumber.shared.reset()
     }
@@ -207,6 +207,15 @@ class StepTest: XCTestCase {
         XCTAssertEqual(steps.map(\.description), ["TAGS:[]\nGiven: I have 3 cukes", "TAGS:[]\nCuando: como 2 pepinos"])
     }
 
+    // A keyword not read from a feature file has no written form, so it is named in the language it is given,
+    // an And or But keyword as itself rather than the keyword it continues (#332).
+    func testAKeywordWithNoWrittenFormIsWrittenInTheLanguageItIsGiven() throws {
+        let spanish = try XCTUnwrap(Language("es"))
+        XCTAssertEqual(Step.Keyword.given.written(in: spanish), "Dadas")
+        XCTAssertEqual(Step.Keyword([.given, .and]).written(in: spanish), "E")
+        XCTAssertEqual(Step.Keyword([.when, .but]).written(in: spanish), "Pero")
+    }
+
     // A step's keyword names itself as written in its own feature file, not in the last parsed file's language (#311).
     func testAStepsKeywordIsNamedAsWrittenInItsFeatureFile() throws {
         defer { Scope.language = .default }
@@ -228,6 +237,35 @@ class StepTest: XCTestCase {
 
         XCTAssertEqual(steps.map { $0.keyword.toString() }, ["Given", "And", "When", "Dado", "Y"])
         XCTAssert(steps[1].keyword.contains(.given), "An And step still continues the keyword before it")
+    }
+
+    // A step describes itself with its keyword as written: the form the feature file uses, not the language's
+    // last one, And rather than the keyword it continues, and * as itself (#332).
+    func testAStepsDescriptionNamesItsKeywordAsWritten() throws {
+        defer { Scope.language = .default }
+        let cucumber = Cucumber(withString: """
+        Feature: Basket
+            Scenario: Eating cukes
+                Given I have 3 cukes
+                And I am hungry
+        """)
+        cucumber.parseIntoFeatures("""
+        # language: es
+        Característica: Una cesta de pepinos
+            Escenario: Llenar la cesta
+                Dado tengo 4 pepinos en mi "cesta"
+                Y como 1 pepino
+                * tengo hambre
+        """)
+        let steps = cucumber.features.flatMap { $0.scenarios.flatMap(\.steps) }
+
+        XCTAssertEqual(steps.map(\.description), [
+            "TAGS:[]\nGiven: I have 3 cukes",
+            "TAGS:[]\nAnd: I am hungry",
+            "TAGS:[]\nDado: tengo 4 pepinos en mi \"cesta\"",
+            "TAGS:[]\nY: como 1 pepino",
+            "TAGS:[]\n*: tengo hambre"
+        ])
     }
 
     // A keyword that was not read from a feature file is named in the last parsed file's language.

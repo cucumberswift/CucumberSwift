@@ -85,7 +85,23 @@ extension Step.Keyword {
         return keyword
     }
 
-    /// The keyword named in the given language.
+    /// The keyword as it is written in its feature file, such as `Dado` or `Y` rather than the language's
+    /// last form for it, or `And` rather than the keyword it continues. A keyword with no written form is
+    /// named in the given language, an `And` or `But` keyword as itself.
+    func written(in language: Language) -> String {
+        if let str = stringValue {
+            return str
+        }
+        if contains(.and) {
+            return language.and
+        }
+        if contains(.but) {
+            return language.but
+        }
+        return toString(in: language)
+    }
+
+    /// The keyword named in the given language, by the language's last form for it.
     func toString(in language: Language) -> String {
         if contains(.given) {
             return language.given

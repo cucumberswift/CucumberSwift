@@ -11,7 +11,7 @@ import XCTest
 
 public class Step: CustomStringConvertible {
     public var description: String {
-        "TAGS:\(tags)\n\(keywordText): \(match)"
+        "TAGS:\(tags)\n\(writtenKeyword): \(match)"
     }
 
     public var continueAfterFailure = true {
@@ -87,14 +87,15 @@ public class Step: CustomStringConvertible {
     /// The language of the feature file the step comes from. Its keyword is named in this language, not in
     /// the one the lexer last read, which is the last feature file's.
     let language: Language
-    /// The step's keyword as written in its feature file: `And` or `But` rather than the keyword it
-    /// continues, which ``keyword`` also holds.
+    /// The step's keyword as written in its feature file: `Dado` rather than the language's last form for
+    /// it, `Dadas`, and `And` or `But` rather than the keyword it continues, which ``keyword`` also holds.
+    /// Readable test names, XCTest activities, reports and messages show it.
     var writtenKeyword: String {
-        if keyword.contains(.and) { return language.and }
-        if keyword.contains(.but) { return language.but }
-        return keywordText
+        keyword.written(in: language)
     }
-    /// The step's ``keyword`` named in its feature file's language.
+    /// The step's ``keyword`` named in its feature file's language, by the language's last form for it and,
+    /// for an `And` or `But` step, by the keyword it continues. Only camel-case test names use it, so that
+    /// they keep the names tests already have.
     var keywordText: String {
         keyword.toString(in: language)
     }
@@ -138,7 +139,7 @@ public class Step: CustomStringConvertible {
         [
             "result": ["status": "\(result)", "error_message": errorMessage, "duration": executionDuration.converted(to: .nanoseconds).value],
             "name": "\(match)",
-            "keyword": "\(keywordText)"
+            "keyword": "\(writtenKeyword)"
         ]
     }
 }
