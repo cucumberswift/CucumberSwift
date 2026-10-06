@@ -410,7 +410,7 @@ jobs:
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
       - name: Build Package.swift with Swift 6.0
         if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        run: swift build
+        run: swift build --force-resolved-versions
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,

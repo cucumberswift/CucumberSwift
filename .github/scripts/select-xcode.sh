@@ -12,8 +12,8 @@ set -euo pipefail
 version=${1:?usage: select-xcode.sh <version>}
 app="/Applications/Xcode_${version}.app"
 if [[ ! -d "$app" ]]; then
-  echo "::error::Xcode $version is not installed on this image. It has:"
-  find /Applications -maxdepth 1 -name 'Xcode*.app' | sort
+  echo "::error::Xcode $version is not installed on this image. It has:" >&2
+  find /Applications -maxdepth 1 -name 'Xcode*.app' | sort >&2
   exit 1
 fi
 sudo xcode-select -s "$app/Contents/Developer"

@@ -72,7 +72,8 @@ for fixture in Fixtures/*/; do
   if [ "$name" = CarthageXCFramework ]; then continue; fi
   developer_dir=
   if [ -f "$fixture/xcode-version" ]; then
-    xcode_version=$(cat "$fixture/xcode-version")
+    # Only the edges are trimmed, such as a CRLF line ending.
+    xcode_version=$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$fixture/xcode-version")
     if [ -d "/Applications/Xcode_$xcode_version.app" ]; then
       developer_dir="/Applications/Xcode_$xcode_version.app/Contents/Developer"
     elif [ -n "${CI:-}" ]; then
