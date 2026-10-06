@@ -47,14 +47,14 @@ xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination
   -derivedDataPath "$derived" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
 grep -E '^Test (Suite|Case) .*(passed|failed)|✔|✘|error: |\*\* TEST' "$log" | tail -40 || true
 if [[ "$status" -ne 0 ]]; then
-  echo "::error::$name failed with Xcode $version"
+  echo "::error::$name failed with Xcode $version" >&2
   exit "$status"
 fi
 # The warnings that show CucumberSwiftLint ran on each test target, as mise run test-fixtures checks.
 grep -v '^#' "$fixture/expected-warnings" | while IFS= read -r expected; do
   [[ -z "$expected" ]] && continue
   if ! grep -qF "$expected" "$log"; then
-    echo "::error::$name: the build output with Xcode $version does not contain: $expected"
+    echo "::error::$name: the build output with Xcode $version does not contain: $expected" >&2
     exit 1
   fi
 done
