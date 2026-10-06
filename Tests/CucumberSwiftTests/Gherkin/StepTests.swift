@@ -207,6 +207,15 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         XCTAssertEqual(steps.map(\.description), ["TAGS:[]\nGiven: I have 3 cukes", "TAGS:[]\nCuando: como 2 pepinos"])
     }
 
+    // A keyword not read from a feature file has no written form, so it is named in the language it is given,
+    // an And or But keyword as itself rather than the keyword it continues (#332).
+    func testAKeywordWithNoWrittenFormIsWrittenInTheLanguageItIsGiven() throws {
+        let spanish = try XCTUnwrap(Language("es"))
+        XCTAssertEqual(Step.Keyword.given.written(in: spanish), "Dadas")
+        XCTAssertEqual(Step.Keyword([.given, .and]).written(in: spanish), "E")
+        XCTAssertEqual(Step.Keyword([.when, .but]).written(in: spanish), "Pero")
+    }
+
     // A step's keyword names itself as written in its own feature file, not in the last parsed file's language (#311).
     func testAStepsKeywordIsNamedAsWrittenInItsFeatureFile() throws {
         defer { Scope.language = .default }

@@ -176,7 +176,7 @@ class AmbiguousStepTests: XCTestCase {
            Escenario: Llenar la cesta
              Dado tengo 4 pepinos
              Y como 1 pepino
-        """, uri: "file:///Features/Cesta.feature")
+        """)
         MatchAll("^tengo (\\d+) pepinos$") { _, _ in }
         Given("tengo {int} pepinos") { _, _ in }
         MatchAll("^como (\\d+) pepino$") { _, _ in }
