@@ -32,12 +32,12 @@ CUCUMBER_SWIFT_PATH=~/src/CucumberSwift mise run generate
 
 ### The samples
 
-| Sample | Shows | Platform | Needs |
-|---|---|---|---|
-| [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) | The smallest working setup: one test target, one feature file, its step definitions | macOS unit test bundle | Xcode 16 or later, CucumberSwift 6.3.0 or later |
-| [TestNavigator](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/TestNavigator) | How scenarios read in Xcode's test navigator: readable names, failures at the feature file's line, Scenario Outline examples, skipped scenarios, a test plan per tag | macOS unit test bundle | Xcode 16 or later, CucumberSwift 6.3.0 or later |
+| Sample | Shows | Platform | Needs | README |
+|---|---|---|---|---|
+| [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) | The smallest working setup: one test target, one feature file, its step definitions | macOS unit test bundle | Xcode 16 or later, CucumberSwift 6.3.0 or later | [README](https://github.com/cucumberswift/CucumberSwiftSample/blob/main/Tuist/GettingStarted/README.md) |
+| [TestNavigator](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/TestNavigator) | How scenarios read in Xcode's test navigator: readable names, failures at the feature file's line, Scenario Outline examples, skipped scenarios, a test plan per tag | macOS unit test bundle | Xcode 16 or later, CucumberSwift 6.3.0 or later | [README](https://github.com/cucumberswift/CucumberSwiftSample/blob/main/Tuist/TestNavigator/README.md) |
 
-Each sample's README says how to copy it into a project of your own. Its `Project.swift` shows how the test target is set up.
+Each sample's README says how to copy it into a project of your own, and its `Project.swift` shows how the test target is set up.
 
 #### GettingStarted
 
