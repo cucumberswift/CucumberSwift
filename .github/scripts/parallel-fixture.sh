@@ -40,6 +40,28 @@ records="$temp/parallel-test-records"
 mkdir -p "$records"
 echo "Running $scheme on $destination with $WORKERS workers"
 
+# Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
+# a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
+# then times out. So boot the simulator once, wait until it has finished, and shut it down for Xcode
+# to clone. A simulator that never finishes booting would keep bootstatus waiting, so after 5 minutes
+# the tests start anyway.
+if [[ -n "${udid:-}" ]]; then
+  start=$(date +%s)
+  xcrun simctl boot "$udid" 2>/dev/null || true
+  xcrun simctl bootstatus "$udid" -b > /dev/null &
+  waiting=$!
+  while kill -0 "$waiting" 2>/dev/null && (( $(date +%s) - start < 300 )); do sleep 2; done
+  if kill -0 "$waiting" 2>/dev/null; then
+    kill "$waiting"
+    echo "::warning::The simulator hadn't finished booting after 5 minutes; running the tests anyway."
+  elif wait "$waiting"; then
+    echo "Booted the simulator once first, in $(( $(date +%s) - start )) seconds"
+  else
+    echo "::warning::The simulator failed to boot before the tests; running them anyway."
+  fi
+  xcrun simctl shutdown "$udid" 2>/dev/null || true
+fi
+
 xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
