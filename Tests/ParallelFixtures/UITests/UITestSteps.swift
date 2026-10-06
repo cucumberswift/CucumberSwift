@@ -17,8 +17,10 @@ enum UITestApp {
 
     /// The item count the app shows. Found by its identifier, or by its text, whatever kind of element the
     /// platform makes of it, and waited for, since the first launch on a new simulator clone can be slow.
-    /// When it isn't there, the failure shows what the app does show.
-    static func items() -> String {
+    /// Given an expected count, it also waits up to 30 seconds for the app to show it: on a busy runner the
+    /// app can show the last tap a moment after the tap returns. When it isn't there, the failure shows
+    /// what the app does show.
+    static func items(expecting expected: String? = nil) -> String {
         let byIdentifier = app.descendants(matching: .any)["items"]
         let byText = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Items:' OR value BEGINSWITH 'Items:'")).firstMatch
         let found = byIdentifier.waitForExistence(timeout: 30) ? byIdentifier : byText
@@ -26,7 +28,14 @@ enum UITestApp {
             XCTFail("The app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
             return ""
         }
-        return found.label.isEmpty ? (found.value as? String ?? "") : found.label
+        func text() -> String { found.label.isEmpty ? (found.value as? String ?? "") : found.label }
+        var shown = text()
+        let deadline = Date().addingTimeInterval(30)
+        while let expected, shown != expected, Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+            shown = text()
+        }
+        return shown
     }
 
     static func add() {
@@ -61,7 +70,7 @@ extension Cucumber: StepImplementation {
         }
 
         Given("a fresh cart") { _, _ in
-            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(), "Items: 0") }
+            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(expecting: "Items: 0"), "Items: 0") }
         }
         When("I add {int} items") { match, _ in
             let count = try match.first(\.int)
@@ -73,7 +82,7 @@ extension Cucumber: StepImplementation {
         }
         Then("the cart holds {int} items") { match, _ in
             let count = try match.first(\.int)
-            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(), "Items: \(count)") }
+            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(expecting: "Items: \(count)"), "Items: \(count)") }
         }
         // Long enough that Xcode hands the scenarios to more than one worker.
         Then("the scenario takes a moment") { _, _ in
