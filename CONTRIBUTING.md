@@ -284,7 +284,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 
 **Documentation.** If users will notice your change, update the DocC catalog in `Sources/CucumberSwift/CucumberSwift.docc/` in the same PR. Please don't add new Markdown files to the repository. Notes, findings and design discussion belong on the issue, where the next person will look for them.
 
-**Samples.** [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample) has working sample projects, tested every night against the latest release and against `main`. If your PR adds or changes something users see, add or update a sample there, or open an issue there for one and link it from your PR. Its [CONTRIBUTING](https://github.com/cucumberswift/CucumberSwiftSample/blob/main/CONTRIBUTING.md#adding-a-sample) says how to add a sample.
+**Samples.** [CucumberSwiftSample](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) documents the working sample projects in [its repository](https://github.com/cucumberswift/CucumberSwiftSample), tested every night against the latest release and against `main`. If your PR adds or changes something users see, add or update a sample there, or open an issue there for one and link it from your PR. Its [CONTRIBUTING](https://github.com/cucumberswift/CucumberSwiftSample/blob/main/CONTRIBUTING.md#adding-a-sample) says how to add a sample.
 
 **Workflows.** If you change a GitHub Actions workflow, give every job an explicit `permissions:` block. Please don't add a new third-party action without discussing it on the issue first.
 

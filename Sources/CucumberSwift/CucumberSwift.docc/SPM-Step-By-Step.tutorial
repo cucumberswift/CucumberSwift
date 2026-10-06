@@ -109,7 +109,7 @@
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
             }
 
-            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. Its next sample, TestNavigator, shows how your scenarios read in Xcode's test navigator. See also <doc:Running-Tests-In-Xcode>.
+            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) show more setups, such as how your scenarios read in Xcode's test navigator. See also <doc:Running-Tests-In-Xcode>.
 
             This tutorial adds CucumberSwift to a test target in an Xcode project. For a test target in a `Package.swift` that you run with `swift test`, see <doc:Running-Tests-With-Swift-Package-Manager>.
 
