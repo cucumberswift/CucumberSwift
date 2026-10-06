@@ -44,6 +44,9 @@ description = "Build and test every project in Fixtures/"
 # (Project.swift) whose project and scheme are named after its folder. See "Fixtures" in
 # CONTRIBUTING.md. A Tuist fixture that uses package traits needs Xcode 26.4 or later. A Tuist
 # fixture runs on macOS unless its xcodebuild-destination file names another destination.
+# A fixture with an xcode-version file, such as 26.4, runs with /Applications/Xcode_<version>.app,
+# so CI checks it with exactly the Xcode the docs give; without that Xcode it fails in CI and
+# runs with the selected Xcode elsewhere.
 # A fixture's expected-warnings lists warnings its build must print, which show that the
 # CucumberSwiftLint plugin ran; the plugin only runs when its inputs change, so its stamps are
 # deleted first. A fixture with expected-failures must fail its tests, with each failure it lists.
@@ -59,15 +62,33 @@ expect_all() {
     fi
   done
 }
+# Runs a command with the fixture's Xcode, if it names one.
+with_xcode() {
+  if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
+}
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
+  developer_dir=
+  if [ -f "$fixture/xcode-version" ]; then
+    # Only the edges are trimmed, such as a CRLF line ending.
+    xcode_version=$(sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$fixture/xcode-version")
+    if [ -d "/Applications/Xcode_$xcode_version.app" ]; then
+      developer_dir="/Applications/Xcode_$xcode_version.app/Contents/Developer"
+    elif [ -n "${CI:-}" ]; then
+      echo "error: $name: needs Xcode $xcode_version, which this runner doesn't have"
+      exit 1
+    else
+      echo "warning: $name: Xcode $xcode_version isn't at /Applications/Xcode_$xcode_version.app; using the selected Xcode"
+    fi
+  fi
+  if [ -n "$developer_dir" ]; then echo "$name: with $(with_xcode xcodebuild -version | head -1)"; fi
   log=$(mktemp)
   status=0
   if [ -f "$fixture/Package.swift" ]; then
     find "$fixture/.build" -name '*.lint-stamp' -delete 2>/dev/null || true
-    swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
+    with_xcode swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
   fi
   if [ -f "$fixture/Project.swift" ]; then
     destination='platform=macOS'
@@ -76,8 +97,8 @@ for fixture in Fixtures/*/; do
     fi
     derived="$fixture/Derived/xcodebuild"
     find "$derived" -name '*.lint-stamp' -delete 2>/dev/null || true
-    tuist generate --no-open --path "$fixture"
-    xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
+    with_xcode tuist generate --no-open --path "$fixture"
+    with_xcode xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
       -derivedDataPath "$derived" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
   fi
   cat "$log"

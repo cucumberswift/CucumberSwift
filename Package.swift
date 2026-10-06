@@ -1,6 +1,7 @@
-// swift-tools-version:5.7
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
-// 5.7 (Xcode 14) for the CucumberSwiftLint build tool plugin, and for applying it in Xcode projects.
+// 6.0 (Xcode 16.0), the oldest Xcode CI builds with. Only Swift 6.0 reads this manifest: Swift 6.1 and
+// later (Xcode 16.3 and later) read Package@swift-6.1.swift.
 
 import PackageDescription
 
@@ -91,5 +92,7 @@ let package = Package(
                 .copy("testdata"),
                 .copy("Features")
             ])
-    ]
+    ],
+    // Written for Swift 5. Tools version 6.0 would otherwise build every target in the Swift 6 language mode.
+    swiftLanguageModes: [.v5]
 )
