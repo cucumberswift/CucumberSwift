@@ -1,5 +1,10 @@
 # Checking Step Definitions When They Compile
 
+@Metadata {
+    @Available(Xcode, introduced: "16.3")
+    @Available(Swift, introduced: "6.1")
+}
+
 Write step definitions as macros, and the compiler checks each pattern and closure where you write it, and offers a fix for the common mistakes.
 
 ## Overview
@@ -29,9 +34,9 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 | | In a Swift package | In an Xcode project, or one Tuist generates |
 |---|---|---|
 | Xcode | 16.3 (Swift 6.1) or later | 26.4 or later |
-| macOS to build on | 15.2 or later | 26.2 or later |
 | Where the tests run | iOS 13, macOS 10.15 and tvOS 13 or later | iOS 13, macOS 10.15 and tvOS 13 or later |
 
+- **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed: the macOS an Xcode needs is Apple's requirement for that Xcode.
 - **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
 - **In an Xcode project**, you need Xcode 26.4, the first to turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as described in <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>, or run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
@@ -39,7 +44,7 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 
 ## Add the macros to your package
 
-The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros` (see <doc:Checking-Step-Definitions#Requirements>). They need the swift-syntax package, which SwiftPM downloads only when the trait is on. A package that does not turn the trait on never downloads swift-syntax.
+The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros` (see <doc:Checking-Step-Definitions#Requirements>). They need the swift-syntax package, which SwiftPM downloads only when the trait is on. With Swift 6.2, a package that does not turn the trait on doesn't download swift-syntax. Swift 6.1 may still record a pin for it in `Package.resolved`, because the dependency is declared, but it doesn't build it.
 
 In your `Package.swift`, turn the trait on and depend on the product:
 
@@ -136,7 +141,7 @@ Each macro takes the pattern, a string literal, and a closure. The closure takes
 | A capture group, in a pattern that starts with `^`, ends with `$` or is written between `/` | `String` |
 | A custom parameter type, such as `{color}` | The parameter's output type |
 
-The types must be written out. Swift checks a macro's arguments before the macro runs, so it cannot work them out from the pattern. If one is wrong, the macro tells you which type to use.
+The types must be written out. Swift checks a macro's arguments before the macro runs, so it cannot work them out from the pattern. If one is wrong, the macro tells you which type to use, for the built-in parameter types: `{int}`, `{float}`, `{double}`, `{string}`, `{word}` and `{}`. For a custom parameter type, the compiler checks the type against the parameter's output, and its error is Swift's own, inside the macro's expansion.
 
 To read the step itself, for example its data table or doc string, add a last argument of type `Step`:
 
@@ -157,13 +162,13 @@ A closure can be `async` and `throws`, and can have a capture list, exactly as w
 
 ### Custom parameter types
 
-A custom parameter type, such as `{color}`, needs no extra declaration. The macro reads it as `\.color` on `Match`, through the extension you already write for it, and the compiler checks the argument's type against the parameter's output. The parameter's name must be a valid Swift identifier.
+A custom parameter type, such as `{color}`, needs no extra declaration. The macro reads it as `\.color` on `Match`, through the extension you already write for it, and the compiler checks the argument's type against the parameter's output. The parameter's name must be a valid Swift identifier. `{bigdecimal}`, `{biginteger}`, `{byte}`, `{short}` and `{long}` aren't built in, so the macros read them as custom parameter types too, and each needs an accessor of its name on `Match`.
 
 ### Keywords
 
 `#Given`, `#When`, `#Then`, `#And` and `#But` fit steps with those keywords, and `#MatchAll` fits every step, exactly as ``Given``, ``When``, ``Then``, ``And``, ``But`` and ``MatchAll`` do. A step written with `*`, or with a keyword in another language, matches as it does without macros. See <doc:Matching-Steps#When-more-than-one-step-definition-matches-a-step>.
 
-Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on.
+Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on. They are only in `CucumberSwiftMacros`: the Swift Testing runner's `CucumberSwiftTestingMacros` doesn't have them.
 
 ```swift
 #ES_Dado("tengo {int} pepinos") { (cantidad: Int) in
@@ -185,6 +190,10 @@ Each mistake is an error on its own line. Click the error's icon to see the whol
 | Any other Cucumber expression that does not follow the syntax, such as empty optional text or a parameter inside optional text | `#Given("I have () cukes")` | None: the error says what is wrong and how to fix it |
 | A pattern that is read as a regular expression does not compile | `#Given("I have {int} cukes$")`, where the `$` makes it a regular expression | Removes the `^`, `$` or slashes, when what is left is a valid Cucumber expression |
 | The pattern is not a string literal | `#Given("I have \(count) cukes")` | None: write the pattern out |
+| A function is passed instead of a closure | `#Given("I have {int} cukes", addCukes)` | None: write a closure, which can call the function |
+| A custom parameter's name is not a Swift identifier, because the macro reads it as `\.name` on `Match` | `#Given("I have {my-color} cukes")` | None: rename the parameter type |
+
+Each macro reports one kind of mistake at a time. When the pattern's parameters and the closure's arguments differ in number, you see only that error; once the number is right, the type errors show, one for each wrong argument. Fix the first, build again, and the next may appear.
 
 A pattern that compiles but matches no step in your feature files is not a compile error: macros cannot read files. <doc:Checking-Feature-Files> reports those steps while you build.
 

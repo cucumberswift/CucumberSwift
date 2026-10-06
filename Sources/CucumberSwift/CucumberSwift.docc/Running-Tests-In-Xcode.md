@@ -12,27 +12,14 @@ Add the `CucumberSwiftLint` build tool plugin to your test target, under **Build
 
 ### Settings
 
-These settings change how your tests appear in Xcode, and the step definitions CucumberSwift suggests for steps that have none. Set each one in code, with a static variable on `Cucumber`, or without changing code, with an environment variable in a scheme or test plan. When both are set, the static variable wins.
+These settings change how your tests appear in Xcode, and the step definitions CucumberSwift suggests for steps that have none:
 
-| Setting | Static variable | Environment variable | Default |
-|---|---|---|---|
-| Name tests as you wrote them | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On |
-| One test per scenario | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step |
-| Suggest regex literals for undefined steps (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>) | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions |
-| Parallel testing, experimental (see <doc:Running-Tests-In-Xcode#Parallel-testing>) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off |
+- **Readable test names**, on by default: see <doc:Running-Tests-In-Xcode#Test-names>.
+- **One test per scenario**, off by default: see <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario>.
+- **Regex literals for undefined steps**, off by default: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
+- **Parallel testing**, experimental and off by default: see <doc:Running-Tests-In-Xcode#Parallel-testing>.
 
-Set the static variables in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
-
-```swift
-extension Cucumber: StepImplementation {
-    public func setupSteps() {
-        Cucumber.oneTestPerScenario = true
-        // Your steps
-    }
-}
-```
-
-The environment variables take `YES` or `NO` (also `TRUE` or `FALSE`, and `1` or `0`). Add them in a test plan's **Configurations** tab, under **Arguments**, or in a scheme's Test action.
+<doc:Settings> lists them with every other setting, and says how to set each one: with a static variable on `Cucumber` in your `StepImplementation`'s `setupSteps()`, or with an environment variable in a scheme or test plan.
 
 ### Choose a test per step or one test per scenario
 
@@ -105,7 +92,7 @@ Feature: Checkout
     …
 ```
 
-Then give each set of tags a test plan of its own:
+Then give each set of tags a test plan of its own. (To choose scenarios in code instead, see <doc:Settings#Choose-scenarios-in-code>.)
 
 1. Create a test plan named after its tags, such as **Smoke**, with your test target in it.
 2. In the test plan's **Configurations** tab, under **Arguments**, add the environment variable `CUCUMBER_TAGS` with the tags as its value, such as `Smoke`. Separate several tags with commas, such as `Smoke,Checkout`, to run the scenarios that have any of them.
@@ -119,7 +106,7 @@ xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 1
 
 Use a test plan for each set of tags rather than a configuration for each in one test plan. A test plan runs all of its configurations, and Xcode's test navigator shows a scenario as not run unless it ran in every one of them.
 
-A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular expression, so `Smoke` also matches `@SmokeTest`. A feature tag applies to every scenario in the feature.
+A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular expression, without regard to case, so `Smoke` also matches `@SmokeTest`. Don't put spaces around the commas: they would be part of the expression. A feature tag applies to every scenario in the feature.
 
 ### Run one scenario
 
@@ -162,6 +149,8 @@ Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle
 
 Feature files then open as Gherkin: in the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file Xcode has already opened before keeps the type it had, Default - Plain Text. Set it once: select the file, and in the File inspector choose **Gherkin Query Document** as its type, then close the file and open it again.
 
+You can also choose Gherkin for the open file under Editor ▸ Syntax Coloring.
+
 To add a snippet, open the Library in a feature file (View ▸ Show Library, or ⇧⌘L), search for `Gherkin`, and double-click the snippet or drag it into the file. Press Tab to move between its placeholders. Xcode doesn't offer code completion in feature files, so the snippets' completion shortcuts don't work there.
 
 The script installs these items:
@@ -170,17 +159,18 @@ The script installs these items:
 - `~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec`, the grammar
 - three snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
 
-To remove them, run the script with `uninstall`, then quit and reopen Xcode:
+To remove them, run the script with `uninstall`, then quit and reopen Xcode. To see which of them are installed, run it with `status`: it lists each item as installed or not, and changes nothing.
 
 ```bash
 CucumberSwift/Tools/Xcode/gherkin-highlighting.sh uninstall
+CucumberSwift/Tools/Xcode/gherkin-highlighting.sh status
 ```
 
 ### Parallel testing
 
 Xcode's parallel testing, the **Execute in parallel** option on a test target in a scheme or test plan, or `xcodebuild -parallel-testing-enabled YES`, runs tests in several worker processes, on clones of the simulator for iOS. It hands each worker whole test classes. By default CucumberSwift's scenarios don't run correctly in parallel: depending on the setup, each one runs in every worker, or not at all, and the run can still pass. Leave parallel testing off for a CucumberSwift test target unless you turn on this experiment.
 
-With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES`, each scenario is a test class of its own, which Xcode hands to one worker. The scenario's steps run in order in that worker, as they do in a serial run. A serial run doesn't change.
+With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES` (the value is case-insensitive, and `TRUE` or `1` work too: see <doc:Settings>), each scenario is a test class of its own, which Xcode hands to one worker. The scenario's steps run in order in that worker, as they do in a serial run. A serial run doesn't change.
 
 It is experimental. Before you rely on it:
 

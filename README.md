@@ -23,9 +23,6 @@ Come say hi on Slack. Ask questions in **#help**, keep an eye on **#announcement
 
 Slack is for questions, usage help, and discussion. [GitHub issues](https://github.com/cucumberswift/CucumberSwift/issues) are for bugs and feature requests. Slack only keeps 90 days of history, so if a conversation settles a bug or a design decision, please write it up as an issue before it scrolls away.
 
-### What's Still Missing?
-- Some Gherkin language errors
-
 ### Contributing
 Contributions are very welcome, see [CONTRIBUTING.md](/CONTRIBUTING.md) for the short version of how it works.
 

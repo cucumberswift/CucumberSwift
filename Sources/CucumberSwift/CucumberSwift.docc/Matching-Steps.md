@@ -42,7 +42,7 @@ A closure without `await` is an ordinary synchronous step definition, exactly as
 
 Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
 
-- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. With `continueTestingAfterFailure` off (the default), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
+- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. By default a failed assertion doesn't stop its step, and CucumberSwift doesn't cancel the step's task. With `continueTestingAfterFailure` turned off, which you do by returning `false` from your `StepImplementation` (see <doc:Settings#Continue-after-a-failed-assertion>), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
 - **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
 
   ```swift
@@ -178,7 +178,7 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 > Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 ## Step definitions for undefined steps
-For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target. Whole numbers become `{int}`, decimals `{float}`, and quoted text `{string}`:
+For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target. Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
 
 ```swift
 Then("the display shows {string}") { match, _ in
@@ -187,10 +187,10 @@ Then("the display shows {string}") { match, _ in
 }
 ```
 
-A parameter type that a step uses more than once is read by position, such as `match[\.int, index: 1]`. Characters that mean something in a Cucumber expression, such as `(`, `{` and `/`, are escaped. A step that ends in `$` gets a regular expression instead, such as `Then("^I owe (\\d+)\\$$")`, because a pattern that ends in `$` is always read as one (see <doc:Matching-Steps#How-a-string-pattern-is-read>). Its parameters are text, read with `match[\.anonymous, index: 0]`.
+A parameter type that a step uses more than once is read by position, such as `match[\.int, index: 1]`. Characters that mean something in a Cucumber expression, such as `\`, `(`, `{` and `/`, are escaped, and so is a `^` at the start of the step. A step that ends in `$` gets a regular expression instead, such as `Then("^I owe (\\d+)\\$$")`, because a pattern that ends in `$` is always read as one (see <doc:Matching-Steps#How-a-string-pattern-is-read>). Its parameters are text, read with `match[\.anonymous, index: 0]`.
 
 ### Generate regex literals instead
-Earlier versions generated regex literals. To have them again, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`, or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. When both are set, the static variable wins.
+Earlier versions generated regex literals. To have them again, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`, or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. When both are set, the static variable wins (see <doc:Settings>). It applies to the XCTest runner only: the Swift Testing runner always suggests Cucumber expressions.
 
 ```swift
 Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
