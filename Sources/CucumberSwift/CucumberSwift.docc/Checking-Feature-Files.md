@@ -10,7 +10,7 @@ Without it, you find a mistake in a feature file only when the tests run: a miss
 
 The plugin only reports warnings. It never fails a build, and it changes nothing about how the tests run.
 
-It needs CucumberSwift added with Swift Package Manager, and Xcode 14 or later. Carthage can't deliver Swift package plugins.
+It needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later. Carthage can't deliver Swift package plugins.
 
 ### Add the plugin to a Swift package
 

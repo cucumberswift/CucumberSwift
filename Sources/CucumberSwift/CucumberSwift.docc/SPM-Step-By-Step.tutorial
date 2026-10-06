@@ -7,7 +7,7 @@
 
     @Section(title: "Add CucumberSwift to your test target") {
         @ContentAndMedia {
-            You need Xcode 16 or later and an Xcode project with a unit test target. This tutorial uses a macOS unit test target, like the sample. The steps are the same for an iOS or tvOS app's unit test target.
+            You need Xcode 16.0 or later and an Xcode project with a unit test target. This tutorial uses a macOS unit test target, like the sample. The steps are the same for an iOS or tvOS app's unit test target.
 
             If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
         }

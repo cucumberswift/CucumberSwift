@@ -10,6 +10,8 @@ NOTE: WatchOS support coming soon!
 
 NOTE: CocoaPods is no longer supported as of 6.0.0. The last version published to CocoaPods is 5.0.3, and it keeps resolving, but there will be no newer ones. Install CucumberSwift with Swift Package Manager or Carthage instead.
 
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and the docs say which.
+
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting Started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)
 * [XCTest Integration](https://github.com/cucumberswift/CucumberSwift/wiki/xctest-integration)

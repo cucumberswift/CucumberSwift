@@ -7,7 +7,8 @@ name: CI
 #
 # A pull request runs each check once, on the newest toolchain. The merge queue,
 # main, support/N.x, the nightly run and manual runs add the older variants
-# (Xcode 16, the oldest Bazel), so every change is checked on all of them before
+# (Xcode 16.0, the oldest Xcode on the macos-15 image and so the oldest CucumberSwift
+# supports, and the oldest Bazel), so every change is checked on all of them before
 # it merges. The parallel tests skip the merge queue, run when the code changes
 # on pull requests and main (the full matrix on main), and run the full matrix on
 # every nightly and manual run (see parallel_tests).
@@ -301,8 +302,7 @@ jobs:
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
   # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run the macos-15 image's own Xcode (`default`, Xcode 16),
-  # the oldest Xcode CI builds with.
+  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with.
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
@@ -316,20 +316,15 @@ jobs:
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
           && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"default","variant":" (Xcode 16)"}]') }}
+          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode ${{ matrix.xcode }}
-        if: matrix.xcode != 'default'
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
-        run: |
-          find /Applications -maxdepth 1 -name 'Xcode*.app' | sort
-          app=$(find /Applications -maxdepth 1 -name "Xcode_${XCODE_VERSION}*.app" | sort | head -1)
-          if [ -z "$app" ]; then echo "::error::Xcode $XCODE_VERSION is not installed on this image"; exit 1; fi
-          sudo xcode-select -s "$app/Contents/Developer"
+        run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
       - name: Show the toolchain
         run: |
           xcodebuild -version
@@ -381,7 +376,9 @@ jobs:
   #
   # Pull requests run Xcode 26, on macos-26: the macos-15 image carries Xcode 26
   # too, but its host is macOS 15, and Xcode 26 will not run Catalyst tests there.
-  # The merge queue and main also run Xcode 16, on macos-15.
+  # The merge queue and main also run Xcode 16.0, on macos-15. In the nightly and
+  # manual runs, that variant also builds Package.swift, which only Swift 6.0
+  # reads: Xcode 16.3 and later read Package@swift-6.1.swift.
   catalyst_tests:
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
@@ -395,15 +392,25 @@ jobs:
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
           && '[{"os":"macos-26","variant":""}]'
-          || '[{"os":"macos-26","variant":""},{"os":"macos-15","variant":" (Xcode 16)"}]') }}
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","xcode":"16.0","variant":" (Xcode 16)"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
+        env:
+          XCODE_VERSION: ${{ matrix.xcode }}
+        run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
       - name: Show the toolchain
-        run: xcodebuild -version
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Run the tests on Mac Catalyst
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
+      - name: Build Package.swift with Swift 6.0
+        if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: swift build
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
@@ -414,7 +421,8 @@ jobs:
   # the merge queue), the rest wait for the macOS hostless combination here to pass, and
   # the first failure cancels the others. A pull request runs the hosted tests on each
   # platform with Xcode 26. Main, nightly and manual runs run every combination with
-  # Xcode 26 on macos-26, and iOS and Mac Catalyst with Xcode 16 on macos-15 too.
+  # Xcode 26 on macos-26, and iOS and Mac Catalyst with Xcode 16.0 on macos-15 too.
+  # Nightly and manual runs also run tvOS and macOS with Xcode 16.0.
   parallel_smoke:
     name: Parallel tests (macOS, hostless)
     needs: changes
@@ -462,19 +470,18 @@ jobs:
         xcode: ${{ fromJSON(github.event_name == 'pull_request' && '["26"]' || '["16","26"]') }}
         platform: [iOS, tvOS, macOS, Catalyst]
         kind: ${{ fromJSON(github.event_name == 'pull_request' && '["hosted"]' || '["hostless","hosted","UI"]') }}
-        exclude:
-          - xcode: '16'
-            platform: tvOS
-          - xcode: '16'
-            platform: macOS
-          # Run first, by parallel_smoke.
-          - xcode: '26'
-            platform: macOS
-            kind: hostless
+        # Xcode 26's macOS hostless combination runs first, in parallel_smoke. Xcode 16.0's
+        # tvOS and macOS combinations run only in the nightly and manual runs.
+        exclude: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          && '[{"xcode":"26","platform":"macOS","kind":"hostless"}]'
+          || '[{"xcode":"26","platform":"macOS","kind":"hostless"},{"xcode":"16","platform":"tvOS"},{"xcode":"16","platform":"macOS"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode 16.0
+        if: matrix.xcode == '16'
+        run: .github/scripts/select-xcode.sh 16.0
       - name: Show the toolchain
         run: xcodebuild -version
       - name: Install mise
@@ -528,17 +535,28 @@ jobs:
       - name: Run the Swift 6 language mode consumer tests
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
       # Uses the step definition macros as a project would: the Macros trait turned on from its own
-      # Package.swift, on the oldest Swift that has traits. Fixture tests runs it on a newer one.
-      - name: Run the step definition macros package fixture
-        run: swift test --package-path Fixtures/StepDefinitionMacrosPackage
+      # Package.swift, with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the macros in
+      # a Swift package. Fixture tests runs it on a newer one.
+      - name: Run the step definition macros package fixture with Xcode 16.3
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
+        run: |
+          swift --version
+          swift test --package-path Fixtures/StepDefinitionMacrosPackage
       # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
-      # on the oldest Swift that has traits. The Fixtures job runs it on a newer one.
-      - name: Run the Swift Testing package fixture
-        run: swift test --package-path Fixtures/SwiftTestingPackage
+      # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
+      # The Fixtures job runs it on a newer one.
+      - name: Run the Swift Testing package fixture with Xcode 16.3
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
+        run: |
+          swift --version
+          swift test --package-path Fixtures/SwiftTestingPackage
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
-  # package trait only compiles with Xcode 26.4 or later. A required check.
+  # package trait only compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4,
+  # named in its xcode-version file. A required check.
   fixture_tests:
     name: Fixture tests
     needs: changes

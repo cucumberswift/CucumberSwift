@@ -7,7 +7,7 @@
 
     @Section(title: "Add CucumberSwift to your test target") {
         @ContentAndMedia {
-            You need Xcode 16 or later, Carthage 0.37 or later, and an Xcode project with an iOS app and a unit test target. If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
+            You need Xcode 16.0 or later, Carthage 0.37 or later, and an Xcode project with an iOS app and a unit test target. If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
 
             This tutorial differs from the GettingStarted sample in its platform only: the sample is a macOS unit test target that gets CucumberSwift with Swift Package Manager. The feature file and the step definitions are the same.
         }

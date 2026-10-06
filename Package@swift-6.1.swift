@@ -168,6 +168,6 @@ let package = Package(
                 .copy("Features")
             ])
     ],
-    // The other targets are written for Swift 5, as Package.swift builds them.
+    // The other targets are written for Swift 5, as in Package.swift.
     swiftLanguageModes: [.v5]
 )
