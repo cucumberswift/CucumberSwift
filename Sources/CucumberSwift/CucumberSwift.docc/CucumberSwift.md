@@ -8,7 +8,7 @@ CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, and macOS.
 
 ### Get started
 
-Follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents> to add CucumberSwift to a test target, with Swift Package Manager or Carthage. [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample) has working sample projects, tested every night against the latest CucumberSwift release. Its [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup the tutorials lead to.
+Follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents> to add CucumberSwift to a test target, with Swift Package Manager or Carthage. <doc:Sample-Projects> lists the working projects in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), tested every night against the latest CucumberSwift release, and what each one shows. Its [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup the tutorials lead to.
 
 CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and their articles say which.
 
@@ -20,6 +20,7 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 
 ### Discussions
 - <doc:Tutorial-Table-of-Contents>
+- <doc:Sample-Projects>
 - <doc:Running-Tests-In-Xcode>
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Feature-Files-With-Swift-Testing>
