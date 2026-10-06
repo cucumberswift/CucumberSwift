@@ -45,7 +45,7 @@ Leave the plugin on for every build, on your Mac and in CI. It only reports warn
 
 In feature files:
 
-- **Keywords.** In English only: text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion.
+- **Keywords.** In English only: text where a step should be, and a word that looks like a misspelt keyword (`Thne`, `Gvien`, `feature:`, `Scenario` without its colon), with a suggestion. Suggestions cover the step keywords, `Feature:`, `Background:`, `Scenario:` and `Examples:`, but not `Rule:`. In a scenario, the usual message for a misspelt step keyword is "Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Then'?".
 - **Structure.** A step outside a scenario or background, a step after `Examples`, and `Examples` outside a scenario.
 - **Tables.** A row with a different number of cells from the first row of its table, and a table that doesn't follow a step or `Examples`.
 - **Doc strings.** A doc string that doesn't follow a step, or is never closed.
@@ -55,11 +55,11 @@ A feature file in another language has a comment such as `# language: fr`. The p
 Against the target's step definitions:
 
 - **Undefined steps.** A step that none of the target's step definitions matches. Each step of a `Scenario Outline` is checked with the values from its `Examples` filled in.
-- **Step definitions that can never match.** A string pattern that starts with `^` or ends with `$` but isn't a valid regular expression, or a regex literal that doesn't compile. The warning is on the step definition's line.
+- **Step definitions that can never match.** A string pattern that starts with `^`, ends with `$` or is written between `/`, but isn't a valid regular expression, or a regex literal that doesn't compile. The warning is on the step definition's line.
 
 ### Fix misspelt keywords
 
-When the plugin suggests a keyword, as in "'Thne' is not a Gherkin keyword. Did you mean 'Then'?", the **Fix Feature Files** command makes the change for you. It applies every such suggestion in your feature files at once, and changes nothing else.
+When the plugin suggests a keyword, as in "Did you mean 'Then'?", the **Fix Feature Files** command makes the change for you. It applies every such suggestion in your feature files at once, and changes nothing else.
 
 ![A feature file in Xcode with seven warnings that each suggest a keyword: "feture", "Scenario Outline" without its colon, "Gvien", "Wehn", "Thne", "scenario" in lowercase, and "Adn".](FixFeatureFiles-Before.png)
 
@@ -75,14 +75,14 @@ The command fixes each keyword, and the warnings are gone after the next build:
 
 ![The same feature file after the command, with Feature, Scenario Outline, Given, When, Then, Scenario and And spelt correctly, and no warnings.](FixFeatureFiles-After.png)
 
-In Terminal, run `swift package fix-feature-files` in the package's folder. Add `--target MyAppTests` to fix only the feature files in that target's folder, the same files the build plugin checks.
+In Terminal, run `swift package fix-feature-files` in the package's folder. Without `--target`, it fixes the feature files in the folders of every target of the package. Add `--target MyAppTests` to fix only the feature files in that target's folder, the same files the build plugin checks.
 
 The command needs permission to change files in your project or package. Xcode asks before it runs, and you can tell it not to ask again. `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`.
 
-It lists each line it changed, before and after:
+It lists each line it changed, before and after, with the file's absolute path:
 
 ```
-Features/Login.feature:12: Thne the user is signed in → Then the user is signed in
+/Users/me/MyApp/Tests/MyAppTests/Features/Login.feature:12: Thne the user is signed in → Then the user is signed in
 Fixed 1 line in 1 of 4 feature files.
 ```
 
@@ -98,5 +98,13 @@ The plugin reads your step definitions from the Swift files in the target. It fi
 - A custom parameter type is registered at run time, so the plugin treats it as matching anything.
 - If the target has no step definitions at all, for example because they are in another module, the plugin doesn't check for undefined steps.
 - It doesn't take a step definition's keyword into account: a `Given` definition matches a `Then` step.
+
+These give wrong results:
+
+- A step definition that is commented out counts as defined.
+- A raw string (`#"…"#`), a multi-line string and a multi-line regex literal aren't read, so a step that only they match is reported as undefined.
+- The localized step functions, such as `FR_Soit`, and the step classes, such as `GivenStep`, aren't read.
+- A modifier on a pattern, such as `.ignoresCase()`, is ignored: the plugin checks the pattern as written.
+- When only some of your step definitions are in the target, and the rest are in another module, the steps those match are reported as undefined.
 
 For the full rules on how steps match step definitions, see <doc:Matching-Steps>.

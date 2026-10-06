@@ -12,7 +12,7 @@ Add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest
 #### XCode Setup
 When adding your `AppCucumberTests` target make sure to add it as a `Unit Testing Bundle`
 
-There's always a weird tendency for people to lowercase the name of their features folder so the plist should contain  `FeaturesPath` with the relative path to the folder (e.g. `specs/features`)
+There's always a weird tendency for people to lowercase the name of their features folder so the Info.plist should contain `FeaturesPath` with the path to the folder, relative to the test bundle (e.g. `specs/features`). See <doc:Settings#Where-the-feature-files-are>.
 
 #### Magic Happens Here
 The `AppCucumberTests.swift` file looks something like this

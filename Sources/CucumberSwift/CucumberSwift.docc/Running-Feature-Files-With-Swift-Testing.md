@@ -1,5 +1,10 @@
 # Running Feature Files with Swift Testing
 
+@Metadata {
+    @Available(Xcode, introduced: "16.3")
+    @Available(Swift, introduced: "6.1")
+}
+
 Run your feature files with Swift Testing in a unit test target, with the step definitions you already have.
 
 ## Overview
@@ -81,9 +86,9 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-<doc:Checking-Step-Definitions> describes the macros in full: the argument each parameter gives, the mistakes the compiler reports, and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which it doesn't have.
+<doc:Checking-Step-Definitions> describes the macros in full: the argument each parameter gives, the mistakes the compiler reports, and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which are only in `CucumberSwiftMacros`, not in `CucumberSwiftTestingMacros`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, a string that starts with `^` or ends with `$` for a regular expression, or a regex literal. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. The step definition macros take only a string pattern, a string literal. A regex literal, such as `#/…/#`, works only with `Given` and the other step functions, and needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
 `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
 
@@ -112,7 +117,7 @@ This needs no package trait, and so works in an Xcode project with any supported
 
 ## Run scenarios
 
-Each scenario's test is named after its title, as CucumberSwift names the tests it generates: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard()`.
+Each scenario's test is named after its title in camel case: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard()`. That is how CucumberSwift names the tests it generates with `Cucumber.readableTestNames` off, and this runner doesn't have that setting: the name is always camel case. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card", and a repeated name gets `_2`, `_3` and so on.
 
 ```bash
 swift test --filter PayWithAGiftCard
@@ -123,7 +128,11 @@ A Scenario Outline is one test, and each example is one of its test cases, named
 
 `CUCUMBER_TAGS` works as it does with CucumberSwift: a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, which Swift Testing reports as a pass.
 
-Scenarios run one at a time, as with CucumberSwift, because step definitions usually share state.
+Scenarios run one at a time, as with CucumberSwift, because step definitions usually share state. That applies to the scenarios: your target's other Swift Testing tests aren't held back by it, and can run alongside them.
+
+### Check the feature files
+
+Besides the scenarios, the runner adds one test, `CucumberFeatures/gherkin()`, shown as "Feature files are valid Gherkin". It fails, with an issue on the file, for each problem the Gherkin parser finds in the target's feature files, and passes when there is none.
 
 The test navigator lists the scenarios that Xcode found when it last indexed the target, and it doesn't always index again when only a feature file changes. Editing a scenario's steps or examples keeps its results on its row. A scenario you add or rename runs with the others, and shows in the test report, but its row in the navigator can wait until Xcode indexes the target again, for example after you build it or reopen the project.
 
@@ -134,6 +143,10 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 - A step definition, or a step hook, that throws fails on the step's line in the feature file. A scenario hook that throws fails on the scenario's line.
 
 In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run.
+
+A hook that throws stops the hooks after it of the same kind: when an `AfterScenario` or `AfterStep` hook throws, the ones after it don't run.
+
+A step that never finishes holds up the run: the runner has no timeout for an async step, as CucumberSwift's `asyncStepTimeout` gives.
 
 A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook, as CucumberSwift reports a failed XCTest assertion. Its message gives the step as it ran, with an example's values, such as `Then the basket has 3 cukes`, and where it was recorded, such as `Recorded at StepDefinitions.swift:31`. A step definition that throws gets the step in its message too. The scenario goes on after a failed `#expect`. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
 
@@ -157,4 +170,15 @@ One scheme can test both targets. To move a unit test target:
 
 ## What isn't available
 
-These parts of CucumberSwift have no counterpart in this runner: `BeforeFeature` and `AfterFeature`, `shouldRunWith(scenario:tags:)`, verbose output and the JSON report, `ExecuteFirstStep`, `Attach`, and the localized step types such as `ES_Dado`. Feature files in any language still work: their steps match by their text.
+These parts of CucumberSwift have no counterpart in this runner:
+
+- the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
+- `BeforeFeature` and `AfterFeature`, `ExecuteFirstStep` and `Attach`,
+- the `StepImplementation` properties: `shouldRunWith(scenario:tags:)`, `continueTestingAfterFailure`, `reverseOrderForAfterHooks`, `asyncStepTimeout`, `regexLiteralStyle` and `verbose`,
+- the `Cucumber` settings, such as `readableTestNames` and `verboseOutput`: the runner reads only `CUCUMBER_TAGS`, as <doc:Settings> describes,
+- verbose output and the JSON report, and custom reporters, `CucumberTestObserver`,
+- `Cucumber.expectation(description:)` and `wait(for:timeout:)`,
+- step definitions that take `[String]`, the deprecated regular expression API, and
+- the localized step types such as `ES_Dado`.
+
+Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are always Cucumber expressions.
