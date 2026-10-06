@@ -22,7 +22,7 @@ case "$PLATFORM" in
     # The first iPhone or Apple TV of the newest runtime whose major version isn't newer than the
     # selected Xcode's SDK, or of the newest runtime if there is none, so the job doesn't depend on
     # a device name. A runner can have runtimes of a newer major version than an older Xcode, such
-    # as iOS 26.2 beside Xcode 16.4, and that Xcode's UI tests fail to launch the app on them.
+    # as iOS 26.2 beside Xcode 16.4, and the tests run on the runtimes each Xcode comes with.
     if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; sdk="appletvsimulator"; else suffix=""; runtime="iOS"; device="iPhone"; sdk="iphonesimulator"; fi
     sdk_version=$(xcrun --sdk "$sdk" --show-sdk-version)
     udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" SDK_VERSION="$sdk_version" python3 -c '
