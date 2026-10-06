@@ -50,8 +50,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
         // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
         .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0"),
-        // Only resolved when the Macros trait is on. 601 is the version Swift 6.1 ships with.
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", "601.0.0"..<"603.0.0")
+        // Only resolved when the Macros trait is on. 601 is the version Swift 6.1 ships with. The macros
+        // build and pass their tests with every version up to 604; raise the upper bound once they do
+        // with the next one, so a project can use it alongside another macro package.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "601.0.0"..<"605.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -76,9 +78,10 @@ let package = Package(
             name: "CucumberSwiftGherkin",
             path: "Sources/CucumberSwiftGherkin"),
         // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
+        // CucumberSwiftGherkin for the keywords of feature files in other languages.
         .executableTarget(
             name: "CucumberSwiftLintTool",
-            dependencies: ["CucumberSwiftExpressions"],
+            dependencies: ["CucumberSwiftExpressions", "CucumberSwiftGherkin"],
             path: "Sources/CucumberSwiftLintTool"),
         .plugin(
             name: "CucumberSwiftLintPlugin",

@@ -3,8 +3,8 @@
 //  CucumberSwiftGherkin
 //
 // The files in Core are CucumberSwift's own Gherkin parser, from Sources/CucumberSwift/Gherkin/Core,
-// compiled a second time here without XCTest so that build tools can use it. This file is the only
-// API this module offers them.
+// compiled a second time here without XCTest so that build tools can use it. This file and
+// Keywords.swift are the only API this module offers them.
 
 import Foundation
 

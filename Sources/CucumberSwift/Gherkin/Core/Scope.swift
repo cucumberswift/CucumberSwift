@@ -19,7 +19,8 @@ enum Scope: Equatable, Hashable {
     case rule
     case unknown
 
-    static func scopeFor(str: String) -> Scope {
+    /// The scope that `str` starts, read with the keywords of `language`.
+    static func scopeFor(str: String, in language: Language = Scope.language) -> Scope {
         if language.matchesFeature(str) {
             return .feature
         } else if language.matchesScenario(str) {
@@ -35,7 +36,7 @@ enum Scope: Equatable, Hashable {
         }
         let index = str.firstIndex(of: " ")
         let keywordString = String(str[str.startIndex..<(index ?? str.endIndex)])
-        if let keyword = Step.Keyword(keywordString) {
+        if let keyword = Step.Keyword(keywordString, in: language) {
             return .step(keyword)
         }
         return .unknown

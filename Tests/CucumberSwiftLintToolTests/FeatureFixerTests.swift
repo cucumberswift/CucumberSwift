@@ -1,6 +1,7 @@
 @testable import CucumberSwiftLintTool
 import XCTest
 
+// swiftlint:disable:next type_body_length
 final class FeatureFixerTests: LintTestCase {
     /// Writes `feature`, fixes it, and returns the file's new text and each change as
     /// "line: before → after".
@@ -82,6 +83,86 @@ final class FeatureFixerTests: LintTestCase {
             "2: scenario outline: S → Scenario Outline: S",
             "7: Scenaro: T → Scenario: T"
         ])
+    }
+
+    func testAMisspeltHeaderOfMoreThanOneWordIsReplacedWhole() throws {
+        let result = try fix("""
+        Feature: Basket
+
+          Scenaro Outline: Eat <n> cukes
+            Given I have <n> cukes
+
+            Examples:
+              | n |
+              | 3 |
+
+          Scenario Outlne: Eat <n> more cukes
+            Given I have <n> cukes
+
+            Examples:
+              | n |
+              | 4 |
+
+          Scenaro Template Eat <n> cukes again
+            Given I have <n> cukes
+        """)
+        XCTAssertEqual(result.changes, [
+            "3: Scenaro Outline: Eat <n> cukes → Scenario Outline: Eat <n> cukes",
+            "10: Scenario Outlne: Eat <n> more cukes → Scenario Outline: Eat <n> more cukes",
+            "17: Scenaro Template Eat <n> cukes again → Scenario Template: Eat <n> cukes again"
+        ])
+        XCTAssertEqual(result.text, """
+        Feature: Basket
+
+          Scenario Outline: Eat <n> cukes
+            Given I have <n> cukes
+
+            Examples:
+              | n |
+              | 3 |
+
+          Scenario Outline: Eat <n> more cukes
+            Given I have <n> cukes
+
+            Examples:
+              | n |
+              | 4 |
+
+          Scenario Template: Eat <n> cukes again
+            Given I have <n> cukes
+        """)
+    }
+
+    func testAnotherHeaderIsNotReplacedByAHeaderOfMoreThanOneWord() throws {
+        // "Scenarios" is one edit from "Scenario", but is a header itself.
+        let result = try fix("""
+        Feature: F
+          Scenario Outline: O <a>
+            Given a <a>
+            Scenarios Outline
+              | a |
+              | b |
+        """)
+        XCTAssertEqual(result.changes, ["4: Scenarios Outline → Scenarios: Outline"])
+    }
+
+    func testACorrectHeaderOfMoreThanOneWordIsNotChanged() throws {
+        let feature = """
+        Feature: F
+          Scenario Outline: Eat <n> cukes
+            Given I have <n> cukes
+            Examples:
+              | n |
+              | 3 |
+          Scenario Template: Eat <n> more cukes
+            Given I have <n> cukes
+            Examples:
+              | n |
+              | 4 |
+        """
+        let result = try fix(feature)
+        XCTAssertEqual(result.changes, [])
+        XCTAssertEqual(result.text, feature)
     }
 
     func testAFixThatRevealsAnotherIsFollowedByIt() throws {

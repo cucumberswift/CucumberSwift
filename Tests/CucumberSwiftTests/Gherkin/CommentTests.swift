@@ -119,4 +119,14 @@ class CommentTests: XCTestCase {
 //        XCTAssertEqual(cucumber.features.first?.scenarios.first?.steps.first?.match, "🎸")
         XCTAssertEqual(Scope.language.given, "😐")
     }
+
+    // Build tools read a keyword in a language they give, rather than the lexer's current one (#324).
+    func testAKeywordIsReadInTheCurrentLanguageOrTheLanguageItIsGiven() throws {
+        defer { Scope.language = .default }
+        Scope.language = try XCTUnwrap(Language("es"))
+        XCTAssertEqual(Step.Keyword("Dado"), .given)
+        XCTAssertNil(Step.Keyword("Given"))
+        XCTAssertEqual(Step.Keyword("Given", in: .default), .given)
+        XCTAssertNil(Step.Keyword("Dado", in: .default))
+    }
 }
