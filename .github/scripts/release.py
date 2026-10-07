@@ -362,8 +362,8 @@ def notes(repo, last, version, issues, lone_pulls, direct, authors):
     known = ("Bug", "Feature", "Task")
     lines = []
     lines += section("Breaking changes", listed(lambda i: i["breaking"]))
-    lines += section("Bugs", listed(lambda i: not i["breaking"] and i["type"] == "Bug"))
     lines += section("Features", listed(lambda i: not i["breaking"] and i["type"] == "Feature"))
+    lines += section("Bugs", listed(lambda i: not i["breaking"] and i["type"] == "Bug"))
     lines += section("Tasks", listed(lambda i: not i["breaking"] and i["type"] == "Task"))
     # Everything else in one section: issues with no type, pull requests with no
     # issue, and commits pushed without a pull request.
