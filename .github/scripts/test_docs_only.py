@@ -72,15 +72,75 @@ class IsDocsTests(unittest.TestCase):
                 self.assertFalse(docs_only.is_docs(path))
 
 
-class DocsOnlyTests(unittest.TestCase):
+class KindTests(unittest.TestCase):
+    def test_scripts_only_linux_jobs_run_are_scripts(self):
+        for path in [
+            ".github/scripts/docs_only.py",
+            ".github/scripts/test_docs_only.py",
+            ".github/scripts/release.py",
+            ".github/scripts/test_release.py",
+            ".github/scripts/test_check_lockfiles.py",
+            ".github/scripts/publish-docs.sh",
+        ]:
+            with self.subTest(path=path):
+                self.assertEqual(docs_only.kind(path), "script")
+
+    def test_scripts_a_macos_job_runs_and_everything_else_are_code(self):
+        for path in [
+            ".github/scripts/xcode-test.sh",
+            ".github/scripts/select-xcode.sh",
+            ".github/scripts/parallel-fixture.sh",
+            ".github/scripts/macros-trait-fixture.sh",
+            ".github/scripts/check_lockfiles.py",
+            ".github/scripts/new_script.py",
+            ".github/scripts/__pycache__/release.cpython-313.pyc",
+            ".github/workflows/CI.yml",
+            ".github/workflows/release.yml",
+            "scripts/release.py",
+            "release.py",
+            ".github/scripts/release.py.orig",
+            "Package.swift",
+            "Project.swift",
+            "Sources/CucumberSwift/Runner/Cucumber.swift",
+            "Tests/CucumberSwiftTests/Features/Basic.feature",
+            "Fixtures/SwiftTestingPackage/Package.swift",
+        ]:
+            with self.subTest(path=path):
+                self.assertEqual(docs_only.kind(path), "code")
+
+    def test_documentation_is_docs(self):
+        self.assertEqual(docs_only.kind("README.md"), "docs")
+        self.assertEqual(docs_only.kind(".github/scripts/README.md"), "docs")
+
+
+class SummaryTests(unittest.TestCase):
+    def outputs(self, docs_only_, scripts_only, no_code):
+        return {"docs_only": docs_only_, "scripts_only": scripts_only, "no_code": no_code}
+
     def test_only_docs_is_docs_only(self):
-        self.assertTrue(docs_only.docs_only(["README.md", f"{CATALOG}/Resources/a.png"]))
+        self.assertEqual(docs_only.summary(["README.md", f"{CATALOG}/Resources/a.png"]),
+                         self.outputs(True, False, True))
 
-    def test_one_code_file_is_not_docs_only(self):
-        self.assertFalse(docs_only.docs_only(["README.md", "Package.swift"]))
+    def test_only_linux_scripts_is_scripts_only(self):
+        self.assertEqual(docs_only.summary([".github/scripts/release.py", ".github/scripts/test_release.py"]),
+                         self.outputs(False, True, True))
 
-    def test_no_files_is_not_docs_only(self):
-        self.assertFalse(docs_only.docs_only([]))
+    def test_docs_and_linux_scripts_is_no_code(self):
+        self.assertEqual(docs_only.summary(["README.md", ".github/scripts/release.py"]),
+                         self.outputs(False, False, True))
+
+    def test_one_code_file_is_code(self):
+        for paths in [
+            ["README.md", "Package.swift"],
+            [".github/scripts/release.py", ".github/scripts/xcode-test.sh"],
+            ["README.md", ".github/scripts/release.py", ".github/workflows/CI.yml"],
+        ]:
+            with self.subTest(paths=paths):
+                self.assertEqual(docs_only.summary(paths), self.outputs(False, False, False))
+
+    def test_no_files_is_code(self):
+        self.assertEqual(docs_only.summary([]), self.outputs(False, False, False))
+        self.assertEqual(docs_only.FULL_RUN, self.outputs(False, False, False))
 
 
 class Repository(unittest.TestCase):
@@ -136,7 +196,11 @@ class Repository(unittest.TestCase):
     def pull_request(self, base, head):
         return {"pull_request": {"base": {"sha": base}, "head": {"sha": head}}}
 
-    def decide(self, event_name, event):
+    def decide(self, event_name, event, output="docs_only"):
+        """One of the run's outputs, docs_only unless named."""
+        return self.outputs(event_name, event)[output]
+
+    def outputs(self, event_name, event):
         path = os.path.join(self.tmp.name, "event.json")
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(event, handle)
@@ -187,6 +251,27 @@ class PullRequestTests(Repository):
         self.assertIn("docs  docs/a\\n::warning::forged\\u2028.md\n", self.output)
         self.assertNotIn("\n::warning::", self.output)
 
+    def test_a_pull_request_changing_only_the_release_script_skips_the_macos_jobs(self):
+        head = self.branch((".github/scripts/release.py", "print()\n"), (".github/scripts/test_release.py", "\n"))
+        self.assertEqual(self.outputs("pull_request", self.pull_request(self.root, head)),
+                         {"docs_only": False, "scripts_only": True, "no_code": True})
+        self.assertIn("script  .github/scripts/release.py", self.output)
+        self.assertIn("Linux-run scripts only", self.output)
+
+    def test_a_pull_request_changing_a_script_a_macos_job_runs_is_code(self):
+        head = self.branch((".github/scripts/release.py", "print()\n"), (".github/scripts/xcode-test.sh", "#!/bin/sh\n"))
+        self.assertEqual(self.outputs("pull_request", self.pull_request(self.root, head)),
+                         {"docs_only": False, "scripts_only": False, "no_code": False})
+        self.assertIn("code  .github/scripts/xcode-test.sh", self.output)
+        self.assertIn("the full CI runs", self.output)
+
+    def test_renaming_code_to_a_linux_script_is_code(self):
+        self.git("switch", "-q", "-c", "topic", self.root)
+        os.makedirs(".github/scripts")
+        self.git("mv", "Sources/CucumberSwift/Cucumber.swift", ".github/scripts/release.py")
+        head = self.commit("rename")
+        self.assertFalse(self.decide("pull_request", self.pull_request(self.root, head), "no_code"))
+
     def test_a_pull_request_with_no_changed_files_is_not_docs_only(self):
         head = self.branch()
         self.assertFalse(self.decide("pull_request", self.pull_request(self.root, head)))
@@ -200,6 +285,11 @@ class MergeGroupTests(Repository):
         head = self.branch(("LICENSE", "MIT\n"), (".github/ISSUE_TEMPLATE/bug.md", "bug\n"))
         self.assertTrue(self.decide("merge_group", self.merge_group(self.root, head)))
 
+    def test_a_queue_entry_changing_only_linux_scripts_has_no_code(self):
+        head = self.branch((".github/scripts/release.py", "print()\n"))
+        self.assertTrue(self.decide("merge_group", self.merge_group(self.root, head), "scripts_only"))
+        self.assertTrue(self.decide("merge_group", self.merge_group(self.root, head), "no_code"))
+
     def test_a_queue_entry_changing_code_is_not_docs_only(self):
         head = self.branch(("README.md", "# Changed\n"), (".github/workflows/CI.yml", "name: CI\n"))
         self.assertFalse(self.decide("merge_group", self.merge_group(self.root, head)))
@@ -212,7 +302,7 @@ class FullRunTests(Repository):
             with self.subTest(event_name=event_name):
                 event = self.pull_request(self.root, head)
                 event.update({"before": self.root, "after": head})
-                self.assertFalse(self.decide(event_name, event))
+                self.assertEqual(self.outputs(event_name, event), docs_only.FULL_RUN)
                 self.assertIn("always runs the full CI", self.output)
 
     def test_an_event_without_its_commits_runs_everything(self):
@@ -228,7 +318,7 @@ class FullRunTests(Repository):
             ("merge_group", {"merge_group": {"base_sha": self.root.upper(), "head_sha": self.root}}),
         ]:
             with self.subTest(event=event):
-                self.assertFalse(self.decide(event_name, event))
+                self.assertEqual(self.outputs(event_name, event), docs_only.FULL_RUN)
                 self.assertIn("::warning::Running the full CI", self.output)
 
     def test_a_commit_missing_from_the_checkout_runs_everything(self):
@@ -239,12 +329,13 @@ class FullRunTests(Repository):
     def test_an_unreadable_event_runs_everything(self):
         out = io.StringIO()
         with redirect_stdout(out):
-            self.assertFalse(docs_only.decide("pull_request", os.path.join(self.tmp.name, "missing.json")))
+            self.assertEqual(docs_only.decide("pull_request", os.path.join(self.tmp.name, "missing.json")),
+                             docs_only.FULL_RUN)
         self.assertIn("::warning::Running the full CI", out.getvalue())
         path = os.path.join(self.tmp.name, "bad.json")
         self.write(path, "{not json")
         with redirect_stdout(io.StringIO()):
-            self.assertFalse(docs_only.decide("pull_request", path))
+            self.assertEqual(docs_only.decide("pull_request", path), docs_only.FULL_RUN)
 
 
 class MainTests(Repository):
@@ -261,16 +352,21 @@ class MainTests(Repository):
         with open(output, encoding="utf-8") as handle:
             return status, handle.read()
 
-    def test_a_docs_only_run_writes_true(self):
+    def test_a_docs_only_run_writes_docs_only_and_no_code(self):
         head = self.branch(("README.md", "# Changed\n"))
         self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)),
-                         (0, "docs_only=true\n"))
+                         (0, "docs_only=true\nscripts_only=false\nno_code=true\n"))
+
+    def test_a_scripts_only_run_writes_scripts_only_and_no_code(self):
+        head = self.branch((".github/scripts/release.py", "print()\n"))
+        self.assertEqual(self.run_main("merge_group", {"merge_group": {"base_sha": self.root, "head_sha": head}}),
+                         (0, "docs_only=false\nscripts_only=true\nno_code=true\n"))
 
     def test_any_other_run_writes_false(self):
         head = self.branch(("Package.swift", "// swift-tools-version:5.5\n"))
-        self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)),
-                         (0, "docs_only=false\n"))
-        self.assertEqual(self.run_main("push", {}), (0, "docs_only=false\n"))
+        full = (0, "docs_only=false\nscripts_only=false\nno_code=false\n")
+        self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)), full)
+        self.assertEqual(self.run_main("push", {}), full)
 
     def test_no_output_file_fails(self):
         with mock.patch.dict(os.environ, {"GITHUB_EVENT_NAME": "push"}), redirect_stdout(io.StringIO()):
