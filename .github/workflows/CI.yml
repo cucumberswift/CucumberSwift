@@ -586,6 +586,18 @@ jobs:
         run: |
           swift --version
           swift test --package-path Fixtures/StepDefinitionMacrosPackage
+      # Runs the Convert to Gherkin Macros command in that package, with the same Xcode: the plugin and its
+      # tool build with swift-syntax, which the step above built, and read the fixture's Swift files. Its
+      # step definitions are already macros, so nothing converts. The rewriting is tested by the root
+      # package's tests, which run on whatever Xcode the image has.
+      - name: Run the Convert to Gherkin Macros command with Xcode 16.3
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
+        run: |
+          output=$(swift package --package-path Fixtures/StepDefinitionMacrosPackage \
+            --allow-writing-to-package-directory convert-to-gherkin-macros --dry-run)
+          echo "$output"
+          grep -Eq '^Would convert 0 step definitions in 0 of [1-9][0-9]* Swift files?\. Left 0 unchanged\.$' <<< "$output"
       # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
       # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
       # The Fixtures job runs it on a newer one.

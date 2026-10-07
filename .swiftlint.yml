@@ -80,6 +80,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   # Symlinks to files and folders that are linted where they are.
   - Sources/CucumberSwiftGherkin/Core
   - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
+  - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
   - Plugins/CucumberSwiftTestingPlugin/ExpandFolders.swift
   # The consumer test packages, run with `swift test` from their own folders.
   - Tests/*/.build/
@@ -101,6 +102,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Sources/CucumberSwift/Generated
   # Generated from I18n.swift by LocalizedStepDefinitionMacroTests.
   - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
+  - Sources/CucumberSwiftMacroConverterTool/LocalizedKeywords.swift
   - Sources/CucumberSwift/CucumberSwift.docc
 
 line_length:
