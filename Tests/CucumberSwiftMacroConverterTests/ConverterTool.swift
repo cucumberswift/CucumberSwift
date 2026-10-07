@@ -85,9 +85,17 @@ enum ConverterTool {
         try process.run()
         if let input { standardInput.fileHandleForWriting.write(Data(input.utf8)) }
         try standardInput.fileHandleForWriting.close()
-        // Read before waiting, so a large source can't fill a pipe and block the tool.
+        // Read both pipes before waiting, and at the same time, so a large source or report can't fill
+        // one and block the tool while this waits for the other.
+        let reading = DispatchGroup()
+        var report = Data()
+        reading.enter()
+        DispatchQueue.global().async {
+            report = standardError.fileHandleForReading.readDataToEndOfFile()
+            reading.leave()
+        }
         let output = standardOutput.fileHandleForReading.readDataToEndOfFile()
-        let report = standardError.fileHandleForReading.readDataToEndOfFile()
+        reading.wait()
         process.waitUntilExit()
         return Launched(status: process.terminationStatus,
                         output: String(bytes: output, encoding: .utf8) ?? "",

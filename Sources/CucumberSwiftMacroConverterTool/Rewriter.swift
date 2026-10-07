@@ -23,6 +23,35 @@ final class Rewriter: SyntaxRewriter {
         return name
     }
 
+    /// Whether a function, variable or type called `name` is declared where the call is: in a block that
+    /// contains it, or in a type that contains it, in this file.
+    private static func isShadowed(_ name: String, around node: some SyntaxProtocol) -> Bool {
+        var ancestor = Syntax(node).parent
+        while let current = ancestor {
+            if let items = current.as(CodeBlockItemListSyntax.self), items.contains(where: { declares(name, $0.item) }) {
+                return true
+            }
+            if let members = current.as(MemberBlockItemListSyntax.self), members.contains(where: { declares(name, Syntax($0.decl)) }) {
+                return true
+            }
+            ancestor = current.parent
+        }
+        return false
+    }
+
+    private static func declares(_ name: String, _ item: some SyntaxProtocol) -> Bool {
+        let syntax = Syntax(item)
+        if let function = syntax.as(FunctionDeclSyntax.self) { return function.name.text == name }
+        if let variable = syntax.as(VariableDeclSyntax.self) {
+            return variable.bindings.contains { $0.pattern.as(IdentifierPatternSyntax.self)?.identifier.text == name }
+        }
+        if let type = syntax.as(StructDeclSyntax.self) { return type.name.text == name }
+        if let type = syntax.as(ClassDeclSyntax.self) { return type.name.text == name }
+        if let type = syntax.as(EnumDeclSyntax.self) { return type.name.text == name }
+        if let alias = syntax.as(TypeAliasDeclSyntax.self) { return alias.name.text == name }
+        return false
+    }
+
     init(runner: Runner, converter: SourceLocationConverter) {
         self.runner = runner
         self.converter = converter
@@ -36,6 +65,12 @@ final class Rewriter: SyntaxRewriter {
         guard let call = visited.as(FunctionCallExprSyntax.self),
               let keyword = Self.keyword(of: call) else { return visited }
         let description = "\(keyword)(\(call.arguments.first?.expression.trimmedDescription ?? ""))"
+        // The original node still has its parents, which the rewritten one doesn't.
+        if Self.isShadowed(keyword, around: node) {
+            let reason = "a `\(keyword)` declared in this file is in scope, so the call may not be a step definition"
+            leftUnchanged.append(.init(line: line, stepDefinition: description, reason: reason))
+            return visited
+        }
         do {
             let macro = try StepDefinitionCall(call, keyword: keyword, runner: runner).macro()
             converted.append(.init(line: line, stepDefinition: description, reason: nil))

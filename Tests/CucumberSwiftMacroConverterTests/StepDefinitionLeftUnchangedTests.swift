@@ -159,6 +159,50 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
             """, because: "hide behind its own `match2`")
     }
 
+    func testLeavesACallToAFunctionThatShadowsTheKeyword() {
+        assertLeftUnchanged("""
+            func Given(_ text: String, _ body: (Match, Step) throws -> Void) {}
+
+            Given("I have {int} cukes") { match, _ in
+                let count = try match.first(\\.int)
+                use(count)
+            }
+            """, because: "a `Given` declared in this file is in scope")
+        assertLeftUnchanged("""
+            func setup() {
+                func When(_ text: String, _ body: (Match, Step) throws -> Void) {}
+                When("I have {int} cukes") { match, _ in
+                    let count = try match.first(\\.int)
+                    use(count)
+                }
+            }
+            """, because: "a `When` declared in this file is in scope")
+        assertLeftUnchanged("""
+            final class Steps {
+                func Then(_ text: String, _ body: (Match, Step) throws -> Void) {}
+                func setup() {
+                    Then("I have {int} cukes") { match, _ in
+                        let count = try match.first(\\.int)
+                        use(count)
+                    }
+                }
+            }
+            """, because: "a `Then` declared in this file is in scope")
+    }
+
+    func testConvertsACallWhenAFunctionWithAnotherNameIsDeclared() {
+        let result = convert("""
+            func helper() {}
+
+            Given("I have {int} cukes") { match, _ in
+                let count = try match.first(\\.int)
+                use(count)
+            }
+            """)
+        XCTAssertEqual(result.leftUnchanged, [])
+        XCTAssertEqual(result.converted.count, 1)
+    }
+
     func testLeavesAFileThatImportsNeitherRunner() {
         assertLeftUnchanged("""
             Given("I have {int} cukes") { match, _ in
