@@ -36,6 +36,33 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"])
     }
 
+    func testAShortMisspeltFirstStepInABackgroundSkipsComments() throws {
+        let messages = try lint("""
+        Feature: F
+          Background:
+            Wen I add a step
+            # comment
+            When I add another step
+        """)
+        XCTAssertEqual(messages, ["3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"])
+    }
+
+    func testAShortWordBeforeATableOrADocStringIsReported() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario: S
+            Wen
+              | a |
+          Scenario: T
+            Wen
+              \"\"\"
+              text
+              \"\"\"
+        """)
+        XCTAssertTrue(messages.contains("3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"), "\(messages)")
+        XCTAssertTrue(messages.contains("6:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"), "\(messages)")
+    }
+
     func testAShortWordInADescriptionIsNotReported() throws {
         let messages = try lint("""
         Feature: F
