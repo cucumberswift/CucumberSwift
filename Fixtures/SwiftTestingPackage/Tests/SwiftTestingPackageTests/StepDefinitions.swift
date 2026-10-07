@@ -66,6 +66,8 @@ extension Cucumber: @retroactive StepImplementation {
             await Task.yield()
             World.cukes -= count
         }
+        // [unowned self] is one of the capture lists this step checks the macro with.
+        // swiftlint:disable:next unowned_variable_capture
         #Then("{int} cukes are left in this step") { [unowned self] (count: Int, step: Step) in
             #expect(self === Cucumber.shared)
             #expect(step.keyword.contains(.then))

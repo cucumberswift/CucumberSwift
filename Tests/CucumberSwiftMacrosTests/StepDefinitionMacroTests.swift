@@ -109,6 +109,40 @@ final class StepDefinitionMacroTests: XCTestCase {
             macros: macros)
     }
 
+    func testAClosureWithACaptureListThatAwaitsWithoutSayingAsyncIsTypedAsync() {
+        // Swift infers that a closure that awaits is async. An await in a nested closure doesn't count.
+        assertMacroExpansion(
+            """
+            #When("I wait for {int} cukes") { [basket] (count: Int) in
+                await basket.wait(count)
+            }
+            #When("I eat {int} cukes") { [basket] (count: Int) in
+                Task {
+                    await basket.eat(count)
+                }
+            }
+            """,
+            expandedSource: """
+            { () -> When in
+                let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [basket] match, _ in
+                    let count: Int = try match.first(\\.int)
+                    await basket.wait(count)
+                }
+                return When("I wait for {int} cukes" as CucumberExpression, callback: callback)
+            }()
+            { () -> When in
+                let callback: (CucumberSwiftExpressions.Match, Step) throws -> Void = { [basket] match, _ in
+                    let count: Int = try match.first(\\.int)
+                    Task {
+                        await basket.eat(count)
+                    }
+                }
+                return When("I eat {int} cukes" as CucumberExpression, callback: callback)
+            }()
+            """,
+            macros: macros)
+    }
+
     func testANestedCaptureListIsTypedBeforeItIsPassed() {
         assertMacroExpansion(
             """

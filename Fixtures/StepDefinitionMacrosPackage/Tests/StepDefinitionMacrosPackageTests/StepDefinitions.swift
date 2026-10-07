@@ -99,6 +99,8 @@ extension Cucumber: @retroactive StepImplementation {
             Basket.shared.cukes = count
         }
 
+        // [unowned self] is one of the capture lists this step checks the macro with.
+        // swiftlint:disable:next unowned_variable_capture
         #When("I eat {int} cukes without keeping the runner") { [unowned self] (count: Int) throws in
             XCTAssertIdentical(self, Cucumber.shared)
             Basket.shared.cukes -= count
@@ -111,6 +113,12 @@ extension Cucumber: @retroactive StepImplementation {
         }
 
         #When("I wait for {int} more cukes in a captured container") { [container] (count: Int) async in
+            XCTAssertEqual(container, "basket")
+            await Task.yield()
+            Basket.shared.cukes += count
+        }
+
+        #When("I wait for {int} more cukes without saying async") { [container] (count: Int) in
             XCTAssertEqual(container, "basket")
             await Task.yield()
             Basket.shared.cukes += count

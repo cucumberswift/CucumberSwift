@@ -16,6 +16,7 @@ Feature: Step definition macros
     Given I have 5 cukes in a captured container
     When I eat 2 cukes without keeping the runner
     And I wait for 2 more cukes in a captured container
-    Then the basket holds 5 cukes, checked in a nested closure
+    And I wait for 1 more cukes without saying async
+    Then the basket holds 6 cukes, checked in a nested closure
     And the step after a capture list says "the basket is called basket"
-    And in the end the basket holds 5 cukes
+    And in the end the basket holds 6 cukes
