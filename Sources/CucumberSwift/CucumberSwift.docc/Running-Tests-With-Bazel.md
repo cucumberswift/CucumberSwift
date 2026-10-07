@@ -96,7 +96,7 @@ Every other environment variable in <doc:Settings>, such as `CUCUMBER_VERBOSE`, 
 
 ### Paste generated step definitions
 
-To compile the `/^…$/` form of the step definitions CucumberSwift generates in the Swift 5 language mode, turn on bare slash regex literals in your `swift_library`:
+The step definitions CucumberSwift generates are Cucumber expressions, which compile in any test target. With `Cucumber.generateRegexLiterals` on, they are regex literals written as `#/^…$/#` instead. Set it in `setupSteps()`, or pass `--test_env=CUCUMBER_GENERATE_REGEX_LITERALS=YES` (see <doc:Matching-Steps#Generate-regex-literals-instead>). To have them written as `/^…$/` in the Swift 5 language mode, turn on bare slash regex literals in your `swift_library`:
 
 ```starlark
 copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
