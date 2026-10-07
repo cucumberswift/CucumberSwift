@@ -1,16 +1,28 @@
 #!/usr/bin/env python3
-"""Decide whether a CI run only changes documentation.
+"""Decide whether a CI run changes code that the macOS jobs check.
 
-CI.yml and codeql.yml run this in their `changes` job. On a docs-only run they
-skip the jobs that build and test code, and the Docs job checks the change.
+CI.yml and codeql.yml run this in their `changes` job. Each changed file is one of:
 
-A change is docs-only when every file it adds, changes, deletes or renames
-(both the old and the new path) is one of:
+  docs    documentation, which the Docs job checks;
+  script  a script that only Linux jobs run, which Script tests checks;
+  code    everything else, which the macOS jobs build and test.
+
+A file is documentation when it is:
 
   - a Markdown file, `*.md`, anywhere;
   - anything inside a DocC catalog, a `*.docc` folder, images included;
   - LICENSE, at the repository root;
   - an issue template, under .github/ISSUE_TEMPLATE/.
+
+A file is a Linux-run script when it is in LINUX_SCRIPTS below: a script in
+.github/scripts that no macOS job runs, or its tests. The list names each file,
+so a new script is code until it is added, and a script that a macOS job runs,
+such as xcode-test.sh, select-xcode.sh, parallel-fixture.sh or check_lockfiles.py
+(Project checks), never belongs on it.
+
+On a run with no code, CI and CodeQL skip the macOS jobs that build and test
+code. On a docs-only run, CI also skips Script tests; on a scripts-only run, it
+also skips the Docs job.
 
 Which files a run changes depends on its event:
 
@@ -18,8 +30,8 @@ Which files a run changes depends on its event:
                 branch, as GitHub shows the pull request's files;
   merge_group   the merge queue's head commit against the queue's base commit.
 
-Every other event (push, schedule, workflow_dispatch, ...) is never docs-only,
-so main and the support/N.x branches always run everything. So does any error:
+Every other event (push, schedule, workflow_dispatch, ...) counts as changing
+code, so main and the support/N.x branches always run everything. So does any error:
 a missing or unreadable event, a commit that is not a full SHA or is missing
 from the checkout, a git failure, or a change with no files. When in doubt, CI runs in full.
 
@@ -31,8 +43,8 @@ Run from the repository root, in a GitHub Actions job:
   python3 .github/scripts/docs_only.py
 
 It reads GITHUB_EVENT_NAME and GITHUB_EVENT_PATH, prints the changed files and
-the decision, and writes `docs_only=true` or `docs_only=false` to
-GITHUB_OUTPUT. It exits non-zero only when it cannot write that output.
+the decision, and writes `docs_only`, `scripts_only` and `no_code`, each `true`
+or `false`, to GITHUB_OUTPUT. It exits non-zero only when it cannot write them.
 
 Only the standard library is used.
 """
@@ -46,6 +58,17 @@ DOCS_EXTENSIONS = (".md",)
 DOCC_CATALOG = ".docc"
 ROOT_DOCS = {"LICENSE"}
 DOCS_FOLDERS = (".github/ISSUE_TEMPLATE/",)
+# The scripts that only Linux jobs run, and their tests: Script tests runs the
+# tests, the changes jobs run docs_only.py, the Release workflow's plan and release
+# jobs run release.py, and docs.yml runs publish-docs.sh.
+LINUX_SCRIPTS = {
+    ".github/scripts/docs_only.py",
+    ".github/scripts/test_docs_only.py",
+    ".github/scripts/release.py",
+    ".github/scripts/test_release.py",
+    ".github/scripts/test_check_lockfiles.py",
+    ".github/scripts/publish-docs.sh",
+}
 # A full commit SHA, SHA-1 or SHA-256. Anything else in the event never reaches git.
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
@@ -67,9 +90,27 @@ def is_docs(path):
     return any(folder.endswith(DOCC_CATALOG) for folder in folders)
 
 
-def docs_only(paths):
-    """Whether every changed file is documentation. No files is not docs-only."""
-    return bool(paths) and all(is_docs(path) for path in paths)
+def kind(path):
+    """What a changed file is, as a repository-relative path: docs, script or code."""
+    if is_docs(path):
+        return "docs"
+    if path in LINUX_SCRIPTS:
+        return "script"
+    return "code"
+
+
+def summary(paths):
+    """The outputs for these changed files. No files counts as code."""
+    kinds = {kind(path) for path in paths}
+    return {
+        "docs_only": kinds == {"docs"},
+        "scripts_only": kinds == {"script"},
+        "no_code": bool(kinds) and "code" not in kinds,
+    }
+
+
+FULL_RUN = summary([])
+
 
 
 def printable(path):
@@ -115,22 +156,29 @@ def changed_files(event_name, event):
 
 
 def decide(event_name, event_path):
-    """Whether the run is docs-only, printing why."""
+    """The outputs for the run, printing why."""
     try:
         with open(event_path, encoding="utf-8") as handle:
             event = json.load(handle)
         paths = changed_files(event_name, event)
     except (OSError, ValueError, ChangesError) as error:
         print(f"::warning::Running the full CI: could not work out the changed files ({error}).")
-        return False
+        return FULL_RUN
     if paths is None:
         print(f"A {event_name} run always runs the full CI.")
-        return False
+        return FULL_RUN
     print(f"{len(paths)} changed files:")
     for path in paths:
-        print(f"  {'docs' if is_docs(path) else 'code'}  {printable(path)}")
-    result = docs_only(paths)
-    print("Docs-only: the code jobs are skipped." if result else "Not docs-only: the full CI runs.")
+        print(f"  {kind(path)}  {printable(path)}")
+    result = summary(paths)
+    if result["docs_only"]:
+        print("Docs-only: the code jobs and Script tests are skipped.")
+    elif result["scripts_only"]:
+        print("Linux-run scripts only: the macOS jobs, Docs included, are skipped.")
+    elif result["no_code"]:
+        print("Docs and Linux-run scripts only: the macOS code jobs are skipped.")
+    else:
+        print("Code changes: the full CI runs.")
     return result
 
 
@@ -141,7 +189,8 @@ def main():
         print("::error::GITHUB_OUTPUT is not set.")
         return 1
     with open(output, "a", encoding="utf-8") as handle:
-        handle.write(f"docs_only={'true' if result else 'false'}\n")
+        for name, value in result.items():
+            handle.write(f"{name}={'true' if value else 'false'}\n")
     return 0
 
 

@@ -52,16 +52,18 @@ env:
 # SwiftPM tests and Fixture tests: renaming one means changing the main ruleset
 # at the same time, or every pull request waits for a check that never reports.
 jobs:
-  # Works out whether this run only changes documentation, with
-  # .github/scripts/docs_only.py, which says what counts. On a docs-only pull
-  # request or merge queue run, the jobs that build and test code are skipped,
-  # and a skipped job reports Skipped, which counts as passing for a required
+  # Works out whether this run changes code, with .github/scripts/docs_only.py,
+  # which sorts each changed file into documentation, scripts that only Linux jobs
+  # run (an explicit list), and code. On a pull request or merge queue run with no
+  # code (no_code), the macOS jobs that build and test code are skipped; on a
+  # docs-only run, Script tests is skipped too; on a scripts-only run, Docs is.
+  # A skipped job reports Skipped, which counts as passing for a required
   # check. Pushes and manual runs always run everything. Each skipped job checks
   # `!cancelled()`, so if this job fails they run rather than skip. Path filters
   # on the whole workflow are not used: they would leave required checks waiting.
   # A matrix job skipped this way reports one check with its name unexpanded,
   # such as "Bazel tests${{ matrix.variant }}", so a required check that a
-  # matrix job reports would wait forever on a docs-only run. Make it a job
+  # matrix job reports would wait forever on a run with no code. Make it a job
   # without a matrix before requiring it.
   #
   # It also works out whether the parallel tests run (see parallel_tests).
@@ -73,6 +75,8 @@ jobs:
       contents: read
     outputs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
+      scripts_only: ${{ steps.changes.outputs.scripts_only }}
+      no_code: ${{ steps.changes.outputs.no_code }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
@@ -83,7 +87,7 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           sparse-checkout: .github/scripts
-      - name: Decide whether this run only changes documentation
+      - name: Decide whether this run changes code
         id: changes
         run: python3 .github/scripts/docs_only.py
       # Never in the merge queue: the parallel tests are not required checks, and the
@@ -112,11 +116,14 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
 
-  # Builds the DocC catalog as the Release workflow does, on every change,
-  # docs-only or not. --warnings-as-errors fails on anything DocC warns about,
-  # such as a broken symbol or page link, a missing image or a malformed directive.
+  # Builds the DocC catalog as the Release workflow does, on every change but
+  # one to Linux-run scripts only, which DocC never reads. --warnings-as-errors
+  # fails on anything DocC warns about, such as a broken symbol or page link, a
+  # missing image or a malformed directive.
   docs:
     name: Docs
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -131,16 +138,16 @@ jobs:
         run: swift package generate-documentation --target CucumberSwift --warnings-as-errors
 
   # codecov/patch is a required check that Codecov posts only after an upload,
-  # and iOS tests, which uploads coverage, is skipped on a docs-only run.
+  # and iOS tests, which uploads coverage, is skipped on a run with no code.
   # This tells Codecov the commit has no coverage to report, and Codecov passes
   # its checks. `force`, because without it Codecov passes only when it counts
-  # every changed file as untestable itself, which LICENSE and DocC tutorials are
-  # not, and it reads those files from a pull request, which a merge queue commit
-  # does not have.
-  coverage_docs_only:
-    name: Coverage (docs only)
+  # every changed file as untestable itself, which LICENSE, DocC tutorials and
+  # the scripts are not, and it reads those files from a pull request, which a
+  # merge queue commit does not have.
+  coverage_no_code:
+    name: Coverage (no code)
     needs: changes
-    if: ${{ needs.changes.outputs.docs_only == 'true' }}
+    if: ${{ needs.changes.outputs.no_code == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -164,7 +171,7 @@ jobs:
   ios_tests:
     name: iOS tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
@@ -205,7 +212,7 @@ jobs:
   project_checks:
     name: Project checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -240,7 +247,8 @@ jobs:
         run: swift build --configuration release --build-path ./build --force-resolved-versions
 
   # The tests of the Python scripts in .github/scripts: the release script, the
-  # lockfile check and the docs-only check.
+  # lockfile check and the docs-only check. Runs on scripts-only runs too, where
+  # it is the only check of the change besides Workflow checks.
   script_tests:
     name: Script tests
     needs: changes
@@ -307,7 +315,7 @@ jobs:
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -397,7 +405,7 @@ jobs:
   catalyst_tests:
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
@@ -548,7 +556,7 @@ jobs:
   swiftpm_tests:
     name: SwiftPM tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -592,12 +600,17 @@ jobs:
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
   # package trait only compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4,
   # named in its xcode-version file. A required check.
+  #
+  # 45 minutes, not 30: a run takes about 13-27 minutes, typically 20-25, and a
+  # slow runner reached 30 with no test failing, which cancelled the job and
+  # dropped a merge queue entry. The timeout only bounds a hung job; a normal
+  # run takes no longer for it.
   fixture_tests:
     name: Fixture tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -633,7 +646,7 @@ jobs:
   bazel_tests:
     name: Bazel tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
