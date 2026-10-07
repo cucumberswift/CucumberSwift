@@ -26,7 +26,7 @@ final class MacroConversionTests: XCTestCase {
         }
         """
 
-    private var folder = URL(fileURLWithPath: "/")
+    private var folder = FileManager.default.temporaryDirectory
 
     override func setUpWithError() throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("MacroConversionTests-\(UUID().uuidString)")
