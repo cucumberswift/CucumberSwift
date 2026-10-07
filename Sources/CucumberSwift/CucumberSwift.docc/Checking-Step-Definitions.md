@@ -210,3 +210,15 @@ Given("I have {int} cukes in my {string}" as CucumberExpression) { match, _ in
 ```
 
 It reads the parameters the same way as the step definitions CucumberSwift generates for undefined steps (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). A parameter type that the pattern uses more than once is read by position, such as `match[\.int, index: 1]`.
+
+A closure with a capture list, such as `[weak self]`, or one that contains a closure with a capture list, expands differently: the closure is first given its type as a constant, then passed to the step definition. Swift doesn't compile the plain form when a macro writes it, although it compiles written by hand.
+
+```swift
+{ () -> Then in
+    let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [weak self] (match, _) async throws in
+        let count: String = try match.first(\.anonymous)
+        try await self?.basket.waitForCount(Int(count))
+    }
+    return Then("^the basket holds (\\d+) cukes?$" as CucumberExpression, callback: callback)
+}()
+```

@@ -99,6 +99,11 @@ struct StepDefinition {
         return lines.map { $0.isEmpty ? "" : "    " + $0.dropFirst(margin) }.joined(separator: "\n")
     }
 
+    /// Whether the closure, or a closure inside it, has a capture list.
+    private static func hasCaptureList(_ closure: ClosureExprSyntax) -> Bool {
+        closure.tokens(viewMode: .sourceAccurate).contains { $0.parent?.is(ClosureCaptureClauseSyntax.self) == true }
+    }
+
     // MARK: Diagnostics
 
     private static func diagnostic(for problem: StepPattern.Problem, in literal: StringLiteralExprSyntax) -> Diagnostic {
@@ -147,11 +152,33 @@ struct StepDefinition {
         }
         let arguments = effects.isEmpty ? "\(match), \(stepName)" : "(\(match), \(stepName)) \(effects)"
         let body = (bindings.map { "    \($0)" } + [Self.reindented(closure.statements)]).filter { !$0.isEmpty }
+        let opening = "{ \(attributes)\(captureList)\(arguments) in"
 
-        return """
-        \(raw: keyword)(\(literal.trimmed) as CucumberExpression) { \(raw: attributes)\(raw: captureList)\(raw: arguments) in
-        \(raw: body.joined(separator: "\n"))
+        guard Self.hasCaptureList(closure) else {
+            return """
+            \(raw: keyword)(\(literal.trimmed) as CucumberExpression) \(raw: opening)
+            \(raw: body.joined(separator: "\n"))
+            }
+            """
         }
+        // Swift fails to type-check a closure with a capture list, its own or a nested closure's, when
+        // it is an argument to the step definition in a macro's expansion, although the same call
+        // compiles written by hand. Typed as a constant first, it compiles.
+        // The step definitions take an async closure on the main actor, as when it is passed directly.
+        let isAsync = signature?.effectSpecifiers?.asyncSpecifier != nil
+        let isolation = isAsync || attributes.contains("@MainActor") ? "@MainActor " : ""
+        let type = "\(isolation)(CucumberSwiftExpressions.Match, Step) \(isAsync ? "async " : "")throws -> Void"
+        let constant = Self.unique("callback", avoiding: Set(closure.tokens(viewMode: .sourceAccurate).map(\.text)))
+        let indented = body.joined(separator: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.isEmpty ? "" : "    \($0)" }
+        return """
+        { () -> \(raw: keyword) in
+            let \(raw: constant): \(raw: type) = \(raw: opening)
+        \(raw: indented.joined(separator: "\n"))
+            }
+            return \(raw: keyword)(\(literal.trimmed) as CucumberExpression, callback: \(raw: constant))
+        }()
         """
     }
 

@@ -77,10 +77,59 @@ final class StepDefinitionMacroTests: XCTestCase {
             }
             """,
             expandedSource: """
-            Then("I see {word}" as CucumberExpression) { [weak self] (match, step) async throws in
-                let word: String = try match.first(\\.word)
-                try await self?.check(word, step)
+            { () -> Then in
+                let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [weak self] (match, step) async throws in
+                    let word: String = try match.first(\\.word)
+                    try await self?.check(word, step)
+                }
+                return Then("I see {word}" as CucumberExpression, callback: callback)
+            }()
+            """,
+            macros: macros)
+    }
+
+    func testAClosureWithACaptureListIsTypedBeforeItIsPassed() {
+        // Swift fails to type-check a closure with a capture list passed straight to the step
+        // definition in an expansion, so the expansion gives it its type first.
+        assertMacroExpansion(
+            """
+            #Given("I have {int} cukes") { [basket] (count: Int) in
+                basket.add(count)
             }
+            """,
+            expandedSource: """
+            { () -> Given in
+                let callback: (CucumberSwiftExpressions.Match, Step) throws -> Void = { [basket] match, _ in
+                    let count: Int = try match.first(\\.int)
+                    basket.add(count)
+                }
+                return Given("I have {int} cukes" as CucumberExpression, callback: callback)
+            }()
+            """,
+            macros: macros)
+    }
+
+    func testANestedCaptureListIsTypedBeforeItIsPassed() {
+        assertMacroExpansion(
+            """
+            #When("I eat {int} cukes") { (count: Int) in
+                let callback = 1
+                queue.async { [count] in
+                    eat(count, callback)
+                }
+            }
+            """,
+            expandedSource: """
+            { () -> When in
+                let callback2: (CucumberSwiftExpressions.Match, Step) throws -> Void = { match, _ in
+                    let count: Int = try match.first(\\.int)
+                    let callback = 1
+                    queue.async { [count] in
+                        eat(count, callback)
+                    }
+                }
+                return When("I eat {int} cukes" as CucumberExpression, callback: callback2)
+            }()
             """,
             macros: macros)
     }
