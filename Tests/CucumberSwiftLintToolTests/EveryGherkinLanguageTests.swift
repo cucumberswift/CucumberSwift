@@ -100,19 +100,29 @@ final class EveryGherkinLanguageTests: LintTestCase {
     /// since a feature has one of each. Every other keyword is used in every form in each file.
     /// A form CucumberSwift doesn't read as its keyword is left out, as the lint tool reads files as
     /// CucumberSwift does: a step keyword of more than one word, or without a space after it, and an
-    /// Examples keyword that is also a Scenario keyword in the same language.
+    /// Examples keyword that is also a Scenario keyword in the same language. Any other form that
+    /// CucumberSwift doesn't read, or one of these that it starts to read, fails the tests.
     static func features(in language: Language) throws -> [GeneratedFeature] {
         let keywords = try XCTUnwrap(FeatureFile.Keywords(language: language.code), "No keywords for '\(language.code)'")
+        // Each form must be read as its keyword, except an Examples keyword that is also a Scenario keyword.
         func headers(_ key: String, _ line: FeatureFile.Keywords.Line) -> [String] {
-            language.forms(key).filter { keywords.line($0 + ": A title") == line }
+            let forms = language.forms(key)
+            let read = forms.filter { keywords.line($0 + ": A title") == line }
+            let expected = forms.filter { key != "examples" || !language.forms("scenario").contains($0) }
+            XCTAssertEqual(read, expected, "\(language.code) \(key)")
+            return read
         }
         let features = headers("feature", .feature)
         let backgrounds = headers("background", .background)
         let scenarios = headers("scenario", .scenario)
         let examples = headers("examples", .examples)
-        let steps = Set(stepKeys.flatMap(language.forms).filter { form in
-            keywords.line(form + "x") == .step(keyword: form.trimmingCharacters(in: .whitespaces))
-        }).sorted()
+        let stepForms = Set(stepKeys.flatMap(language.forms))
+        let steps = stepForms
+            .filter { keywords.line($0 + "x") == .step(keyword: $0.trimmingCharacters(in: .whitespaces)) }
+            .sorted()
+        // Each step form of one word followed by a space must be read as a step, and only those.
+        let oneWord = stepForms.filter { $0.last == " " && !$0.trimmingCharacters(in: .whitespaces).contains(" ") }
+        XCTAssertEqual(steps, oneWord.sorted(), language.code)
         let given = try XCTUnwrap(steps.first, "No step keyword in '\(language.code)'")
         XCTAssertFalse(scenarios.isEmpty, "No Scenario keyword in '\(language.code)'")
         XCTAssertNil(keywords.line(description), language.code)
@@ -147,7 +157,9 @@ final class EveryGherkinLanguageTests: LintTestCase {
     }
 
     static func allFeatures() throws -> [GeneratedFeature] {
-        try languages.flatMap(features(in:))
+        let features = try languages.flatMap(features(in:))
+        XCTAssertFalse(features.isEmpty, "No languages read from \(languagesFile.path)")
+        return features
     }
 
     /// The diagnostics for `feature` as "line:column message".
