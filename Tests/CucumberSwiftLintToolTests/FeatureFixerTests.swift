@@ -40,6 +40,16 @@ final class FeatureFixerTests: LintTestCase {
         XCTAssertEqual(result.changes, ["3: Gvien a step → Given a step"])
     }
 
+    func testAShortMisspeltFirstStepIsFixed() throws {
+        let result = try fix("""
+        Feature: F
+          Scenario: S
+            Wen a step
+            Then another step
+        """)
+        XCTAssertEqual(result.changes, ["3: Wen a step → When a step"])
+    }
+
     func testAKeywordInTheWrongCaseIsFixed() throws {
         let result = try fix("""
         feature: F
