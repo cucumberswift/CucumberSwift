@@ -25,3 +25,9 @@ Feature: Counting cukes
       | item  | price |
       | cukes | 2     |
     Then the list has 2 items and the cukes cost 2
+
+  Scenario: Closures with capture lists
+    Given I have 3 cukes
+    When I get a bonus cuke
+    And I eat 2 cukes later
+    Then 2 cukes are left in this step
