@@ -80,6 +80,7 @@ class KindTests(unittest.TestCase):
             ".github/scripts/release.py",
             ".github/scripts/test_release.py",
             ".github/scripts/test_check_lockfiles.py",
+            ".github/scripts/test_gherkin_highlighting.py",
             ".github/scripts/publish-docs.sh",
         ]:
             with self.subTest(path=path):

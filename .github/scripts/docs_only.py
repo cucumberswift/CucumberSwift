@@ -67,6 +67,7 @@ LINUX_SCRIPTS = {
     ".github/scripts/release.py",
     ".github/scripts/test_release.py",
     ".github/scripts/test_check_lockfiles.py",
+    ".github/scripts/test_gherkin_highlighting.py",
     ".github/scripts/publish-docs.sh",
 }
 # A full commit SHA, SHA-1 or SHA-256. Anything else in the event never reaches git.
