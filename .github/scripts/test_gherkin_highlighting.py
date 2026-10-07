@@ -23,6 +23,7 @@ import os
 import plistlib
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -238,7 +239,7 @@ class ScriptTests(unittest.TestCase):
         path = os.path.join(folder, name)
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(text)
-        os.chmod(path, 0o755)
+        os.chmod(path, stat.S_IRWXU)
         return path
 
     def run_script(self, *arguments, status=0):
