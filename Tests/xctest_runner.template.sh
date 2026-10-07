@@ -7,7 +7,6 @@ set -euo pipefail
 test_type="%(test_type)s"
 test_host_path="%(test_host_path)s"
 bundle_path="%(test_bundle_path)s"
-test_env="%(test_env)s"
 test_filter="%(test_filter)s"
 
 if [[ -n "${TEST_PREMATURE_EXIT_FILE:-}" ]]; then
@@ -38,15 +37,9 @@ else
   unzip -qq -d "$test_dir" "$bundle_path"
 fi
 
-# The test process inherits Bazel's test environment (--test_env, the env
-# attribute and the TEST_* variables). Also set the environment rules_apple
-# would put in the xctestrun file.
-if [[ -n "$test_env" ]]; then
-  IFS=',' read -ra pairs <<< "$test_env"
-  for pair in "${pairs[@]}"; do
-    export "${pair?}"
-  done
-fi
+# xctest inherits Bazel's test environment as it is: --test_env, the env
+# attribute and the TEST_* variables. the test_env substitution holds the same
+# values joined with commas, which can't be split back safely, so it isn't used.
 
 # --test_filter (TESTBRIDGE_TEST_ONLY) and the test_filter attribute: a comma
 # separated list of tests as xctest names them, Module.Class or
@@ -74,8 +67,10 @@ if [[ "$status" -ne 0 ]]; then
 fi
 
 # xctest passes when the bundle has no tests; treat that as a failure.
-if ! grep -E 'Executed [0-9]+ tests?,' "$log" | tail -1 | grep -qv 'Executed 0 tests'; then
+summary="$(grep -E 'Executed [0-9]+ tests?,' "$log" | tail -1 || true)"
+if [[ -z "$summary" || "$summary" == *"Executed 0 tests"* ]]; then
   echo "error: no tests ran. Is the test bundle empty, or does the filter match nothing?" >&2
+  echo "Last xctest summary: ${summary:-none}" >&2
   exit 1
 fi
 
