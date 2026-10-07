@@ -1,6 +1,9 @@
 load(":consumer_tests.bzl", "consumer_tests")
+load(":xctest_runner.bzl", "macos_xctest_runner")
 
 # From this folder: `bazel test //...` runs each suite on macOS and on an iOS simulator.
+
+macos_xctest_runner(name = "macos_xctest_runner")
 
 consumer_tests(
     name = "CucumberSwiftConsumerTests",

@@ -31,9 +31,12 @@ def consumer_tests(name, copts = []):
     )
 
     # The lowest OS versions CucumberSwift supports, so the library is compiled for them too.
+    # macOS runs the bundle with `xcrun xctest` (see xctest_runner.bzl). iOS keeps
+    # rules_apple's runner, which runs the tests on a simulator.
     macos_unit_test(
         name = name,
         minimum_os_version = "10.15",
+        runner = Label("//:macos_xctest_runner"),
         deps = [":" + name + "Lib"],
     )
 
