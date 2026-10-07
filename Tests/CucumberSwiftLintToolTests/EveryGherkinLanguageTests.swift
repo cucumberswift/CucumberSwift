@@ -78,8 +78,11 @@ final class EveryGherkinLanguageTests: LintTestCase {
     // Not a keyword in any language: "A description" starts with an And step in Czech.
     private static let description = "Lorem ipsum dolor sit amet."
 
+    /// Every language in the language data.
+    static let languages = readLanguages()
+
     /// Every language in the language data, read from the JSON in Languages.swift.
-    static let languages: [Language] = {
+    private static func readLanguages() -> [Language] {
         guard let source = try? String(contentsOf: languagesFile, encoding: .utf8),
               let start = source.range(of: "\"\"\""),
               let end = source.range(of: "\"\"\"", options: .backwards),
@@ -91,7 +94,7 @@ final class EveryGherkinLanguageTests: LintTestCase {
             return Language(code: code, keywords: language.compactMapValues { $0 as? [String] })
         }
         .sorted { $0.code < $1.code }
-    }()
+    }
 
     /// The valid feature files for `language`: as many as it has forms of Feature or of Background,
     /// since a feature has one of each. Every other keyword is used in every form in each file.
