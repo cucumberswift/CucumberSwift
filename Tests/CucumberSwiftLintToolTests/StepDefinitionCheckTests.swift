@@ -34,6 +34,43 @@ final class StepDefinitionCheckTests: LintTestCase {
         XCTAssertEqual(messages, [])
     }
 
+    func testTheStepClassesAreStepDefinitions() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario: S
+            Given I have 3 cukes
+            When I eat 1
+            Then I have 2 left
+            And none are green
+            But one is pickled
+            * the rest are fresh
+        """, steps: """
+        GivenStep("I have {int} cukes") { _, _ in }
+        WhenStep("I eat {int}") { _, _ in }
+        ThenStep("I have {int} left") { _, _ in }
+        AndStep("none are green") { _, _ in }
+        ButStep("one is pickled") { _, _ in }
+        MatchAllStep("the rest are fresh") { _, _ in }
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
+    /// Both runners, XCTest and Swift Testing, declare the step classes and their English typealiases in StepDSL.swift.
+    func testEveryStepClassAndTypealiasInTheRunnersIsRead() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let declaration = try NSRegularExpression(
+            pattern: #"^public (?:final class (\w+): StepDSL\b|typealias (\w+) = \w+Step$)"#, options: .anchorsMatchLines)
+        for file in ["CucumberSwift/DSL/StepDSL.swift", "CucumberSwiftTesting/StepDSL.swift"] {
+            let source = try String(contentsOf: root.appendingPathComponent("Sources/\(file)"), encoding: .utf8)
+            let names = declaration.matches(in: source, range: NSRange(source.startIndex..., in: source)).compactMap { match in
+                (Range(match.range(at: 1), in: source) ?? Range(match.range(at: 2), in: source)).map { String(source[$0]) }
+            }
+            XCTAssertEqual(names.count, 12, file)
+            XCTAssertEqual(Set(names).subtracting(StepDefinition.names), [], file)
+        }
+    }
+
     func testARegexLiteralCanContainAnEscapedDelimiter() throws {
         let messages = try lint("""
         Feature: F

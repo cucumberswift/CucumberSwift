@@ -1,7 +1,7 @@
 import CucumberSwiftExpressions
 import Foundation
 
-/// A step definition found in a Swift file: `Given("…")`, `When(#/…/#)`, `Then(/…/)`, `#ES_Dado("…")` and so on.
+/// A step definition found in a Swift file: `Given("…")`, `When(#/…/#)`, `Then(/…/)`, `GivenStep("…")`, `#ES_Dado("…")` and so on.
 /// Only literal patterns are found; a pattern built at run time is invisible to the build.
 struct StepDefinition {
     enum Pattern {
@@ -9,8 +9,12 @@ struct StepDefinition {
         case regex(NSRegularExpression)
     }
 
-    /// The names of the step definitions, which are also the names of their macros: `Given` and `#Given`.
-    private static let names = ["Given", "When", "Then", "And", "But", "MatchAll"] + localizedNames
+    /// Every name a step definition is written with: the step classes, such as `GivenStep`, their typealiases,
+    /// such as `Given` and `ES_Dado`, and the typealiases' macros, such as `#Given` and `#ES_Dado`.
+    static let names = [
+        "GivenStep", "WhenStep", "ThenStep", "AndStep", "ButStep", "MatchAllStep",
+        "Given", "When", "Then", "And", "But", "MatchAll"
+    ] + localizedNames
     // Given("…"), Given(#/…/#) or Given(/…/), and the same for the other names. `\b` also matches after a macro's `#`.
     private static let finder = compile(
         #"\b(?:"# + names.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|")
