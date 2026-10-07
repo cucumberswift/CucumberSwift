@@ -7,10 +7,10 @@ import PackagePlugin
 struct CucumberSwiftLintPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
         guard let target = target as? SourceModuleTarget else { return [] }
-        return try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").path,
-                                workDirectory: context.pluginWorkDirectory,
+        return try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").url,
+                                workDirectory: context.pluginWorkDirectoryURL,
                                 targetName: target.name,
-                                files: target.sourceFiles.map(\.path) + [target.directory])
+                                paths: target.sourceFiles.map(\.url.path) + [directoryPath(of: target)].compactMap { $0 })
     }
 }
 
@@ -19,21 +19,21 @@ import XcodeProjectPlugin
 
 extension CucumberSwiftLintPlugin: XcodeBuildToolPlugin {
     func createBuildCommands(context: XcodePluginContext, target: XcodeTarget) throws -> [Command] {
-        try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").path,
-                         workDirectory: context.pluginWorkDirectory,
+        try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").url,
+                         workDirectory: context.pluginWorkDirectoryURL,
                          targetName: target.displayName,
-                         files: target.inputFiles.map(\.path))
+                         paths: target.inputFiles.map(\.url.path))
     }
 }
 #endif
 
 /// Feature files are usually a copied resource folder, so the plugin is given the folder, not
 /// the files in it. Expand folders to the `.feature` and `.swift` files inside them.
-private func lintCommands(tool: Path, workDirectory: Path, targetName: String, files: [Path]) throws -> [Command] {
+private func lintCommands(tool: URL, workDirectory: URL, targetName: String, paths: [String]) throws -> [Command] {
     var features = Set<String>()
     var swiftFiles = Set<String>()
-    for file in files {
-        for path in expand(file.string) {
+    for input in paths {
+        for path in expand(input) {
             switch URL(fileURLWithPath: path).pathExtension {
                 case "feature": features.insert(path)
                 case "swift": swiftFiles.insert(path)
@@ -44,13 +44,28 @@ private func lintCommands(tool: Path, workDirectory: Path, targetName: String, f
     guard !features.isEmpty else { return [] }
     let sortedFeatures = features.sorted()
     let sortedSwiftFiles = swiftFiles.sorted()
-    let stamp = workDirectory.appending("\(targetName).lint-stamp")
+    let stamp = workDirectory.appendingPathComponent("\(targetName).lint-stamp")
     return [
         .buildCommand(displayName: "Checking feature files in \(targetName)",
                       executable: tool,
-                      arguments: ["--stamp", stamp.string, "--features"] + sortedFeatures
+                      arguments: ["--stamp", stamp.path, "--features"] + sortedFeatures
                         + ["--step-definitions"] + sortedSwiftFiles,
-                      inputFiles: (sortedFeatures + sortedSwiftFiles).map { Path($0) },
+                      inputFiles: (sortedFeatures + sortedSwiftFiles).map { URL(fileURLWithPath: $0) },
                       outputFiles: [stamp])
     ]
+}
+
+/// The target's folder. Swift 6.1 added `directoryURL` to `Target`. Swift 6.0 reads Package.swift,
+/// whose tools version 6.0 has it only on each kind of target, and deprecates `Path`; Swift 6.1 and
+/// later read Package@swift-6.1.swift.
+private func directoryPath(of target: any SourceModuleTarget) -> String? {
+#if compiler(>=6.1)
+    return target.directoryURL.path
+#else
+    switch target {
+        case let target as SwiftSourceModuleTarget: return target.directoryURL.path
+        case let target as ClangSourceModuleTarget: return target.directoryURL.path
+        default: return nil
+    }
+#endif
 }
