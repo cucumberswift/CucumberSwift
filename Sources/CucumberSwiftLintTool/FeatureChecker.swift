@@ -200,8 +200,11 @@ final class FeatureChecker {
         let header = multiWord?.header ?? exact
         let written = multiWord?.written ?? header.map { String(text.prefix($0.count)) }
             ?? String(text.prefix { !$0.isWhitespace && $0 != ":" })
-        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: written, strict: !sawStep)
-        let inSteps = sawStep && [.background, .scenario, .outline].contains(section)
+        let inScenario = [.background, .scenario, .outline].contains(section)
+        // A description line directly above a step, a table or a doc string is a misspelt step in practice.
+        let aboveStep = inScenario && nextLine(after: line, skippingBlankLines: false).map(Self.isStepContent) == true
+        let suggestion = header.map { $0 + ":" } ?? Self.suggestion(for: written, strict: !sawStep && !aboveStep)
+        let inSteps = sawStep && inScenario
         let fix = suggestion.flatMap { suggestion -> Diagnostic.Fix? in
             guard inSteps || section == .none || isMistake(written, in: text, suggestion: suggestion, line: line) else { return nil }
             return Self.fix(replacing: written, in: text, with: suggestion)
@@ -226,14 +229,17 @@ final class FeatureChecker {
         let keyword = suggestion.trimmingCharacters(in: CharacterSet(charactersIn: ":"))
         let misspelt = word.lowercased() != keyword.lowercased()
         guard misspelt || word == keyword || text.dropFirst(word.count).hasPrefix(":") else { return false }
-        guard let next = lines.dropFirst(line).first(where: { !$0.isEmpty && !$0.hasPrefix("#") }) else { return false }
-        if Self.stepKeyword(of: next) != nil || next.hasPrefix("|") || next.hasPrefix("\"\"\"") || next.hasPrefix("```") {
-            return true
-        }
+        guard let next = nextLine(after: line, skippingBlankLines: true) else { return false }
+        if Self.isStepContent(next) { return true }
         // The next line may be a misspelt step itself.
         let nextWord = String(next.prefix { !$0.isWhitespace && $0 != ":" })
         guard let step = Self.suggestion(for: nextWord, strict: false), Self.stepKeywords.contains(step) else { return false }
         return nextWord.lowercased() != step.lowercased()
+    }
+
+    /// The next line after `line` that isn't a comment, nor blank when `skippingBlankLines`.
+    private func nextLine(after line: Int, skippingBlankLines: Bool) -> String? {
+        lines.dropFirst(line).first { !$0.hasPrefix("#") && !(skippingBlankLines && $0.isEmpty) }
     }
 
     private func finishScenario() {
@@ -265,6 +271,11 @@ extension FeatureChecker {
     private static func stepKeyword(of text: String) -> String? {
         if text.hasPrefix("* ") { return "*" }
         return stepKeywords.first { text.hasPrefix($0 + " ") }
+    }
+
+    /// Whether `line` is a step, a table row or the start of a doc string.
+    private static func isStepContent(_ line: String) -> Bool {
+        stepKeyword(of: line) != nil || line.hasPrefix("|") || line.hasPrefix("\"\"\"") || line.hasPrefix("```")
     }
 
     private static func cells(_ row: String) -> [String] {

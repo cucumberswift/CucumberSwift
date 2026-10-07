@@ -56,6 +56,23 @@ extension Cucumber: @retroactive StepImplementation {
         #Then("I have {int} cukes") { (count: Int) in
             #expect(World.cukes == count)
         }
+        // Closures with capture lists, which expand differently.
+        let bonus = 1
+        #When("I get a bonus cuke") { [bonus] in
+            World.cukes += bonus
+        }
+        #When("I eat {int} cukes later") { [weak self] (count: Int) async throws in
+            #expect(self != nil)
+            await Task.yield()
+            World.cukes -= count
+        }
+        // [unowned self] is one of the capture lists this step checks the macro with.
+        // swiftlint:disable:next unowned_variable_capture
+        #Then("{int} cukes are left in this step") { [unowned self] (count: Int, step: Step) in
+            #expect(self === Cucumber.shared)
+            #expect(step.keyword.contains(.then))
+            #expect(World.cukes == count)
+        }
     }
 
     /// CucumberSwift's plain DSL, which the macros expand to.

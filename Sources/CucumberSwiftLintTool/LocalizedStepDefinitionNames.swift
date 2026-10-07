@@ -1,26 +1,28 @@
 //
-//  LocalizedKeywords.swift
-//  CucumberSwiftMacroConverterTool
+//  LocalizedStepDefinitionNames.swift
+//  CucumberSwiftLintTool
 //
-//  Generated from CucumberSwift's Generated/I18n.swift by LocalizedKeywordsTests.
+//  Generated from CucumberSwift's Generated/I18n.swift by LocalizedStepDefinitionNameTests.
 //  Do not edit: change I18n.swift, then rewrite this file as that test describes.
 //
 
-#if Macros
-enum LocalizedKeywords {
-    /// Every localized step definition name, such as `ES_Dado`, which has a macro of the same name.
-    static let all: Set<String> = [
+extension StepDefinition {
+    /// The localized step definitions, such as `ES_Dado(…)`, and their macros, such as `#ES_Dado(…)`.
+    static let localizedNames: [String] = [
+        // Afrikaans
         "AF_Gegewe",
         "AF_Wanneer",
         "AF_Dan",
         "AF_En",
         "AF_Maar",
+        // Armenian
         "AM_Դիցուք",
         "AM_Եթե",
         "AM_Երբ",
         "AM_Ապա",
         "AM_Եվ",
         "AM_Բայց",
+        // Aragonese
         "AN_Dau",
         "AN_Dada",
         "AN_Daus",
@@ -32,6 +34,7 @@ enum LocalizedKeywords {
         "AN_Y",
         "AN_E",
         "AN_Pero",
+        // Arabic
         "AR_بفرض",
         "AR_متى",
         "AR_عندما",
@@ -39,6 +42,7 @@ enum LocalizedKeywords {
         "AR_ثم",
         "AR_و",
         "AR_لكن",
+        // Asturian
         "AST_Dáu",
         "AST_Dada",
         "AST_Daos",
@@ -48,6 +52,7 @@ enum LocalizedKeywords {
         "AST_Y",
         "AST_Ya",
         "AST_Peru",
+        // Azerbaijani
         "AZ_TutaqKi",
         "AZ_Verilir",
         "AZ_Əgər",
@@ -57,11 +62,13 @@ enum LocalizedKeywords {
         "AZ_Həm",
         "AZ_Amma",
         "AZ_Ancaq",
+        // Bulgarian
         "BG_Дадено",
         "BG_Когато",
         "BG_То",
         "BG_И",
         "BG_Но",
+        // Malay
         "BM_Diberi",
         "BM_Bagi",
         "BM_Apabila",
@@ -70,12 +77,14 @@ enum LocalizedKeywords {
         "BM_Dan",
         "BM_Tetapi",
         "BM_Tapi",
+        // Bosnian
         "BS_Dato",
         "BS_Kada",
         "BS_Zatim",
         "BS_I",
         "BS_A",
         "BS_Ali",
+        // Catalan
         "CA_Donat",
         "CA_Donada",
         "CA_Atès",
@@ -85,6 +94,7 @@ enum LocalizedKeywords {
         "CA_Cal",
         "CA_I",
         "CA_Però",
+        // Czech
         "CS_Pokud",
         "CS_ZaPředpokladu",
         "CS_Když",
@@ -92,16 +102,19 @@ enum LocalizedKeywords {
         "CS_ATaké",
         "CS_A",
         "CS_Ale",
+        // Welsh
         "CY_GB_AnrhegedigA",
         "CY_GB_Pryd",
         "CY_GB_Yna",
         "CY_GB_A",
         "CY_GB_Ond",
+        // Danish
         "DA_Givet",
         "DA_Når",
         "DA_Så",
         "DA_Og",
         "DA_Men",
+        // German
         "DE_Angenommen",
         "DE_GegebenSei",
         "DE_GegebenSeien",
@@ -109,16 +122,19 @@ enum LocalizedKeywords {
         "DE_Dann",
         "DE_Und",
         "DE_Aber",
+        // Greek
         "EL_Δεδομένου",
         "EL_Όταν",
         "EL_Τότε",
         "EL_Και",
         "EL_Αλλά",
+        // Emoji
         "EM_😐",
         "EM_🎬",
         "EM_🙏",
         "EM_😂",
         "EM_😔",
+        // Scouse
         "EN_SCOUSE_Givun",
         "EN_SCOUSE_YouseKnowWhenYouseGot",
         "EN_SCOUSE_Wun",
@@ -127,16 +143,19 @@ enum LocalizedKeywords {
         "EN_SCOUSE_DenYouseGotta",
         "EN_SCOUSE_An",
         "EN_SCOUSE_Buh",
+        // Australian
         "EN_AU_YKnow",
         "EN_AU_ItSJustUnbelievable",
         "EN_AU_ButAtTheEndOfTheDayIReckon",
         "EN_AU_TooRight",
         "EN_AU_YeahNah",
+        // LOLCAT
         "EN_LOL_ICanHaz",
         "EN_LOL_Wen",
         "EN_LOL_Den",
         "EN_LOL_An",
         "EN_LOL_But",
+        // Old English
         "EN_OLD_Thurh",
         "EN_OLD_Þurh",
         "EN_OLD_Ðurh",
@@ -149,17 +168,20 @@ enum LocalizedKeywords {
         "EN_OLD_Ond",
         "EN_OLD__7",
         "EN_OLD_Ac",
+        // Pirate
         "EN_PIRATE_Gangway",
         "EN_PIRATE_Blimey",
         "EN_PIRATE_LetGoAndHaul",
         "EN_PIRATE_Aye",
         "EN_PIRATE_Avast",
+        // Esperanto
         "EO_Donitaĵo",
         "EO_Komence",
         "EO_Se",
         "EO_Do",
         "EO_Kaj",
         "EO_Sed",
+        // Spanish
         "ES_Dado",
         "ES_Dada",
         "ES_Dados",
@@ -169,21 +191,25 @@ enum LocalizedKeywords {
         "ES_Y",
         "ES_E",
         "ES_Pero",
+        // Estonian
         "ET_Eeldades",
         "ET_Kui",
         "ET_Siis",
         "ET_Ja",
         "ET_Kuid",
+        // Persian
         "FA_بافرض",
         "FA_هنگامی",
         "FA_آنگاه",
         "FA_و",
         "FA_اما",
+        // Finnish
         "FI_Oletetaan",
         "FI_Kun",
         "FI_Niin",
         "FI_Ja",
         "FI_Mutta",
+        // French
         "FR_Soit",
         "FR_EtantDonnéQue",
         "FR_EtantDonnéQu",
@@ -207,6 +233,7 @@ enum LocalizedKeywords {
         "FR_MaisQue",
         "FR_MaisQu",
         "FR_Mais",
+        // Irish
         "GA_CuirIGcásGo",
         "GA_CuirIGcásNach",
         "GA_CuirIGcásGur",
@@ -218,11 +245,13 @@ enum LocalizedKeywords {
         "GA_Ansin",
         "GA_Agus",
         "GA_Ach",
+        // Gujarati
         "GJ_આપેલછે",
         "GJ_ક્યારે",
         "GJ_પછી",
         "GJ_અને",
         "GJ_પણ",
+        // Galician
         "GL_Dado",
         "GL_Dada",
         "GL_Dados",
@@ -233,12 +262,14 @@ enum LocalizedKeywords {
         "GL_E",
         "GL_Mais",
         "GL_Pero",
+        // Hebrew
         "HE_בהינתן",
         "HE_כאשר",
         "HE_אז",
         "HE_אזי",
         "HE_וגם",
         "HE_אבל",
+        // Hindi
         "HI_अगर",
         "HI_यदि",
         "HI_चूंकि",
@@ -251,6 +282,7 @@ enum LocalizedKeywords {
         "HI_पर",
         "HI_परन्तु",
         "HI_किन्तु",
+        // Croatian
         "HR_Zadan",
         "HR_Zadani",
         "HR_Zadano",
@@ -259,6 +291,7 @@ enum LocalizedKeywords {
         "HR_Onda",
         "HR_I",
         "HR_Ali",
+        // Creole
         "HT_Sipoze",
         "HT_SipozeKe",
         "HT_Lè",
@@ -269,6 +302,7 @@ enum LocalizedKeywords {
         "HT_Epi",
         "HT_E",
         "HT_Men",
+        // Hungarian
         "HU_Amennyiben",
         "HU_Adott",
         "HU_Majd",
@@ -277,16 +311,19 @@ enum LocalizedKeywords {
         "HU_Akkor",
         "HU_És",
         "HU_De",
+        // Indonesian
         "ID_Dengan",
         "ID_Ketika",
         "ID_Maka",
         "ID_Dan",
         "ID_Tapi",
+        // Icelandic
         "IS_Ef",
         "IS_Þegar",
         "IS_Þá",
         "IS_Og",
         "IS_En",
+        // Italian
         "IT_Dato",
         "IT_Data",
         "IT_Dati",
@@ -295,6 +332,7 @@ enum LocalizedKeywords {
         "IT_Allora",
         "IT_E",
         "IT_Ma",
+        // Japanese
         "JA_前提",
         "JA_もし",
         "JA_ならば",
@@ -302,6 +340,7 @@ enum LocalizedKeywords {
         "JA_しかし",
         "JA_但し",
         "JA_ただし",
+        // Javanese
         "JV_Nalika",
         "JV_Nalikaning",
         "JV_Manawa",
@@ -312,16 +351,19 @@ enum LocalizedKeywords {
         "JV_Tapi",
         "JV_Nanging",
         "JV_Ananging",
+        // Georgian
         "KA_Მოცემული",
         "KA_Როდესაც",
         "KA_Მაშინ",
         "KA_Და",
         "KA_Მაგ­რამ",
+        // Kannada
         "KN_ನೀಡಿದ",
         "KN_ಸ್ಥಿತಿಯನ್ನು",
         "KN_ನಂತರ",
         "KN_ಮತ್ತು",
         "KN_ಆದರೆ",
+        // Korean
         "KO_조건",
         "KO_먼저",
         "KO_만일",
@@ -330,11 +372,13 @@ enum LocalizedKeywords {
         "KO_그리고",
         "KO_하지만",
         "KO_단",
+        // Lithuanian
         "LT_Duota",
         "LT_Kai",
         "LT_Tada",
         "LT_Ir",
         "LT_Bet",
+        // Luxemburgish
         "LU_Ugeholl",
         "LU_Wann",
         "LU_Dann",
@@ -342,23 +386,27 @@ enum LocalizedKeywords {
         "LU_A",
         "LU_Awer",
         "LU_Mä",
+        // Latvian
         "LV_Kad",
         "LV_Ja",
         "LV_Tad",
         "LV_Un",
         "LV_Bet",
+        // Macedonian
         "MK_CYRL_Дадено",
         "MK_CYRL_Дадена",
         "MK_CYRL_Кога",
         "MK_CYRL_Тогаш",
         "MK_CYRL_И",
         "MK_CYRL_Но",
+        // Macedonian (Latin)
         "MK_LATN_Dadeno",
         "MK_LATN_Dadena",
         "MK_LATN_Koga",
         "MK_LATN_Togash",
         "MK_LATN_I",
         "MK_LATN_No",
+        // Mongolian
         "MN_ӨгөгдсөнНь",
         "MN_Анх",
         "MN_Хэрэв",
@@ -368,6 +416,7 @@ enum LocalizedKeywords {
         "MN_Тэгээд",
         "MN_Гэхдээ",
         "MN_Харин",
+        // Dutch
         "NL_Gegeven",
         "NL_Stel",
         "NL_Als",
@@ -375,17 +424,20 @@ enum LocalizedKeywords {
         "NL_Dan",
         "NL_En",
         "NL_Maar",
+        // Norwegian
         "NO_Gitt",
         "NO_Når",
         "NO_Så",
         "NO_Og",
         "NO_Men",
+        // Panjabi
         "PA_ਜੇਕਰ",
         "PA_ਜਿਵੇਂਕਿ",
         "PA_ਜਦੋਂ",
         "PA_ਤਦ",
         "PA_ਅਤੇ",
         "PA_ਪਰ",
+        // Polish
         "PL_Zakładając",
         "PL_Mając",
         "PL_ZakładającŻe",
@@ -397,6 +449,7 @@ enum LocalizedKeywords {
         "PL_Oraz",
         "PL_I",
         "PL_Ale",
+        // Portuguese
         "PT_Dado",
         "PT_Dada",
         "PT_Dados",
@@ -406,6 +459,7 @@ enum LocalizedKeywords {
         "PT_Entao",
         "PT_E",
         "PT_Mas",
+        // Romanian
         "RO_DateFiind",
         "RO_DatFiind",
         "RO_DatăFiind",
@@ -419,6 +473,7 @@ enum LocalizedKeywords {
         "RO_Și",
         "RO_Şi",
         "RO_Dar",
+        // Russian
         "RU_Допустим",
         "RU_Дано",
         "RU_Пусть",
@@ -433,6 +488,7 @@ enum LocalizedKeywords {
         "RU_Но",
         "RU_А",
         "RU_Иначе",
+        // Slovak
         "SK_Pokiaľ",
         "SK_ZaPredpokladu",
         "SK_Keď",
@@ -444,6 +500,7 @@ enum LocalizedKeywords {
         "SK_ATaktiež",
         "SK_AZároveň",
         "SK_Ale",
+        // Slovenian
         "SL_Dano",
         "SL_Podano",
         "SL_Zaradi",
@@ -460,6 +517,7 @@ enum LocalizedKeywords {
         "SL_Toda",
         "SL_Ampak",
         "SL_Vendar",
+        // Serbian
         "SR_CYRL_ЗаДато",
         "SR_CYRL_ЗаДате",
         "SR_CYRL_ЗаДати",
@@ -468,6 +526,7 @@ enum LocalizedKeywords {
         "SR_CYRL_Онда",
         "SR_CYRL_И",
         "SR_CYRL_Али",
+        // Serbian (Latin)
         "SR_LATN_ZaDato",
         "SR_LATN_ZaDate",
         "SR_LATN_ZaDati",
@@ -476,27 +535,32 @@ enum LocalizedKeywords {
         "SR_LATN_Onda",
         "SR_LATN_I",
         "SR_LATN_Ali",
+        // Swedish
         "SV_Givet",
         "SV_När",
         "SV_Så",
         "SV_Och",
         "SV_Men",
+        // Tamil
         "TA_கொடுக்கப்பட்ட",
         "TA_எப்போது",
         "TA_அப்பொழுது",
         "TA_மேலும்",
         "TA_மற்றும்",
         "TA_ஆனால்",
+        // Thai
         "TH_กำหนดให้",
         "TH_เมื่อ",
         "TH_ดังนั้น",
         "TH_และ",
         "TH_แต่",
+        // Telugu
         "TL_చెప్పబడినది",
         "TL_ఈపరిస్థితిలో",
         "TL_అప్పుడు",
         "TL_మరియు",
         "TL_కాని",
+        // Klingon
         "TLH_GhuNoblu",
         "TLH_DaHGhuBejlu",
         "TLH_QaSDI",
@@ -505,12 +569,14 @@ enum LocalizedKeywords {
         "TLH_Latlh",
         "TLH__Ach",
         "TLH__A",
+        // Turkish
         "TR_DiyelimKi",
         "TR_EğerKi",
         "TR_OZaman",
         "TR_Ve",
         "TR_Fakat",
         "TR_Ama",
+        // Tatar
         "TT_Әйтик",
         "TT_Әгәр",
         "TT_Нәтиҗәдә",
@@ -518,6 +584,7 @@ enum LocalizedKeywords {
         "TT_Вә",
         "TT_Ләкин",
         "TT_Әмма",
+        // Ukrainian
         "UK_Припустимо",
         "UK_ПрипустимоЩо",
         "UK_Нехай",
@@ -530,6 +597,7 @@ enum LocalizedKeywords {
         "UK_АТакож",
         "UK_Та",
         "UK_Але",
+        // Urdu
         "UR_اگر",
         "UR_بالفرض",
         "UR_فرضکیا",
@@ -538,18 +606,21 @@ enum LocalizedKeywords {
         "UR_تب",
         "UR_اور",
         "UR_لیکن",
+        // Uzbek
         "UZ_Агар",
         "UZ_Унда",
         "UZ_Ва",
         "UZ_Лекин",
         "UZ_Бирок",
         "UZ_Аммо",
+        // Vietnamese
         "VI_Biết",
         "VI_Cho",
         "VI_Khi",
         "VI_Thì",
         "VI_Và",
         "VI_Nhưng",
+        // Chinese simplified
         "ZH_CN_假如",
         "ZH_CN_假设",
         "ZH_CN_假定",
@@ -559,6 +630,7 @@ enum LocalizedKeywords {
         "ZH_CN_并且",
         "ZH_CN_同时",
         "ZH_CN_但是",
+        // Chinese traditional
         "ZH_TW_假如",
         "ZH_TW_假設",
         "ZH_TW_假定",
@@ -567,7 +639,6 @@ enum LocalizedKeywords {
         "ZH_TW_而且",
         "ZH_TW_並且",
         "ZH_TW_同時",
-        "ZH_TW_但是"
+        "ZH_TW_但是",
     ]
 }
-#endif

@@ -59,6 +59,7 @@ final class ConvertedStepDefinitionExpansionTests: XCTestCase {
             """)
     }
 
+    // A closure with a capture list is typed as a constant before it is passed, as the macro does since #274.
     func testACaptureListAndAsyncAndThrows() throws {
         try assertExpansion(of: """
             Given("I have {int} cukes") { [weak self] (match, _) async throws in
@@ -66,10 +67,13 @@ final class ConvertedStepDefinitionExpansionTests: XCTestCase {
                 try await self?.basket.waitForCount(count)
             }
             """, is: """
-            Given("I have {int} cukes" as CucumberExpression) { [weak self] (match, _) async throws in
-                let count: Int = try match.first(\\.int)
-                try await self?.basket.waitForCount(count)
-            }
+            { () -> Given in
+                let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [weak self] (match, _) async throws in
+                    let count: Int = try match.first(\\.int)
+                    try await self?.basket.waitForCount(count)
+                }
+                return Given("I have {int} cukes" as CucumberExpression, callback: callback)
+            }()
             """)
     }
 

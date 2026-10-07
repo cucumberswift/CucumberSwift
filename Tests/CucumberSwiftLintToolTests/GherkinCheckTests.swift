@@ -23,6 +23,61 @@ final class GherkinCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["3:5 'Gvien' is not a Gherkin keyword. Did you mean 'Given'?"])
     }
 
+    func testAShortMisspeltFirstStepIsReported() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario Outline: O
+            Wen I add <added> cukes
+            And I remove <removed> cukes
+            Examples:
+              | added | removed |
+              | 5     | 2       |
+        """)
+        XCTAssertEqual(messages, ["3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"])
+    }
+
+    func testAShortMisspeltFirstStepInABackgroundSkipsComments() throws {
+        let messages = try lint("""
+        Feature: F
+          Background:
+            Wen I add a step
+            # comment
+            When I add another step
+        """)
+        XCTAssertEqual(messages, ["3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"])
+    }
+
+    func testAShortWordBeforeATableOrADocStringIsReported() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario: S
+            Wen
+              | a |
+          Scenario: T
+            Wen
+              \"\"\"
+              text
+              \"\"\"
+        """)
+        XCTAssertTrue(messages.contains("3:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"), "\(messages)")
+        XCTAssertTrue(messages.contains("6:5 'Wen' is not a Gherkin keyword. Did you mean 'When'?"), "\(messages)")
+    }
+
+    func testAShortWordInADescriptionIsNotReported() throws {
+        let messages = try lint("""
+        Feature: F
+          Scenario: S
+            Wen the basket is empty
+            nothing can be removed
+            Given a step
+          Scenario: T
+            Wen the basket is empty
+
+            Given a step
+        """)
+        XCTAssertEqual(messages, [])
+    }
+
     func testAHeaderWithoutItsColonIsReported() throws {
         let messages = try lint("""
         Feature: F

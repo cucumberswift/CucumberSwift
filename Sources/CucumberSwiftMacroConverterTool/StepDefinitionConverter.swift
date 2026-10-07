@@ -34,6 +34,9 @@ public enum StepDefinitionConverter {
     /// The English keywords, which both runners have a macro for.
     static let keywords: Set<String> = ["Given", "When", "Then", "And", "But", "MatchAll"]
 
+    /// The localized step definitions, such as `ES_Dado`, from the list that CucumberSwiftLintTool shares.
+    static let localizedNames = Set(StepDefinition.localizedNames)
+
     public static func convert(_ source: String) -> Result {
         let tree = Parser.parse(source: source)
         let runner = Runner(importsOf: tree)
@@ -164,7 +167,7 @@ private final class Rewriter: SyntaxRewriter {
     /// label, and a closure or function to call. `Given(I: …)` in the DSL is not one.
     private static func keyword(of call: FunctionCallExprSyntax) -> String? {
         guard let name = call.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text,
-              StepDefinitionConverter.keywords.contains(name) || LocalizedKeywords.all.contains(name),
+              StepDefinitionConverter.keywords.contains(name) || StepDefinitionConverter.localizedNames.contains(name),
               let first = call.arguments.first, first.label == nil else { return nil }
         let labels = call.arguments.dropFirst().compactMap { $0.label?.text }
         guard call.trailingClosure != nil || labels.contains("callback") || labels.contains("class") else { return nil }
@@ -205,7 +208,7 @@ private struct StepDefinitionCall {
 
     func macro() throws -> MacroExpansionExprSyntax {
         guard let found = runner.found else { throw Unconvertible(reason: runner.problem ?? "") }
-        if LocalizedKeywords.all.contains(keyword), !found.hasLocalizedMacros {
+        if StepDefinitionConverter.localizedNames.contains(keyword), !found.hasLocalizedMacros {
             throw Unconvertible(reason: "\(found.macrosModule) has no localized macros")
         }
         let (pattern, closure) = try arguments()

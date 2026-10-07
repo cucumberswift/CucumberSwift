@@ -92,7 +92,7 @@ The command only needs CucumberSwift added with Swift Package Manager; the build
 
 ### Know its limits
 
-The plugin reads your step definitions from the Swift files in the target. It finds `Given`, `When`, `Then`, `And`, `But` and `MatchAll` calls whose pattern is written in place: a string literal, `#/…/#` or `/…/`. So:
+The plugin reads your step definitions from the Swift files in the target. It finds the step definitions written with `Given`, `When`, `Then`, `And`, `But` and `MatchAll`, with the step classes such as `GivenStep`, with the localized step functions such as `FR_Soit`, and with the macros such as `#Given` and `#FR_Soit`, whose pattern is written in place: a string literal, `#/…/#` or `/…/`. So:
 
 - A pattern built at run time, or a string with interpolation, is invisible to it. A step that only such a pattern matches is reported as undefined.
 - A custom parameter type is registered at run time, so the plugin treats it as matching anything.
@@ -101,9 +101,7 @@ The plugin reads your step definitions from the Swift files in the target. It fi
 
 These give wrong results:
 
-- A step definition that is commented out counts as defined.
 - A raw string (`#"…"#`), a multi-line string and a multi-line regex literal aren't read, so a step that only they match is reported as undefined.
-- The localized step functions, such as `FR_Soit`, and the step classes, such as `GivenStep`, aren't read.
 - A modifier on a pattern, such as `.ignoresCase()`, is ignored: the plugin checks the pattern as written.
 - When only some of your step definitions are in the target, and the rest are in another module, the steps those match are reported as undefined.
 

@@ -43,6 +43,18 @@ extension CucumberExpression: @retroactive CustomParameters {
     }
 }
 
+extension Cucumber {
+    /// What the [weak self] example in "Checking Step Definitions When They Compile" calls.
+    @MainActor var basket: Basket { Basket.shared }
+}
+
+extension Basket {
+    func waitForCount(_ count: Int?) async throws {
+        await Task.yield()
+        XCTAssertEqual(cukes, count)
+    }
+}
+
 extension Cucumber: @retroactive StepImplementation {
     public var bundle: Bundle { Bundle.module }
 
@@ -78,6 +90,49 @@ extension Cucumber: @retroactive StepImplementation {
             XCTAssert(step.keyword.contains(.and))
             XCTAssertEqual(text, "the basket is called basket")
             XCTAssertEqual(Basket.shared.colors, [.green])
+        }
+
+        // Closures with capture lists, which expand differently from the closures above.
+        let container = "basket"
+        #Given("I have {int} cukes in a captured container") { @MainActor [container] (count: Int) in
+            XCTAssertEqual(container, "basket")
+            Basket.shared.cukes = count
+        }
+
+        // [unowned self] is one of the capture lists this step checks the macro with.
+        // swiftlint:disable:next unowned_variable_capture
+        #When("I eat {int} cukes without keeping the runner") { [unowned self] (count: Int) throws in
+            XCTAssertIdentical(self, Cucumber.shared)
+            Basket.shared.cukes -= count
+        }
+
+        // The closure of the [weak self] example in "Checking Step Definitions When They Compile", as
+        // written there. The pattern differs from the example's, which a step definition above has.
+        #Then("^in the end the basket holds (\\d+) cukes?$") { [weak self] (count: String) async throws in
+            try await self?.basket.waitForCount(Int(count))
+        }
+
+        #When("I wait for {int} more cukes in a captured container") { [container] (count: Int) async in
+            XCTAssertEqual(container, "basket")
+            await Task.yield()
+            Basket.shared.cukes += count
+        }
+
+        #When("I wait for {int} more cukes without saying async") { [container] (count: Int) in
+            XCTAssertEqual(container, "basket")
+            await Task.yield()
+            Basket.shared.cukes += count
+        }
+
+        #Then("the step after a capture list says {string}") { [weak self] (text: String, step: Step) in
+            XCTAssertNotNil(self)
+            XCTAssert(step.keyword.contains(.and))
+            XCTAssertEqual(text, "the basket is called basket")
+        }
+
+        #Then("the basket holds {int} cukes, checked in a nested closure") { (count: Int) in
+            let check = { [count] in XCTAssertEqual(Basket.shared.cukes, count) }
+            check()
         }
 
         #ES_Dado("tengo {int} pepinos") { (cantidad: Int) in
