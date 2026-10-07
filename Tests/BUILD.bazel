@@ -1,6 +1,18 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
+load(":xctest_runner.bzl", "macos_xctest_runner")
 
 # From this folder: `bazel test //...` runs each suite on macOS and on an iOS simulator.
+
+macos_xctest_runner(name = "macos_xctest_runner")
+
+# Checks the runner's script with a stand-in for xctest.
+sh_test(
+    name = "xctest_runner_test",
+    srcs = ["xctest_runner_test.sh"],
+    args = ["$(rootpath :xctest_runner.template.sh)"],
+    data = [":xctest_runner.template.sh"],
+)
 
 consumer_tests(
     name = "CucumberSwiftConsumerTests",
