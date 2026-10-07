@@ -91,6 +91,18 @@ final class ConvertedStepDefinitionExpansionTests: XCTestCase {
             """)
     }
 
+    func testAnAsyncStepDefinitionWithoutParameters() throws {
+        try assertExpansion(of: """
+            Given("I wait") { (_, _) async throws in
+                try await wait()
+            }
+            """, is: """
+            Given("I wait" as CucumberExpression) { (_, _) async throws in
+                try await wait()
+            }
+            """)
+    }
+
     func testAStepDefinitionWithoutParameters() throws {
         try assertExpansion(of: """
             Given("I log in") { _, _ in

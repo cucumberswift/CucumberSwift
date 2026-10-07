@@ -165,7 +165,9 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
                 let count = try match.first(\\.int)
                 use(count)
             }
-            """, because: "neither CucumberSwift nor CucumberSwiftTesting", header: "import XCTest\n")
+            """,
+            because: "neither CucumberSwift nor CucumberSwiftTesting",
+            header: "import XCTest\n")
     }
 
     func testLeavesAFileThatImportsBothRunners() {
@@ -174,7 +176,8 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
                 let count = try match.first(\\.int)
                 use(count)
             }
-            """, because: "both CucumberSwift and CucumberSwiftTesting",
+            """,
+            because: "both CucumberSwift and CucumberSwiftTesting",
             header: "import CucumberSwift\nimport CucumberSwiftTesting\n")
     }
 

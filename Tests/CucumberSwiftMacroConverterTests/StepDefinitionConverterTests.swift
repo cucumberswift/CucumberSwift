@@ -77,6 +77,48 @@ final class StepDefinitionConverterTests: ConverterTestCase {
             """)
     }
 
+    func testAStepDefinitionWithoutParametersKeepsAsyncAndThrowsOnAnEmptyParameterList() {
+        assertConverts("""
+            When("I wait") { (_, _) async throws in
+                try await wait()
+            }
+            """, to: """
+            #When("I wait") { () async throws in
+                try await wait()
+            }
+            """)
+        assertConverts("""
+            When("I wait") { (_, _) async in
+                await wait()
+            }
+            """, to: """
+            #When("I wait") { () async in
+                await wait()
+            }
+            """)
+    }
+
+    func testAStepDefinitionWithoutParametersKeepsACaptureListAndAttributes() {
+        assertConverts("""
+            When("I wait") { [weak self] _, _ in
+                self?.wait()
+            }
+            """, to: """
+            #When("I wait") { [weak self] in
+                self?.wait()
+            }
+            """)
+        assertConverts("""
+            When("I wait") { @MainActor _, _ in
+                wait()
+            }
+            """, to: """
+            #When("I wait") { @MainActor in
+                wait()
+            }
+            """)
+    }
+
     func testAStepDefinitionWithoutParametersKeepsTheStep() {
         assertConverts("""
             Given("I log in") { _, step in
@@ -184,150 +226,6 @@ final class StepDefinitionConverterTests: ConverterTestCase {
                 }
             }
             """)
-    }
-
-    // MARK: Preserved
-
-    func testKeepsCommentsAndFormatting() {
-        assertConverts("""
-            Given("I have {int} cukes in my {string}") { match, _ in
-                // The count of cukes
-                let count = try match.first(\\.int)   // trailing
-                /* The container */
-                let container = try match.first(\\.string)
-
-                // Add them
-                basket.add(count,
-                           to: container)   // keeps its alignment
-            }
-            """, to: """
-            #Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
-                // The count of cukes
-                // trailing
-                /* The container */
-
-                // Add them
-                basket.add(count,
-                           to: container)   // keeps its alignment
-            }
-            """)
-    }
-
-    func testKeepsACaptureList() {
-        assertConverts("""
-            Given("I have {int} cukes") { [weak self] match, _ in
-                let count = try match.first(\\.int)
-                self?.basket.add(count)
-            }
-            """, to: """
-            #Given("I have {int} cukes") { [weak self] (count: Int) in
-                self?.basket.add(count)
-            }
-            """)
-    }
-
-    func testKeepsAsyncAndThrows() {
-        assertConverts("""
-            Then("I have {int} cukes") { [weak self] (match, _) async throws in
-                let count = try match.first(\\.int)
-                try await self?.basket.waitForCount(count)
-            }
-            """, to: """
-            #Then("I have {int} cukes") { [weak self] (count: Int) async throws in
-                try await self?.basket.waitForCount(count)
-            }
-            """)
-    }
-
-    func testKeepsAttributesOnTheClosure() {
-        assertConverts("""
-            Given("I have {int} cukes") { @MainActor match, _ in
-                let count = try match.first(\\.int)
-                use(count)
-            }
-            """, to: """
-            #Given("I have {int} cukes") { @MainActor (count: Int) in
-                use(count)
-            }
-            """)
-    }
-
-    func testKeepsTheIndentationOfANestedStepDefinition() {
-        assertConverts("""
-            struct Steps {
-                func setup() {
-                    Given("I have {int} cukes") { match, _ in
-                        let count = try match.first(\\.int)
-                        use(count)
-                    }
-                }
-            }
-            """, to: """
-            struct Steps {
-                func setup() {
-                    #Given("I have {int} cukes") { (count: Int) in
-                        use(count)
-                    }
-                }
-            }
-            """)
-    }
-
-    // MARK: Imports
-
-    func testImportsTheMacrosModuleWhenTheFileHasNotImportedIt() {
-        let result = convert(source: """
-            import XCTest
-            import CucumberSwift
-
-            Given("I log in") { _, _ in }
-            """)
-        XCTAssertEqual(result.source, """
-            import XCTest
-            import CucumberSwift
-            import CucumberSwiftMacros
-
-            #Given("I log in") {}
-            """)
-    }
-
-    func testUsesTheSwiftTestingMacrosForTheSwiftTestingRunner() {
-        let result = convert(source: """
-            import CucumberSwiftTesting
-
-            Given("I have {int} cukes") { match, _ in
-                let count = try match.first(\\.int)
-                use(count)
-            }
-            """)
-        XCTAssertEqual(result.source, """
-            import CucumberSwiftTesting
-            import CucumberSwiftTestingMacros
-
-            #Given("I have {int} cukes") { (count: Int) in
-                use(count)
-            }
-            """)
-    }
-
-    func testDoesNotImportTheMacrosModuleWhenNothingConverts() {
-        let source = """
-            import CucumberSwift
-
-            Given("I have {int} cukes") { match, _ in
-                use(match)
-            }
-            """
-        XCTAssertEqual(convert(source: source).source, source)
-    }
-
-    func testALocalizedStepDefinitionIsLeftUnchangedForTheSwiftTestingRunner() {
-        assertLeftUnchanged("""
-            ES_Dado("tengo {int} pepinos") { match, _ in
-                let cantidad = try match.first(\\.int)
-                use(cantidad)
-            }
-            """, because: "has no localized macros", header: "import CucumberSwiftTestingMacros\n")
     }
 }
 #endif

@@ -3,12 +3,13 @@
 //  CucumberSwiftMacroConverterTests
 //
 
+#if Macros
 import Foundation
 import XCTest
 
-/// Runs the converter tool, built next to the test bundle, on a source string: `--stdin`. The tests run it
-/// as a program because SwiftPM links every test target into one bundle, and linking swift-syntax into a
-/// second target breaks the macros' tests with Swift 6.2's prebuilt swift-syntax.
+/// Runs the converter tool, built next to the test bundle. The tests run it as a program because SwiftPM
+/// links every test target into one bundle, and linking swift-syntax into a second target breaks the
+/// macros' tests with Swift 6.2's prebuilt swift-syntax.
 enum ConverterTool {
     struct Entry: Equatable {
         let line: Int
@@ -23,49 +24,74 @@ enum ConverterTool {
         let leftUnchanged: [Entry]
     }
 
-    static var url: URL {
-        Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }.map {
-            $0.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwiftMacroConverterTool")
-        } ?? URL(fileURLWithPath: "CucumberSwiftMacroConverterTool")
+    /// What a run on files and folders printed, and how it ended.
+    struct Run {
+        let status: Int32
+        let output: String
     }
 
+    private struct Launched {
+        let status: Int32
+        let output: String
+        /// What the tool wrote to standard error.
+        let report: String
+    }
+
+    static var url: URL {
+        let bundle = Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }
+        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwiftMacroConverterTool") }
+            ?? URL(fileURLWithPath: "CucumberSwiftMacroConverterTool")
+    }
+
+    /// `--stdin`: one file's source in, its converted source out, and a line for each step definition.
     static func convert(_ source: String) throws -> Result {
-        let process = Process()
-        process.executableURL = url
-        process.arguments = ["--stdin"]
-        let input = Pipe(), output = Pipe(), report = Pipe()
-        process.standardInput = input
-        process.standardOutput = output
-        process.standardError = report
-        try process.run()
-        // Read before waiting, so a large source can't fill a pipe and block the tool.
-        input.fileHandleForWriting.write(Data(source.utf8))
-        try input.fileHandleForWriting.close()
-        let converted = output.fileHandleForReading.readDataToEndOfFile()
-        let lines = String(decoding: report.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw NSError(domain: "ConverterTool", code: Int(process.terminationStatus),
-                          userInfo: [NSLocalizedDescriptionKey: "The tool exited with status \(process.terminationStatus): \(lines)"])
+        let run = try launch(["--stdin"], input: source)
+        guard run.status == 0 else {
+            let message = "The tool exited with status \(run.status): \(run.report)"
+            throw NSError(domain: "ConverterTool", code: Int(run.status), userInfo: [NSLocalizedDescriptionKey: message])
         }
-        var result = Result(source: String(decoding: converted, as: UTF8.self), converted: [], leftUnchanged: [])
-        var convertedEntries = [Entry](), left = [Entry]()
-        for line in lines.split(separator: "\n") {
+        var converted = [Entry]()
+        var left = [Entry]()
+        for line in run.report.split(separator: "\n") {
             let parts = line.split(separator: ":", maxSplits: 1)
             guard parts.count == 2, let number = Int(parts[0]) else { continue }
             let text = parts[1].dropFirst()
             if text.hasPrefix("converted ") {
-                convertedEntries.append(Entry(line: number, stepDefinition: String(text.dropFirst("converted ".count)), reason: nil))
-            } else if text.hasPrefix("left unchanged ") {
+                converted.append(Entry(line: number, stepDefinition: String(text.dropFirst("converted ".count)), reason: nil))
+            } else if text.hasPrefix("left unchanged "), let end = text.dropFirst("left unchanged ".count).range(of: "): ") {
                 let rest = text.dropFirst("left unchanged ".count)
-                // The step definition ends at the first `): ` after its closing parenthesis.
-                if let end = rest.range(of: "): ") {
-                    left.append(Entry(line: number, stepDefinition: String(rest[..<end.lowerBound]) + ")",
-                                      reason: String(rest[end.upperBound...])))
-                }
+                left.append(Entry(line: number, stepDefinition: String(rest[..<end.lowerBound]) + ")", reason: String(rest[end.upperBound...])))
             }
         }
-        result = Result(source: result.source, converted: convertedEntries, leftUnchanged: left)
-        return result
+        return Result(source: run.output, converted: converted, leftUnchanged: left)
+    }
+
+    /// The tool on files and folders, as the command runs it.
+    static func run(_ arguments: [String]) throws -> Run {
+        let run = try launch(arguments, input: nil)
+        return Run(status: run.status, output: run.output)
+    }
+
+    private static func launch(_ arguments: [String], input: String?) throws -> Launched {
+        let process = Process()
+        process.executableURL = url
+        process.arguments = arguments
+        let standardInput = Pipe()
+        let standardOutput = Pipe()
+        let standardError = Pipe()
+        process.standardInput = standardInput
+        process.standardOutput = standardOutput
+        process.standardError = standardError
+        try process.run()
+        if let input { standardInput.fileHandleForWriting.write(Data(input.utf8)) }
+        try standardInput.fileHandleForWriting.close()
+        // Read before waiting, so a large source can't fill a pipe and block the tool.
+        let output = standardOutput.fileHandleForReading.readDataToEndOfFile()
+        let report = standardError.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return Launched(status: process.terminationStatus,
+                        output: String(bytes: output, encoding: .utf8) ?? "",
+                        report: String(bytes: report, encoding: .utf8) ?? "")
     }
 }
+#endif
