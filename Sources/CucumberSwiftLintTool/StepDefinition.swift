@@ -28,7 +28,7 @@ struct StepDefinition {
 
     /// Reads the step definitions in `file`, and reports each pattern that can never match.
     static func read(file: String, report: (Diagnostic) -> Void) -> [StepDefinition] {
-        guard let source = try? String(contentsOfFile: file, encoding: .utf8) else { return [] }
+        guard let source = (try? String(contentsOfFile: file, encoding: .utf8))?.blankingComments else { return [] }
         let lineStarts = source.lineStartOffsets
         var definitions = [StepDefinition]()
         for match in finder.matches(in: source, range: NSRange(source.startIndex..., in: source)) {

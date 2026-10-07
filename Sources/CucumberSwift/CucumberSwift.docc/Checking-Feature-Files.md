@@ -101,7 +101,6 @@ The plugin reads your step definitions from the Swift files in the target. It fi
 
 These give wrong results:
 
-- A step definition that is commented out counts as defined.
 - A raw string (`#"…"#`), a multi-line string and a multi-line regex literal aren't read, so a step that only they match is reported as undefined.
 - A modifier on a pattern, such as `.ignoresCase()`, is ignored: the plugin checks the pattern as written.
 - When only some of your step definitions are in the target, and the rest are in another module, the steps those match are reported as undefined.
