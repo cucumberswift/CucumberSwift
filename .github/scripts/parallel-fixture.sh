@@ -19,14 +19,23 @@ case "$PLATFORM" in
   "Mac Catalyst") suffix=""; destination="platform=macOS,variant=Mac Catalyst" ;;
   "macOS") suffix="Mac"; destination="platform=macOS" ;;
   *)
-    # The newest runtime's first iPhone or Apple TV, so the job doesn't depend on a device name.
-    if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; else suffix=""; runtime="iOS"; device="iPhone"; fi
-    udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" python3 -c '
+    # The first iPhone or Apple TV of the runtime the selected Xcode comes with, so the job doesn't
+    # depend on a device name: the newest runtime not newer than the Xcode's SDK, or else the oldest
+    # newer one of the same major version, or else the newest. A runner can have newer runtimes than
+    # an older Xcode, such as iOS 18.6 and 26.2 beside Xcode 16.4, and the tests run on the runtimes
+    # each Xcode comes with.
+    if [[ "$PLATFORM" = "tvOS Simulator" ]]; then suffix="TV"; runtime="tvOS"; device="Apple TV"; sdk="appletvsimulator"; else suffix=""; runtime="iOS"; device="iPhone"; sdk="iphonesimulator"; fi
+    sdk_version=$(xcrun --sdk "$sdk" --show-sdk-version)
+    udid=$(xcrun simctl list devices available --json | RUNTIME="$runtime" DEVICE="$device" SDK_VERSION="$sdk_version" python3 -c '
 import json, os, sys
 devices = json.load(sys.stdin)["devices"]
 prefix = ".SimRuntime." + os.environ["RUNTIME"] + "-"
-runtimes = sorted((r for r in devices if prefix in r),
-                  key=lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")], reverse=True)
+sdk = [int(n) for n in os.environ["SDK_VERSION"].split(".")]
+version = lambda r: [int(n) for n in r.rsplit(prefix, 1)[1].split("-")]
+runtimes = sorted((r for r in devices if prefix in r), key=version, reverse=True)
+runtimes = ([r for r in runtimes if version(r) <= sdk]
+            + sorted((r for r in runtimes if version(r) > sdk and version(r)[0] == sdk[0]), key=version)
+            + [r for r in runtimes if version(r)[0] > sdk[0]])
 print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startswith(os.environ["DEVICE"])), ""))
 ')
     if [[ -z "$udid" ]]; then
