@@ -579,13 +579,16 @@ jobs:
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
       # Uses the step definition macros as a project would: the Macros trait turned on from its own
       # Package.swift, with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the macros in
-      # a Swift package. Fixture tests runs it on a newer one.
+      # a Swift package. Fixture tests runs it on a newer one. Both fixture runs here also check
+      # the warnings from CucumberSwift, as Fixture tests does.
       - name: Run the step definition macros package fixture with Xcode 16.3
         env:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
           swift --version
-          swift test --package-path Fixtures/StepDefinitionMacrosPackage
+          set -o pipefail
+          swift test --package-path Fixtures/StepDefinitionMacrosPackage 2>&1 | tee "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
+          .github/scripts/fixture-warnings.sh Fixtures/StepDefinitionMacrosPackage "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
       # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
       # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
       # The Fixtures job runs it on a newer one.
@@ -594,7 +597,9 @@ jobs:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
           swift --version
-          swift test --package-path Fixtures/SwiftTestingPackage
+          set -o pipefail
+          swift test --package-path Fixtures/SwiftTestingPackage 2>&1 | tee "$RUNNER_TEMP/SwiftTestingPackage.log"
+          .github/scripts/fixture-warnings.sh Fixtures/SwiftTestingPackage "$RUNNER_TEMP/SwiftTestingPackage.log"
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a

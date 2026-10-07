@@ -50,12 +50,6 @@ if [[ "$status" -ne 0 ]]; then
   echo "::error::$name failed with Xcode $version" >&2
   exit "$status"
 fi
-# The warnings that show CucumberSwiftLint ran on each test target, as mise run test-fixtures checks.
-grep -v '^#' "$fixture/expected-warnings" | while IFS= read -r expected; do
-  [[ -z "$expected" ]] && continue
-  if ! grep -qF "$expected" "$log"; then
-    echo "::error::$name: the build output with Xcode $version does not contain: $expected" >&2
-    exit 1
-  fi
-done
+# The warnings from CucumberSwift, as mise run test-fixtures checks them.
+.github/scripts/fixture-warnings.sh "$fixture" "$log"
 echo "$name passed with Xcode $version on iOS $ios"
