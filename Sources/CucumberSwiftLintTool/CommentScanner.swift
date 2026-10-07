@@ -1,11 +1,17 @@
 /// Walks Swift source and blanks its comments. It tracks string and regex literals, so `//` or `/*`
 /// inside one isn't a comment, and nested block comments and string interpolations.
 struct CommentScanner {
-    private static let slash = code("/"), star = code("*"), hash = code("#")
-    private static let quote = code("\""), backslash = code("\\")
-    private static let open = code("("), close = code(")")
-    private static let newline = code("\n"), carriageReturn = code("\r")
-    private static let space = code(" "), tab = code("\t")
+    private static let slash = code("/")
+    private static let star = code("*")
+    private static let hash = code("#")
+    private static let quote = code("\"")
+    private static let backslash = code("\\")
+    private static let open = code("(")
+    private static let close = code(")")
+    private static let newline = code("\n")
+    private static let carriageReturn = code("\r")
+    private static let space = code(" ")
+    private static let tab = code("\t")
     // A bare `/…/` regex literal can follow these, where a `/` can't be division.
     private static let beforeBareRegex = Set("(,=[:{;!&|?^~".utf16)
 
