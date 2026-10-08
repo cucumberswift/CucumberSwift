@@ -1,4 +1,4 @@
-import CucumberSwiftGherkin
+@testable import CucumberSwiftGherkin
 import XCTest
 
 final class FeatureFileTests: XCTestCase {
@@ -217,9 +217,29 @@ final class FeatureFileTests: XCTestCase {
         XCTAssertEqual(keywords.line("Exemples:"), .examples)
         XCTAssertEqual(keywords.line("Soit un prix: 3"), .step(keyword: "Soit"))
         XCTAssertEqual(keywords.line("* un panier"), .step(keyword: "*"))
+        XCTAssertEqual(keywords.line("Étant donné qu'il y a un panier"), .step(keyword: "Étant donné qu'"))
         XCTAssertNil(keywords.line("Une description"))
         // CucumberSwift reads a header only with its colon.
         XCTAssertNil(keywords.line("Fonctionnalité Panier"))
+    }
+
+    // Every step keyword in the language data, of more than one word or with no space after it too (#363).
+    func testKeywordsReadEveryStepKeywordOfEveryLanguage() throws {
+        let object = try JSONSerialization.jsonObject(with: Data(Language.languages.utf8))
+        // Besides the languages, the data has a title and an empty "properties".
+        let languages = try XCTUnwrap(object as? [String: Any]).compactMapValues { $0 as? [String: Any] }.filter { $0.value["feature"] != nil }
+        XCTAssertGreaterThan(languages.count, 70)
+        for (code, language) in languages {
+            let keywords = try XCTUnwrap(FeatureFile.Keywords(language: code), code)
+            let forms = Set(["given", "when", "then", "and", "but"].flatMap { language[$0] as? [String] ?? [] })
+            for form in forms {
+                // The longest form the line starts with is its keyword.
+                let longest = forms.filter { (form + "1 step").lowercased().hasPrefix($0.lowercased()) }.max { $0.count < $1.count }
+                let written = String(form.prefix(try XCTUnwrap(longest).trimmingCharacters(in: .whitespaces).count))
+                XCTAssertEqual(keywords.line(form + "1 step"), .step(keyword: written), "\(code) \(form)")
+            }
+            XCTAssertNil(keywords.line("Lorem ipsum dolor sit amet."), code)
+        }
     }
 
     func testKeywordsAreNilForAnUnsupportedLanguage() {

@@ -16,6 +16,7 @@ There's always a weird tendency for people to lowercase the name of their featur
 
 #### Magic Happens Here
 The `AppCucumberTests.swift` file looks something like this
+<!-- swift-example: fragment: needs the UIUTest package and your app, and UIKit, which a macOS build doesn't have -->
 ```swift
 import XCTest
 import UIUTest

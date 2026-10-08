@@ -150,7 +150,21 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertNotNil(scenarioClass(title, "Pay by card"))
     }
 
-    // In a serial run XCTest has built CucumberTest's suite, scenarios and all, before the main actor is free.
+    // A worker must have each scenario's class before XCTest lists or builds anything, with or without a
+    // host app. Preparing later let a worker without one build CucumberTest's suite first and run every
+    // scenario a second time (#371).
+    func testPreparingWhenLoadedOnTheMainThreadMakesTheScenarioClassesAtOnce() {
+        let title = parseFeature()
+        Cucumber.parallelTesting = true
+
+        ParallelTesting.prepareWhenLoaded()
+
+        XCTAssertTrue(ParallelTesting.scenarioClassesMade)
+        XCTAssertNotNil(scenarioClass(title, "Pay by card"))
+    }
+
+    // A bundle loaded off the main thread prepares later, and XCTest may have built CucumberTest's suite,
+    // scenarios and all, by then.
     @MainActor
     func testPreparingDoesNothingOnceXCTestHasBuiltTheSuite() {
         _ = parseFeature()

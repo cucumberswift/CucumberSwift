@@ -8,8 +8,8 @@
 //  so without this a parallel run drops the scenarios, or runs them all in every worker that is handed
 //  CucumberTest or a subclass of it.
 //
-//  With `Cucumber.parallelTesting`, each scenario's class is made as soon as XCTest has
-//  loaded the test bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
+//  With `Cucumber.parallelTesting`, each scenario's class is made while XCTest loads the test
+//  bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
 
@@ -40,15 +40,14 @@ enum ParallelTesting {
     }
     #endif
 
-    /// Prepares once XCTest has loaded the test bundle and the main actor is first free. In a parallel
-    /// worker that is before XCTest lists the classes to hand out. In a serial run XCTest has already
-    /// built every suite by then, and preparing does nothing.
+    /// Prepares at once, while XCTest loads the test bundle, so that each scenario's class exists before
+    /// XCTest lists the classes to hand out or builds any suite, in every worker. Waiting until the main
+    /// actor was first free raced XCTest: a worker without a host app sometimes built CucumberTest's suite
+    /// first, scenarios and all, and ran every scenario a second time (#371).
     ///
-    /// A test bundle hosted in an app, or run by a UI test runner, is loaded into an app that is already
-    /// running, and XCTest lists the classes before the main actor is free. There it prepares at once,
-    /// while the bundle loads.
+    /// A bundle loaded off the main thread prepares once the main actor is free.
     nonisolated static func prepareWhenLoaded() {
-        if Thread.isMainThread && Bundle.main.bundlePath.hasSuffix(".app") {
+        if Thread.isMainThread {
             MainActor.assumeIsolated { prepare() }
         } else {
             Task { @MainActor in prepare() }

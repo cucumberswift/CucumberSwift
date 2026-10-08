@@ -193,6 +193,20 @@ It builds and tests with the selected Xcode. The pinned Tuist can't read the fix
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
 - **Nothing generated is committed**: `.gitignore` covers each fixture's Xcode project, `Derived` folder, `.build` folder and `Package.resolved`. They are outside `Project.swift`'s globs, so they are not in CucumberSwift's Xcode project or in what Carthage builds.
 
+### The documentation's examples
+
+Every Swift example in the DocC catalog compiles against the code in the same commit: each ` ```swift ` block in an article, and each Swift file under its `Resources` folder that a tutorial shows. Compile them with Swift 6.1 or later:
+
+```bash
+mise run test-docs-examples
+```
+
+or `python3 .github/scripts/docs_examples.py`, which `--list` makes list each example and how it compiles. CI runs it in the `SwiftPM tests` job, with Xcode 16.3, whenever a pull request changes the code or the catalog, so a PR that only edits an article runs that one step. A target of its own is made for each block, named after its article and the line of its fence, in `.build/documentation-examples`, so an error names the example it's in.
+
+- **A block is a whole Swift file**, unless the line before its fence has a marker, such as `<!-- swift-example: steps -->` for statements written inside `setupSteps()`, or `members` for members of `extension Cucumber: StepImplementation`. A `Package.swift` is found without one. DocC leaves the marker out of the page. The script's header lists the kinds and options, such as `swift6` and `bare-slash-regex`.
+- **The reader's own code is stubbed** in `Tests/DocumentationExamples`, for example `basket`. A new example that uses a new name needs a stub there.
+- **A block that can't compile on its own is a fragment**: `<!-- swift-example: fragment: <reason> -->`, and its article and reason go in `FRAGMENTS` in the script too, or the script fails. Keep fragments rare: today they're a Tuist manifest and two examples that need UIKit.
+
 Run the tests once before you change anything and note the numbers of tests, failures and skipped tests. Then you can compare after your change. A test that silently stops running still reports success.
 
 ## The Xcode project
@@ -287,7 +301,7 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 - If something looks unnecessary, check the history before you remove it. It may be there for a reason.
 - Add a short comment to explain a non-obvious algorithm.
 
-**Documentation.** If users will notice your change, update the DocC catalog in `Sources/CucumberSwift/CucumberSwift.docc/` in the same PR. Please don't add new Markdown files to the repository. Notes, findings and design discussion belong on the issue, where the next person will look for them.
+**Documentation.** If users will notice your change, update the DocC catalog in `Sources/CucumberSwift/CucumberSwift.docc/` in the same PR. Its Swift examples must compile: see [The documentation's examples](#the-documentations-examples). Please don't add new Markdown files to the repository. Notes, findings and design discussion belong on the issue, where the next person will look for them.
 
 **Samples.** [CucumberSwiftSample](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) documents the working sample projects in [its repository](https://github.com/cucumberswift/CucumberSwiftSample), tested every night against the latest release and against `main`. If your PR adds or changes something users see, add or update a sample there, or open an issue there for one and link it from your PR. Its [CONTRIBUTING](https://github.com/cucumberswift/CucumberSwiftSample/blob/main/CONTRIBUTING.md#adding-a-sample) says how to add a sample.
 

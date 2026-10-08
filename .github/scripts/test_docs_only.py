@@ -80,6 +80,7 @@ class KindTests(unittest.TestCase):
             ".github/scripts/release.py",
             ".github/scripts/test_release.py",
             ".github/scripts/test_check_lockfiles.py",
+            ".github/scripts/test_gherkin_highlighting.py",
             ".github/scripts/publish-docs.sh",
         ]:
             with self.subTest(path=path):
@@ -114,12 +115,34 @@ class KindTests(unittest.TestCase):
 
 
 class SummaryTests(unittest.TestCase):
-    def outputs(self, docs_only_, scripts_only, no_code):
-        return {"docs_only": docs_only_, "scripts_only": scripts_only, "no_code": no_code}
+    def outputs(self, docs_only_, scripts_only, no_code, catalog=False):
+        return {"docs_only": docs_only_, "scripts_only": scripts_only, "no_code": no_code,
+                "catalog": catalog}
 
     def test_only_docs_is_docs_only(self):
         self.assertEqual(docs_only.summary(["README.md", f"{CATALOG}/Resources/a.png"]),
-                         self.outputs(True, False, True))
+                         self.outputs(True, False, True, catalog=True))
+        self.assertEqual(docs_only.summary(["README.md"]), self.outputs(True, False, True))
+
+    def test_a_file_in_a_catalog_changes_the_catalog(self):
+        for paths in [
+            [f"{CATALOG}/Hooks.md"],
+            ["README.md", f"{CATALOG}/Resources/Installation/StepDefinitions.swift"],
+            ["Sources/CucumberSwift/Hooks.swift", f"{CATALOG}/Hooks.md"],
+        ]:
+            with self.subTest(paths=paths):
+                self.assertTrue(docs_only.summary(paths)["catalog"])
+        for paths in [["README.md"], ["Sources/CucumberSwift/Hooks.swift"], ["docs.docc"]]:
+            with self.subTest(paths=paths):
+                self.assertFalse(docs_only.summary(paths)["catalog"])
+
+    def test_docs_that_script_tests_checks_are_not_docs_only(self):
+        for paths in [
+            [f"{CATALOG}/Running-Tests-In-Xcode.md"],
+            ["README.md", f"{CATALOG}/Running-Tests-In-Xcode.md"],
+        ]:
+            with self.subTest(paths=paths):
+                self.assertEqual(docs_only.summary(paths), self.outputs(False, False, True, True))
 
     def test_only_linux_scripts_is_scripts_only(self):
         self.assertEqual(docs_only.summary([".github/scripts/release.py", ".github/scripts/test_release.py"]),
@@ -139,8 +162,8 @@ class SummaryTests(unittest.TestCase):
                 self.assertEqual(docs_only.summary(paths), self.outputs(False, False, False))
 
     def test_no_files_is_code(self):
-        self.assertEqual(docs_only.summary([]), self.outputs(False, False, False))
-        self.assertEqual(docs_only.FULL_RUN, self.outputs(False, False, False))
+        self.assertEqual(docs_only.summary([]), self.outputs(False, False, False, catalog=True))
+        self.assertEqual(docs_only.FULL_RUN, self.outputs(False, False, False, catalog=True))
 
 
 class Repository(unittest.TestCase):
@@ -254,14 +277,14 @@ class PullRequestTests(Repository):
     def test_a_pull_request_changing_only_the_release_script_skips_the_macos_jobs(self):
         head = self.branch((".github/scripts/release.py", "print()\n"), (".github/scripts/test_release.py", "\n"))
         self.assertEqual(self.outputs("pull_request", self.pull_request(self.root, head)),
-                         {"docs_only": False, "scripts_only": True, "no_code": True})
+                         {"docs_only": False, "scripts_only": True, "no_code": True, "catalog": False})
         self.assertIn("script  .github/scripts/release.py", self.output)
         self.assertIn("Linux-run scripts only", self.output)
 
     def test_a_pull_request_changing_a_script_a_macos_job_runs_is_code(self):
         head = self.branch((".github/scripts/release.py", "print()\n"), (".github/scripts/xcode-test.sh", "#!/bin/sh\n"))
         self.assertEqual(self.outputs("pull_request", self.pull_request(self.root, head)),
-                         {"docs_only": False, "scripts_only": False, "no_code": False})
+                         {"docs_only": False, "scripts_only": False, "no_code": False, "catalog": False})
         self.assertIn("code  .github/scripts/xcode-test.sh", self.output)
         self.assertIn("the full CI runs", self.output)
 
@@ -355,18 +378,19 @@ class MainTests(Repository):
     def test_a_docs_only_run_writes_docs_only_and_no_code(self):
         head = self.branch(("README.md", "# Changed\n"))
         self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)),
-                         (0, "docs_only=true\nscripts_only=false\nno_code=true\n"))
+                         (0, "docs_only=true\nscripts_only=false\nno_code=true\ncatalog=false\n"))
 
     def test_a_scripts_only_run_writes_scripts_only_and_no_code(self):
         head = self.branch((".github/scripts/release.py", "print()\n"))
         self.assertEqual(self.run_main("merge_group", {"merge_group": {"base_sha": self.root, "head_sha": head}}),
-                         (0, "docs_only=false\nscripts_only=true\nno_code=true\n"))
+                         (0, "docs_only=false\nscripts_only=true\nno_code=true\ncatalog=false\n"))
 
-    def test_any_other_run_writes_false(self):
+    def test_a_code_run_writes_false_and_a_full_run_changes_the_catalog(self):
         head = self.branch(("Package.swift", "// swift-tools-version:5.5\n"))
-        full = (0, "docs_only=false\nscripts_only=false\nno_code=false\n")
-        self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)), full)
-        self.assertEqual(self.run_main("push", {}), full)
+        code = (0, "docs_only=false\nscripts_only=false\nno_code=false\ncatalog=false\n")
+        self.assertEqual(self.run_main("pull_request", self.pull_request(self.root, head)), code)
+        self.assertEqual(self.run_main("push", {}),
+                         (0, "docs_only=false\nscripts_only=false\nno_code=false\ncatalog=true\n"))
 
     def test_no_output_file_fails(self):
         with mock.patch.dict(os.environ, {"GITHUB_EVENT_NAME": "push"}), redirect_stdout(io.StringIO()):

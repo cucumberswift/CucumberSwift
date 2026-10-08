@@ -241,7 +241,8 @@ public class Lexer: StringReader {
             advance(stripSpaceIfNecessary())
             return .scope(position, scope)
         } else if case .step(let keyword) = scope {
-            readLineUntil { $0.isSpace }
+            // The keyword may be several words, or have no space before the step's text.
+            keyword.toString().forEach { _ in advanceIndex() }
             lastKeyword = keyword
             stripSpaceIfNecessary()
             return .keyword(position, keyword)

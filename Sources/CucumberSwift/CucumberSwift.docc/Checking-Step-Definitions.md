@@ -74,6 +74,7 @@ In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dep
 
 In a project that Tuist generates, turn the trait on where the project lists its packages, and depend on the product:
 
+<!-- swift-example: fragment: a Tuist Project.swift, which needs Tuist; Fixtures/SwiftTestingAndXCTestMacrosTuist builds one -->
 ```swift
 let project = Project(
     name: "MyApp",
@@ -220,6 +221,7 @@ The types must be written out. Swift checks a macro's arguments before the macro
 
 To read the step itself, for example its data table or doc string, add a last argument of type `Step`:
 
+<!-- swift-example: steps -->
 ```swift
 #When("I eat {int} cukes") { (count: Int, step: Step) in
     XCTAssertNotNil(step.dataTable, "List the cukes in a data table.")
@@ -229,9 +231,10 @@ To read the step itself, for example its data table or doc string, add a last ar
 
 A closure can be `async` and `throws`, and can have a capture list, exactly as with ``Given``. See <doc:Matching-Steps#Async-steps>.
 
+<!-- swift-example: steps -->
 ```swift
-#Then("^the basket holds (\\d+) cukes?$") { [weak self] (count: String) async throws in
-    try await self?.basket.waitForCount(Int(count))
+#Then("^the basket holds (\\d+) cukes?$") { [basket] (count: String) async throws in
+    try await basket.waitForCount(Int(count))
 }
 ```
 
@@ -245,6 +248,7 @@ A custom parameter type, such as `{color}`, needs no extra declaration. The macr
 
 Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on. They are only in `CucumberSwiftMacros`: the Swift Testing runner's `CucumberSwiftTestingMacros` doesn't have them.
 
+<!-- swift-example: steps -->
 ```swift
 #ES_Dado("tengo {int} pepinos") { (cantidad: Int) in
     cesta.añadir(cantidad)
@@ -276,6 +280,7 @@ A pattern that compiles but matches no step in your feature files is not a compi
 
 In Xcode, right-click a macro and choose **Expand Macro**. The expansion is the step definition the macro stands for, and you can set breakpoints in it:
 
+<!-- swift-example: steps -->
 ```swift
 Given("I have {int} cukes in my {string}" as CucumberExpression) { match, _ in
     let count: Int = try match.first(\.int)
@@ -288,11 +293,12 @@ It reads the parameters the same way as the step definitions CucumberSwift gener
 
 A closure with a capture list, such as `[weak self]`, or one that contains a closure with a capture list, expands differently: the closure is first given its type as a constant, then passed to the step definition. Swift doesn't compile the plain form when a macro writes it, although it compiles written by hand.
 
+<!-- swift-example: steps -->
 ```swift
 { () -> Then in
-    let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [weak self] (match, _) async throws in
+    let callback: @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void = { [basket] (match, _) async throws in
         let count: String = try match.first(\.anonymous)
-        try await self?.basket.waitForCount(Int(count))
+        try await basket.waitForCount(Int(count))
     }
     return Then("^the basket holds (\\d+) cukes?$" as CucumberExpression, callback: callback)
 }()

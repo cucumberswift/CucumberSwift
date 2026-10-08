@@ -33,6 +33,9 @@ public class Language {
     private var thenNames = [String]()
     private var andNames = [String]()
     private var butNames = [String]()
+    // Every step keyword, lowercased and as the language data writes it, with or without a trailing
+    // space, longest first.
+    private var stepKeywords = [String]()
 
     public var given: String {
         givenNames.last?.capitalizingFirstLetter() ?? "Given"
@@ -68,6 +71,8 @@ public class Language {
             thenNames ?= (language[Keys.then]            as? [String])?.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
             andNames ?= (language[Keys.and]             as? [String])?.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
             butNames ?= (language[Keys.but]             as? [String])?.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            stepKeywords = Self.stepKeywords([Keys.given, Keys.when, Keys.then, Keys.and, Keys.but]
+                .flatMap { language[$0] as? [String] ?? [] })
         } else {
             return nil
         }
@@ -116,6 +121,20 @@ public class Language {
     func matchesBut(_ str: String) -> Bool {
         butNames.contains { $0 == str.lowercased() }
     }
+
+    /// The step keyword that `line` starts with, as written in `line` and without a trailing space, such
+    /// as `Gegeben sei` or `前提`. As in Gherkin, it is the longest keyword the line starts with, and a
+    /// keyword the language data writes with a trailing space must be followed by one, or end the line.
+    func stepKeyword(startingLine line: String) -> String? {
+        let lowercased = line.lowercased()
+        for keyword in stepKeywords {
+            let name = keyword.trimmingCharacters(in: .whitespaces)
+            if lowercased.hasPrefix(keyword) || lowercased == name {
+                return String(line.prefix(name.count))
+            }
+        }
+        return nil
+    }
 }
 
 extension Language {
@@ -132,6 +151,12 @@ extension Language {
         l.thenNames = ["* ", "Then "].map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
         l.andNames = ["* ", "And  "].map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
         l.butNames = ["* ", "But "].map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+        l.stepKeywords = stepKeywords(["* ", "Given ", "When ", "Then ", "And ", "But "])
         return l
     }()
+
+    /// `keywords` lowercased, without duplicates, longest first.
+    private static func stepKeywords(_ keywords: [String]) -> [String] {
+        Set(keywords.map { $0.lowercased() }).sorted { ($0.count, $0) > ($1.count, $1) }
+    }
 }
