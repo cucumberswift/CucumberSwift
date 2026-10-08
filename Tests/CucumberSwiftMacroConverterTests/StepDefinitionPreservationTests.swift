@@ -112,6 +112,49 @@ final class StepDefinitionPreservationTests: ConverterTestCase {
             """)
     }
 
+    func testAddsNoImportToAFileThatImportsTheMacrosModuleAlready() {
+        assertConverts("""
+            Given("I log in") { _, _ in
+                login()
+            }
+            """,
+            to: """
+            #Given("I log in") {
+                login()
+            }
+            """,
+            header: "import CucumberSwiftMacros\n")
+        assertConverts("""
+            Given("I log in") { _, _ in
+                login()
+            }
+            """,
+            to: """
+            #Given("I log in") {
+                login()
+            }
+            """,
+            header: "import CucumberSwiftTestingMacros\n")
+    }
+
+    func testKeepsTheRunnersImportAndAddsTheMacrosModuleAfterIt() {
+        let result = convert(source: """
+            import XCTest
+            @testable import CucumberSwift
+            import Foundation
+
+            Given("I log in") { _, _ in }
+            """)
+        XCTAssertEqual(result.source, """
+            import XCTest
+            @testable import CucumberSwift
+            import CucumberSwiftMacros
+            import Foundation
+
+            #Given("I log in") {}
+            """)
+    }
+
     func testUsesTheSwiftTestingMacrosForTheSwiftTestingRunner() {
         let result = convert(source: """
             import CucumberSwiftTesting
