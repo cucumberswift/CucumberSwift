@@ -280,6 +280,7 @@ struct StepDefinition {
                 .with(\.leadingTrivia, type.leadingTrivia)
                 .with(\.trailingTrivia, type.trailingTrivia)
             let source = switch (capture.parameter, regex) {
+                case ("anonymous", nil) where !pattern.isRegularExpression: "{}"
                 case ("anonymous", _): "A capture group"
                 case (_, nil): "{\(capture.parameter)}"
                 default: "The capture group '\(capture.parameter)'"

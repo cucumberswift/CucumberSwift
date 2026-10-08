@@ -90,6 +90,27 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             """)
     }
 
+    func testWrongTypeForAnAnonymousParameterNamesIt() {
+        assertMacroExpansion(
+            """
+            #Given("I have {} cukes") { (count: Int) in
+                print(count)
+            }
+            """,
+            expandedSource: """
+            #Given("I have {} cukes") { (count: Int) in
+                print(count)
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: "{} gives String, but 'count' is declared as Int.",
+                               line: 1,
+                               column: 37,
+                               fixIts: [FixItSpec(message: "Change the type to String")])
+            ],
+            macros: macros)
+    }
+
     func testUnterminatedParameterOffersTheClosingBrace() {
         assertMacroExpansion(
             """
