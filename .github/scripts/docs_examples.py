@@ -88,7 +88,10 @@ FRAGMENTS = [
 KINDS = ("file", "steps", "members", "manifest", "package-target", "target-arguments", "fragment")
 OPTIONS = ("swift6", "bare-slash-regex", "features")
 
-MARKER = re.compile(r"^\s*<!--\s*swift-example:(?P<body>.*)-->\s*$")
+MARKER_START = "<!--"
+MARKER_NAME = "swift-example:"
+MARKER_END = "-->"
+NOT_FOLLOWED = "a swift-example marker must be followed by a ```swift block"
 # A fenced code block, as CommonMark defines it: three or more backticks or tildes, then the
 # language. It ends at a line of the same character, at least as long, and nothing else.
 FENCE_OPEN = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^`]*)$")
@@ -179,38 +182,53 @@ def how_to_compile(pending, code):
     return "file", (), None
 
 
+def marker_body(line):
+    """What follows `swift-example:` in a marker comment on this line, or None."""
+    line = line.strip()
+    if not (line.startswith(MARKER_START) and line.endswith(MARKER_END)):
+        return None
+    comment = line[len(MARKER_START):-len(MARKER_END)].strip()
+    return comment[len(MARKER_NAME):] if comment.startswith(MARKER_NAME) else None
+
+
+def fenced_example(path, lines, index, fence, pending):
+    """The example in the fenced block that opens at lines[index], or None when it is not
+    Swift, and the index of the block's closing line."""
+    start = index + 1
+    body, index = read_fence(lines, index, fence)
+    if fence.group("info").strip().split(" ")[0].lower() != "swift":
+        if pending:
+            raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")
+        return None, index
+    if index == len(lines):
+        raise ExampleError(f"{path}:{start}: the ```swift block is never closed")
+    code = "\n".join(body) + "\n"
+    return Example(path, start, code, *how_to_compile(pending, code)), index
+
+
 def blocks_in_article(path, text):
     """The Swift examples in one article."""
-    not_followed = "a swift-example marker must be followed by a ```swift block"
     examples = []
     lines = text.split("\n")
     index = 0
     pending = None  # (kind, options, reason, line) of a marker waiting for its fence
     while index < len(lines):
-        marker = MARKER.match(lines[index])
+        body = marker_body(lines[index])
         fence = FENCE_OPEN.match(lines[index])
-        if marker:
+        if body is not None:
             if pending:
-                raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
-            pending = (*parse_marker(marker.group("body"), f"{path}:{index + 1}"), index + 1)
+                raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")
+            pending = (*parse_marker(body, f"{path}:{index + 1}"), index + 1)
         elif fence:
-            start = index + 1
-            body, index = read_fence(lines, index, fence)
-            is_swift = fence.group("info").strip().split(" ")[0].lower() == "swift"
-            if is_swift and index == len(lines):
-                raise ExampleError(f"{path}:{start}: the ```swift block is never closed")
-            if is_swift:
-                code = "\n".join(body) + "\n"
-                examples.append(Example(path, start, code, *how_to_compile(pending, code)))
-            elif pending:
-                raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
+            example, index = fenced_example(path, lines, index, fence, pending)
+            examples += [example] if example else []
             pending = None
         elif pending and lines[index].strip():
             raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be on the "
                                "line before a ```swift block")
         index += 1
     if pending:
-        raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
+        raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")
     return examples
 
 
