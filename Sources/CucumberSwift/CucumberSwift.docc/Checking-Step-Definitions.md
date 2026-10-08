@@ -169,9 +169,10 @@ A closure can be `async` and `throws`, and can have a capture list, exactly as w
 
 The macros take a regex literal too, `#/…/#`, or `/…/` where your target allows bare regex literals, as the Swift 6 language mode does. The step matches when the regex matches its whole text, exactly as with ``Given``'s regex literal form.
 
+<!-- swift-example: steps -->
 ```swift
 #Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { (count: Substring, container: Substring) in
-    basket.add(Int(count) ?? 0, to: container)
+    basket.add(Int(count) ?? 0, to: String(container))
 }
 ```
 
@@ -261,10 +262,11 @@ A closure with a capture list, such as `[weak self]`, or one that contains a clo
 
 A regex literal's step definition reads every argument from the match's output at once, so that Swift checks them against the regex:
 
+<!-- swift-example: steps -->
 ```swift
 Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { match, _ in
     let (_, count, container): (_, Substring, Substring) = match.output
-    basket.add(Int(count) ?? 0, to: container)
+    basket.add(Int(count) ?? 0, to: String(container))
 }
 ```
 
