@@ -180,7 +180,9 @@ def read_fence(lines, index, fence):
     index += 1
     while index < len(lines) and not close.match(lines[index]):
         line = lines[index]
-        body.append(line[len(indent):] if line.startswith(indent) else line.lstrip())
+        # At most the fence's own indent, as CommonMark removes.
+        spaces = len(line) - len(line.lstrip(" "))
+        body.append(line[min(spaces, len(indent)):])
         index += 1
     return body, index
 
@@ -208,7 +210,7 @@ def fenced_example(path, lines, index, fence, pending):
     Swift, and the index of the block's closing line."""
     start = index + 1
     body, index = read_fence(lines, index, fence)
-    if fence["info"].strip().split(" ")[0].lower() != "swift":
+    if (fence["info"].split() or [""])[0].lower() != "swift":
         if pending:
             raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")
         return None, index

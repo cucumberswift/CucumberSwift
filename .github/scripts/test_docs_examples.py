@@ -76,6 +76,16 @@ class BlocksInArticleTests(unittest.TestCase):
         self.assertEqual(docs_examples.blocks_in_article("A.md", article(
             "````markdown", "```swift", "not code", "```", "````")), [])
 
+    def test_a_line_loses_no_more_than_the_fence_indent(self):
+        [example] = docs_examples.blocks_in_article("A.md", article(
+            "  ```swift", "  let a = \"\"\"", " b", "    c", "  \"\"\"", "  ```"))
+        self.assertEqual(example.code, 'let a = """\nb\n  c\n"""\n')
+
+    def test_the_language_ends_at_any_whitespace(self):
+        [example] = docs_examples.blocks_in_article("A.md", article(
+            "```swift\ttitle", "let a = 1", "```"))
+        self.assertEqual(example.code, "let a = 1\n")
+
     def test_other_languages_are_not_examples(self):
         self.assertEqual(docs_examples.blocks_in_article("A.md", article(
             "```gherkin", "Given a step", "```", "```bash", "swift test", "```")), [])
