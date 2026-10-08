@@ -88,10 +88,10 @@ FRAGMENTS = [
 KINDS = ("file", "steps", "members", "manifest", "package-target", "target-arguments", "fragment")
 OPTIONS = ("swift6", "bare-slash-regex", "features")
 
-MARKER = re.compile(r"^\s*<!--\s*swift-example:\s*(?P<body>.*?)\s*-->\s*$")
+MARKER = re.compile(r"^\s*<!--\s*swift-example:(?P<body>.*)-->\s*$")
 # A fenced code block, as CommonMark defines it: three or more backticks or tildes, then the
 # language. It ends at a line of the same character, at least as long, and nothing else.
-FENCE_OPEN = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})\s*(?P<info>[^`]*?)\s*$")
+FENCE_OPEN = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^`]*)$")
 IMPORT = re.compile(r"^\s*(?:@\w+\s+)*import\s+(?P<module>\w+)", re.MULTILINE)
 CONFORMANCE = re.compile(r"extension\s+Cucumber\s*:\s*(?:@retroactive\s+)?StepImplementation\b")
 TESTING_MODULES = {"CucumberSwiftTesting", "CucumberSwiftTestingMacros"}
@@ -135,6 +135,7 @@ class Example:
 
 def parse_marker(body, location):
     """The kind, options and reason in a marker's body."""
+    body = body.strip()
     kind, _, rest = body.partition(":") if body.startswith("fragment") else (body, "", "")
     if kind.strip() == "fragment":
         reason = rest.strip()
@@ -154,57 +155,62 @@ def parse_marker(body, location):
     return words[0], words[1:], None
 
 
+def read_fence(lines, index, fence):
+    """The lines inside the fenced block that opens at lines[index], without its indent, and
+    the index of its closing line, or len(lines) when it is never closed."""
+    indent = fence.group("indent")
+    mark = fence.group("fence")
+    close = re.compile(rf"^ {{0,3}}{re.escape(mark[0])}{{{len(mark)},}}\s*$")
+    body = []
+    index += 1
+    while index < len(lines) and not close.match(lines[index]):
+        line = lines[index]
+        body.append(line[len(indent):] if line.startswith(indent) else line.lstrip())
+        index += 1
+    return body, index
+
+
+def how_to_compile(pending, code):
+    """The kind, options and reason of a block: its marker's, or worked out from its code."""
+    if pending:
+        return pending[:3]
+    if code.lstrip().startswith("// swift-tools-version"):
+        return "manifest", (), None
+    return "file", (), None
+
+
 def blocks_in_article(path, text):
     """The Swift examples in one article."""
+    not_followed = "a swift-example marker must be followed by a ```swift block"
     examples = []
     lines = text.split("\n")
     index = 0
     pending = None  # (kind, options, reason, line) of a marker waiting for its fence
     while index < len(lines):
-        line = lines[index]
-        marker = MARKER.match(line)
-        fence = FENCE_OPEN.match(line)
+        marker = MARKER.match(lines[index])
+        fence = FENCE_OPEN.match(lines[index])
         if marker:
             if pending:
-                raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be "
-                                   "followed by a ```swift block")
+                raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
             pending = (*parse_marker(marker.group("body"), f"{path}:{index + 1}"), index + 1)
         elif fence:
-            indent = fence.group("indent")
-            mark = fence.group("fence")
-            is_swift = fence.group("info").split(" ")[0].lower() == "swift"
-            close = re.compile(rf"^ {{0,3}}{re.escape(mark[0])}{{{len(mark)},}}\s*$")
             start = index + 1
-            body = []
-            index += 1
-            while index < len(lines) and not close.match(lines[index]):
-                body.append(lines[index][len(indent):] if lines[index].startswith(indent)
-                            else lines[index].lstrip())
-                index += 1
-            if not is_swift:
-                if pending:
-                    raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be "
-                                       "followed by a ```swift block")
-                index += 1
-                continue
-            if index == len(lines):
+            body, index = read_fence(lines, index, fence)
+            is_swift = fence.group("info").strip().split(" ")[0].lower() == "swift"
+            if is_swift and index == len(lines):
                 raise ExampleError(f"{path}:{start}: the ```swift block is never closed")
-            code = "\n".join(body) + "\n"
-            if pending:
-                kind, options, reason, _ = pending
-                pending = None
-            elif code.lstrip().startswith("// swift-tools-version"):
-                kind, options, reason = "manifest", (), None
-            else:
-                kind, options, reason = "file", (), None
-            examples.append(Example(path, start, code, kind, options, reason))
-        elif pending and line.strip():
+            if is_swift:
+                code = "\n".join(body) + "\n"
+                examples.append(Example(path, start, code, *how_to_compile(pending, code)))
+            elif pending:
+                raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
+            pending = None
+        elif pending and lines[index].strip():
             raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be on the "
                                "line before a ```swift block")
         index += 1
     if pending:
-        raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be followed by "
-                           "a ```swift block")
+        raise ExampleError(f"{path}:{pending[3]}: {not_followed}")
     return examples
 
 
@@ -352,33 +358,35 @@ def swift_string(value):
     return '"' + str(value).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def write_swift_example(example, folder):
+    folder.mkdir(parents=True)
+    for name, contents in swift_sources(example).items():
+        (folder / name).write_text(contents, encoding="utf-8")
+    if "features" in example.options:
+        (folder / "Features").mkdir()
+        (folder / "Features" / "Example.feature").write_text("Feature: Example\n", encoding="utf-8")
+
+
 def write_package(examples, root, output):
     """Writes the package of Swift examples and the manifest examples' packages."""
     if output.exists():
         for child in output.iterdir():
-            if child.name != ".build":
-                shutil.rmtree(child) if child.is_dir() else child.unlink()
+            if child.is_dir() and child.name != ".build":
+                shutil.rmtree(child)
+            elif child.is_file():
+                child.unlink()
     output.mkdir(parents=True, exist_ok=True)
     swift = [e for e in examples if e.kind != "fragment" and not e.is_manifest]
     for example in swift:
-        folder = output / "Examples" / example.target
-        folder.mkdir(parents=True)
-        for name, contents in swift_sources(example).items():
-            (folder / name).write_text(contents, encoding="utf-8")
-        if "features" in example.options:
-            (folder / "Features").mkdir()
-            (folder / "Features" / "Example.feature").write_text(
-                "Feature: Example\n", encoding="utf-8")
+        write_swift_example(example, output / "Examples" / example.target)
     for module, _ in STUB_MODULES.values():
-        folder = output / "Stubs" / module
-        folder.mkdir(parents=True)
-        shutil.copy(root / STUBS / f"{module}.swift", folder)
+        (output / "Stubs" / module).mkdir(parents=True)
+        shutil.copy(root / STUBS / f"{module}.swift", output / "Stubs" / module)
     (output / "Package.swift").write_text(package_manifest(swift, root), encoding="utf-8")
-    for example in examples:
-        if example.is_manifest:
-            folder = output / "Manifests" / example.target
-            folder.mkdir(parents=True)
-            (folder / "Package.swift").write_text(manifest_source(example), encoding="utf-8")
+    for example in (e for e in examples if e.is_manifest):
+        folder = output / "Manifests" / example.target
+        folder.mkdir(parents=True)
+        (folder / "Package.swift").write_text(manifest_source(example), encoding="utf-8")
 
 
 def check_manifest(folder):
@@ -387,19 +395,23 @@ def check_manifest(folder):
     return result.returncode, result.stdout + result.stderr
 
 
+def check_manifests(manifests, output):
+    """Checks every Package.swift example. Returns whether all of them compiled."""
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+        results = list(pool.map(lambda e: check_manifest(output / "Manifests" / e.target),
+                                manifests))
+    for example, (status, log) in zip(manifests, results):
+        if status != 0:
+            print(f"error: {example.location}: the Package.swift example doesn't compile\n{log}")
+    print(f"Checked {len(manifests)} Package.swift examples with `swift package dump-package`.",
+          flush=True)
+    return all(status == 0 for status, _ in results)
+
+
 def compile_examples(examples, root, output):
     """Builds every example. Returns whether all of them compiled."""
     write_package(examples, root, output)
-    ok = True
-    manifests = [e for e in examples if e.is_manifest]
-    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
-        results = pool.map(lambda e: check_manifest(output / "Manifests" / e.target), manifests)
-        for example, (status, log) in zip(manifests, results):
-            if status != 0:
-                ok = False
-                print(f"error: {example.location}: the Package.swift example doesn't compile\n{log}")
-    print(f"Checked {len(manifests)} Package.swift examples with `swift package dump-package`.",
-          flush=True)
+    ok = check_manifests([e for e in examples if e.is_manifest], output)
     swift = [e for e in examples if e.kind != "fragment" and not e.is_manifest]
     build = subprocess.run(["swift", "build", "--package-path", str(output)], check=False)
     if build.returncode != 0:

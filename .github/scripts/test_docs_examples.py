@@ -83,8 +83,9 @@ class BlocksInArticleTests(unittest.TestCase):
             article("<!-- swift-example: steps -->"),
             article("```swift", "x"),
         ]:
-            with self.subTest(text=text), self.assertRaises(docs_examples.ExampleError):
-                docs_examples.blocks_in_article("A.md", text)
+            with self.subTest(text=text):
+                with self.assertRaises(docs_examples.ExampleError):
+                    docs_examples.blocks_in_article("A.md", text)
 
 
 class FragmentTests(unittest.TestCase):
@@ -95,8 +96,9 @@ class FragmentTests(unittest.TestCase):
         docs_examples.check_fragments([self.fragment("why")], expected=[("A.md", "why")])
 
     def test_an_unlisted_fragment_fails(self):
+        fragments = [self.fragment("why")]
         with self.assertRaises(docs_examples.ExampleError):
-            docs_examples.check_fragments([self.fragment("why")], expected=[])
+            docs_examples.check_fragments(fragments, expected=[])
 
     def test_a_listed_fragment_that_is_not_marked_fails(self):
         with self.assertRaises(docs_examples.ExampleError):
