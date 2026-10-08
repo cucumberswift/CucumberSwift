@@ -42,6 +42,7 @@ Most step definitions need no change. Step definitions whose closure takes `[Str
 
 To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. This works on every platform and deployment target:
 
+<!-- swift-example: steps -->
 ```swift
 Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
 ```
@@ -49,6 +50,7 @@ Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
 ## Async steps
 A step definition can be `async` and `throws`. Write `await` in its closure and CucumberSwift runs it as an async step:
 
+<!-- swift-example: steps -->
 ```swift
 Given("the user has signed in") { _, _ in
     try await session.signIn(as: .testUser)
@@ -75,6 +77,7 @@ Steps still run one at a time, in the order the feature file declares them. The 
 
 With the Swift DSL, pass an async function or closure rather than a call:
 
+<!-- swift-example: steps -->
 ```swift
 @MainActor func signIn() async throws { /* ... */ }
 
@@ -90,9 +93,10 @@ Feature("Sign in") {
 ### Swift 6 language mode
 In a test target that builds in Swift 6 language mode, mark the conformance `@retroactive`, because both `Cucumber` and `StepImplementation` come from CucumberSwift:
 
+<!-- swift-example: file swift6 -->
 ```swift
 extension Cucumber: @retroactive StepImplementation {
-    public var bundle: Bundle { /* ... */ }
+    public var bundle: Bundle { Bundle(for: MyFeatureTests.self) }
     public func setupSteps() { /* ... */ }
 }
 ```
@@ -112,6 +116,7 @@ Given there are 3 flights from lax.
 ```
 
 We could match it in CucumberSwift like this:
+<!-- swift-example: steps -->
 ```swift
 Given("there is/are/were {int} flight(s) from {airport}." as CucumberExpression) { match, _ in 
     XCTAssertEqual(match[\.int, index: 0], 3)
@@ -177,6 +182,7 @@ extension Match {
 Regular expressions can match what a Cucumber expression can't, at the cost of readability and typed arguments (see <doc:Matching-Steps#Choose-a-pattern>). When you need one and your tests run on iOS 16, macOS 13 or tvOS 16 or later, prefer a regex literal to a regular expression in a string: the compiler checks it.
 
 Here's a trivial example:
+<!-- swift-example: steps bare-slash-regex -->
 ```swift
 When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
     XCTAssertEqual(match.1, "action")
@@ -186,6 +192,7 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 > NOTE: You can use regex builders in Swift to transform into concrete types. It's a little verbose, but is supported by CucumberSwift.
 
 The same step definition with an extended delimiter, which compiles in any test target:
+<!-- swift-example: steps -->
 ```swift
 When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
     XCTAssertEqual(match.1, "action")
@@ -197,6 +204,7 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 ## Step definitions for undefined steps
 For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target. Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
 
+<!-- swift-example: steps -->
 ```swift
 Then("the display shows {string}") { match, _ in
     let string = try match.first(\.string)
@@ -209,6 +217,7 @@ A parameter type that a step uses more than once is read by position, such as `m
 ### Generate regex literals instead
 Earlier versions generated regex literals. To have them again, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`, or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. When both are set, the static variable wins (see <doc:Settings>). It applies to the XCTest runner only: the Swift Testing runner always suggests Cucumber expressions.
 
+<!-- swift-example: steps -->
 ```swift
 Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
     let string = matches.1
@@ -223,6 +232,7 @@ Each step should match exactly one step definition. A step that more than one st
 
 A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step and any `And` or `But` step that follows one, and ``MatchAll`` fits every step. So:
 
+<!-- swift-example: steps -->
 ```swift
 Given("some precondition") { _, _ in }
 When("some precondition") { _, _ in }      // not ambiguous for "Given some precondition": When never fits a Given step

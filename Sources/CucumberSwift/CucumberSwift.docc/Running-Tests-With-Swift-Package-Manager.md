@@ -10,6 +10,7 @@ The tutorials set CucumberSwift up in an Xcode project. A test target in a Swift
 
 SwiftPM copies only the files you declare into the test bundle. Declare your `Features` folder with `.copy`, which keeps its subfolders:
 
+<!-- swift-example: package-target -->
 ```swift
 .testTarget(
     name: "MyAppFeatureTests",
@@ -29,6 +30,7 @@ The folder must be named `Features`, with that capitalisation. SwiftPM generates
 
 SwiftPM puts resources in a bundle of their own, not in the test bundle, so `Bundle(for:)` does not find them. Return `Bundle.module`, the resource bundle SwiftPM generates for the target:
 
+<!-- swift-example: file features -->
 ```swift
 extension Cucumber: StepImplementation {
     public var bundle: Bundle {
@@ -80,6 +82,7 @@ To see which steps ran and how each scenario ended, turn on verbose output: `CUC
 
 For each step with no step definition, CucumberSwift reports a failure with the Swift code for one, a Cucumber expression that compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, that code is a regex literal instead, written as `#/^…$/#`, which also compiles in any test target. To have it written as `/^…$/`, your test target needs bare slash regex literals: the Swift 6 language mode, or this setting in the Swift 5 language mode (tools version 5.8 or later):
 
+<!-- swift-example: target-arguments -->
 ```swift
 swiftSettings: [
     .enableUpcomingFeature("BareSlashRegexLiterals")
@@ -88,6 +91,7 @@ swiftSettings: [
 
 Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. To follow the target's setting automatically, check it in your own code, where the compiler knows it:
 
+<!-- swift-example: members -->
 ```swift
 public var regexLiteralStyle: RegexLiteralStyle {
     #if compiler(>=5.8) && hasFeature(BareSlashRegexLiterals)

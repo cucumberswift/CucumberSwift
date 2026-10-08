@@ -67,6 +67,7 @@ So don't write passwords, tokens or other secrets in a feature file. Name who or
 When I sign in as the admin user
 ```
 
+<!-- swift-example: steps -->
 ```swift
 When("I sign in as the admin user") { _, _ in
     let password = ProcessInfo.processInfo.environment["ADMIN_PASSWORD"] ?? ""
@@ -124,6 +125,7 @@ The test's name is its feature's and its scenario's, as the test navigator shows
 
 To skip a scenario, for example when a service it needs is unavailable, throw `XCTSkip` from a step definition:
 
+<!-- swift-example: steps -->
 ```swift
 Given("the card terminal is offline") { _, _ in
     throw XCTSkip("The card terminal is offline")
