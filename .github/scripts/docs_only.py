@@ -22,7 +22,8 @@ such as xcode-test.sh, select-xcode.sh, parallel-fixture.sh or check_lockfiles.p
 
 On a run with no code, CI and CodeQL skip the macOS jobs that build and test
 code. On a docs-only run, CI also skips Script tests; on a scripts-only run, it
-also skips the Docs job.
+also skips the Docs job. A run with no code that changes a DocC catalog still
+compiles the catalog's Swift examples, in the SwiftPM tests job.
 
 Which files a run changes depends on its event:
 
@@ -43,8 +44,9 @@ Run from the repository root, in a GitHub Actions job:
   python3 .github/scripts/docs_only.py
 
 It reads GITHUB_EVENT_NAME and GITHUB_EVENT_PATH, prints the changed files and
-the decision, and writes `docs_only`, `scripts_only` and `no_code`, each `true`
-or `false`, to GITHUB_OUTPUT. It exits non-zero only when it cannot write them.
+the decision, and writes `docs_only`, `scripts_only`, `no_code` and `catalog`,
+each `true` or `false`, to GITHUB_OUTPUT. `catalog` is whether a file inside a
+DocC catalog changes, and is `true` on a full run. It exits non-zero only when it cannot write them.
 
 Only the standard library is used.
 """
@@ -77,6 +79,12 @@ class ChangesError(Exception):
     """The changed files could not be worked out."""
 
 
+def in_catalog(path):
+    """Whether a changed file is inside a DocC catalog: some folder above it ends in .docc."""
+    folders = path.split("/")[:-1]
+    return any(folder.endswith(DOCC_CATALOG) for folder in folders)
+
+
 def is_docs(path):
     """Whether a changed file, as a repository-relative path, is documentation."""
     if path in ROOT_DOCS:
@@ -85,9 +93,7 @@ def is_docs(path):
         return True
     if path.lower().endswith(DOCS_EXTENSIONS):
         return True
-    # A file inside a catalog: some folder above it ends in .docc.
-    folders = path.split("/")[:-1]
-    return any(folder.endswith(DOCC_CATALOG) for folder in folders)
+    return in_catalog(path)
 
 
 def kind(path):
@@ -106,6 +112,7 @@ def summary(paths):
         "docs_only": kinds == {"docs"},
         "scripts_only": kinds == {"script"},
         "no_code": bool(kinds) and "code" not in kinds,
+        "catalog": not paths or any(in_catalog(path) for path in paths),
     }
 
 
@@ -171,6 +178,8 @@ def decide(event_name, event_path):
     for path in paths:
         print(f"  {kind(path)}  {printable(path)}")
     result = summary(paths)
+    if result["no_code"] and result["catalog"]:
+        print("A DocC catalog changes: SwiftPM tests compiles its Swift examples.")
     if result["docs_only"]:
         print("Docs-only: the code jobs and Script tests are skipped.")
     elif result["scripts_only"]:

@@ -94,6 +94,7 @@ extension Cucumber: StepImplementation {
 
 Return `false` and XCTest stops the step at its first failed assertion. With one test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
 
+<!-- swift-example: members -->
 ```swift
 public var continueTestingAfterFailure: Bool { false }
 ```

@@ -66,7 +66,9 @@ jobs:
   # matrix job reports would wait forever on a run with no code. Make it a job
   # without a matrix before requiring it.
   #
-  # It also works out whether the parallel tests run (see parallel_tests).
+  # It also says whether the run changes a DocC catalog (catalog), so that SwiftPM
+  # tests compiles the documentation's Swift examples on a run with no code too, and
+  # whether the parallel tests run (see parallel_tests).
   changes:
     name: Changed files
     runs-on: ubuntu-24.04
@@ -77,6 +79,7 @@ jobs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
       scripts_only: ${{ steps.changes.outputs.scripts_only }}
       no_code: ${{ steps.changes.outputs.no_code }}
+      catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
@@ -261,7 +264,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: .github/scripts
+          # The DocC catalog and the stubs too, which test_docs_examples.py reads.
+          sparse-checkout: |
+            .github/scripts
+            Sources/CucumberSwift/CucumberSwift.docc
+            Tests/DocumentationExamples
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 
@@ -552,11 +559,12 @@ jobs:
   # SwiftPM links all of a package's test targets into one test bundle, and each
   # consumer test target declares its own `extension Cucumber: StepImplementation`,
   # so each consumer test folder is a package of its own and runs separately.
-  # A required check.
+  # A required check. On a run with no code that changes a DocC catalog, it only
+  # compiles the documentation's Swift examples, the last step.
   swiftpm_tests:
     name: SwiftPM tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -570,17 +578,22 @@ jobs:
       # Every trait on, so the step definition macros (the Macros trait) and their tests build too.
       # The consumer packages below turn no trait on, as most projects that use CucumberSwift.
       - name: Run the root package's tests
+        if: needs.changes.outputs.no_code != 'true'
         run: swift test --enable-all-traits --skip 'CucumberSwift\.CucumberTest'
       - name: Run the consumer tests
+        if: needs.changes.outputs.no_code != 'true'
         run: swift test --package-path Tests/CucumberSwiftConsumerTests
       - name: Run the DSL consumer tests
+        if: needs.changes.outputs.no_code != 'true'
         run: swift test --package-path Tests/CucumberSwiftDSLConsumerTests
       - name: Run the Swift 6 language mode consumer tests
+        if: needs.changes.outputs.no_code != 'true'
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
       # Uses the step definition macros as a project would: the Macros trait turned on from its own
       # Package.swift, with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the macros in
       # a Swift package. Fixture tests runs it on a newer one.
       - name: Run the step definition macros package fixture with Xcode 16.3
+        if: needs.changes.outputs.no_code != 'true'
         env:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
@@ -590,11 +603,21 @@ jobs:
       # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
       # The Fixtures job runs it on a newer one.
       - name: Run the Swift Testing package fixture with Xcode 16.3
+        if: needs.changes.outputs.no_code != 'true'
         env:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
           swift --version
           swift test --package-path Fixtures/SwiftTestingPackage
+      # Compiles every Swift example in the DocC catalog against this commit, each as a target of
+      # its own, with the Macros trait, and with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs
+      # give for the macros and the Swift Testing runner. See .github/scripts/docs_examples.py.
+      - name: Compile the documentation's Swift examples with Xcode 16.3
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
+        run: |
+          swift --version
+          python3 .github/scripts/docs_examples.py
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
