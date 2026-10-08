@@ -23,8 +23,8 @@ struct FixFeatureFilesPlugin: CommandPlugin {
         let unknown = names.filter { name in !context.package.targets.contains { $0.name == name } }
         guard unknown.isEmpty else { throw FixError.unknownTargets(unknown) }
         let targets = context.package.targets.filter { names.isEmpty || names.contains($0.name) }
-        try fix(tool: context.tool(named: "CucumberSwiftLintTool").path,
-                paths: targets.compactMap { ($0 as? SourceModuleTarget)?.directory })
+        try fix(tool: context.tool(named: "CucumberSwiftLintTool").url,
+                paths: targets.compactMap { ($0 as? SourceModuleTarget).flatMap(directoryPath) })
     }
 }
 
@@ -39,24 +39,39 @@ extension FixFeatureFilesPlugin: XcodeCommandPlugin {
         let unknown = names.filter { name in !context.xcodeProject.targets.contains { $0.displayName == name } }
         guard unknown.isEmpty else { throw FixError.unknownTargets(unknown) }
         let targets = context.xcodeProject.targets.filter { names.isEmpty || names.contains($0.displayName) }
-        try fix(tool: context.tool(named: "CucumberSwiftLintTool").path,
-                paths: targets.flatMap { $0.inputFiles.map(\.path) })
+        try fix(tool: context.tool(named: "CucumberSwiftLintTool").url,
+                paths: targets.flatMap { $0.inputFiles.map(\.url.path) })
     }
 }
 #endif
 
 /// Feature files are usually in a copied resource folder, so pass folders as well as `.feature`
 /// files. The tool finds the feature files in each folder, and prints what it changes.
-private func fix(tool: Path, paths: [Path]) throws {
-    let candidates = Set(paths.map(\.string)).sorted().filter { path in
+private func fix(tool: URL, paths: [String]) throws {
+    let candidates = Set(paths).sorted().filter { path in
         var isDirectory: ObjCBool = false
         return path.hasSuffix(".feature")
             || (FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue)
     }
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: tool.string)
+    process.executableURL = tool
     process.arguments = ["--fix"] + candidates
     try process.run()
     process.waitUntilExit()
     guard process.terminationStatus == 0 else { throw FixError.failed(process.terminationStatus) }
+}
+
+/// The target's folder. Swift 6.1 added `directoryURL` to `Target`. Swift 6.0 reads Package.swift,
+/// whose tools version 6.0 has it only on each kind of target, and deprecates `Path`; Swift 6.1 and
+/// later read Package@swift-6.1.swift.
+private func directoryPath(of target: any SourceModuleTarget) -> String? {
+#if compiler(>=6.1)
+    return target.directoryURL.path
+#else
+    switch target {
+        case let target as SwiftSourceModuleTarget: return target.directoryURL.path
+        case let target as ClangSourceModuleTarget: return target.directoryURL.path
+        default: return nil
+    }
+#endif
 }
