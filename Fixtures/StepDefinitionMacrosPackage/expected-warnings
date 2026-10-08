@@ -1,3 +1,0 @@
-# Warnings `mise run test-fixtures` expects in this fixture's build output, one per line, as each
-# ends the path of the file that has it. They show that CucumberSwiftLint runs on each test target.
-Tests/StepDefinitionMacrosPackageTests/Features/LintCheck.feature:7:5: warning: Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'When'?

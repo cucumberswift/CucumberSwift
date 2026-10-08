@@ -6,3 +6,5 @@ BrokenXCTestTests/Features/Broken.feature:9:7: warning: This row has 3 cells, bu
 BrokenSwiftTestingTests/Features/Broken.feature:5:5: warning: Expected a step (Given, When, Then, And, But), a table or a doc string. Did you mean 'Then'?
 BrokenSwiftTestingTests/Features/Broken.feature:6:5: warning: Undefined step: no step definition matches "a step that no step definition matches"
 BrokenSwiftTestingTests/Features/Broken.feature:9:7: warning: This row has 3 cells, but the table's first row (line 8) has 2
+BrokenXCTestTests/Features/Unsupported.feature:1:1: warning: CucumberSwift doesn't support the language 'xx'
+BrokenSwiftTestingTests/Features/Unsupported.feature:1:1: warning: CucumberSwift doesn't support the language 'xx'

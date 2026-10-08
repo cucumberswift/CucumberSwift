@@ -47,9 +47,12 @@ description = "Build and test every project in Fixtures/"
 # A fixture with an xcode-version file, such as 26.4, runs with /Applications/Xcode_<version>.app,
 # so CI checks it with exactly the Xcode the docs give; without that Xcode it fails in CI and
 # runs with the selected Xcode elsewhere.
-# A fixture's expected-warnings lists warnings its build must print, which show that the
-# CucumberSwiftLint plugin ran; the plugin only runs when its inputs change, so its stamps are
-# deleted first. A fixture with expected-failures must fail its tests, with each failure it lists.
+# A fixture's output must have no warnings from CucumberSwift other than those its expected-warnings
+# lists, and every one of those (.github/scripts/fixture-warnings.sh). A fixture that uses the
+# CucumberSwiftLint plugin must show that the plugin ran: its stamps are deleted first, since the
+# plugin only runs when its inputs change, and the build must make new ones. A Swift package fixture
+# that uses the plugin and has no expected-warnings also runs Fix Feature Files, which must change
+# nothing. A fixture with expected-failures must fail its tests, with each failure it lists.
 run = '''
 set -e
 # Fails unless every line of $1, other than comments and blank lines, is in the output $2.
@@ -86,8 +89,9 @@ for fixture in Fixtures/*/; do
   if [ -n "$developer_dir" ]; then echo "$name: with $(with_xcode xcodebuild -version | head -1)"; fi
   log=$(mktemp)
   status=0
+  build="$fixture/.build"
   if [ -f "$fixture/Package.swift" ]; then
-    find "$fixture/.build" -name '*.lint-stamp' -delete 2>/dev/null || true
+    find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
     with_xcode swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
   fi
   if [ -f "$fixture/Project.swift" ]; then
@@ -95,11 +99,11 @@ for fixture in Fixtures/*/; do
     if [ -f "$fixture/xcodebuild-destination" ]; then
       destination=$(cat "$fixture/xcodebuild-destination")
     fi
-    derived="$fixture/Derived/xcodebuild"
-    find "$derived" -name '*.lint-stamp' -delete 2>/dev/null || true
+    build="$fixture/Derived/xcodebuild"
+    find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
     with_xcode tuist generate --no-open --path "$fixture"
     with_xcode xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
-      -derivedDataPath "$derived" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
+      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
   fi
   cat "$log"
   if [ -f "$fixture/expected-failures" ]; then
@@ -112,10 +116,29 @@ for fixture in Fixtures/*/; do
   elif [ "$status" -ne 0 ]; then
     exit "$status"
   fi
-  if [ -f "$fixture/expected-warnings" ]; then
-    expect_all "$fixture/expected-warnings" "$log"
-    echo "$name: CucumberSwiftLint reported every expected warning."
+  if grep -qs CucumberSwiftLint "$fixture/Package.swift" "$fixture/Project.swift"; then
+    if [ -z "$(find "$build" -name '*.lint-stamp' 2>/dev/null)" ]; then
+      echo "error: $name: uses the CucumberSwiftLint plugin, but the plugin didn't run"
+      exit 1
+    fi
+    if [ -f "$fixture/Package.swift" ] && [ ! -f "$fixture/expected-warnings" ]; then
+      before=$(find "$fixture" -name '*.feature' -not -path "$build/*" -exec shasum {} +)
+      fix_log=$(mktemp)
+      fix_status=0
+      with_xcode swift package --package-path "$fixture" --allow-writing-to-package-directory fix-feature-files \
+        > "$fix_log" 2>&1 || fix_status=$?
+      cat "$fix_log"
+      cat "$fix_log" >> "$log"
+      rm -f "$fix_log"
+      if [ "$fix_status" -ne 0 ]; then exit "$fix_status"; fi
+      if [ "$before" != "$(find "$fixture" -name '*.feature' -not -path "$build/*" -exec shasum {} +)" ]; then
+        echo "error: $name: Fix Feature Files changed a feature file"
+        exit 1
+      fi
+      echo "$name: Fix Feature Files changed nothing."
+    fi
   fi
+  .github/scripts/fixture-warnings.sh "$fixture" "$log"
   rm -f "$log"
 done
 '''
