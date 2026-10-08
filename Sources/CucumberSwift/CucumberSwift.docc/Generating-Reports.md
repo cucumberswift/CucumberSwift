@@ -54,6 +54,7 @@ class MyTestObserver: CucumberTestObserver {
 ```
 
 Note the duration is a `Measurement` type, by default its value is in nanoseconds but you can convert that to whatever makes sense, like this:
+<!-- swift-example: steps -->
 ```swift
 duration.converted(to: .seconds).value // value in seconds
 ```
