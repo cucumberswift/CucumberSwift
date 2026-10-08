@@ -57,6 +57,18 @@ class BlocksInArticleTests(unittest.TestCase):
         self.assertEqual(example.kind, "members")
         self.assertEqual(example.code, "public var verbose: Bool { true }\n")
 
+    def test_longer_fences_and_tildes_are_found(self):
+        examples = docs_examples.blocks_in_article("A.md", article(
+            "````swift", "let a = 1", "```", "let b = 2", "````",
+            "~~~ Swift", "let c = 3", "~~~~"))
+        self.assertEqual([e.code for e in examples],
+                         ["let a = 1\n```\nlet b = 2\n", "let c = 3\n"])
+        self.assertEqual([e.line for e in examples], [1, 6])
+
+    def test_a_swift_fence_inside_another_block_is_not_an_example(self):
+        self.assertEqual(docs_examples.blocks_in_article("A.md", article(
+            "````markdown", "```swift", "not code", "```", "````")), [])
+
     def test_other_languages_are_not_examples(self):
         self.assertEqual(docs_examples.blocks_in_article("A.md", article(
             "```gherkin", "Given a step", "```", "```bash", "swift test", "```")), [])

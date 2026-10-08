@@ -264,7 +264,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: .github/scripts
+          # The DocC catalog and the stubs too, which test_docs_examples.py reads.
+          sparse-checkout: |
+            .github/scripts
+            Sources/CucumberSwift/CucumberSwift.docc
+            Tests/DocumentationExamples
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 

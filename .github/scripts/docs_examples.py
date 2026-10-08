@@ -89,7 +89,9 @@ KINDS = ("file", "steps", "members", "manifest", "package-target", "target-argum
 OPTIONS = ("swift6", "bare-slash-regex", "features")
 
 MARKER = re.compile(r"^\s*<!--\s*swift-example:\s*(?P<body>.*?)\s*-->\s*$")
-FENCE_OPEN = re.compile(r"^(?P<indent>\s*)```swift\s*$")
+# A fenced code block, as CommonMark defines it: three or more backticks or tildes, then the
+# language. It ends at a line of the same character, at least as long, and nothing else.
+FENCE_OPEN = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})\s*(?P<info>[^`]*?)\s*$")
 IMPORT = re.compile(r"^\s*(?:@\w+\s+)*import\s+(?P<module>\w+)", re.MULTILINE)
 CONFORMANCE = re.compile(r"extension\s+Cucumber\s*:\s*(?:@retroactive\s+)?StepImplementation\b")
 TESTING_MODULES = {"CucumberSwiftTesting", "CucumberSwiftTestingMacros"}
@@ -169,13 +171,22 @@ def blocks_in_article(path, text):
             pending = (*parse_marker(marker.group("body"), f"{path}:{index + 1}"), index + 1)
         elif fence:
             indent = fence.group("indent")
+            mark = fence.group("fence")
+            is_swift = fence.group("info").split(" ")[0].lower() == "swift"
+            close = re.compile(rf"^ {{0,3}}{re.escape(mark[0])}{{{len(mark)},}}\s*$")
             start = index + 1
             body = []
             index += 1
-            while index < len(lines) and lines[index].strip() != "```":
+            while index < len(lines) and not close.match(lines[index]):
                 body.append(lines[index][len(indent):] if lines[index].startswith(indent)
                             else lines[index].lstrip())
                 index += 1
+            if not is_swift:
+                if pending:
+                    raise ExampleError(f"{path}:{pending[3]}: a swift-example marker must be "
+                                       "followed by a ```swift block")
+                index += 1
+                continue
             if index == len(lines):
                 raise ExampleError(f"{path}:{start}: the ```swift block is never closed")
             code = "\n".join(body) + "\n"
