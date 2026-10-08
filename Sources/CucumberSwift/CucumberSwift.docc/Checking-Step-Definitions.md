@@ -134,6 +134,7 @@ The first time you build a macro, Xcode asks you to trust and enable it. A clean
 
 A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and marks and lists each one it leaves, with the reason:
 
+<!-- swift-example: steps -->
 ```swift
 // Before
 Given("I have {int} cukes in my {string}") { match, _ in
@@ -185,10 +186,11 @@ It leaves a step definition unchanged, and lists it with its reason, when:
 
 It puts a `#warning` before each one that stands alone as a statement, so the compiler points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
 
+<!-- swift-example: steps -->
 ```swift
 #warning("Convert to Gherkin Macros by hand: it passes match on to other code")
 When("I pass match on") { match, _ in
-    …
+    print(match)
 }
 ```
 
