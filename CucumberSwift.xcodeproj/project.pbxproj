@@ -71,6 +71,7 @@
 		747CAE60AED2F131F9B3CAA4 /* SkippedStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A562D88BBACC53D2D23CD0 /* SkippedStepTests.swift */; };
 		74887F8CCC6F73861079A9D9 /* CucumberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F50683FEE6A06157BE7644F /* CucumberTests.swift */; };
 		74D1E6688E5392C5FAC49337 /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
+		77410F4C3ECFAA83DEA446CA /* StepKeywordLanguageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B7D2C61BF46E431E78CE145 /* StepKeywordLanguageTests.swift */; };
 		77CB7A905ABF48CB23EB9DF9 /* TableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 409E110CAE7DC4BBCD9A50DA /* TableTests.swift */; };
 		79402EFFA296F356FD73556E /* Languages.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB12509F1C5B1BA356ED24 /* Languages.swift */; };
 		79F283AFD904F44B71ADB6FE /* MightEqualOperatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C81A88E41DDD343049CA6970 /* MightEqualOperatorTests.swift */; };
@@ -280,6 +281,7 @@
 		68F8BB794347FC46B5DF34BF /* StubGeneratorToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubGeneratorToken.swift; sourceTree = "<group>"; };
 		6A2F0AEDB5AA6F5EA32A169B /* StepTestCaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepTestCaseTests.swift; sourceTree = "<group>"; };
 		6AEA7D8F25DD9C78B1F89FE0 /* StepBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepBuilder.swift; sourceTree = "<group>"; };
+		6B7D2C61BF46E431E78CE145 /* StepKeywordLanguageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepKeywordLanguageTests.swift; sourceTree = "<group>"; };
 		6FA91D7A5477B4504A32B958 /* Cucumber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cucumber.swift; sourceTree = "<group>"; };
 		74EDC6CCDEAF4A89B767AEFF /* ASTRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASTRule.swift; sourceTree = "<group>"; };
 		75BCE63E2E09648B990BC047 /* DSLRuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLRuleTests.swift; sourceTree = "<group>"; };
@@ -649,6 +651,7 @@
 				4653CC61B70D4024CE614C44 /* ParserTests.swift */,
 				618CE2935247590BDCA6D74A /* PositionTests.swift */,
 				DEA059D8DEDD462293ADB60B /* RuleTests.swift */,
+				6B7D2C61BF46E431E78CE145 /* StepKeywordLanguageTests.swift */,
 				175AA2B2087F9A59368B780B /* StepTests.swift */,
 				409E110CAE7DC4BBCD9A50DA /* TableTests.swift */,
 				98C7AC01561165E18CBD85F6 /* TagTests.swift */,
@@ -1035,6 +1038,7 @@
 				87D45B5DE00C3DC4F9247BDC /* ParserTests.swift in Sources */,
 				C59DCAC025791D6D58D74C78 /* PositionTests.swift in Sources */,
 				A43AE851A9E592AAA58A6878 /* RuleTests.swift in Sources */,
+				77410F4C3ECFAA83DEA446CA /* StepKeywordLanguageTests.swift in Sources */,
 				F0A5E25C4ABFEFBBD54E6A67 /* StepTests.swift in Sources */,
 				77CB7A905ABF48CB23EB9DF9 /* TableTests.swift in Sources */,
 				1A9BEB00D0199A934BBAFBDF /* TagTests.swift in Sources */,

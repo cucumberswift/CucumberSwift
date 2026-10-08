@@ -12,7 +12,7 @@ extension FeatureFile {
         /// What a line of a feature file starts with.
         public enum Line: Equatable, Sendable {
             case feature, rule, background, scenario, scenarioOutline, examples
-            /// A step, and its keyword as written, such as `Soit` or `*`.
+            /// A step, and its keyword as written, such as `Soit`, `Étant donné que`, `前提` or `*`.
             case step(keyword: String)
         }
 
@@ -36,7 +36,7 @@ extension FeatureFile {
                 case .scenario: return .scenario
                 case .scenarioOutline: return .scenarioOutline
                 case .examples: return .examples
-                case .step: return .step(keyword: String(text.prefix { $0 != " " }))
+                case .step(let keyword): return .step(keyword: keyword.toString())
                 case .unknown: return nil
             }
         }
