@@ -32,13 +32,31 @@ struct StepDefinitionCall {
     struct Arguments {
         let pattern: StepPattern
         let closure: ClosureExprSyntax
-        /// The string regular expression that replaces a regex literal, or `nil` for a pattern that is a string already.
+        /// The string that replaces the pattern: a regex literal as the string regular expression CucumberSwift also
+        /// reads, or a string literal without its `as CucumberExpression`, which the macro adds itself. `nil` for a
+        /// pattern that is a plain string literal.
         let replacement: StringLiteralExprSyntax?
+        let isRegexLiteral: Bool
     }
 
     let call: FunctionCallExprSyntax
     let keyword: String
     let runner: Runner
+
+    /// The string literal, written plain or cast `as CucumberExpression`. The parser leaves the cast as an
+    /// unfolded sequence: the literal, `as`, and the type.
+    private static func stringLiteral(in expression: ExprSyntax) -> StringLiteralExprSyntax? {
+        if let literal = expression.as(StringLiteralExprSyntax.self) { return literal }
+        guard let sequence = expression.as(SequenceExprSyntax.self), sequence.elements.count == 3 else { return nil }
+        let elements = Array(sequence.elements)
+        guard let literal = elements[0].as(StringLiteralExprSyntax.self),
+              let cast = elements[1].as(UnresolvedAsExprSyntax.self), cast.questionOrExclamationMark == nil,
+              let type = elements[2].as(TypeExprSyntax.self),
+              ["CucumberExpression", "CucumberSwiftExpressions.CucumberExpression"].contains(type.type.trimmedDescription) else {
+            return nil
+        }
+        return literal
+    }
 
     init(_ call: FunctionCallExprSyntax, keyword: String, runner: Runner) {
         self.call = call
@@ -53,7 +71,7 @@ struct StepDefinitionCall {
         }
         let arguments = try arguments()
         let (pattern, closure) = (arguments.pattern, arguments.closure)
-        let isRegexLiteral = arguments.replacement != nil
+        let isRegexLiteral = arguments.isRegexLiteral
         let parameters = try closureParameters(closure)
         let reads = isRegexLiteral
             ? try regexReads(in: closure, match: parameters.match, pattern: pattern)
@@ -105,13 +123,18 @@ struct StepDefinitionCall {
         let expression = arguments[0].expression
         var replacement: StringLiteralExprSyntax?
         let text: String
+        let isRegexLiteral = expression.is(RegexLiteralExprSyntax.self)
         if let regex = expression.as(RegexLiteralExprSyntax.self) {
             // The macros take a string, so a regex literal becomes the string regular expression CucumberSwift also reads.
             let string = try RegexLiteralPattern.stringLiteral(for: regex)
             replacement = string
             text = string.representedLiteralValue ?? ""
-        } else if let literal = expression.as(StringLiteralExprSyntax.self), let value = literal.representedLiteralValue {
+        } else if let literal = Self.stringLiteral(in: expression), let value = literal.representedLiteralValue {
             text = value
+            // `"…" as CucumberExpression` is a string the macro would cast itself.
+            if !expression.is(StringLiteralExprSyntax.self) {
+                replacement = literal.with(\.leadingTrivia, expression.leadingTrivia).with(\.trailingTrivia, expression.trailingTrivia)
+            }
         } else {
             throw Unconvertible(reason: "its pattern isn't a string literal")
         }
@@ -125,7 +148,7 @@ struct StepDefinitionCall {
         guard let closure = body?.as(ClosureExprSyntax.self), call.additionalTrailingClosures.isEmpty else {
             throw Unconvertible(reason: "it passes a function, and the macros take a closure")
         }
-        return Arguments(pattern: pattern, closure: closure, replacement: replacement)
+        return Arguments(pattern: pattern, closure: closure, replacement: replacement, isRegexLiteral: isRegexLiteral)
     }
 
     // MARK: The closure's parameters

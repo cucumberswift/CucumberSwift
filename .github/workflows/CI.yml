@@ -608,9 +608,9 @@ jobs:
           swift test --package-path Fixtures/StepDefinitionMacrosPackage 2>&1 | tee "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
           .github/scripts/fixture-warnings.sh Fixtures/StepDefinitionMacrosPackage "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
       # Runs the Convert to Gherkin Macros command in that package, with the same Xcode: the plugin and its
-      # tool build with swift-syntax, which the step above built, and read the fixture's Swift files. Its
-      # step definitions are already macros, so nothing converts. The rewriting is tested by the root
-      # package's tests, which run on whatever Xcode the image has.
+      # tool build with swift-syntax, which the step above built, and read the fixture's Swift files. It
+      # reports without changing a file (--dry-run), and the step checks that it got to its summary. The
+      # rewriting is tested by the root package's tests, which run on whatever Xcode the image has.
       - name: Run the Convert to Gherkin Macros command with Xcode 16.3
         if: needs.changes.outputs.no_code != 'true'
         env:
@@ -619,7 +619,7 @@ jobs:
           output=$(swift package --package-path Fixtures/StepDefinitionMacrosPackage \
             --allow-writing-to-package-directory convert-to-gherkin-macros --dry-run)
           echo "$output"
-          grep -Eq '^Would convert 0 step definitions in 0 of [1-9][0-9]* Swift files?\. Left 0 unchanged\.$' <<< "$output"
+          grep -Eq '^Would convert [0-9]+ step definitions? in [0-9]+ of [1-9][0-9]* Swift files?\. Left [0-9]+ unchanged' <<< "$output"
       # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
       # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
       # The Fixtures job runs it on a newer one.

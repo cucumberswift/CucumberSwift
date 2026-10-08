@@ -103,6 +103,20 @@ final class ConvertedStepDefinitionExpansionTests: XCTestCase {
             """)
     }
 
+    func testAPatternCastAsACucumberExpression() throws {
+        try assertExpansion(of: """
+            Given("I have {int} cukes" as CucumberExpression) { match, _ in
+                let count = try match.first(\\.int)
+                use(count)
+            }
+            """, is: """
+            Given("I have {int} cukes" as CucumberExpression) { match, _ in
+                let count: Int = try match.first(\\.int)
+                use(count)
+            }
+            """)
+    }
+
     func testARegexLiteral() throws {
         try assertExpansion(of: """
             Given(#/^I have (\\d+) cukes$/#) { match, _ in

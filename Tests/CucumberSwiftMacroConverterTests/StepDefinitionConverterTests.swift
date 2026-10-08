@@ -172,6 +172,28 @@ final class StepDefinitionConverterTests: ConverterTestCase {
             """)
     }
 
+    func testDropsTheCastOfAPatternWrittenAsACucumberExpression() {
+        assertConverts("""
+            Then("the note says {string}" as CucumberExpression) { match, _ in
+                let text = try match.first(\\.string)
+                use(text)
+            }
+            """, to: """
+            #Then("the note says {string}") { (text: String) in
+                use(text)
+            }
+            """)
+        assertConverts("""
+            Then("the note is empty" as CucumberSwiftExpressions.CucumberExpression) { _, _ in
+                use()
+            }
+            """, to: """
+            #Then("the note is empty") {
+                use()
+            }
+            """)
+    }
+
     func testConvertsARegularExpressionStringByCaptureGroupPosition() {
         // The macro reads a capture group as {anonymous}.
         assertConverts("""

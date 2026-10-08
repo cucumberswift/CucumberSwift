@@ -102,6 +102,11 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
             }
             """, because: "isn't a string literal")
         assertLeftUnchanged("""
+            Given(pattern as CucumberExpression) { _, _ in
+                use()
+            }
+            """, because: "isn't a string literal")
+        assertLeftUnchanged("""
             Given("I have \\(count) cukes") { _, _ in
                 use()
             }
