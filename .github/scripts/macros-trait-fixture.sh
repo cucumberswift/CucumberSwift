@@ -20,7 +20,8 @@ if [[ ! -d "$DEVELOPER_DIR" ]]; then
 fi
 name=SwiftTestingAndXCTestMacrosTuist
 fixture="Fixtures/$name"
-xcodebuild -version | head -1
+# sed reads to the end: head would close the pipe early, and xcodebuild aborts on the broken pipe.
+xcodebuild -version | sed -n 1p
 
 ios=$(xcrun --sdk iphonesimulator --show-sdk-version)
 runtime="com.apple.CoreSimulator.SimRuntime.iOS-${ios//./-}"
