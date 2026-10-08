@@ -11,19 +11,25 @@ final class StepKeywordLanguageTests: XCTestCase {
         let feature: String
         let scenario: String
         let forms: [String]
+
+        /// The keywords of the language `code`, from its entry in the language data. Nil for an entry that
+        /// isn't a language, such as "properties".
+        init?(code: String, data: Any) {
+            guard let language = data as? [String: Any],
+                  let feature = (language["feature"] as? [String])?.first,
+                  let scenario = (language["scenario"] as? [String])?.first else { return nil }
+            let forms = ["given", "when", "then", "and", "but"].flatMap { language[$0] as? [String] ?? [] }
+            self.code = code
+            self.feature = feature
+            self.scenario = scenario
+            self.forms = Array(Set(forms)).sorted()
+        }
     }
 
     static let languages: [StepKeywords] = {
         guard let object = try? JSONSerialization.jsonObject(with: Data(Language.languages.utf8)),
               let json = object as? [String: Any] else { return [] }
-        return json.compactMap { code, value -> StepKeywords? in
-            guard let language = value as? [String: Any],
-                  let feature = (language["feature"] as? [String])?.first,
-                  let scenario = (language["scenario"] as? [String])?.first else { return nil }
-            let forms = ["given", "when", "then", "and", "but"].flatMap { language[$0] as? [String] ?? [] }
-            return StepKeywords(code: code, feature: feature, scenario: scenario, forms: Array(Set(forms)).sorted())
-        }
-        .sorted { $0.code < $1.code }
+        return json.compactMap(StepKeywords.init).sorted { $0.code < $1.code }
     }()
 
     // Starts no step in any language, and no keyword ends in a digit.
