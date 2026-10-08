@@ -41,7 +41,8 @@ found=$(awk -v root="$root" -v real_root="$real_root" '
 status=0
 expected_lines=()
 if [[ -f "$expected" ]]; then
-  while IFS= read -r line; do
+  # Also reads a last line that has no newline.
+  while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "$line" || "$line" == \#* ]] && continue
     expected_lines+=("$line")
     if ! grep -qF -- "$line" <<<"$found"; then
