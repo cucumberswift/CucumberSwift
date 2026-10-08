@@ -191,6 +191,11 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
 fi
 '''
 
+[tasks.test-docs-examples]
+description = "Compile every Swift example in the DocC catalog"
+# Needs Swift 6.1 or later. See "The documentation's examples" in CONTRIBUTING.md.
+run = "python3 .github/scripts/docs_examples.py"
+
 [tasks.test-swiftpm]
 description = "Run every test target with Swift Package Manager"
 # SwiftPM links all of a package's test targets into one bundle, so each consumer
