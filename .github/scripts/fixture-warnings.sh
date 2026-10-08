@@ -46,7 +46,7 @@ if [[ -f "$expected" ]]; then
     [[ -z "$line" || "$line" == \#* ]] && continue
     expected_lines+=("$line")
     if ! grep -qF -- "$line" <<<"$found"; then
-      echo "error: $name: the output does not contain, as expected-warnings requires: $line"
+      echo "error: $name: the output does not contain, as expected-warnings requires: $line" >&2
       status=1
     fi
   done < "$expected"
@@ -59,7 +59,7 @@ while IFS= read -r warning; do
     if [[ "$warning" == *"$line" ]]; then listed=true; break; fi
   done
   if [[ "$listed" == false ]]; then
-    echo "error: $name: a warning from CucumberSwift that expected-warnings doesn't list: $warning"
+    echo "error: $name: a warning from CucumberSwift that expected-warnings doesn't list: $warning" >&2
     status=1
   fi
 done <<<"$found"
