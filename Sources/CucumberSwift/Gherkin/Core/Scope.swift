@@ -21,8 +21,14 @@ enum Scope: Equatable, Hashable {
 
     /// The scope that `str` starts, read with the keywords of `language`. A step's keyword is the text it
     /// starts with, which may be several words or have no space after it, such as `Gegeben sei` or `前提`.
-    static func scopeFor(str: String, in language: Language = Scope.language) -> Scope {
-        if language.matchesFeature(str) {
+    ///
+    /// `inScenario` is whether `str` is inside a Scenario or Scenario Outline, after its header. Examples
+    /// belong there, so a keyword that is both Examples and another header, such as Azerbaijani
+    /// `Nümunələr`, is Examples there and the other header anywhere else, as in cucumber-jvm.
+    static func scopeFor(str: String, in language: Language = Scope.language, inScenario: Bool = false) -> Scope {
+        if inScenario && language.matchesExamples(str) {
+            return .examples
+        } else if language.matchesFeature(str) {
             return .feature
         } else if language.matchesScenario(str) {
             return .scenario
@@ -61,5 +67,10 @@ enum Scope: Equatable, Hashable {
             return true
         }
         return false
+    }
+
+    /// Whether the lines after this header are inside a Scenario or Scenario Outline, where Examples belong.
+    func startsScenario() -> Bool {
+        [.scenario, .scenarioOutline, .examples].contains(self)
     }
 }

@@ -157,7 +157,7 @@ final class FeatureChecker {
     /// A line in another language than English. Its headers and steps are checked as in English, but
     /// keywords aren't, so other text is never reported.
     private func checkLine(_ text: String, keywords: FeatureFile.Keywords, line: Int, column: Int) {
-        switch keywords.line(text) {
+        switch keywords.line(text, inScenario: [.scenario, .outline, .examples].contains(section)) {
             case .feature: checkHeader("Feature", line: line, column: column)
             case .rule: checkHeader("Rule", line: line, column: column)
             case .background: checkHeader("Background", line: line, column: column)

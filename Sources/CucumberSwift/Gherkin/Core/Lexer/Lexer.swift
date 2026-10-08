@@ -12,6 +12,8 @@ public class Lexer: StringReader {
     // A tag line is one whose first non-space character is `@`; anywhere else `@` is text.
     internal var inTagLine = false
     internal var lastScope: Scope?
+    // The last header read, which decides whether a keyword shared by two headers is Examples (#364).
+    internal var lastHeader: Scope?
     internal var lastKeyword: Step.Keyword?
     internal var url: URL?
 
@@ -234,9 +236,10 @@ public class Lexer: StringReader {
         }
         atLineStart = false
         let position = self.position
-        let scope = Scope.scopeFor(str: lookAheadAtLineUntil { $0.isScopeTerminator })
+        let scope = Scope.scopeFor(str: lookAheadAtLineUntil { $0.isScopeTerminator }, inScenario: lastHeader?.startsScenario() == true)
         if scope != .unknown && !scope.isStep() {
             lastScope = scope
+            lastHeader = scope
             readUntil { $0.isScopeTerminator }
             advance(stripSpaceIfNecessary())
             return .scope(position, scope)
