@@ -122,6 +122,14 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(docs_only.summary(["README.md", f"{CATALOG}/Resources/a.png"]),
                          self.outputs(True, False, True))
 
+    def test_docs_that_script_tests_checks_are_not_docs_only(self):
+        for paths in [
+            [f"{CATALOG}/Running-Tests-In-Xcode.md"],
+            ["README.md", f"{CATALOG}/Running-Tests-In-Xcode.md"],
+        ]:
+            with self.subTest(paths=paths):
+                self.assertEqual(docs_only.summary(paths), self.outputs(False, False, True))
+
     def test_only_linux_scripts_is_scripts_only(self):
         self.assertEqual(docs_only.summary([".github/scripts/release.py", ".github/scripts/test_release.py"]),
                          self.outputs(False, True, True))

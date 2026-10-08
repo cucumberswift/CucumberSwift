@@ -456,6 +456,11 @@ class FileTests(unittest.TestCase):
         )
         self.assertEqual(documented["snippets"][1], len(snippet_paths()))
 
+    def test_a_change_to_the_article_runs_script_tests(self):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import docs_only
+        self.assertIn(os.path.relpath(ARTICLE, REPOSITORY), docs_only.SCRIPT_TESTED_DOCS)
+
 
 if __name__ == "__main__":
     unittest.main()
