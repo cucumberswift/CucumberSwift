@@ -9,6 +9,28 @@ import SwiftSyntaxBuilder
 
 /// A step definition macro with a regex literal, such as `#Given(#/^I have (\d+) cukes$/#) { (count: Substring) in … }`.
 extension StepDefinition {
+    /// Whether the closure's own body may throw, which makes Swift infer that it throws, without the keyword.
+    /// A `try` inside a `do` that catches everything counts too, which only types the closure as throwing.
+    private static func mayThrow(_ closure: ClosureExprSyntax) -> Bool {
+        closure.signature?.effectSpecifiers?.throwsClause != nil || BodyFinder.contains(in: closure) { node in
+            node.is(ThrowStmtSyntax.self) || node.as(TryExprSyntax.self).map { $0.questionOrExclamationMark == nil } == true
+        }
+    }
+
+    /// Whether a type is `Substring` or an optional `Substring`, in any of the ways it can be written.
+    static func isSubstring(_ type: TypeSyntax) -> Bool {
+        var text = Substring(type.trimmedDescription.filter { !$0.isWhitespace })
+        while true {
+            if text.hasSuffix("?") {
+                text = text.dropLast()
+            } else if let prefix = ["Optional<", "Swift.Optional<"].first(where: { text.hasPrefix($0) }), text.hasSuffix(">") {
+                text = text.dropFirst(prefix.count).dropLast()
+            } else {
+                return text == "Substring" || text == "Swift.Substring"
+            }
+        }
+    }
+
     /// The step definition with a regex literal, which reads the arguments from the match's `output`. The
     /// compiler checks them against the regex's `Output`: one per capture, of the capture's type.
     func expansion(keyword: String, regex: RegexLiteralPattern) -> ExprSyntax {
@@ -55,7 +77,12 @@ extension StepDefinition {
         let isMainActor = signature?.attributes.contains { $0.trimmedDescription == "@MainActor" } == true
         let isolation = isAsync || isMainActor ? "@MainActor " : ""
         // The sync step definition with a regex literal doesn't throw: a closure that throws takes the async one.
-        let effectsOfType = isAsync ? "async throws " : Self.mayThrow(closure) ? "throws " : ""
+        var effectsOfType = ""
+        if isAsync {
+            effectsOfType = "async throws "
+        } else if Self.mayThrow(closure) {
+            effectsOfType = "throws "
+        }
         let type = "\(isolation)(Regex<Output>.Match, Step) \(effectsOfType)-> Void"
         var tokens = Set(closure.tokens(viewMode: .sourceAccurate).map(\.text))
         let function = Self.unique("typedCallback", avoiding: tokens)
@@ -79,27 +106,14 @@ extension StepDefinition {
         }()
         """
     }
+}
 
-    /// Whether the closure's own body may throw, which makes Swift infer that it throws, without the keyword.
-    /// A `try` inside a `do` that catches everything counts too, which only types the closure as throwing.
-    private static func mayThrow(_ closure: ClosureExprSyntax) -> Bool {
-        closure.signature?.effectSpecifiers?.throwsClause != nil || BodyFinder.contains(in: closure) { node in
-            node.is(ThrowStmtSyntax.self) || node.as(TryExprSyntax.self).map { $0.questionOrExclamationMark == nil } == true
-        }
-    }
-
-    /// Whether a type is `Substring` or an optional `Substring`, in any of the ways it can be written.
-    static func isSubstring(_ type: TypeSyntax) -> Bool {
-        var text = Substring(type.trimmedDescription.filter { !$0.isWhitespace })
-        while true {
-            if text.hasSuffix("?") {
-                text = text.dropLast()
-            } else if let prefix = ["Optional<", "Swift.Optional<"].first(where: { text.hasPrefix($0) }), text.hasSuffix(">") {
-                text = text.dropFirst(prefix.count).dropLast()
-            } else {
-                return text == "Substring" || text == "Swift.Substring"
-            }
-        }
+extension StepPattern {
+    /// A regex literal's captures. Each is read from the regex's `Output`, so `parameter` is only the
+    /// capture's name in messages: its group's name, or `anonymous`.
+    init(regexCaptures: [RegexLiteralPattern.Capture]) {
+        captures = regexCaptures.map { Capture(parameter: $0.name ?? "anonymous", type: $0.type) }
+        isRegularExpression = true
     }
 }
 #endif

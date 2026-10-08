@@ -24,27 +24,6 @@ struct RegexLiteralPattern {
         var type: String { isOptional ? "Substring?" : "Substring" }
     }
 
-    let captures: [Capture]
-    /// Whether `captures` can be relied on to report a wrong number of arguments.
-    let isCertain: Bool
-
-    /// - Parameters:
-    ///   - pattern: The literal's text between its delimiters.
-    ///   - isExtended: Whether it is a multi-line literal, whose whitespace and `#` comments are ignored.
-    init(_ pattern: String, isExtended: Bool) {
-        var scanner = Scanner(Array(pattern), isExtended: isExtended)
-        let read = scanner.read()
-        captures = read ?? []
-        isCertain = read.map { Self.icuCaptureCount(of: pattern, isExtended: isExtended) == $0.count } ?? false
-    }
-
-    /// The number of capture groups ICU finds, or `nil` if it can't read the pattern, as for syntax only
-    /// Swift has.
-    private static func icuCaptureCount(of pattern: String, isExtended: Bool) -> Int? {
-        try? NSRegularExpression(pattern: pattern, options: isExtended ? [.allowCommentsAndWhitespace] : [])
-            .numberOfCaptureGroups
-    }
-
     /// Reads the groups. Anything that changes how groups are numbered or what captures, such as
     /// branch reset `(?|…)`, the `n` and `x` options, conditionals and recursion, is left to the compiler.
     private struct Scanner {
@@ -205,5 +184,26 @@ struct RegexLiteralPattern {
                     return false
             }
         }
+    }
+
+    let captures: [Capture]
+    /// Whether `captures` can be relied on to report a wrong number of arguments.
+    let isCertain: Bool
+
+    /// The number of capture groups ICU finds, or `nil` if it can't read the pattern, as for syntax only
+    /// Swift has.
+    private static func icuCaptureCount(of pattern: String, isExtended: Bool) -> Int? {
+        try? NSRegularExpression(pattern: pattern, options: isExtended ? [.allowCommentsAndWhitespace] : [])
+            .numberOfCaptureGroups
+    }
+
+    /// - Parameters:
+    ///   - pattern: The literal's text between its delimiters.
+    ///   - isExtended: Whether it is a multi-line literal, whose whitespace and `#` comments are ignored.
+    init(_ pattern: String, isExtended: Bool) {
+        var scanner = Scanner(Array(pattern), isExtended: isExtended)
+        let read = scanner.read()
+        captures = read ?? []
+        isCertain = read.map { Self.icuCaptureCount(of: pattern, isExtended: isExtended) == $0.count } ?? false
     }
 }

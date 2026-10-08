@@ -57,13 +57,6 @@ struct StepPattern {
         }
     }
 
-    /// A regex literal's captures. Each is read from the regex's `Output`, so `parameter` is only the
-    /// capture's name in messages: its group's name, or `anonymous`.
-    init(regexCaptures: [RegexLiteralPattern.Capture]) {
-        captures = regexCaptures.map { Capture(parameter: $0.name ?? "anonymous", type: $0.type) }
-        isRegularExpression = true
-    }
-
     /// The same rule as `CucumberExpression.init(_:)`.
     static func isRegularExpression(_ pattern: String) -> Bool {
         pattern.first == "^" || pattern.last == "$" || (pattern.count >= 2 && pattern.first == "/" && pattern.last == "/")

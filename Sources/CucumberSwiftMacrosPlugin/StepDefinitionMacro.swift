@@ -17,6 +17,30 @@ struct StepDefinition {
         let type: TypeSyntax?
     }
 
+    /// Finds a node in a closure's own body: an `await` or a `try` in a nested closure or function belongs to that one.
+    final class BodyFinder: SyntaxAnyVisitor {
+        private let predicate: (Syntax) -> Bool
+        private var found = false
+
+        static func contains(in closure: ClosureExprSyntax, where predicate: @escaping (Syntax) -> Bool) -> Bool {
+            let finder = BodyFinder(predicate)
+            finder.walk(closure.statements)
+            return finder.found
+        }
+
+        private init(_ predicate: @escaping (Syntax) -> Bool) {
+            self.predicate = predicate
+            super.init(viewMode: .sourceAccurate)
+        }
+
+        override func visit(_: ClosureExprSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
+        override func visit(_: FunctionDeclSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
+        override func visitAny(_ node: Syntax) -> SyntaxVisitorContinueKind {
+            if predicate(node) { found = true }
+            return found ? .skipChildren : .visitChildren
+        }
+    }
+
     /// The pattern as written: a string literal, with a Cucumber expression or a regular expression, or a regex literal.
     let literal: ExprSyntax
     let pattern: StepPattern
@@ -126,30 +150,6 @@ struct StepDefinition {
     static func awaits(_ closure: ClosureExprSyntax) -> Bool {
         BodyFinder.contains(in: closure) { node in
             node.is(AwaitExprSyntax.self) || node.as(ForStmtSyntax.self)?.awaitKeyword != nil
-        }
-    }
-
-    /// Finds a node in a closure's own body: an `await` or a `try` in a nested closure or function belongs to that one.
-    final class BodyFinder: SyntaxAnyVisitor {
-        private let predicate: (Syntax) -> Bool
-        private var found = false
-
-        private init(_ predicate: @escaping (Syntax) -> Bool) {
-            self.predicate = predicate
-            super.init(viewMode: .sourceAccurate)
-        }
-
-        static func contains(in closure: ClosureExprSyntax, where predicate: @escaping (Syntax) -> Bool) -> Bool {
-            let finder = BodyFinder(predicate)
-            finder.walk(closure.statements)
-            return finder.found
-        }
-
-        override func visit(_: ClosureExprSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
-        override func visit(_: FunctionDeclSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
-        override func visitAny(_ node: Syntax) -> SyntaxVisitorContinueKind {
-            if predicate(node) { found = true }
-            return found ? .skipChildren : .visitChildren
         }
     }
 
