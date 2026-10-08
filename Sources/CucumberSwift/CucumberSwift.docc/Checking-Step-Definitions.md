@@ -183,6 +183,8 @@ Every group counts, including one inside another: `#/^((\d+) red) cukes$/#` give
 
 Swift, not the macro, works out a regex literal's `Output`, and it checks the closure's arguments against it in the macro's expansion: a missing argument, an extra one, or a wrong type, `Substring?` for `Substring` included, is a compile error. Where the macro can read the captures itself, it reports the error first, on your closure, with a fix: the closure takes the wrong number of arguments, or an argument isn't a `Substring`. For a regex with syntax that it doesn't read, such as `(?'name'…)` or the `n` and `x` options, the macro leaves the check to Swift, whose error is inside the expansion.
 
+A capture is always text, which the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression: it is the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the three kinds.
+
 Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
 
 ### Custom parameter types

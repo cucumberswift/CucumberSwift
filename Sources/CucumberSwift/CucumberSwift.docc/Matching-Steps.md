@@ -4,6 +4,23 @@ Gherkin defined in `.feature` files can be matched in several ways. All matching
 
 To have the compiler check each step definition's pattern and closure, write it as a macro such as `#Given` instead: see <doc:Checking-Step-Definitions>.
 
+## Choose a pattern
+
+A step definition's pattern can be a Cucumber expression, a regular expression written as a string, or a regex literal. **Use a Cucumber expression unless you need something only a regular expression can do.** It is the Cucumber way to write a step definition, the same in every Cucumber implementation. It reads like the step it matches, and it gives each argument its type.
+
+| | Cucumber expression | Regular expression in a string | Regex literal |
+|---|---|---|---|
+| Example | `"I have {int} cukes"` | `"^I have (\\d+) cukes$"` | `#/^I have (\d+) cukes$/#` |
+| Arguments | Typed: `Int` for `{int}`, `Double` for `{double}`, `String` for `{string}`, and any type of your own with a custom parameter type | `String`, one per top-level capture group | `Substring`, or `Substring?` for a group that may not match, one per capture group, nested ones included |
+| Converting the text | Done for you; a value that can't be converted fails the step | Yours to do, in the closure | Yours to do, in the closure |
+| Checked when it compiles, with the step definition macros | The syntax, the number of arguments and each one's type | The syntax, the number of arguments, and that each is a `String` | The syntax, the number of arguments and each one's type, against the regex's output |
+| Two step definitions with the same pattern | Reported | Reported | Not detected |
+| Runs on | iOS 13, macOS 10.15, tvOS 13 and later | iOS 13, macOS 10.15, tvOS 13 and later | iOS 16, macOS 13, tvOS 16 and later |
+
+A regular expression is the right choice when the step needs what a Cucumber expression can't say, such as alternatives that are more than one word, lookarounds or a case-insensitive match. Of the two, a regex literal is the safer: Swift checks its syntax when it compiles, with or without the macros, while a regular expression in a string is checked only with the macros, and otherwise only when the tests run. If what you need is a typed value from text a built-in parameter doesn't match, such as a date or an airport code, write a custom parameter type instead: it keeps the Cucumber expression, and every step definition reuses it (see <doc:Matching-Steps#Matching-with-Cucumber-Expressions>).
+
+CucumberSwift suggests Cucumber expressions for undefined steps, too: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
+
 ## How a string pattern is read
 When you pass a string to ``Given``, ``When`` or ``Then``, CucumberSwift decides from its shape whether it is a regular expression or a Cucumber expression, the same way other Cucumber implementations do:
 
@@ -87,7 +104,7 @@ The same goes for `extension Cucumber: @retroactive CucumberTestObservable` when
 In Swift 5 language mode nothing changes: the protocols are marked `@preconcurrency`, so code written for earlier versions of CucumberSwift compiles as before.
 
 ## Matching with Cucumber Expressions
-Cucumber has [its own expressions](https://github.com/cucumber/cucumber-expressions#readme) that CucumberSwift supports. These are an alternative to regular expressions that are a little more readable. They aren't nearly as powerful when it comes to precise matching, but they can be extended with regular expressions and can very likely meet the majority of use-cases. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
+[Cucumber expressions](https://github.com/cucumber/cucumber-expressions#readme) are the pattern Cucumber recommends, and the one to reach for first (see <doc:Matching-Steps#Choose-a-pattern>). A parameter such as `{int}` matches text and converts it to its type, and a custom parameter type, with its own regular expression, does the same for a type of your own. A string pattern is read as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
 
 Imagine the following step:
 ```gherkin
@@ -157,7 +174,7 @@ extension Match {
 ```
 
 ## Matching with Regular Expressions
-Regular expressions are a very powerful tool. If you can support regex literals in your tests, they are by far the preferable method to match with.
+Regular expressions can match what a Cucumber expression can't, at the cost of readability and typed arguments (see <doc:Matching-Steps#Choose-a-pattern>). When you need one and your tests run on iOS 16, macOS 13 or tvOS 16 or later, prefer a regex literal to a regular expression in a string: the compiler checks it.
 
 Here's a trivial example:
 ```swift
