@@ -25,13 +25,19 @@ extension FeatureFile {
             self.language = language
         }
 
+        /// What `text`, a line with its indentation removed, starts with, read outside a scenario. Nil for
+        /// any other line, such as a description.
+        public func line(_ text: String) -> Line? {
+            line(text, inScenario: false)
+        }
+
         /// What `text`, a line with its indentation removed, starts with. Nil for any other line, such as
         /// a description.
         ///
         /// `inScenario` is whether the line is inside a Scenario or Scenario Outline, after its header.
         /// There a keyword that is both Examples and another header, such as Azerbaijani `Nümunələr`,
         /// is Examples.
-        public func line(_ text: String, inScenario: Bool = false) -> Line? {
+        public func line(_ text: String, inScenario: Bool) -> Line? {
             // Like the lexer: a header is the text before the line's first colon.
             let header = String(text.prefix { !$0.isScopeTerminator })
             switch Scope.scopeFor(str: header, in: language, inScenario: inScenario) {
