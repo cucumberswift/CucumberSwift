@@ -104,9 +104,9 @@ final class EveryGherkinLanguageTests: LintTestCase {
     /// The valid feature files for `language`: as many as it has forms of Feature or of Background,
     /// since a feature has one of each. Every other keyword is used in every form in each file.
     /// A form CucumberSwift doesn't read as its keyword is left out, as the lint tool reads files as
-    /// CucumberSwift does: a step keyword of more than one word, or without a space after it, and an
-    /// Examples keyword that is also a Scenario keyword in the same language. Any other form that
-    /// CucumberSwift doesn't read, or one of these that it starts to read, fails the tests.
+    /// CucumberSwift does: an Examples keyword that is also a Scenario keyword in the same language.
+    /// Any other form that CucumberSwift doesn't read, or this one if it starts to read it, fails the
+    /// tests. Every step keyword is read, of more than one word or without a space after it too (#363).
     static func features(in language: Language) throws -> [GeneratedFeature] {
         let keywords = try XCTUnwrap(FeatureFile.Keywords(language: language.code), "No keywords for '\(language.code)'")
         // Each form must be read as its keyword, except an Examples keyword that is also a Scenario keyword.
@@ -121,12 +121,13 @@ final class EveryGherkinLanguageTests: LintTestCase {
         let backgrounds = headers("background", .background)
         let scenarios = headers("scenario", .scenario)
         let stepForms = Set(stepKeys.flatMap(language.forms))
+        // A line starting with a form is read as a step with that form as its keyword, even when a shorter
+        // form starts it too, such as Czech `A ` in `A také `, or the form has no space after it, as `前提`.
         let steps = stepForms
             .filter { keywords.line($0 + "x") == .step(keyword: $0.trimmingCharacters(in: .whitespaces)) }
             .sorted()
-        // Each step form of one word followed by a space must be read as a step, and only those.
-        let oneWord = stepForms.filter { $0.last == " " && !$0.trimmingCharacters(in: .whitespaces).contains(" ") }
-        XCTAssertEqual(steps, oneWord.sorted(), language.code)
+        // Every step form must be read as a step.
+        XCTAssertEqual(steps, stepForms.sorted(), language.code)
         let given = try XCTUnwrap(steps.first, "No step keyword in '\(language.code)'")
         // Each file needs a Feature, a Background and a Scenario: fail rather than build none.
         for (kind, forms) in [("Feature", features), ("Background", backgrounds), ("Scenario", scenarios)] {

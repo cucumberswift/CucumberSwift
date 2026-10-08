@@ -22,12 +22,14 @@ xcode_dir="$HOME/Library/Developer/Xcode"
 plugin="$xcode_dir/Plug-ins/Gherkin.ideplugin"
 grammar="$xcode_dir/Specifications/Gherkin.xclangspec"
 snippets_dir="$xcode_dir/UserData/CodeSnippets"
+# Its tests set PLISTBUDDY to run it on Linux, which has no PlistBuddy.
+plistbuddy="${PLISTBUDDY:-/usr/libexec/PlistBuddy}"
 
 # Prints the installed path of each snippet in Snippets/, with its source.
 snippets() {
     local snippet id
     for snippet in "$source_dir"/Snippets/*.codesnippet; do
-        id="$(/usr/libexec/PlistBuddy -c 'Print :IDECodeSnippetIdentifier' "$snippet")"
+        id="$("$plistbuddy" -c 'Print :IDECodeSnippetIdentifier' "$snippet")"
         printf '%s\t%s\n' "$snippets_dir/$id.codesnippet" "$snippet"
     done
 }

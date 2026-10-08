@@ -14,6 +14,7 @@ import XCTest
     static let shared = Basket()
     var cukes = 0
     var colors = [Color]()
+    var note: String?
 }
 
 enum Color: String, Sendable {
@@ -62,6 +63,7 @@ extension Cucumber: @retroactive StepImplementation {
         BeforeScenario { _ in
             Basket.shared.cukes = 0
             Basket.shared.colors = []
+            Basket.shared.note = nil
         }
 
         #Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
@@ -143,7 +145,42 @@ extension Cucumber: @retroactive StepImplementation {
             XCTAssertEqual(Basket.shared.cukes, cantidad)
         }
 
+        #ES_Entonces("la nota dice {string}") { (texto: String) in
+            XCTAssertEqual(Basket.shared.note, texto)
+        }
+
+        // Plain step definitions, next to the macros as a project that is moving to them has them.
+        Given("the basket holds these cukes:") { _, step async in
+            Basket.shared.cukes += Self.count(in: step)
+        }
+
+        Given("a note on the basket:") { _, step async in
+            Basket.shared.note = step.docString?.literal
+        }
+
+        Then("the note says {string}" as CucumberExpression) { match, _ async in
+            XCTAssertEqual(Basket.shared.note, try match.first(\.string))
+        }
+
+        ES_Dado("la cesta tiene estos pepinos:") { _, step async in
+            Basket.shared.cukes += Self.count(in: step)
+        }
+
+        ES_Dado("una nota en la cesta:") { _, step async in
+            Basket.shared.note = step.docString?.literal
+        }
+
+        // A step definition that is commented out. CucumberSwiftLint ignores it, so it doesn't warn
+        // that its regular expression, which has an unclosed group, does not compile.
+        // Then(#/^a broken (step$/#) { _, _ in }
+
         regexLiteralSteps()
+    }
+
+    /// The sum of the second column of the step's table, under its header row.
+    private static func count(in step: Step) -> Int {
+        let rows = step.dataTable?.rows.dropFirst() ?? []
+        return rows.reduce(0) { $0 + (Int($1[1]) ?? 0) }
     }
 
     /// Step definitions with regex literals.

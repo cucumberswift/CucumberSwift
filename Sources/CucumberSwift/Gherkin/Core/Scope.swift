@@ -19,7 +19,8 @@ enum Scope: Equatable, Hashable {
     case rule
     case unknown
 
-    /// The scope that `str` starts, read with the keywords of `language`.
+    /// The scope that `str` starts, read with the keywords of `language`. A step's keyword is the text it
+    /// starts with, which may be several words or have no space after it, such as `Gegeben sei` or `前提`.
     static func scopeFor(str: String, in language: Language = Scope.language) -> Scope {
         if language.matchesFeature(str) {
             return .feature
@@ -34,9 +35,8 @@ enum Scope: Equatable, Hashable {
         } else if language.matchesRule(str) {
             return .rule
         }
-        let index = str.firstIndex(of: " ")
-        let keywordString = String(str[str.startIndex..<(index ?? str.endIndex)])
-        if let keyword = Step.Keyword(keywordString, in: language) {
+        if let written = language.stepKeyword(startingLine: str),
+           let keyword = Step.Keyword(written, in: language) {
             return .step(keyword)
         }
         return .unknown

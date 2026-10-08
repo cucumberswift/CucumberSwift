@@ -42,8 +42,8 @@ env:
   # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (435 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 524
+  # run today (441 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 530
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs
@@ -251,7 +251,9 @@ jobs:
 
   # The tests of the Python scripts in .github/scripts: the release script, the
   # lockfile check and the docs-only check. Runs on scripts-only runs too, where
-  # it is the only check of the change besides Workflow checks.
+  # it is the only check of the change besides Workflow checks. It also tests the
+  # Gherkin highlighting for Xcode in Tools/Xcode against the article that
+  # documents it, so it checks those out as well.
   script_tests:
     name: Script tests
     needs: changes
@@ -264,11 +266,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The DocC catalog and the stubs too, which test_docs_examples.py reads.
+          # The DocC catalog and the stubs too, which test_docs_examples.py reads,
+          # and the Gherkin highlighting for Xcode, which test_gherkin_highlighting.py
+          # checks against the catalog's "Running Tests in Xcode" article.
           sparse-checkout: |
             .github/scripts
             Sources/CucumberSwift/CucumberSwift.docc
             Tests/DocumentationExamples
+            Tools/Xcode
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 
@@ -591,14 +596,17 @@ jobs:
         run: swift test --package-path Tests/CucumberSwiftSwift6ConsumerTests
       # Uses the step definition macros as a project would: the Macros trait turned on from its own
       # Package.swift, with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the macros in
-      # a Swift package. Fixture tests runs it on a newer one.
+      # a Swift package. Fixture tests runs it on a newer one. Both fixture runs here also check
+      # the warnings from CucumberSwift, as Fixture tests does.
       - name: Run the step definition macros package fixture with Xcode 16.3
         if: needs.changes.outputs.no_code != 'true'
         env:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
           swift --version
-          swift test --package-path Fixtures/StepDefinitionMacrosPackage
+          set -o pipefail
+          swift test --package-path Fixtures/StepDefinitionMacrosPackage 2>&1 | tee "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
+          .github/scripts/fixture-warnings.sh Fixtures/StepDefinitionMacrosPackage "$RUNNER_TEMP/StepDefinitionMacrosPackage.log"
       # Runs feature files with Swift Testing as a project would: the build tool plugin and the macros,
       # with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs give for the Swift Testing runner.
       # The Fixtures job runs it on a newer one.
@@ -608,7 +616,9 @@ jobs:
           DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
         run: |
           swift --version
-          swift test --package-path Fixtures/SwiftTestingPackage
+          set -o pipefail
+          swift test --package-path Fixtures/SwiftTestingPackage 2>&1 | tee "$RUNNER_TEMP/SwiftTestingPackage.log"
+          .github/scripts/fixture-warnings.sh Fixtures/SwiftTestingPackage "$RUNNER_TEMP/SwiftTestingPackage.log"
       # Compiles every Swift example in the DocC catalog against this commit, each as a target of
       # its own, with the Macros trait, and with Xcode 16.3 (Swift 6.1), the oldest Xcode the docs
       # give for the macros and the Swift Testing runner. See .github/scripts/docs_examples.py.
