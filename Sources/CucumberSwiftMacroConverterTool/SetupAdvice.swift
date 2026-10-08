@@ -42,7 +42,7 @@ enum SetupAdvice {
     }
 
     /// The package manifest's swift-tools-version, and whether it already mentions the trait.
-    private static func manifest(root: String?, fileManager: FileManager = .default) -> (tools: (Int, Int)?, mentionsTrait: Bool)? {
+    private static func manifest(root: String?) -> (tools: (Int, Int)?, mentionsTrait: Bool)? {
         guard let root else { return nil }
         var folder = URL(fileURLWithPath: root)
         for _ in 0..<searchDepth {
