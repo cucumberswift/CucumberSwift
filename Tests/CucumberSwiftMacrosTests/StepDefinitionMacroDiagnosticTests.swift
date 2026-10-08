@@ -179,7 +179,7 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             #Given("I have \(count) cukes") { }
             """#,
             diagnostics: [
-                DiagnosticSpec(message: "The step definition's pattern must be a string literal, so it can be checked when it compiles.",
+                DiagnosticSpec(message: "The step definition's pattern must be a string literal or a regex literal, so it can be checked when it compiles.",
                                line: 1,
                                column: 8)
             ],
@@ -195,7 +195,7 @@ final class StepDefinitionMacroDiagnosticTests: XCTestCase {
             #Given(pattern) { }
             """,
             diagnostics: [
-                DiagnosticSpec(message: "The step definition's pattern must be a string literal, so it can be checked when it compiles.",
+                DiagnosticSpec(message: "The step definition's pattern must be a string literal or a regex literal, so it can be checked when it compiles.",
                                line: 1,
                                column: 8)
             ],

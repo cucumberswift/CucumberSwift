@@ -31,3 +31,10 @@ Feature: Counting cukes
     When I get a bonus cuke
     And I eat 2 cukes later
     Then 2 cukes are left in this step
+
+  Scenario: Regex literals
+    Given I have 4 cukes from "Lisbon"
+    When I eat 1 cuke with a regex
+    And I eat 1 cuke with a regex quickly
+    Then the regex step sees 2 cukes
+    And 2 cukes are left in a weak regex step

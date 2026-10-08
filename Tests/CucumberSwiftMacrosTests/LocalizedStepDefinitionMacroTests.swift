@@ -28,6 +28,9 @@ final class LocalizedStepDefinitionMacroTests: XCTestCase {
     /// What using a macro without the Macros trait reports, the same as for `#Given`.
     static let unavailableMessage = "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later."
 
+    /// The versions the macros with a regex literal need, as the step definitions with one.
+    static let regexAvailability = "@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)"
+
     /// The English macro each step type has.
     private static let englishMacros = [
         "GivenStep": "Given",
@@ -58,12 +61,17 @@ final class LocalizedStepDefinitionMacroTests: XCTestCase {
                 lines += ["", "// MARK: \(macro.language)"]
                 languageOfLastMacro = macro.language
             }
-            lines += ["", "/// `#\(englishMacros[macro.type] ?? macro.type)` in \(macro.language)."]
+            let english = englishMacros[macro.type] ?? macro.type
+            lines += ["", "/// `#\(english)` in \(macro.language)."]
                 + declaration(of: macro, attributes: [])
+                + ["", "/// `#\(english)` with a regex literal, in \(macro.language)."]
+                + regexDeclaration(of: macro, attributes: [])
         }
         lines += ["#else", "// Without the Macros trait the macros are declared but unavailable, as in StepDefinitionMacros.swift."]
+        let unavailable = "@available(*, unavailable, message: \"\(unavailableMessage)\")"
         for macro in macros {
-            lines += [""] + declaration(of: macro, attributes: ["@available(*, unavailable, message: \"\(unavailableMessage)\")"])
+            lines += [""] + declaration(of: macro, attributes: [unavailable])
+                + [""] + regexDeclaration(of: macro, attributes: [unavailable])
         }
         lines += ["#endif", ""]
         return lines.joined(separator: "\n")
@@ -72,6 +80,15 @@ final class LocalizedStepDefinitionMacroTests: XCTestCase {
     private static func declaration(of macro: LocalizedStep, attributes: [String]) -> [String] {
         ["@freestanding(expression)", "@discardableResult"] + attributes + [
             "public macro \(macro.name)<each Argument>(_ expression: String,",
+            "    _ body: (repeat each Argument) async throws -> Void) -> \(macro.type)",
+            "    = #externalMacro(module: \"CucumberSwiftMacrosPlugin\", type: \"StepDefinitionMacro\")"
+        ]
+    }
+
+    /// The macro with a regex literal, which needs the same versions as `Regex`.
+    private static func regexDeclaration(of macro: LocalizedStep, attributes: [String]) -> [String] {
+        ["@freestanding(expression)", "@discardableResult", regexAvailability] + attributes + [
+            "public macro \(macro.name)<Output, each Argument>(_ regex: Regex<Output>,",
             "    _ body: (repeat each Argument) async throws -> Void) -> \(macro.type)",
             "    = #externalMacro(module: \"CucumberSwiftMacrosPlugin\", type: \"StepDefinitionMacro\")"
         ]
@@ -114,13 +131,16 @@ final class LocalizedStepDefinitionMacroTests: XCTestCase {
             Self.englishMacros.keys.contains { line.hasSuffix(" = \($0)") }
         }
         let macros = try String(contentsOf: Self.macros, encoding: .utf8)
-        // Each is declared twice: available with the Macros trait, unavailable without it.
-        XCTAssertEqual(stepTypes.count * 2, macros.components(separatedBy: "public macro ").count - 1)
+        // Each is declared four times: with a string and with a regex literal, each available with the
+        // Macros trait and unavailable without it.
+        XCTAssertEqual(stepTypes.count * 4, macros.components(separatedBy: "public macro ").count - 1)
         XCTAssertTrue(macros.contains("public macro ES_Dado<each Argument>"))
+        XCTAssertTrue(macros.contains("public macro ES_Dado<Output, each Argument>(_ regex: Regex<Output>,"))
         // The English macros say the same as the localized ones when the trait is off.
         let english = try String(contentsOf: Self.root.appendingPathComponent("Sources/CucumberSwiftMacros/StepDefinitionMacros.swift"),
                                  encoding: .utf8)
-        XCTAssertEqual(english.components(separatedBy: "message: \"\(Self.unavailableMessage)\"").count - 1, 6)
+        XCTAssertEqual(english.components(separatedBy: "message: \"\(Self.unavailableMessage)\"").count - 1, 12)
+        XCTAssertEqual(english.components(separatedBy: Self.regexAvailability).count - 1, 12)
     }
 }
 #endif

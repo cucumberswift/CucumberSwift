@@ -64,6 +64,69 @@ public macro But<each Argument>(_ expression: String,
 public macro MatchAll<each Argument>(_ expression: String,
                                      _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// A `Given` step definition with a regex literal, whose pattern and closure are checked when it compiles.
+///
+/// ```swift
+/// #Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { (count: Substring, container: Substring) in
+///     …
+/// }
+/// ```
+///
+/// The closure takes one argument per capture group, in order, and optionally the `Step` last. Each
+/// argument's type is its capture's type in the regex's `Output`: `Substring`, or `Substring?` for a group
+/// that may not take part in the match, such as `(\d+)?`. Regex literals need iOS 16, macOS 13 or tvOS 16.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro Given<Output, each Argument>(_ regex: Regex<Output>,
+                                          _ body: (repeat each Argument) async throws -> Void) -> GivenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// A `When` step definition with a regex literal, whose pattern and closure are checked when it compiles.
+/// See `#Given` with a regex literal.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro When<Output, each Argument>(_ regex: Regex<Output>,
+                                         _ body: (repeat each Argument) async throws -> Void) -> WhenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// A `Then` step definition with a regex literal, whose pattern and closure are checked when it compiles.
+/// See `#Given` with a regex literal.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro Then<Output, each Argument>(_ regex: Regex<Output>,
+                                         _ body: (repeat each Argument) async throws -> Void) -> ThenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// An `And` step definition with a regex literal, whose pattern and closure are checked when it compiles.
+/// See `#Given` with a regex literal.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro And<Output, each Argument>(_ regex: Regex<Output>,
+                                        _ body: (repeat each Argument) async throws -> Void) -> AndStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// A `But` step definition with a regex literal, whose pattern and closure are checked when it compiles.
+/// See `#Given` with a regex literal.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro But<Output, each Argument>(_ regex: Regex<Output>,
+                                        _ body: (repeat each Argument) async throws -> Void) -> ButStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+/// A step definition for any keyword with a regex literal, whose pattern and closure are checked when it
+/// compiles. See `#Given` with a regex literal.
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+public macro MatchAll<Output, each Argument>(_ regex: Regex<Output>,
+                                             _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 #else
 // Without the Macros trait the macros are declared but unavailable, so that using one says what
 // to turn on, rather than that no such macro exists.
@@ -106,6 +169,53 @@ public macro But<each Argument>(_ expression: String,
 @discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro MatchAll<each Argument>(_ expression: String,
+                      _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro Given<Output, each Argument>(_ regex: Regex<Output>,
+                   _ body: (repeat each Argument) async throws -> Void) -> GivenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro When<Output, each Argument>(_ regex: Regex<Output>,
+                  _ body: (repeat each Argument) async throws -> Void) -> WhenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro Then<Output, each Argument>(_ regex: Regex<Output>,
+                  _ body: (repeat each Argument) async throws -> Void) -> ThenStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro And<Output, each Argument>(_ regex: Regex<Output>,
+                 _ body: (repeat each Argument) async throws -> Void) -> AndStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro But<Output, each Argument>(_ regex: Regex<Output>,
+                 _ body: (repeat each Argument) async throws -> Void) -> ButStep
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the step definition macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MatchAll<Output, each Argument>(_ regex: Regex<Output>,
                       _ body: (repeat each Argument) async throws -> Void) -> MatchAllStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "StepDefinitionMacro")
 #endif

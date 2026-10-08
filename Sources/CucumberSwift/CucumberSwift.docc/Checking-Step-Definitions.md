@@ -35,11 +35,13 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 |---|---|---|
 | Xcode | 16.3 (Swift 6.1) or later | 26.4 or later |
 | Where the tests run | iOS 13, macOS 10.15 and tvOS 13 or later | iOS 13, macOS 10.15 and tvOS 13 or later |
+| Where step definitions with a regex literal run | iOS 16, macOS 13 and tvOS 16 or later | iOS 16, macOS 13 and tvOS 16 or later |
 
 - **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed: the macOS an Xcode needs is Apple's requirement for that Xcode.
 - **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
 - **In an Xcode project**, you need Xcode 26.4, the first to turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as described in <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>, or run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
+- **Regex literals need iOS 16, macOS 13 or tvOS 16**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Checking-Step-Definitions#Regex-literals>.
 - **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
 
 ## Add the macros to your package
@@ -130,7 +132,7 @@ The first time you build a macro, Xcode asks you to trust and enable it. A clean
 
 ## Write a step definition
 
-Each macro takes the pattern, a string literal, and a closure. The closure takes one argument for each parameter of a Cucumber expression, or each capture group of a regular expression, in the order they appear. Give each argument its type:
+Each macro takes the pattern, a string literal or a regex literal (see <doc:Checking-Step-Definitions#Regex-literals>), and a closure. The closure takes one argument for each parameter of a Cucumber expression, or each capture group of a regular expression, in the order they appear. Give each argument its type:
 
 | In the pattern | The argument's type |
 |---|---|
@@ -159,6 +161,29 @@ A closure can be `async` and `throws`, and can have a capture list, exactly as w
     try await self?.basket.waitForCount(Int(count))
 }
 ```
+
+### Regex literals
+
+The macros take a regex literal too, `#/…/#`, or `/…/` where your target allows bare regex literals, as the Swift 6 language mode does. The step matches when the regex matches its whole text, exactly as with ``Given``'s regex literal form.
+
+```swift
+#Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { (count: Substring, container: Substring) in
+    basket.add(Int(count) ?? 0, to: container)
+}
+```
+
+The closure takes one argument per capture group, in order, and optionally the `Step` last. Each argument's type is the capture's type in the regex's `Output`, as Swift gives it:
+
+| In the regex | The argument's type |
+|---|---|
+| A capture group, numbered or named | `Substring` |
+| A capture group that may not take part in the match: in an alternation, such as `(a)\|(b)`, or repeated zero or more times, such as `(\d+)?` or `(,\d+)*` | `Substring?` |
+
+Every group counts, including one inside another: `#/^((\d+) red) cukes$/#` gives two arguments. A string pattern read as a regular expression, such as `"^((\\d+) red) cukes$"`, gives only its outer group. A named group's name doesn't need to match the argument's.
+
+Swift, not the macro, works out a regex literal's `Output`, and it checks the closure's arguments against it in the macro's expansion: a missing argument, an extra one, or a wrong type, `Substring?` for `Substring` included, is a compile error. Where the macro can read the captures itself, it reports the error first, on your closure, with a fix: the closure takes the wrong number of arguments, or an argument isn't a `Substring`. For a regex with syntax that it doesn't read, such as `(?'name'…)` or the `n` and `x` options, the macro leaves the check to Swift, whose error is inside the expansion.
+
+Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
 
 ### Custom parameter types
 
@@ -189,9 +214,12 @@ Each mistake is an error on its own line. Click the error's icon to see the whol
 | A parameter is missing its `}` | `#Given("I have {int cukes")` | Inserts `}` after `{int` |
 | Any other Cucumber expression that does not follow the syntax, such as empty optional text or a parameter inside optional text | `#Given("I have () cukes")` | None: the error says what is wrong and how to fix it |
 | A pattern that is read as a regular expression does not compile | `#Given("I have {int} cukes$")`, where the `$` makes it a regular expression | Removes the `^`, `$` or slashes, when what is left is a valid Cucumber expression |
-| The pattern is not a string literal | `#Given("I have \(count) cukes")` | None: write the pattern out |
+| The pattern is not a string literal or a regex literal | `#Given("I have \(count) cukes")` | None: write the pattern out |
 | A function is passed instead of a closure | `#Given("I have {int} cukes", addCukes)` | None: write a closure, which can call the function |
 | A custom parameter's name is not a Swift identifier, because the macro reads it as `\.name` on `Match` | `#Given("I have {my-color} cukes")` | None: rename the parameter type |
+| A regex literal's closure takes too few or too many arguments | `#Given(#/^I have (\d+) (\w+)$/#) { (count: Substring) in … }` | Changes the closure's arguments to `(count: Substring, group: Substring)` |
+| An argument for a regex literal's capture isn't a `Substring` | `#Given(#/^I have (\d+) cukes$/#) { (count: Int) in … }` | Changes `Int` to `Substring` |
+| An argument for a regex literal's capture is `Substring` where the capture gives `Substring?`, or the other way round | `#Given(#/^I have (\d+)?$/#) { (count: Substring) in … }` | None: Swift's own error, inside the expansion |
 
 Each macro reports one kind of mistake at a time. When the pattern's parameters and the closure's arguments differ in number, you see only that error; once the number is right, the type errors show, one for each wrong argument. Fix the first, build again, and the next may appear.
 
@@ -222,3 +250,14 @@ A closure with a capture list, such as `[weak self]`, or one that contains a clo
     return Then("^the basket holds (\\d+) cukes?$" as CucumberExpression, callback: callback)
 }()
 ```
+
+A regex literal's step definition reads every argument from the match's output at once, so that Swift checks them against the regex:
+
+```swift
+Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { match, _ in
+    let (_, count, container): (_, Substring, Substring) = match.output
+    basket.add(Int(count) ?? 0, to: container)
+}
+```
+
+With a capture list, a regex literal's closure is given its type by a small generic function in the expansion instead, because the type names the regex's `Output`, which only Swift knows.

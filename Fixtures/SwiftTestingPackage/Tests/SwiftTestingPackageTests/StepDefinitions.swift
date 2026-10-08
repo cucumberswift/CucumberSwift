@@ -73,6 +73,24 @@ extension Cucumber: @retroactive StepImplementation {
             #expect(step.keyword.contains(.then))
             #expect(World.cukes == count)
         }
+        // Regex literals: numbered, named and optional captures, the Step, async and a capture list.
+        #Given(#/^I have (\d+) cukes from "(?<city>\w+)"$/#) { (count: Substring, city: Substring) in
+            #expect(city == "Lisbon")
+            World.cukes = Int(count) ?? -1
+        }
+        #When(#/^I eat (\d+) cukes? with a regex( quickly)?$/#) { (count: Substring, quickly: Substring?) async in
+            await Task.yield()
+            #expect((quickly == nil) == (World.cukes == 4))
+            World.cukes -= Int(count) ?? 0
+        }
+        #Then(#/^the regex step sees (\d+) cukes$/#) { (count: Substring, step: Step) in
+            #expect(step.keyword.contains(.then))
+            #expect(World.cukes == Int(count))
+        }
+        #Then(#/^(\d+) cukes are left in a weak regex step$/#) { [weak self] (count: Substring) async throws in
+            #expect(self != nil)
+            #expect(World.cukes == Int(count))
+        }
     }
 
     /// CucumberSwift's plain DSL, which the macros expand to.
