@@ -131,7 +131,7 @@ The first time you build a macro, Xcode asks you to trust and enable it. A clean
 
 ## Convert existing step definitions
 
-A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and lists each one it leaves, with the reason:
+A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and marks and lists each one it leaves, with the reason:
 
 ```swift
 // Before
@@ -153,22 +153,41 @@ In Terminal, run `swift package convert-to-gherkin-macros` in the package's fold
 
 It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
 
+### Regex literals
+
+The macros take a string, so a step definition with a regex literal, such as `Given(#/^I have (\d+) cukes$/#)`, becomes one with the string regular expression that CucumberSwift also reads, `"^I have (\\d+) cukes$"`. A pattern that doesn't start with `^` and end with `$` is wrapped in them, as `"^(?:…)$"`, because a regex literal has to match the whole step. Its closure reads each capture group in its first statements, in any order, as `let count = match.1` or `let box: Substring = match.output.2`, and those statements become the closure's arguments. The arguments are `String`, where `match.1` was a `Substring`: the compiler flags any use that needs a `Substring`.
+
+Swift's `Regex` and the string regular expression don't read every pattern alike, so the command converts only what both read the same way: not a named group, an option such as `(?i)`, `\p{…}`, `\u{…}`, a back reference, a POSIX class or a character class operation, nor a capture group inside another. It leaves those as they are, with the reason.
+
+### What it leaves
+
 It leaves a step definition unchanged, and lists it with its reason, when:
 
 - its closure passes `match` on to other code, reads `match.allParameters`, or reads a parameter after other code;
 - it reads parameters in an order other than the pattern's, or reads a parameter type the pattern has once by position, or one it has more than once with `first`;
-- its pattern is a regex literal, is not a string literal, or has a mistake the macro would report;
+- its pattern is not a string literal or a regex literal it can convert, or has a mistake the macro would report;
 - its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
 - it declares a type other than the one the pattern gives, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
 - the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
 - the file imports neither CucumberSwift nor CucumberSwiftTesting, or both, or uses a localized step definition with CucumberSwiftTesting, which has no localized macros.
+
+It puts a `#warning` before each one that stands alone as a statement, so the compiler points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
+
+```swift
+#warning("Convert to Gherkin Macros by hand: it passes match on to other code")
+When("I pass match on") { match, _ in
+    …
+}
+```
+
+Running the command again doesn't add a second warning, and a warning goes when you delete it. If your build treats warnings as errors, convert or delete these first. A call that may not be a step definition, because the file declares something with the keyword's name, gets no warning.
 
 It prints a line for each step definition it found, with the file's absolute path and line, and a total:
 
 ```
 /Users/me/MyApp/Tests/MyAppTests/Steps.swift:7: converted Given("I have {int} cukes in my {string}")
 /Users/me/MyApp/Tests/MyAppTests/Steps.swift:12: left unchanged When("I pass match on"): it passes match on to other code
-Converted 1 step definition in 1 of 4 Swift files. Left 1 unchanged.
+Converted 1 step definition in 1 of 4 Swift files. Left 1 unchanged, 1 marked with #warning.
 ```
 
 Review the result with your version control before you commit it, and build your tests: a macro reports a mistake the original only found when the tests ran.

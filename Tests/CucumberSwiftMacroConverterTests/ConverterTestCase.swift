@@ -8,6 +8,9 @@ import XCTest
 
 /// What the converter's tests share: the source they convert, and the two outcomes they check.
 class ConverterTestCase: XCTestCase {
+    /// What the converter writes before a step definition it leaves.
+    static let marker = "#warning(\"Convert to Gherkin Macros by hand: "
+
     let header = """
         import CucumberSwift
         import CucumberSwiftMacros
@@ -42,10 +45,14 @@ class ConverterTestCase: XCTestCase {
     func assertLeftUnchanged(_ source: String,
                              because reason: String,
                              header: String? = nil,
+                             marked: Bool = true,
                              file: StaticString = #filePath,
                              line: UInt = #line) {
         let result = convert(source, header: header)
-        XCTAssertEqual(result.source, (header ?? self.header) + source, file: file, line: line)
+        let lines = result.source.components(separatedBy: "\n")
+        let withoutMarkers = lines.filter { !$0.contains(Self.marker) }.joined(separator: "\n")
+        XCTAssertEqual(withoutMarkers, (header ?? self.header) + source, file: file, line: line)
+        XCTAssertEqual(lines.count - withoutMarkers.components(separatedBy: "\n").count, marked ? 1 : 0, file: file, line: line)
         XCTAssertEqual(result.converted, [], file: file, line: line)
         XCTAssertEqual(result.leftUnchanged.count, 1, file: file, line: line)
         let actual = result.leftUnchanged.first?.reason ?? "no reason"

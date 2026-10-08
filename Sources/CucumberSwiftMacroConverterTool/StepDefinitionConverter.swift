@@ -25,7 +25,8 @@ public enum StepDefinitionConverter {
 
     public struct Result {
         /// The source with every step definition it could convert rewritten, and the macros' module
-        /// imported. Exactly the source given when nothing was converted.
+        /// imported, and a `#warning` before each step definition it left that stands alone as a statement.
+        /// Exactly the source given when nothing changed.
         public let source: String
         public let converted: [Entry]
         public let leftUnchanged: [Entry]
@@ -45,7 +46,8 @@ public enum StepDefinitionConverter {
         if !rewriter.converted.isEmpty, let runner = runner.found, !runner.importsMacros {
             rewritten = ImportAdder(after: runner.module, adding: runner.macrosModule).rewrite(rewritten).cast(SourceFileSyntax.self)
         }
-        return Result(source: rewriter.converted.isEmpty ? source : rewritten.description,
+        let changed = !rewriter.converted.isEmpty || rewritten.description != source
+        return Result(source: changed ? rewritten.description : source,
                       converted: rewriter.converted,
                       leftUnchanged: rewriter.leftUnchanged)
     }

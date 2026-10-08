@@ -73,7 +73,7 @@ final class MacroConversionTests: XCTestCase {
         XCTAssertTrue(run.output.contains("\(missing): no such file or folder"), run.output)
     }
 
-    func testOnlyAFileThatConvertedIsWritten() throws {
+    func testMarksAStepDefinitionItLeavesAndWritesOnlyAFileThatChanged() throws {
         let unchangeable = """
             import CucumberSwift
 
@@ -81,16 +81,31 @@ final class MacroConversionTests: XCTestCase {
                 use(match)
             }
             """
-        let kept = try write(unchangeable, to: "Kept.swift")
+        let marked = try write(unchangeable, to: "Marked.swift")
         let other = try write("let value = 1\n", to: "Other.swift")
-        let before = try FileManager.default.attributesOfItem(atPath: kept.path)[.modificationDate] as? Date
+        let before = try FileManager.default.attributesOfItem(atPath: other.path)[.modificationDate] as? Date
         let run = try ConverterTool.run([folder.path])
         XCTAssertEqual(run.status, 0)
-        XCTAssertEqual(try read(kept), unchangeable)
+        XCTAssertEqual(try read(marked), """
+            import CucumberSwift
+
+            #warning("Convert to Gherkin Macros by hand: it passes match on to other code")
+            Given("I have {int} cukes") { match, _ in
+                use(match)
+            }
+            """)
         XCTAssertEqual(try read(other), "let value = 1\n")
-        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: kept.path)[.modificationDate] as? Date, before)
+        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: other.path)[.modificationDate] as? Date, before)
         XCTAssertTrue(run.output.contains("left unchanged Given(\"I have {int} cukes\"): it passes match on to other code"), run.output)
-        XCTAssertTrue(run.output.hasSuffix("Converted 0 step definitions in 0 of 2 Swift files. Left 1 unchanged.\n"), run.output)
+        XCTAssertTrue(run.output.hasSuffix("Converted 0 step definitions in 1 of 2 Swift files. Left 1 unchanged, 1 marked with #warning.\n"), run.output)
+    }
+
+    func testDryRunSaysHowManyItWouldMarkAndChangesNothing() throws {
+        let source = convertible.replacingOccurrences(of: "use(count)", with: "use(match)")
+        let steps = try write(source, to: "Steps.swift")
+        let run = try ConverterTool.run(["--dry-run", folder.path])
+        XCTAssertEqual(try read(steps), source)
+        XCTAssertTrue(run.output.hasSuffix("Would convert 0 step definitions in 1 of 1 Swift file. Left 1 unchanged, 1 to mark with #warning.\n"), run.output)
     }
 
     func testSkipsBuildAndDependencyFolders() throws {

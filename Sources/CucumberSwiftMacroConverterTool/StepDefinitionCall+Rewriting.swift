@@ -78,8 +78,9 @@ extension StepDefinitionCall {
             .with(\.trailingTrivia, old?.trailingTrivia ?? .space)))
     }
 
-    func makeMacro(closure: ClosureExprSyntax) -> MacroExpansionExprSyntax {
+    func makeMacro(closure: ClosureExprSyntax, pattern: StringLiteralExprSyntax?) -> MacroExpansionExprSyntax {
         var arguments = Array(call.arguments)
+        if let pattern { arguments[0] = arguments[0].with(\.expression, ExprSyntax(pattern)) }
         if call.trailingClosure == nil, arguments.count == 2 {
             // `Given("…", callback: { … })` becomes `#Given("…", { … })`, as the macros don't label it.
             let label = arguments[1].label

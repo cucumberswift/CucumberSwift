@@ -4,13 +4,19 @@
 //
 
 #if Macros
+import SwiftParser
 import SwiftSyntax
 
 final class Rewriter: SyntaxRewriter {
+    /// What a marker starts with, which also tells that a step definition has one already.
+    static let markerPrefix = "Convert to Gherkin Macros by hand: "
+
     private let runner: Runner
     private let converter: SourceLocationConverter
     private(set) var converted = [StepDefinitionConverter.Entry]()
     private(set) var leftUnchanged = [StepDefinitionConverter.Entry]()
+    /// Why each step definition that stands alone as a statement stays unchanged, by the original call's identity.
+    private var markers = [SyntaxIdentifier: String]()
 
     /// The keyword, when the call looks like a step definition: a keyword, a first argument without a
     /// label, and a closure or function to call. `Given(I: …)` in the DSL is not one.
@@ -69,10 +75,39 @@ final class Rewriter: SyntaxRewriter {
         return false
     }
 
+    private static func marker(reason: String) -> CodeBlockItemSyntax? {
+        let escaped = (markerPrefix + reason).replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let parsed = Parser.parse(source: "#warning(\"\(escaped)\")")
+        guard !parsed.hasError else { return nil }
+        return parsed.statements.first
+    }
+
     init(runner: Runner, converter: SourceLocationConverter) {
         self.runner = runner
         self.converter = converter
         super.init(viewMode: .sourceAccurate)
+    }
+
+    /// Puts a `#warning` before each step definition the converter left, so the compiler points to it.
+    override func visit(_ node: CodeBlockItemListSyntax) -> CodeBlockItemListSyntax {
+        let rewritten = Array(super.visit(node))
+        guard !markers.isEmpty, rewritten.count == node.count else { return CodeBlockItemListSyntax(rewritten) }
+        var items = [CodeBlockItemSyntax]()
+        var previous: CodeBlockItemSyntax?
+        for (original, item) in zip(node, rewritten) {
+            defer { previous = original }
+            guard let call = original.item.as(FunctionCallExprSyntax.self), let reason = markers[call.id],
+                  previous?.description.contains(Self.markerPrefix) != true,
+                  let marker = Self.marker(reason: reason) else {
+                items.append(item)
+                continue
+            }
+            // The marker takes the call's place, with its comments above it, and the call follows on the next line.
+            let indentation = StepDefinitionCall.indentation(of: item.leadingTrivia)
+            items.append(marker.with(\.leadingTrivia, item.leadingTrivia))
+            items.append(item.with(\.leadingTrivia, Trivia(pieces: [.newlines(1)] + indentation)))
+        }
+        return CodeBlockItemListSyntax(items)
     }
 
     override func visit(_ node: FunctionCallExprSyntax) -> ExprSyntax {
@@ -94,6 +129,7 @@ final class Rewriter: SyntaxRewriter {
             return ExprSyntax(macro)
         } catch let problem as Unconvertible {
             leftUnchanged.append(.init(line: line, stepDefinition: description, reason: problem.reason))
+            if node.parent?.is(CodeBlockItemSyntax.self) == true { markers[node.id] = problem.reason }
             return visited
         } catch {
             return visited

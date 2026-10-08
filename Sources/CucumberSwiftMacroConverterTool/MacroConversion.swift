@@ -30,6 +30,7 @@ public enum MacroConversion {
 
         var totalConverted = 0
         var totalLeft = 0
+        var totalMarked = 0
         var changedFiles = 0
         for file in files {
             guard let source = try? String(contentsOfFile: file, encoding: .utf8) else {
@@ -44,7 +45,8 @@ public enum MacroConversion {
             }
             totalConverted += result.converted.count
             totalLeft += result.leftUnchanged.count
-            guard !result.converted.isEmpty else { continue }
+            guard result.source != source else { continue }
+            totalMarked += Self.markers(in: result.source) - Self.markers(in: source)
             changedFiles += 1
             if !dryRun {
                 do {
@@ -56,9 +58,14 @@ public enum MacroConversion {
             }
         }
         let verb = dryRun ? "Would convert" : "Converted"
+        let marked = totalMarked == 0 ? "" : ", \(totalMarked) \(dryRun ? "to mark" : "marked") with #warning"
         output("\(verb) \(totalConverted) step definition\(totalConverted == 1 ? "" : "s") in \(changedFiles) of \(files.count) Swift file\(files.count == 1 ? "" : "s"). "
-            + "Left \(totalLeft) unchanged.")
+            + "Left \(totalLeft) unchanged\(marked).")
         return failed ? 1 : 0
+    }
+
+    private static func markers(in source: String) -> Int {
+        source.components(separatedBy: Rewriter.markerPrefix).count - 1
     }
 
     /// Reads one file's source from standard input, writes the converted source to standard output and the

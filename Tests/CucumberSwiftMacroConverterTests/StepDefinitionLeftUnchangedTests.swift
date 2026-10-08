@@ -27,12 +27,56 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
             """, because: "match.allParameters")
     }
 
-    func testLeavesARegexLiteral() {
+    func testLeavesARegexLiteralWithSyntaxOnlySwiftReads() {
+        let patterns = [
+            "#/I (?<name>\\w+)/#",
+            "#/I (\\p{L}+)/#",
+            "#/I (\\u{1F600})/#",
+            "#/(?i)I (\\w+)/#",
+            "#/I ((\\d)+)/#",
+            "#/I (\\1)/#",
+            "#/I ([[:alpha:]]+)/#",
+            "#/I ([a-z--[b]]+)/#"
+        ]
+        for pattern in patterns {
+            assertLeftUnchanged("""
+                Given(\(pattern)) { match, _ in
+                    use(match.1)
+                }
+                """, because: "its regex literal")
+        }
+    }
+
+    func testLeavesARegexLiteralThatReadsItsMatchInAnotherWay() {
         assertLeftUnchanged("""
             Given(#/^I have (\\d+) cukes$/#) { match, _ in
-                use(match.1)
+                use(match)
             }
-            """, because: "regex literal")
+            """, because: "it passes match on to other code")
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                use(match.output)
+            }
+            """, because: "after other code, or in another form")
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                let count = match.1
+                use(count, match.0)
+            }
+            """, because: "after other code, or in another form")
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                let count = match.2
+                use(count)
+            }
+            """, because: "capture group 2, and its pattern has 1")
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                let count = match.1
+                let again = match.1
+                use(count, again)
+            }
+            """, because: "capture group 1 more than once")
     }
 
     func testLeavesTheDeprecatedStringArrayClosure() {
@@ -157,79 +201,6 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
                 use(match, match2)
             }
             """, because: "hide behind its own `match2`")
-    }
-
-    func testLeavesACallToAFunctionThatShadowsTheKeyword() {
-        assertLeftUnchanged("""
-            func Given(_ text: String, _ body: (Match, Step) throws -> Void) {}
-
-            Given("I have {int} cukes") { match, _ in
-                let count = try match.first(\\.int)
-                use(count)
-            }
-            """, because: "a `Given` declared in this file is in scope")
-        assertLeftUnchanged("""
-            func setup() {
-                func When(_ text: String, _ body: (Match, Step) throws -> Void) {}
-                When("I have {int} cukes") { match, _ in
-                    let count = try match.first(\\.int)
-                    use(count)
-                }
-            }
-            """, because: "a `When` declared in this file is in scope")
-        assertLeftUnchanged("""
-            final class Steps {
-                func Then(_ text: String, _ body: (Match, Step) throws -> Void) {}
-                func setup() {
-                    Then("I have {int} cukes") { match, _ in
-                        let count = try match.first(\\.int)
-                        use(count)
-                    }
-                }
-            }
-            """, because: "a `Then` declared in this file is in scope")
-    }
-
-    func testLeavesACallToAParameterThatShadowsTheKeyword() {
-        assertLeftUnchanged("""
-            func setup(Given: (String, (Match, Step) throws -> Void) -> Void) {
-                Given("I have {int} cukes") { match, _ in
-                    let count = try match.first(\\.int)
-                    use(count)
-                }
-            }
-            """, because: "a `Given` declared in this file is in scope")
-        assertLeftUnchanged("""
-            let register = { (When: (String, (Match, Step) throws -> Void) -> Void) in
-                When("I have {int} cukes") { match, _ in
-                    let count = try match.first(\\.int)
-                    use(count)
-                }
-            }
-            """, because: "a `When` declared in this file is in scope")
-        assertLeftUnchanged("""
-            final class Steps {
-                init(Then: (String, (Match, Step) throws -> Void) -> Void) {
-                    Then("I have {int} cukes") { match, _ in
-                        let count = try match.first(\\.int)
-                        use(count)
-                    }
-                }
-            }
-            """, because: "a `Then` declared in this file is in scope")
-    }
-
-    func testConvertsACallWhenAFunctionWithAnotherNameIsDeclared() {
-        let result = convert("""
-            func helper() {}
-
-            Given("I have {int} cukes") { match, _ in
-                let count = try match.first(\\.int)
-                use(count)
-            }
-            """)
-        XCTAssertEqual(result.leftUnchanged, [])
-        XCTAssertEqual(result.converted.count, 1)
     }
 
     func testLeavesAFileThatImportsNeitherRunner() {

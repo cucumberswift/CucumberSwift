@@ -28,6 +28,14 @@ struct StepDefinitionCall {
         let type: TypeSyntax?
     }
 
+    /// The step definition's arguments, checked.
+    struct Arguments {
+        let pattern: StepPattern
+        let closure: ClosureExprSyntax
+        /// The string regular expression that replaces a regex literal, or `nil` for a pattern that is a string already.
+        let replacement: StringLiteralExprSyntax?
+    }
+
     let call: FunctionCallExprSyntax
     let keyword: String
     let runner: Runner
@@ -43,11 +51,15 @@ struct StepDefinitionCall {
         if StepDefinitionConverter.localizedNames.contains(keyword), !found.hasLocalizedMacros {
             throw Unconvertible(reason: "\(found.macrosModule) has no localized macros")
         }
-        let (pattern, closure) = try arguments()
+        let arguments = try arguments()
+        let (pattern, closure) = (arguments.pattern, arguments.closure)
+        let isRegexLiteral = arguments.replacement != nil
         let parameters = try closureParameters(closure)
-        let reads = try self.reads(in: closure, match: parameters.match, pattern: pattern)
+        let reads = isRegexLiteral
+            ? try regexReads(in: closure, match: parameters.match, pattern: pattern)
+            : try self.reads(in: closure, match: parameters.match, pattern: pattern)
         let rest = closure.statements.dropFirst(reads.count)
-        try checkTheRest(rest, match: parameters.match)
+        try checkTheRest(rest, match: parameters.match, isRegexLiteral: isRegexLiteral)
 
         var clause = [String]()
         var names = [String]()
@@ -76,12 +88,12 @@ struct StepDefinitionCall {
         }
 
         let newClosure = try rewritten(closure, parameters: clause, droppingReads: reads.count)
-        return makeMacro(closure: newClosure)
+        return makeMacro(closure: newClosure, pattern: arguments.replacement)
     }
 
     // MARK: Arguments
 
-    private func arguments() throws -> (StepPattern, ClosureExprSyntax) {
+    private func arguments() throws -> Arguments {
         let arguments = Array(call.arguments)
         let labels = arguments.dropFirst().compactMap { $0.label?.text }
         if labels.contains("class") {
@@ -91,10 +103,16 @@ struct StepDefinitionCall {
             throw Unconvertible(reason: "it passes `\(other):`, which the macros don't take")
         }
         let expression = arguments[0].expression
-        if expression.is(RegexLiteralExprSyntax.self) {
-            throw Unconvertible(reason: "its pattern is a regex literal, and the macros take a string")
-        }
-        guard let literal = expression.as(StringLiteralExprSyntax.self), let text = literal.representedLiteralValue else {
+        var replacement: StringLiteralExprSyntax?
+        let text: String
+        if let regex = expression.as(RegexLiteralExprSyntax.self) {
+            // The macros take a string, so a regex literal becomes the string regular expression CucumberSwift also reads.
+            let string = try RegexLiteralPattern.stringLiteral(for: regex)
+            replacement = string
+            text = string.representedLiteralValue ?? ""
+        } else if let literal = expression.as(StringLiteralExprSyntax.self), let value = literal.representedLiteralValue {
+            text = value
+        } else {
             throw Unconvertible(reason: "its pattern isn't a string literal")
         }
         let pattern: StepPattern
@@ -107,7 +125,7 @@ struct StepDefinitionCall {
         guard let closure = body?.as(ClosureExprSyntax.self), call.additionalTrailingClosures.isEmpty else {
             throw Unconvertible(reason: "it passes a function, and the macros take a closure")
         }
-        return (pattern, closure)
+        return Arguments(pattern: pattern, closure: closure, replacement: replacement)
     }
 
     // MARK: The closure's parameters

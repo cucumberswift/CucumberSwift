@@ -181,10 +181,12 @@ let package = Package(
             ]),
         .testTarget(
             name: "CucumberSwiftMacroConverterTests",
-            // The macros, to check that what the converter writes expands to the step definition it replaced.
+            // The macros, to check that what the converter writes expands to the step definition it replaced,
+            // and the expressions, to check that a regex literal's string regular expression matches alike.
             // Not the converter: see the tool's comment.
             dependencies: [
                 "CucumberSwiftMacrosPlugin",
+                "CucumberSwiftExpressions",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
             ]),
         .testTarget(

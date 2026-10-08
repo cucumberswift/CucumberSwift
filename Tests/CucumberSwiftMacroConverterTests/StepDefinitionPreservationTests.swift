@@ -139,7 +139,9 @@ final class StepDefinitionPreservationTests: ConverterTestCase {
                 use(match)
             }
             """
-        XCTAssertEqual(convert(source: source).source, source)
+        let result = convert(source: source)
+        XCTAssertEqual(result.converted, [])
+        XCTAssertFalse(result.source.contains("import CucumberSwiftMacros"))
     }
 
     func testALocalizedStepDefinitionIsLeftUnchangedForTheSwiftTestingRunner() {

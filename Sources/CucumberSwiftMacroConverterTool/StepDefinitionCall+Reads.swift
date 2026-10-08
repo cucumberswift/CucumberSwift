@@ -111,7 +111,7 @@ extension StepDefinitionCall {
         return declared
     }
 
-    func checkTheRest(_ rest: some Sequence<CodeBlockItemSyntax>, match: Parameter) throws {
+    func checkTheRest(_ rest: some Sequence<CodeBlockItemSyntax>, match: Parameter, isRegexLiteral: Bool = false) throws {
         guard match.name != "_" else { return }
         let uses = rest.flatMap { References(of: match.name).uses(in: Syntax($0)) }
         guard let use = uses.first else { return }
@@ -124,6 +124,10 @@ extension StepDefinitionCall {
         if Self.isMember(use, named: "first") || use.parent?.is(SubscriptCallExprSyntax.self) == true {
             throw Unconvertible(reason: "it reads a parameter of \(match.name) after other code, or not with let, "
                 + "and the macro reads every parameter before the closure's code")
+        }
+        if isRegexLiteral, use.parent?.is(MemberAccessExprSyntax.self) == true {
+            throw Unconvertible(reason: "it reads \(match.name) after other code, or in another form than `let name = \(match.name).1`, "
+                + "and the macro reads every capture group before the closure's code")
         }
         throw Unconvertible(reason: "it passes \(match.name) on to other code")
     }
