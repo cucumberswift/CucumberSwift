@@ -92,9 +92,6 @@ MARKER_START = "<!--"
 MARKER_NAME = "swift-example:"
 MARKER_END = "-->"
 NOT_FOLLOWED = "a swift-example marker must be followed by a ```swift block"
-# A fenced code block, as CommonMark defines it: three or more backticks or tildes, then the
-# language. It ends at a line of the same character, at least as long, and nothing else.
-FENCE_OPEN = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^`]*)$")
 IMPORT = re.compile(r"^\s*(?:@\w+\s+)*import\s+(?P<module>\w+)", re.MULTILINE)
 CONFORMANCE = re.compile(r"extension\s+Cucumber\s*:\s*(?:@retroactive\s+)?StepImplementation\b")
 TESTING_MODULES = {"CucumberSwiftTesting", "CucumberSwiftTestingMacros"}
@@ -158,11 +155,26 @@ def parse_marker(body, location):
     return words[0], words[1:], None
 
 
+def open_fence(line):
+    """The indent, fence and info string of a line that opens a fenced code block, as
+    CommonMark defines it: up to three spaces, three or more backticks or tildes, then the
+    language. None for any other line."""
+    rest = line.lstrip(" ")
+    indent = line[:len(line) - len(rest)]
+    if len(indent) > 3 or not rest or rest[0] not in "`~":
+        return None
+    mark = rest[:len(rest) - len(rest.lstrip(rest[0]))]
+    info = rest[len(mark):]
+    if len(mark) < 3 or (mark[0] == "`" and "`" in info):
+        return None
+    return {"indent": indent, "fence": mark, "info": info}
+
+
 def read_fence(lines, index, fence):
     """The lines inside the fenced block that opens at lines[index], without its indent, and
     the index of its closing line, or len(lines) when it is never closed."""
-    indent = fence.group("indent")
-    mark = fence.group("fence")
+    indent = fence["indent"]
+    mark = fence["fence"]
     close = re.compile(rf"^ {{0,3}}{re.escape(mark[0])}{{{len(mark)},}}\s*$")
     body = []
     index += 1
@@ -196,7 +208,7 @@ def fenced_example(path, lines, index, fence, pending):
     Swift, and the index of the block's closing line."""
     start = index + 1
     body, index = read_fence(lines, index, fence)
-    if fence.group("info").strip().split(" ")[0].lower() != "swift":
+    if fence["info"].strip().split(" ")[0].lower() != "swift":
         if pending:
             raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")
         return None, index
@@ -214,7 +226,7 @@ def blocks_in_article(path, text):
     pending = None  # (kind, options, reason, line) of a marker waiting for its fence
     while index < len(lines):
         body = marker_body(lines[index])
-        fence = FENCE_OPEN.match(lines[index])
+        fence = open_fence(lines[index])
         if body is not None:
             if pending:
                 raise ExampleError(f"{path}:{pending[3]}: {NOT_FOLLOWED}")

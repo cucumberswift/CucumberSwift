@@ -65,6 +65,13 @@ class BlocksInArticleTests(unittest.TestCase):
                          ["let a = 1\n```\nlet b = 2\n", "let c = 3\n"])
         self.assertEqual([e.line for e in examples], [1, 6])
 
+    def test_only_a_fence_opens_a_block(self):
+        self.assertEqual(docs_examples.open_fence("  ````swift "),
+                         {"indent": "  ", "fence": "````", "info": "swift "})
+        for line in ["``swift", "    ```swift", "```swift `x`", "text ```swift", ""]:
+            with self.subTest(line=line):
+                self.assertIsNone(docs_examples.open_fence(line))
+
     def test_a_swift_fence_inside_another_block_is_not_an_example(self):
         self.assertEqual(docs_examples.blocks_in_article("A.md", article(
             "````markdown", "```swift", "not code", "```", "````")), [])
