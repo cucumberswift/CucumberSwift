@@ -90,7 +90,12 @@ final class EveryGherkinLanguageTests: LintTestCase {
               let object = try? JSONSerialization.jsonObject(with: Data(source[start.upperBound..<end.lowerBound].utf8)),
               let json = object as? [String: Any] else { return [] }
         return json.compactMap { code, value -> Language? in
-            guard let language = value as? [String: Any], language["feature"] != nil else { return nil }
+            // Besides the languages, the data has a "title" and an empty "properties".
+            guard let language = value as? [String: Any], code != "properties" else { return nil }
+            guard language["feature"] != nil else {
+                XCTFail("Language '\(code)' has no Feature keywords")
+                return nil
+            }
             return Language(code: code, keywords: language.compactMapValues { $0 as? [String] })
         }
         .sorted { $0.code < $1.code }
@@ -115,7 +120,6 @@ final class EveryGherkinLanguageTests: LintTestCase {
         let features = headers("feature", .feature)
         let backgrounds = headers("background", .background)
         let scenarios = headers("scenario", .scenario)
-        let examples = headers("examples", .examples)
         let stepForms = Set(stepKeys.flatMap(language.forms))
         let steps = stepForms
             .filter { keywords.line($0 + "x") == .step(keyword: $0.trimmingCharacters(in: .whitespaces)) }
@@ -124,12 +128,15 @@ final class EveryGherkinLanguageTests: LintTestCase {
         let oneWord = stepForms.filter { $0.last == " " && !$0.trimmingCharacters(in: .whitespaces).contains(" ") }
         XCTAssertEqual(steps, oneWord.sorted(), language.code)
         let given = try XCTUnwrap(steps.first, "No step keyword in '\(language.code)'")
-        XCTAssertFalse(scenarios.isEmpty, "No Scenario keyword in '\(language.code)'")
+        // Each file needs a Feature, a Background and a Scenario: fail rather than build none.
+        for (kind, forms) in [("Feature", features), ("Background", backgrounds), ("Scenario", scenarios)] {
+            _ = try XCTUnwrap(forms.first, "No \(kind) keyword in '\(language.code)'")
+        }
         XCTAssertNil(keywords.line(description), language.code)
         let body = Body(
             scenarios: scenarios,
             outlines: headers("scenarioOutline", .scenarioOutline),
-            examples: examples,
+            examples: headers("examples", .examples),
             rules: headers("rule", .rule),
             steps: steps
         )
