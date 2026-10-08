@@ -80,6 +80,7 @@ class KindTests(unittest.TestCase):
             ".github/scripts/release.py",
             ".github/scripts/test_release.py",
             ".github/scripts/test_check_lockfiles.py",
+            ".github/scripts/test_gherkin_highlighting.py",
             ".github/scripts/publish-docs.sh",
         ]:
             with self.subTest(path=path):
@@ -134,6 +135,14 @@ class SummaryTests(unittest.TestCase):
         for paths in [["README.md"], ["Sources/CucumberSwift/Hooks.swift"], ["docs.docc"]]:
             with self.subTest(paths=paths):
                 self.assertFalse(docs_only.summary(paths)["catalog"])
+
+    def test_docs_that_script_tests_checks_are_not_docs_only(self):
+        for paths in [
+            [f"{CATALOG}/Running-Tests-In-Xcode.md"],
+            ["README.md", f"{CATALOG}/Running-Tests-In-Xcode.md"],
+        ]:
+            with self.subTest(paths=paths):
+                self.assertEqual(docs_only.summary(paths), self.outputs(False, False, True, True))
 
     def test_only_linux_scripts_is_scripts_only(self):
         self.assertEqual(docs_only.summary([".github/scripts/release.py", ".github/scripts/test_release.py"]),

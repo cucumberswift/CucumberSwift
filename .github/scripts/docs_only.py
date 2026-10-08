@@ -23,7 +23,9 @@ such as xcode-test.sh, select-xcode.sh, parallel-fixture.sh or check_lockfiles.p
 On a run with no code, CI and CodeQL skip the macOS jobs that build and test
 code. On a docs-only run, CI also skips Script tests; on a scripts-only run, it
 also skips the Docs job. A run with no code that changes a DocC catalog still
-compiles the catalog's Swift examples, in the SwiftPM tests job.
+compiles the catalog's Swift examples, in the SwiftPM tests job. A run that
+changes documentation Script tests checks, listed in SCRIPT_TESTED_DOCS, is not
+docs-only, so Script tests runs.
 
 Which files a run changes depends on its event:
 
@@ -69,7 +71,13 @@ LINUX_SCRIPTS = {
     ".github/scripts/release.py",
     ".github/scripts/test_release.py",
     ".github/scripts/test_check_lockfiles.py",
+    ".github/scripts/test_gherkin_highlighting.py",
     ".github/scripts/publish-docs.sh",
+}
+# The documentation that Script tests checks: test_gherkin_highlighting.py reads
+# this article. A run changing it is not docs-only, so Script tests runs.
+SCRIPT_TESTED_DOCS = {
+    "Sources/CucumberSwift/CucumberSwift.docc/Running-Tests-In-Xcode.md",
 }
 # A full commit SHA, SHA-1 or SHA-256. Anything else in the event never reaches git.
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
@@ -109,7 +117,7 @@ def summary(paths):
     """The outputs for these changed files. No files counts as code."""
     kinds = {kind(path) for path in paths}
     return {
-        "docs_only": kinds == {"docs"},
+        "docs_only": kinds == {"docs"} and not SCRIPT_TESTED_DOCS.intersection(paths),
         "scripts_only": kinds == {"script"},
         "no_code": bool(kinds) and "code" not in kinds,
         "catalog": not paths or any(in_catalog(path) for path in paths),

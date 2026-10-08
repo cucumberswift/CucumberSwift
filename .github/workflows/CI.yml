@@ -251,7 +251,9 @@ jobs:
 
   # The tests of the Python scripts in .github/scripts: the release script, the
   # lockfile check and the docs-only check. Runs on scripts-only runs too, where
-  # it is the only check of the change besides Workflow checks.
+  # it is the only check of the change besides Workflow checks. It also tests the
+  # Gherkin highlighting for Xcode in Tools/Xcode against the article that
+  # documents it, so it checks those out as well.
   script_tests:
     name: Script tests
     needs: changes
@@ -264,11 +266,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The DocC catalog and the stubs too, which test_docs_examples.py reads.
+          # The DocC catalog and the stubs too, which test_docs_examples.py reads,
+          # and the Gherkin highlighting for Xcode, which test_gherkin_highlighting.py
+          # checks against the catalog's "Running Tests in Xcode" article.
           sparse-checkout: |
             .github/scripts
             Sources/CucumberSwift/CucumberSwift.docc
             Tests/DocumentationExamples
+            Tools/Xcode
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 
