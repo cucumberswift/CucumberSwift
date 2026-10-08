@@ -16,6 +16,7 @@ It needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later
 
 Add the plugin to the test target that has the feature files:
 
+<!-- swift-example: package-target -->
 ```swift
 .testTarget(
     name: "MyAppTests",

@@ -48,6 +48,7 @@ extension Cucumber: StepImplementation {
 ### Async hooks
 A hook can be `async` and `throws`. Write `await` in its closure:
 
+<!-- swift-example: steps -->
 ```swift
 BeforeScenario { scenario in
     try await server.reset()
@@ -63,6 +64,7 @@ Set `lifetime` to `.keepAlways`, because Xcode deletes an attachment when the te
 
 **In a UI test target**, attach a screenshot of the screen:
 
+<!-- swift-example: steps -->
 ```swift
 AfterScenario { scenario in
     let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -76,6 +78,7 @@ AfterScenario { scenario in
 
 **In a unit test bundle** (for example with UIUTest), attach a view you render yourself, or text or data:
 
+<!-- swift-example: fragment: uses UIKit, which a macOS build doesn't have -->
 ```swift
 AfterScenario { scenario in
     let image = UIGraphicsImageRenderer(bounds: view.bounds).image { context in
