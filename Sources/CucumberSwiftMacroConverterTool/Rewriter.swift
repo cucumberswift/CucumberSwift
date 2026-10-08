@@ -23,8 +23,9 @@ final class Rewriter: SyntaxRewriter {
         return name
     }
 
-    /// Whether a function, variable or type called `name` is declared where the call is: in a block that
-    /// contains it, or in a type that contains it, in this file.
+    /// Whether a function, variable, type or parameter called `name` is declared where the call is: in a block
+    /// that contains it, in a type that contains it, or as a parameter of a function or closure that contains
+    /// it, in this file.
     private static func isShadowed(_ name: String, around node: some SyntaxProtocol) -> Bool {
         var ancestor = Syntax(node).parent
         while let current = ancestor {
@@ -34,9 +35,25 @@ final class Rewriter: SyntaxRewriter {
             if let members = current.as(MemberBlockItemListSyntax.self), members.contains(where: { declares(name, Syntax($0.decl)) }) {
                 return true
             }
+            if hasParameter(named: name, current) { return true }
             ancestor = current.parent
         }
         return false
+    }
+
+    /// Whether the function, initializer or closure takes a parameter called `name`.
+    private static func hasParameter(named name: String, _ node: Syntax) -> Bool {
+        func contains(_ clause: FunctionParameterClauseSyntax) -> Bool {
+            clause.parameters.contains { ($0.secondName ?? $0.firstName).text == name }
+        }
+        if let function = node.as(FunctionDeclSyntax.self) { return contains(function.signature.parameterClause) }
+        if let initializer = node.as(InitializerDeclSyntax.self) { return contains(initializer.signature.parameterClause) }
+        guard let closure = node.as(ClosureExprSyntax.self) else { return false }
+        switch closure.signature?.parameterClause {
+            case .simpleInput(let list): return list.contains { $0.name.text == name }
+            case .parameterClause(let clause): return clause.parameters.contains { ($0.secondName ?? $0.firstName).text == name }
+            case nil: return false
+        }
     }
 
     private static func declares(_ name: String, _ item: some SyntaxProtocol) -> Bool {

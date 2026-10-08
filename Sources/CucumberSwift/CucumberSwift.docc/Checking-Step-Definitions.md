@@ -160,7 +160,7 @@ It leaves a step definition unchanged, and lists it with its reason, when:
 - its pattern is a regex literal, is not a string literal, or has a mistake the macro would report;
 - its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
 - it declares a type other than the one the pattern gives, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
-- the file declares a function, variable or type with the keyword's name where the call is, so the call may not be a step definition;
+- the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
 - the file imports neither CucumberSwift nor CucumberSwiftTesting, or both, or uses a localized step definition with CucumberSwiftTesting, which has no localized macros.
 
 It prints a line for each step definition it found, with the file's absolute path and line, and a total:

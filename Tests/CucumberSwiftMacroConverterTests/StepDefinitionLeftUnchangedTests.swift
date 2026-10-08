@@ -190,6 +190,35 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
             """, because: "a `Then` declared in this file is in scope")
     }
 
+    func testLeavesACallToAParameterThatShadowsTheKeyword() {
+        assertLeftUnchanged("""
+            func setup(Given: (String, (Match, Step) throws -> Void) -> Void) {
+                Given("I have {int} cukes") { match, _ in
+                    let count = try match.first(\\.int)
+                    use(count)
+                }
+            }
+            """, because: "a `Given` declared in this file is in scope")
+        assertLeftUnchanged("""
+            let register = { (When: (String, (Match, Step) throws -> Void) -> Void) in
+                When("I have {int} cukes") { match, _ in
+                    let count = try match.first(\\.int)
+                    use(count)
+                }
+            }
+            """, because: "a `When` declared in this file is in scope")
+        assertLeftUnchanged("""
+            final class Steps {
+                init(Then: (String, (Match, Step) throws -> Void) -> Void) {
+                    Then("I have {int} cukes") { match, _ in
+                        let count = try match.first(\\.int)
+                        use(count)
+                    }
+                }
+            }
+            """, because: "a `Then` declared in this file is in scope")
+    }
+
     func testConvertsACallWhenAFunctionWithAnotherNameIsDeclared() {
         let result = convert("""
             func helper() {}
