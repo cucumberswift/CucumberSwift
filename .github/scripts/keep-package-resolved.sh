@@ -26,6 +26,7 @@ restore() {
     rm -f "$lockfile"
   fi
   rm -f "$saved"
+  return 0
 }
 # Also when the command is interrupted.
 trap restore EXIT
