@@ -580,7 +580,6 @@ def publish():
 
     # Built before the tag, so a bad archive leaves no tag behind.
     archive, integrity = source_archive(repo, version, commit)
-    archive_summary(repo, version, integrity, False, commit)
 
     # The tag: reuse it only if it points to exactly this commit.
     ref = api(f"repos/{repo}/git/ref/tags/{version}", allow=(404,))
@@ -606,6 +605,7 @@ def publish():
     else:
         print(f"The release {version} already exists. Nothing to do.")
     append("GITHUB_STEP_SUMMARY", f"Released {version} at {commit}.\n")
+    archive_summary(repo, version, integrity, False, commit)
 
 
 if __name__ == "__main__":

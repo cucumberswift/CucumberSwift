@@ -1022,6 +1022,7 @@ class DryRunTests(PlanTestCase):
         self.plan("patch")
         self.assertEqual(self.fake.processes, [])
         self.assertEqual([c for c in self.fake.calls if c[0] != "GET"], [])
+        self.assertEqual([r for r in self.fake.runs if r[0] != "git"], [])
 
     def test_a_bad_archive_fails_the_dry_run(self):
         self.fake.archive = (("BUILD.bazel", "MODULE.bazel"), SHA)
@@ -1097,7 +1098,7 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(self.fake.processes, [[
             "gh", "release", "create", "5.0.11", "--verify-tag", "--title", "Release 5.0.11",
             "--notes-file", "notes.md", "--latest=true", "docs-major.zip", "docs-root.zip", ARCHIVE]])
-        self.assertEqual(self.read(self.summary), archive_section() + f"Released 5.0.11 at {COMMIT}.\n")
+        self.assertEqual(self.read(self.summary), f"Released 5.0.11 at {COMMIT}.\n" + archive_section())
         self.assertEqual(out, "")
 
     def archives(self):
@@ -1234,7 +1235,7 @@ class PublishTests(ReleaseTestCase):
         self.assertEqual(out, f"Reusing the version commit {COMMIT} from an earlier attempt.\n"
                               "Reusing the tag 5.0.11 from an earlier attempt.\n"
                               "The release 5.0.11 already exists. Nothing to do.\n")
-        self.assertEqual(self.read(self.summary), archive_section() + f"Released 5.0.11 at {COMMIT}.\n")
+        self.assertEqual(self.read(self.summary), f"Released 5.0.11 at {COMMIT}.\n" + archive_section())
 
     def test_a_rerun_after_the_commit_creates_the_tag_and_the_release(self):
         self.earlier_attempt()
