@@ -2,7 +2,8 @@
 """Release helper for .github/workflows/release.yml.
 
   plan     Compute the version from the last release and the chosen bump, check
-           it, and write the release notes.
+           it, and write the release notes. A dry run also builds and checks
+           the source archive.
   publish  Commit the version files, build the source archive, create the tag
            and create the release.
 
@@ -449,6 +450,12 @@ def plan():
            f"- Branch: `{branch}`\n- Last release on this line: `{fmt(last)}`\n"
            f"- Kind: `{bump}`\n- Marked Latest: {'yes' if latest else 'no'}\n\n"
            f"### Release notes\n\n{text}")
+    # A dry run builds and checks the source archive too, and never uploads it.
+    if os.environ.get("DRY_RUN") == "true":
+        source_archive(repo, version, sha)
+        append("GITHUB_STEP_SUMMARY",
+               f"\nDry run: built from `{sha}` and not uploaded. A release that makes a version commit "
+               "builds the archive from that commit, so its integrity differs.\n")
 
 
 # publish ---------------------------------------------------------------------
@@ -503,8 +510,11 @@ def source_archive(repo, version, commit):
         fail(f"{path} is missing {', '.join(missing)}, or has them as another kind of file.")
     with open(path, "rb") as handle:
         digest = hashlib.sha256(handle.read()).digest()
-    append("GITHUB_STEP_SUMMARY", f"Source archive {path}: integrity sha256-{base64.b64encode(digest).decode()}, "
-                                  f"strip_prefix {name}.\n")
+    # What the registry entry's source.json needs.
+    append("GITHUB_STEP_SUMMARY",
+           f"\n### Source archive\n\n- Name: `{path}`\n"
+           f"- URL: https://github.com/{repo}/releases/download/{version}/{path}\n"
+           f"- Integrity: `sha256-{base64.b64encode(digest).decode()}`\n- Strip prefix: `{name}`\n")
     return path
 
 
