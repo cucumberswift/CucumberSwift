@@ -32,6 +32,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. Each sa
 |---|---|---|
 | <doc:Running-Feature-Files-With-Swift-Testing>, and <doc:Checking-Step-Definitions> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Checking-Step-Definitions> in an Xcode or Tuist project | Xcode 26.4 | Xcode 26.4 |
+| <doc:Checking-Step-Definitions#Convert-existing-step-definitions> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Running-Tests-In-Xcode#Parallel-testing> (experimental) | Per platform: the article lists what has been tried | The versions its CI jobs run |
 | Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
 

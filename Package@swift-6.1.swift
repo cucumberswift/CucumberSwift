@@ -24,6 +24,11 @@ let package = Package(
         .plugin(
             name: "FixFeatureFiles",
             targets: ["Fix Feature Files"]),
+        // Rewrites existing step definitions as step definition macros: `swift package convert-to-gherkin-macros`,
+        // or Convert to Gherkin Macros on the project's or package's menu in Xcode. Needs the Macros trait.
+        .plugin(
+            name: "ConvertToGherkinMacros",
+            targets: ["Convert to Gherkin Macros"]),
         // Step definition macros, checked at compile time. Needs the Macros trait.
         .library(
             name: "CucumberSwiftMacros",
@@ -100,6 +105,31 @@ let package = Package(
                 ]),
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/FixFeatureFilesPlugin"),
+        // The tool the Convert to Gherkin Macros plugin runs. It builds for the Mac that builds the tests. It
+        // reads and writes Swift code with swift-syntax, so without the Macros trait it only says what to turn
+        // on. Its tests run it as a program (`--stdin`), not linked in: SwiftPM links every test target into one
+        // bundle, and a second target that links swift-syntax breaks the macros' tests with Swift 6.2's
+        // prebuilt swift-syntax. It shares StepPattern.swift with the compiler plugin, through a symlink.
+        .executableTarget(
+            name: "CucumberSwiftMacroConverterTool",
+            dependencies: [
+                "CucumberSwiftExpressions",
+                .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftParser", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ],
+            path: "Sources/CucumberSwiftMacroConverterTool"),
+        // Named as Xcode shows it on the project's or package's menu.
+        .plugin(
+            name: "Convert to Gherkin Macros",
+            capability: .command(
+                intent: .custom(
+                    verb: "convert-to-gherkin-macros",
+                    description: "Rewrites step definitions as step definition macros where the macro expands to the same step definition"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Rewrites step definitions as step definition macros in your Swift files")
+                ]),
+            dependencies: ["CucumberSwiftMacroConverterTool"],
+            path: "Plugins/ConvertToGherkinMacrosPlugin"),
         // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.
         .macro(
             name: "CucumberSwiftMacrosPlugin",
@@ -147,6 +177,16 @@ let package = Package(
             name: "CucumberSwiftMacrosTests",
             dependencies: [
                 "CucumberSwiftMacrosPlugin",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ]),
+        .testTarget(
+            name: "CucumberSwiftMacroConverterTests",
+            // The macros, to check that what the converter writes expands to the step definition it replaced,
+            // and the expressions, to check that a regex literal's string regular expression matches alike.
+            // Not the converter: see the tool's comment.
+            dependencies: [
+                "CucumberSwiftMacrosPlugin",
+                "CucumberSwiftExpressions",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
             ]),
         .testTarget(

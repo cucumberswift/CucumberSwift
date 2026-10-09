@@ -40,6 +40,7 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 - **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed: the macOS an Xcode needs is Apple's requirement for that Xcode.
 - **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
 - **In an Xcode project**, you need Xcode 26.4, the first to turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as described in <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>, or run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
+- **Convert to Gherkin Macros** (see <doc:Checking-Step-Definitions#Convert-existing-step-definitions>) is tested the same way in a Swift package: CI runs the command with exactly Xcode 16.3. In an Xcode project it needs the trait on, so Xcode 26.4, as the macros do, but CI doesn't run the command there.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
 - **Regex literals need iOS 16, macOS 13 or tvOS 16**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Checking-Step-Definitions#Regex-literals>.
 - **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
@@ -130,6 +131,82 @@ Add the folder to your project as a local package: in Xcode, **File > Add Packag
 The same package turns the trait on for the Swift Testing runner's `CucumberSwiftTestingMacros`; see <doc:Running-Feature-Files-With-Swift-Testing>.
 
 The first time you build a macro, Xcode asks you to trust and enable it. A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead, but only when swift.org publishes one for both your toolchain and the swift-syntax version your package resolves, and not in every build even then. Swift 6.1 always compiles it.
+
+## Convert existing step definitions
+
+A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and marks and lists each one it leaves, with the reason:
+
+<!-- swift-example: steps -->
+```swift
+// Before
+Given("I have {int} cukes in my {string}") { match, _ in
+    let count = try match.first(\.int)
+    let container = try match.first(\.string)
+    basket.add(count, to: container)
+}
+
+// After
+#Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
+    basket.add(count, to: container)
+}
+```
+
+In Xcode, right-click the project or package in the Project navigator, and choose **Convert to Gherkin Macros** under CucumberSwift. Choose the targets whose Swift files to convert, and click **Run**.
+
+In Terminal, run `swift package convert-to-gherkin-macros` in the package's folder. Without `--target`, it converts the Swift files in the folders of every target of the package. Add `--target MyAppTests` to convert one target's, and `--dry-run` to report what it would do without changing a file. The command needs permission to change files in your project or package: Xcode asks before it runs, and `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`. It checks that your project is set up for the macros first, as described under <doc:Checking-Step-Definitions#Before-it-changes-anything>.
+
+It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
+
+### Before it changes anything
+
+The command checks your project's setup first, and changes nothing until the project is ready:
+
+- **The `Macros` trait must be on for CucumberSwift.** The command reads and writes Swift code with swift-syntax, which only comes with the trait, so with the trait off it can't run. It stops, and its message is the first thing you see: the exact change for the kind of project it finds, whether a Swift package (the trait on the dependency, with `swift-tools-version` 6.1 or later), a Tuist project (`Project.swift`), or an Xcode project (the package's trait setting with Xcode 26.4 or later, or the local `MacrosTrait` package before it). When it can't tell which, it lists them all.
+- **Each target it converts must depend on the macros product.** A target that depends on `CucumberSwift` but not on `CucumberSwiftMacros`, or on `CucumberSwiftTesting` but not on `CucumberSwiftTestingMacros`, stops the command, which names the target and says what to add. The converted step definitions couldn't compile without it.
+
+It never edits `Package.swift`, `Project.swift` or the Xcode project: turning the trait on and adding the product are your changes, once, as in <doc:Checking-Step-Definitions#Add-the-macros-to-your-package>. When it stops for either reason, it exits with an error, so a script can tell.
+
+In each file it converts, it imports the macros module for you: `CucumberSwiftMacros` after the file's import of `CucumberSwift`, or `CucumberSwiftTestingMacros` after its import of `CucumberSwiftTesting`. It keeps the import of the runner, which the macros module re-exports, and adds nothing to a file that imports the macros module already.
+
+### Regex literals
+
+The macros take a string, so a step definition with a regex literal, such as `Given(#/^I have (\d+) cukes$/#)`, becomes one with the string regular expression that CucumberSwift also reads, `"^I have (\\d+) cukes$"`. A pattern that doesn't start with `^` and end with `$` is wrapped in them, as `"^(?:…)$"`, because a regex literal has to match the whole step. Its closure reads each capture group in its first statements, in any order, as `let count = match.1` or `let box: Substring = match.output.2`, and those statements become the closure's arguments. The arguments are `String`, where `match.1` was a `Substring`: the compiler flags any use that needs a `Substring`.
+
+Swift's `Regex` and the string regular expression don't read every pattern alike, so the command converts only what both read the same way: not a named group, an option such as `(?i)`, `\p{…}`, `\u{…}`, a back reference, a POSIX class or a character class operation, nor a capture group inside another. It leaves those as they are, with the reason.
+
+### What it leaves
+
+It leaves a step definition unchanged, and lists it with its reason, when:
+
+- its closure passes `match` on to other code, reads `match.allParameters`, or reads a parameter after other code;
+- it reads parameters in an order other than the pattern's, or reads a parameter type the pattern has once by position, or one it has more than once with `first`;
+- its pattern is not a string literal or a regex literal it can convert, or has a mistake the macro would report;
+- its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
+- it declares a type other than the one the pattern gives, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
+- the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
+- the file imports neither CucumberSwift nor CucumberSwiftTesting, or both, or uses a localized step definition with CucumberSwiftTesting, which has no localized macros.
+
+It puts a `#warning` before each one that stands alone as a statement, so the compiler points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
+
+<!-- swift-example: steps -->
+```swift
+#warning("Convert to Gherkin Macros by hand: it passes match on to other code")
+When("I pass match on") { match, _ in
+    print(match)
+}
+```
+
+Running the command again doesn't add a second warning, and a warning goes when you delete it. If your build treats warnings as errors, convert or delete these first. A call that may not be a step definition, because the file declares something with the keyword's name, gets no warning.
+
+It prints a line for each step definition it found, with the file's absolute path and line, and a total:
+
+```
+/Users/me/MyApp/Tests/MyAppTests/Steps.swift:7: converted Given("I have {int} cukes in my {string}")
+/Users/me/MyApp/Tests/MyAppTests/Steps.swift:12: left unchanged When("I pass match on"): it passes match on to other code
+Converted 1 step definition in 1 of 4 Swift files. Left 1 unchanged, 1 marked with #warning.
+```
+
+Review the result with your version control before you commit it, and build your tests: a macro reports a mistake the original only found when the tests ran.
 
 ## Write a step definition
 
