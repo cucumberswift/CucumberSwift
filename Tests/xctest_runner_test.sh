@@ -25,6 +25,9 @@ chmod +x "$work/bin/xcrun"
 mkdir -p "$work/bundle/Fake.xctest/Contents"
 (cd "$work/bundle" && zip -qr "$work/Fake.zip" Fake.xctest)
 
+# The runner's bundle: the zip, unless a case sets it.
+bundle="$work/Fake.zip"
+
 failures=0
 fail() {
   echo "FAIL: $*" >&2
@@ -38,7 +41,7 @@ run() {
   shift
   sed -e "s|%(test_type)s|XCTEST|" \
     -e "s|%(test_host_path)s||" \
-    -e "s|%(test_bundle_path)s|$work/Fake.zip|" \
+    -e "s|%(test_bundle_path)s|$bundle|" \
     -e "s|%(test_filter)s|$filter|" \
     "$template" > "$work/runner.sh"
   status=0
@@ -52,6 +55,16 @@ run() {
 run ""
 [[ "$status" -eq 0 ]] || fail "a passing run exited $status"
 [[ "$(cat "$work/args")" == "xctest"$'\n'*/Fake.xctest ]] || fail "unexpected arguments: $(cat "$work/args")"
+
+# An .xctest folder bundle (apple.experimental.tree_artifact_outputs) is copied,
+# and xctest runs the copy, not Bazel's read-only output.
+bundle="$work/bundle/Fake.xctest"
+run ""
+bundle="$work/Fake.zip"
+[[ "$status" -eq 0 ]] || fail "a folder bundle run exited $status"
+copied="$(sed -n 2p "$work/args")"
+[[ "$copied" == */Fake.xctest ]] || fail "unexpected folder bundle arguments: $(cat "$work/args")"
+[[ "$copied" != "$work/bundle/Fake.xctest" ]] || fail "xctest ran the folder bundle in place"
 
 # An environment value keeps its commas.
 run "" PROBE="a,b=c,d"
