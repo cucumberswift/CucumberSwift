@@ -2,9 +2,9 @@
 //  UITestSteps.swift
 //  ParallelFixtures
 //
-//  The step definitions of the UI test fixture. Each scenario launches the app and drives its cart: tapping
-//  on iOS, clicking on macOS, and pressing the remote's select button on tvOS, where the Add button is the
-//  only one that can be focused.
+//  The step definitions of the UI test fixture. Each scenario drives the app's cart: tapping on iOS,
+//  clicking on macOS, and pressing the remote's select button on tvOS, where the Add button is the only one
+//  that can be focused.
 //
 
 import Foundation
@@ -14,6 +14,9 @@ import CucumberSwift
 @MainActor
 enum UITestApp {
     static let app = XCUIApplication()
+    /// The count the app showed when the scenario began. On a Simulator the app runs for the whole worker,
+    /// so the cart keeps the items of the scenarios before, and a scenario counts from here.
+    static var start = 0
 
     /// The item count the app shows. Found by its identifier, or by its text, whatever kind of element the
     /// platform makes of it, and waited for, since the first launch on a new simulator clone can be slow.
@@ -63,14 +66,30 @@ extension Cucumber: StepImplementation {
 
         // Plain, synchronous hooks and steps, as XCUITest expects: its calls wait on the main run loop
         // themselves. They run on the main thread, which MainActor.assumeIsolated tells the compiler.
-        // launch() ends a copy left running by the scenario before, so nothing terminates the app: on a
-        // simulator clone, terminating it can fail.
+        // On a Simulator the app is launched once per worker, when it isn't running, and never terminated:
+        // launch() would first terminate a copy left running by the scenario before, and on a simulator
+        // clone with Xcode 16.4 that fails at times ("Failed to terminate", #375). On a Mac each scenario
+        // launches it afresh.
         BeforeScenario { _ in
-            MainActor.assumeIsolated { UITestApp.app.launch() }
+            MainActor.assumeIsolated {
+                #if targetEnvironment(simulator)
+                if UITestApp.app.state == .notRunning {
+                    UITestApp.app.launch()
+                }
+                #else
+                UITestApp.app.launch()
+                #endif
+            }
         }
 
         Given("a fresh cart") { _, _ in
-            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(expecting: "Items: 0"), "Items: 0") }
+            MainActor.assumeIsolated {
+                let shown = UITestApp.items()
+                guard let count = Int(shown.dropFirst("Items: ".count)), shown.hasPrefix("Items: ") else {
+                    return XCTFail("The app shows no item count it can read: '\(shown)'")
+                }
+                UITestApp.start = count
+            }
         }
         When("I add {int} items") { match, _ in
             let count = try match.first(\.int)
@@ -82,7 +101,10 @@ extension Cucumber: StepImplementation {
         }
         Then("the cart holds {int} items") { match, _ in
             let count = try match.first(\.int)
-            MainActor.assumeIsolated { XCTAssertEqual(UITestApp.items(expecting: "Items: \(count)"), "Items: \(count)") }
+            MainActor.assumeIsolated {
+                let expected = "Items: \(UITestApp.start + count)"
+                XCTAssertEqual(UITestApp.items(expecting: expected), expected)
+            }
         }
         // Long enough that Xcode hands the scenarios to more than one worker.
         Then("the scenario takes a moment") { _, _ in
