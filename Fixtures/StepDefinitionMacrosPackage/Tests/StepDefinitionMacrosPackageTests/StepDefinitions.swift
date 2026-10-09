@@ -231,5 +231,24 @@ extension Cucumber: @retroactive StepImplementation {
         #ES_Dado(#/^tengo (?<cantidad>\d+) pepinos en la cesta$/#) { (cantidad: Substring) in
             Basket.shared.cukes = Int(cantidad) ?? -1
         }
+
+        // Plain step definitions with regex literals, which `mise run test-fixtures` converts with Convert to
+        // Gherkin Macros, a named and an optional capture and a capture list among them, before it runs the
+        // tests again.
+        Given(#/^the till holds (\d+) coins from (?<city>\w+)( today)?$/#) { match, _ in
+            let count = match.1
+            let city = match.city
+            let today: Substring? = match.output.3
+            XCTAssertEqual(city, "Faro")
+            XCTAssertNotNil(today)
+            Basket.shared.cukes = Int(count) ?? -1
+        }
+
+        Then(/^the till has (\d+) coins? left$/) { [container] match, step in
+            let count = match.1
+            XCTAssertEqual(container, "basket")
+            XCTAssertEqual(step.match, "the till has 7 coins left")
+            XCTAssertEqual(Basket.shared.cukes, Int(count))
+        }
     }
 }

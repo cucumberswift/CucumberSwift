@@ -107,13 +107,4 @@ extension StepDefinition {
         """
     }
 }
-
-extension StepPattern {
-    /// A regex literal's captures. Each is read from the regex's `Output`, so `parameter` is only the
-    /// capture's name in messages: its group's name, or `anonymous`.
-    init(regexCaptures: [RegexLiteralPattern.Capture]) {
-        captures = regexCaptures.map { Capture(parameter: $0.name ?? "anonymous", type: $0.type) }
-        isRegularExpression = true
-    }
-}
 #endif

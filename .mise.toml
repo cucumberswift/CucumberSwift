@@ -53,6 +53,9 @@ description = "Build and test every project in Fixtures/"
 # plugin only runs when its inputs change, and the build must make new ones. A Swift package fixture
 # that uses the plugin and has no expected-warnings also runs Fix Feature Files, which must change
 # nothing. A fixture with expected-failures must fail its tests, with each failure it lists.
+# A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
+# its report must have each line expected-conversion lists, and the converted tests must pass, with no
+# warnings from CucumberSwift either. Its Swift files are put back as they were afterwards.
 run = '''
 set -e
 # Fails unless every line of $1, other than comments and blank lines, is in the output $2.
@@ -137,6 +140,38 @@ for fixture in Fixtures/*/; do
       fi
       echo "$name: Fix Feature Files changed nothing."
     fi
+  fi
+  if [ -f "$fixture/Package.swift" ] && [ -f "$fixture/expected-conversion" ]; then
+    # The command rewrites the fixture's Swift files, so a copy of them is put back however this ends.
+    swift_files() { find "$fixture" -name '*.swift' -not -path "$build/*" -exec shasum {} + | sort; }
+    before=$(swift_files)
+    originals=$(mktemp)
+    (cd "$fixture" && find . -name '*.swift' -not -path './.build/*' -print0 | tar -cf "$originals" --null -T -)
+    trap 'tar -xf "$originals" -C "$fixture"' EXIT
+    conversion_log=$(mktemp)
+    conversion_status=0
+    with_xcode swift package --package-path "$fixture" --allow-writing-to-package-directory convert-to-gherkin-macros \
+      > "$conversion_log" 2>&1 || conversion_status=$?
+    cat "$conversion_log"
+    if [ "$conversion_status" -ne 0 ]; then exit "$conversion_status"; fi
+    expect_all "$fixture/expected-conversion" "$conversion_log"
+    converted_status=0
+    with_xcode swift test --package-path "$fixture" > "$conversion_log" 2>&1 || converted_status=$?
+    cat "$conversion_log"
+    cat "$conversion_log" >> "$log"
+    rm -f "$conversion_log"
+    if [ "$converted_status" -ne 0 ]; then
+      echo "error: $name: its tests failed once Convert to Gherkin Macros had converted it"
+      exit "$converted_status"
+    fi
+    tar -xf "$originals" -C "$fixture"
+    trap - EXIT
+    rm -f "$originals"
+    if [ "$before" != "$(swift_files)" ]; then
+      echo "error: $name: its Swift files weren't put back as they were before Convert to Gherkin Macros"
+      exit 1
+    fi
+    echo "$name: Convert to Gherkin Macros converted it as expected-conversion lists, and its tests passed."
   fi
   .github/scripts/fixture-warnings.sh "$fixture" "$log"
   rm -f "$log"

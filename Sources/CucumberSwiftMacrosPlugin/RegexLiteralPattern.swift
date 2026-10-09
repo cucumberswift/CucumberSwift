@@ -5,7 +5,8 @@
 
 import Foundation
 
-/// What a regex literal captures, in order, read from its syntax.
+/// What a regex literal captures, in order, read from its syntax. CucumberSwiftMacroConverterTool shares this
+/// file through a symlink, to give a converted closure the arguments the macro takes.
 ///
 /// The compiler, not the macro, knows a regex literal's `Output`, and the expansion leaves the type check to
 /// it. This reading is for the macro's own diagnostics and fix-its, so it only claims to know the captures
@@ -205,5 +206,14 @@ struct RegexLiteralPattern {
         let read = scanner.read()
         captures = read ?? []
         isCertain = read.map { Self.icuCaptureCount(of: pattern, isExtended: isExtended) == $0.count } ?? false
+    }
+}
+
+extension StepPattern {
+    /// A regex literal's captures. Each is read from the regex's `Output`, so `parameter` is only the
+    /// capture's name in messages: its group's name, or `anonymous`.
+    init(regexCaptures: [RegexLiteralPattern.Capture]) {
+        captures = regexCaptures.map { Capture(parameter: $0.name ?? "anonymous", type: $0.type) }
+        isRegularExpression = true
     }
 }
