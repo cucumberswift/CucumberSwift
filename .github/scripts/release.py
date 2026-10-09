@@ -452,10 +452,8 @@ def plan():
            f"### Release notes\n\n{text}")
     # A dry run builds and checks the source archive too, and never uploads it.
     if os.environ.get("DRY_RUN") == "true":
-        source_archive(repo, version, sha)
-        append("GITHUB_STEP_SUMMARY",
-               f"\nDry run: built from `{sha}` and not uploaded. A release that makes a version commit "
-               "builds the archive from that commit, so its integrity differs.\n")
+        _, integrity = source_archive(repo, version, sha)
+        archive_summary(repo, version, integrity, True, sha)
 
 
 # publish ---------------------------------------------------------------------
@@ -483,8 +481,8 @@ def set_version(path, content, version):
 
 def source_archive(repo, version, commit):
     """Build the release's source archive from `commit` with git archive, check
-    it, and return its file name. Bazel registry entries pin its checksum, which
-    GitHub's on-demand tag archives do not keep stable."""
+    it, and return its file name and integrity. Bazel registry entries pin its
+    checksum, which GitHub's on-demand tag archives do not keep stable."""
     name = f"{repo.split('/')[1]}-{version}"
     path = f"{name}.tar.gz"
     # The version commit, if there is one, was made through the API.
@@ -510,12 +508,20 @@ def source_archive(repo, version, commit):
         fail(f"{path} is missing {', '.join(missing)}, or has them as another kind of file.")
     with open(path, "rb") as handle:
         digest = hashlib.sha256(handle.read()).digest()
-    # What the registry entry's source.json needs.
-    append("GITHUB_STEP_SUMMARY",
-           f"\n### Source archive\n\n- Name: `{path}`\n"
-           f"- URL: https://github.com/{repo}/releases/download/{version}/{path}\n"
-           f"- Integrity: `sha256-{base64.b64encode(digest).decode()}`\n- Strip prefix: `{name}`\n")
-    return path
+    return path, f"sha256-{base64.b64encode(digest).decode()}"
+
+
+def archive_summary(repo, version, integrity, dry_run, sha):
+    """Show what the Bazel registry entry's source.json needs."""
+    name = f"{repo.split('/')[1]}-{version}"
+    path = f"{name}.tar.gz"
+    text = (f"\n### Source archive\n\n- Name: `{path}`\n"
+            f"- URL: https://github.com/{repo}/releases/download/{version}/{path}\n"
+            f"- Integrity: `{integrity}`\n- Strip prefix: `{name}`\n")
+    if dry_run:
+        text += (f"\nDry run: built from `{sha}` and not uploaded. A release that makes a version commit "
+                 "builds the archive from that commit, so its integrity differs.\n")
+    append("GITHUB_STEP_SUMMARY", text)
 
 
 def publish():
@@ -573,7 +579,8 @@ def publish():
                 fail(f"{branch} moved during the run. Nothing was tagged or released. Start a new run.")
 
     # Built before the tag, so a bad archive leaves no tag behind.
-    archive = source_archive(repo, version, commit)
+    archive, integrity = source_archive(repo, version, commit)
+    archive_summary(repo, version, integrity, False, commit)
 
     # The tag: reuse it only if it points to exactly this commit.
     ref = api(f"repos/{repo}/git/ref/tags/{version}", allow=(404,))
