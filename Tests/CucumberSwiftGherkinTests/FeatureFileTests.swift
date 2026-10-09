@@ -152,6 +152,25 @@ final class FeatureFileTests: XCTestCase {
         XCTAssertEqual(steps.map(\.keywords), [[.given], [.and, .given], [.then]])
     }
 
+    // In Azerbaijani, Nümunələr is both a Scenario and an Examples keyword; after an outline's steps
+    // it is Examples (#364).
+    func testAnAzerbaijaniOutlinesNumunelerAreItsExamples() throws {
+        let feature = try parse("""
+        # language: az
+        Özəllik: Xiyar
+          Ssenarinin strukturu: Yemək
+            Əgər <eat> xiyar yeyirəm
+
+            Nümunələr:
+              | eat |
+              | 5   |
+              | 7   |
+        """)
+        XCTAssertEqual(feature.scenarios.map(\.title), ["Yemək"])
+        let examples = try XCTUnwrap(feature.scenarios.first?.examples)
+        XCTAssertEqual(examples.map { $0.steps.map(\.text) }, [["5 xiyar yeyirəm"], ["7 xiyar yeyirəm"]])
+    }
+
     // Swift Testing's messages name a step with its keyword as written, as CucumberSwift's do (#332).
     func testAStepsKeywordNameIsItsKeywordAsWritten() throws {
         let english = try parse("""

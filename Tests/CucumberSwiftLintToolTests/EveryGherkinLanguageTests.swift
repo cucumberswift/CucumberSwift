@@ -103,23 +103,25 @@ final class EveryGherkinLanguageTests: LintTestCase {
 
     /// The valid feature files for `language`: as many as it has forms of Feature or of Background,
     /// since a feature has one of each. Every other keyword is used in every form in each file.
-    /// A form CucumberSwift doesn't read as its keyword is left out, as the lint tool reads files as
-    /// CucumberSwift does: an Examples keyword that is also a Scenario keyword in the same language.
-    /// Any other form that CucumberSwift doesn't read, or this one if it starts to read it, fails the
-    /// tests. Every step keyword is read, of more than one word or without a space after it too (#363).
+    /// Every form must be read as its keyword. An Examples keyword that is also a Scenario keyword, such
+    /// as Azerbaijani `Nümunələr`, is Examples inside a scenario and a Scenario elsewhere (#364), so it
+    /// starts the language's scenarios, straight after the Background. Every step keyword is read, of
+    /// more than one word or without a space after it too (#363).
     static func features(in language: Language) throws -> [GeneratedFeature] {
         let keywords = try XCTUnwrap(FeatureFile.Keywords(language: language.code), "No keywords for '\(language.code)'")
-        // Each form must be read as its keyword, except an Examples keyword that is also a Scenario keyword.
+        // Each form must be read as its keyword. Examples are read inside a scenario, where they belong.
         func headers(_ key: String, _ line: FeatureFile.Keywords.Line) -> [String] {
             let forms = language.forms(key)
-            let read = forms.filter { keywords.line($0 + ": A title") == line }
-            let expected = forms.filter { key != "examples" || !language.forms("scenario").contains($0) }
-            XCTAssertEqual(read, expected, "\(language.code) \(key)")
+            let read = forms.filter { keywords.line($0 + ": A title", inScenario: key == "examples") == line }
+            XCTAssertEqual(read, forms, "\(language.code) \(key)")
             return read
         }
         let features = headers("feature", .feature)
         let backgrounds = headers("background", .background)
-        let scenarios = headers("scenario", .scenario)
+        // A Scenario keyword that is also an Examples keyword starts a scenario only outside one.
+        let examplesForms = language.forms("examples")
+        let scenarioForms = headers("scenario", .scenario)
+        let scenarios = scenarioForms.filter(examplesForms.contains) + scenarioForms.filter { !examplesForms.contains($0) }
         let stepForms = Set(stepKeys.flatMap(language.forms))
         // A line starting with a form is read as a step with that form as its keyword, even when a shorter
         // form starts it too, such as Czech `A ` in `A také `, or the form has no space after it, as `前提`.
