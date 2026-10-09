@@ -14,7 +14,19 @@ set -uo pipefail
 
 lockfile="$(cd "$(dirname "$0")/../.." && pwd)/Package.resolved"
 saved=$(mktemp)
-cp -p "$lockfile" "$saved"
+had_lockfile=false
+if [[ -e "$lockfile" ]]; then
+  cp -p "$lockfile" "$saved" || { rm -f "$saved"; echo "Cannot save $lockfile" >&2; exit 1; }
+  had_lockfile=true
+fi
+restore() {
+  if [[ "$had_lockfile" == true ]]; then
+    cmp -s "$saved" "$lockfile" || cp -p "$saved" "$lockfile"
+  else
+    rm -f "$lockfile"
+  fi
+  rm -f "$saved"
+}
 # Also when the command is interrupted.
-trap 'cmp -s "$saved" "$lockfile" || cp -p "$saved" "$lockfile"; rm -f "$saved"' EXIT
+trap restore EXIT
 "$@"
