@@ -27,24 +27,37 @@ final class StepDefinitionLeftUnchangedTests: ConverterTestCase {
             """, because: "match.allParameters")
     }
 
-    func testLeavesARegexLiteralWithSyntaxOnlySwiftReads() {
+    func testLeavesARegexLiteralWhoseCaptureGroupsItCannotRead() {
+        // Syntax that changes what captures or how groups are numbered, which only Swift works out.
         let patterns = [
-            "#/I (?<name>\\w+)/#",
-            "#/I (\\p{L}+)/#",
-            "#/I (\\u{1F600})/#",
-            "#/(?i)I (\\w+)/#",
-            "#/I ((\\d)+)/#",
-            "#/I (\\1)/#",
-            "#/I ([[:alpha:]]+)/#",
-            "#/I ([a-z--[b]]+)/#"
+            "#/(?x) I (\\w+)/#",
+            "#/(?n)I (\\w+)/#",
+            "#/I (?|(a)|(b))/#",
+            "#/I (\\u{1F600})/#"
         ]
         for pattern in patterns {
             assertLeftUnchanged("""
                 Given(\(pattern)) { match, _ in
-                    use(match.1)
+                    let word = match.1
+                    use(word)
                 }
-                """, because: "its regex literal")
+                """, because: "its regex literal has syntax the command doesn't read")
         }
+    }
+
+    func testLeavesARegexLiteralThatDeclaresACaptureWithAnotherType() {
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                let count: String = String(match.1)
+                use(count)
+            }
+            """, because: "it reads match after other code")
+        assertLeftUnchanged("""
+            Given(#/^I have (\\d+)? cukes$/#) { match, _ in
+                let count: Substring = match.1
+                use(count)
+            }
+            """, because: "it declares capture group 1 as Substring, and the macro gives it as Substring?")
     }
 
     func testLeavesARegexLiteralThatReadsItsMatchInAnotherWay() {

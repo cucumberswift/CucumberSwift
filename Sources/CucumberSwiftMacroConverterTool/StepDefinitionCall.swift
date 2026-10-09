@@ -32,9 +32,8 @@ struct StepDefinitionCall {
     struct Arguments {
         let pattern: StepPattern
         let closure: ClosureExprSyntax
-        /// The string that replaces the pattern: a regex literal as the string regular expression CucumberSwift also
-        /// reads, or a string literal without its `as CucumberExpression`, which the macro adds itself. `nil` for a
-        /// pattern that is a plain string literal.
+        /// The string that replaces the pattern: a string literal without its `as CucumberExpression`, which the
+        /// macro adds itself. `nil` for a pattern that stays as it is: a plain string literal or a regex literal.
         let replacement: StringLiteralExprSyntax?
         let isRegexLiteral: Bool
     }
@@ -122,27 +121,29 @@ struct StepDefinitionCall {
         }
         let expression = arguments[0].expression
         var replacement: StringLiteralExprSyntax?
-        let text: String
+        let pattern: StepPattern
         let isRegexLiteral = expression.is(RegexLiteralExprSyntax.self)
         if let regex = expression.as(RegexLiteralExprSyntax.self) {
-            // The macros take a string, so a regex literal becomes the string regular expression CucumberSwift also reads.
-            let string = try RegexLiteralPattern.stringLiteral(for: regex)
-            replacement = string
-            text = string.representedLiteralValue ?? ""
+            // The macros take the regex literal as it is, and give the closure each capture's type in its `Output`.
+            // A multi-line literal, whose pattern starts on the line after `#/`, uses extended syntax.
+            let text = regex.regex.text
+            let captures = RegexLiteralPattern(text, isExtended: text.first?.isNewline == true)
+            guard captures.isCertain else {
+                throw Unconvertible(reason: "its regex literal has syntax the command doesn't read, so it can't give each capture group its type")
+            }
+            pattern = StepPattern(regexCaptures: captures.captures)
         } else if let literal = Self.stringLiteral(in: expression), let value = literal.representedLiteralValue {
-            text = value
             // `"…" as CucumberExpression` is a string the macro would cast itself.
             if !expression.is(StringLiteralExprSyntax.self) {
                 replacement = literal.with(\.leadingTrivia, expression.leadingTrivia).with(\.trailingTrivia, expression.trailingTrivia)
             }
+            do {
+                pattern = try StepPattern(value)
+            } catch let problem as StepPattern.Problem {
+                throw Unconvertible(reason: "its pattern has a mistake the macro would report: \(problem.message)")
+            }
         } else {
-            throw Unconvertible(reason: "its pattern isn't a string literal")
-        }
-        let pattern: StepPattern
-        do {
-            pattern = try StepPattern(text)
-        } catch let problem as StepPattern.Problem {
-            throw Unconvertible(reason: "its pattern has a mistake the macro would report: \(problem.message)")
+            throw Unconvertible(reason: "its pattern isn't a string literal or a regex literal")
         }
         let body = call.trailingClosure.map { ExprSyntax($0) } ?? arguments.dropFirst().first?.expression
         guard let closure = body?.as(ClosureExprSyntax.self), call.additionalTrailingClosures.isEmpty else {

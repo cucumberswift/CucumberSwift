@@ -124,9 +124,24 @@ final class ConvertedStepDefinitionExpansionTests: XCTestCase {
                 use(count)
             }
             """, is: """
-            Given("^I have (\\\\d+) cukes$" as CucumberExpression) { match, _ in
-                let count: String = try match.first(\\.anonymous)
+            Given(#/^I have (\\d+) cukes$/#) { match, _ in
+                let (_, count): (_, Substring) = match.output
                 use(count)
+            }
+            """)
+    }
+
+    func testARegexLiteralWithANamedAndAnOptionalCaptureAndTheStep() throws {
+        try assertExpansion(of: """
+            Then(#/^(?<city>\\w+) has (\\d+)( more)? cukes$/#) { match, step in
+                let more = match.3
+                let city = match.city
+                use(city, more, step)
+            }
+            """, is: """
+            Then(#/^(?<city>\\w+) has (\\d+)( more)? cukes$/#) { match, step in
+                let (_, city, _, more): (_, Substring, Substring, Substring?) = match.output
+                use(city, more, step)
             }
             """)
     }

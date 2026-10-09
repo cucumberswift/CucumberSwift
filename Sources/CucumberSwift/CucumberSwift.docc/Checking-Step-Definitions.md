@@ -155,7 +155,7 @@ In Xcode, right-click the project or package in the Project navigator, and choos
 
 In Terminal, run `swift package convert-to-gherkin-macros` in the package's folder. Without `--target`, it converts the Swift files in the folders of every target of the package. Add `--target MyAppTests` to convert one target's, and `--dry-run` to report what it would do without changing a file. The command needs permission to change files in your project or package: Xcode asks before it runs, and `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`. It checks that your project is set up for the macros first, as described under <doc:Checking-Step-Definitions#Before-it-changes-anything>.
 
-It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
+It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself, or as a regex literal, as described under <doc:Checking-Step-Definitions#Converting-regex-literals>. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
 
 ### Before it changes anything
 
@@ -168,11 +168,25 @@ It never edits `Package.swift`, `Project.swift` or the Xcode project: turning th
 
 In each file it converts, it imports the macros module for you: `CucumberSwiftMacros` after the file's import of `CucumberSwift`, or `CucumberSwiftTestingMacros` after its import of `CucumberSwiftTesting`. It keeps the import of the runner, which the macros module re-exports, and adds nothing to a file that imports the macros module already.
 
-### Regex literals
+### Converting regex literals
 
-The macros take a string, so a step definition with a regex literal, such as `Given(#/^I have (\d+) cukes$/#)`, becomes one with the string regular expression that CucumberSwift also reads, `"^I have (\\d+) cukes$"`. A pattern that doesn't start with `^` and end with `$` is wrapped in them, as `"^(?:…)$"`, because a regex literal has to match the whole step. Its closure reads each capture group in its first statements, in any order, as `let count = match.1` or `let box: Substring = match.output.2`, and those statements become the closure's arguments. The arguments are `String`, where `match.1` was a `Substring`: the compiler flags any use that needs a `Substring`.
+A step definition with a regex literal, `#/…/#` or `/…/`, keeps it: the macros take it as it is (see <doc:Checking-Step-Definitions#Regex-literals>), so the step matches exactly the steps it matched before. Its closure reads each capture group in its first statements, in any order, by number or by a named group's name, as `let count = match.1`, `let city: Substring = match.output.2` or `let city = match.city`, and those statements become the closure's arguments. Each argument gets the capture's type in the regex's `Output`, `Substring`, or `Substring?` for a group that may not take part in the match, and a group the closure doesn't read becomes an argument named `_`:
 
-Swift's `Regex` and the string regular expression don't read every pattern alike, so the command converts only what both read the same way: not a named group, an option such as `(?i)`, `\p{…}`, `\u{…}`, a back reference, a POSIX class or a character class operation, nor a capture group inside another. It leaves those as they are, with the reason.
+<!-- swift-example: steps -->
+```swift
+// Before
+Given(#/^I have (\d+) cukes( today)?$/#) { match, _ in
+    let count = match.1
+    basket.add(Int(count) ?? 0, to: "basket")
+}
+
+// After
+#Given(#/^I have (\d+) cukes( today)?$/#) { (count: Substring, _: Substring?) in
+    basket.add(Int(count) ?? 0, to: "basket")
+}
+```
+
+A regex literal needs iOS 16, macOS 13 or tvOS 16 with or without the macros, so the code around it already has the `@available` that the macro needs. A regex with syntax that changes how its groups are numbered or what captures, such as `(?|…)` or the `n` and `x` options, is left as it is, because the command can't give each capture group its type.
 
 ### What it leaves
 
@@ -180,9 +194,9 @@ It leaves a step definition unchanged, and lists it with its reason, when:
 
 - its closure passes `match` on to other code, reads `match.allParameters`, or reads a parameter after other code;
 - it reads parameters in an order other than the pattern's, or reads a parameter type the pattern has once by position, or one it has more than once with `first`;
-- its pattern is not a string literal or a regex literal it can convert, or has a mistake the macro would report;
+- its pattern is not a string literal or a regex literal, has a mistake the macro would report, or is a regex literal whose capture groups the command can't read;
 - its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
-- it declares a type other than the one the pattern gives, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
+- it declares a type other than the one the pattern gives, a capture group's included, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
 - the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
 - the file imports neither CucumberSwift nor CucumberSwiftTesting, or both, or uses a localized step definition with CucumberSwiftTesting, which has no localized macros.
 
