@@ -71,12 +71,18 @@ if [[ -n "${udid:-}" ]]; then
   xcrun simctl shutdown "$udid" 2>/dev/null || true
 fi
 
+# The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder, in the container of
+# the fixture's test runner, such as org.cucumberswift.ParallelUITests.xctrunner. Nothing else empties it, so
+# a local run would also count the records of an earlier one. Only the fixtures' runners' containers are
+# touched, never another app's.
+runner_records=("$HOME"/Library/Containers/org.cucumberswift.Parallel*.xctrunner/Data/tmp/parallel-test-records)
+for folder in "${runner_records[@]}"; do rm -rf "$folder"; done
+
 xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
 status=$?
-# The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
-cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
+for folder in "${runner_records[@]}"; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
 
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
