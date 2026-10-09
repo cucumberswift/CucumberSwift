@@ -9,7 +9,15 @@
 import Foundation
 
 public class CucumberJSONReporter: CucumberTestObserver {
-    let reportURL: URL
+    private let explicitReportURL: URL?
+    private let defaultReportURL: URL
+    /// Where the report is written: the path it was made with, else ``Cucumber/reportPath``, else the
+    /// default. Read each time, because the reporter is made before `setupSteps()` sets the static variable.
+    var reportURL: URL {
+        if let explicitReportURL { return explicitReportURL }
+        if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
+        return defaultReportURL
+    }
     private(set) var features: [Feature] = []
     private var currentFeature: Feature?
     private var currentScenario: Scenario?
@@ -26,53 +34,76 @@ public class CucumberJSONReporter: CucumberTestObserver {
                                                                 in: .userDomainMask,
                                                                 appropriateFor: nil,
                                                                 create: false) {
-            reportURL = documentDirectory.appendingPathComponent(name)
+            defaultReportURL = documentDirectory.appendingPathComponent(name)
+            explicitReportURL = nil
         } else {
             return nil
         }
     }
 
     public init(reportPath: URL) {
-        reportURL = reportPath
+        explicitReportURL = reportPath
+        defaultReportURL = reportPath
+    }
+
+    /// Writes the report. With parallel testing on, every worker writes to the same file, so this merges
+    /// the worker's features into it under a lock; otherwise it is the run's only writer and replaces it.
+    private func save() {
+        if FeatureFlags.isParallelTesting {
+            let file = ReportFile.at(reportURL)
+            guard let data = try? encoder.encode(features),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            file.merge(json)
+        } else {
+            try? encoder.encode(features).write(to: reportURL)
+        }
     }
 
     public func testSuiteStarted(at: Date) {
-        defer { try? encoder.encode(features).write(to: reportURL) }
+        if FeatureFlags.isParallelTesting {
+            // XCTest asks for CucumberTest's suite again while a worker runs scenarios. Clearing the
+            // features then would leave the scenario in progress with a feature that is no longer in the
+            // report, and lose the rest of the worker's scenarios. The report is where the run starts over.
+            ReportFile.at(reportURL).joinRun()
+            save()
+            return
+        }
+        defer { save() }
         features.removeAll()
     }
 
     public func testSuiteFinished(at: Date) {
-        try? encoder.encode(features).write(to: reportURL)
+        save()
     }
 
     public func didStart(feature: CucumberSwift.Feature, at date: Date) {
-        defer { try? encoder.encode(features).write(to: reportURL) }
+        defer { save() }
         features.append(Feature(feature))
         currentFeature = features.last
     }
 
     public func didStart(scenario: CucumberSwift.Scenario, at date: Date) {
-        defer { try? encoder.encode(features).write(to: reportURL) }
+        defer { save() }
         currentFeature?.elements.append(Scenario(scenario))
         currentScenario = currentFeature?.elements.last
     }
 
     public func didStart(step: CucumberSwift.Step, at date: Date) {
-        defer { try? encoder.encode(features).write(to: reportURL) }
+        defer { save() }
         currentScenario?.steps.append(Step(step))
         currentStep = currentScenario?.steps.last
     }
 
     public func didFinish(feature: CucumberSwift.Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        try? encoder.encode(features).write(to: reportURL)
+        save()
     }
 
     public func didFinish(scenario: CucumberSwift.Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        try? encoder.encode(features).write(to: reportURL)
+        save()
     }
 
     public func didFinish(step: CucumberSwift.Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        defer { try? encoder.encode(features).write(to: reportURL) }
+        defer { save() }
         currentStep?.result = result
         currentStep?.duration = duration
     }

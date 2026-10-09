@@ -6,6 +6,8 @@
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
 #   [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
 #
+# Each worker also merges its results into one Cucumber JSON report, which must hold every scenario once.
+#
 # Each run of a scenario writes a record, named after the scenario, its worker's process and a UUID, so
 # that two runs never share one. xcodebuild's log can't show this, because it interleaves its own output
 # with the workers' and cuts test lines short.
@@ -46,7 +48,9 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
 esac
 scheme="Parallel${KIND}Tests${suffix}"
 records="$temp/parallel-test-records"
-mkdir -p "$records"
+report="$temp/parallel-test-report/report.json"
+mkdir -p "$records" "$(dirname "$report")"
+rm -f "$report" "$report.lock" "$report.run"
 echo "Running $scheme on $destination with $WORKERS workers"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
@@ -73,10 +77,12 @@ fi
 
 xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
-  PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
+  PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" > parallel-test.log 2>&1
 status=$?
 # The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
 cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
+# It writes the report there too, and has only one worker, so there is nothing to merge it with.
+[[ -s "$report" ]] || cp "$(ls -t "$HOME"/Library/Containers/*/Data/tmp/parallel-test-report/report.json 2>/dev/null | head -1)" "$report" 2>/dev/null || true
 
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
@@ -115,6 +121,40 @@ if [[ "$total" -ne "$scenarios" ]]; then
 fi
 if [[ "$workers" -lt "$min_workers" ]]; then
   echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
+  status=1
+fi
+
+# The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
+# in feature-file order.
+report_check=$(REPORT="$report" EXPECTED="$EXPECTED_SCENARIOS" python3 -c '
+import json, os, sys
+try:
+    features = json.load(open(os.environ["REPORT"]))
+except (OSError, ValueError) as error:
+    print("The report is missing or is not JSON: %s" % error)
+    sys.exit(1)
+problems = []
+seen = {}
+for feature in features:
+    lines = [scenario["line"] for scenario in feature.get("elements", [])]
+    if lines != sorted(lines):
+        problems.append("%s: scenarios are not in feature-file order" % feature.get("name"))
+    for scenario in feature.get("elements", []):
+        key = (feature.get("uri"), scenario["line"], scenario["name"])
+        seen[key] = seen.get(key, 0) + 1
+        if not scenario.get("steps"):
+            problems.append("%s has no steps" % scenario["name"])
+problems += ["%s ran %d times in the report" % (key[2], n) for key, n in seen.items() if n > 1]
+if len(seen) != int(os.environ["EXPECTED"]):
+    problems.append("the report holds %d of %s scenarios" % (len(seen), os.environ["EXPECTED"]))
+print("Report: %d scenarios in %d features" % (len(seen), len(features)))
+print("\n".join(problems))
+sys.exit(1 if problems else 0)
+')
+report_status=$?
+echo "$report_check"
+if [[ "$report_status" -ne 0 ]]; then
+  echo "::error::The Cucumber JSON report does not hold every scenario exactly once." >&2
   status=1
 fi
 exit $status

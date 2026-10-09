@@ -185,6 +185,6 @@ It is experimental. Before you rely on it:
 - **Check the number of tests that ran** against a serial run. It depends on when XCTest lists the classes it hands out, which a new Xcode can change.
 - **Each worker is a process of its own.** State your step definitions share between scenarios, such as a variable that counts them, is per worker.
 - **Feature hooks run per worker.** `BeforeFeature` runs in each worker that runs one of the feature's scenarios. `AfterFeature` runs in the worker that runs the feature's last scenario, which can finish before the feature's other scenarios have finished in other workers, or, in a serial run, before they start. Scenario and step hooks run as they do in a serial run.
-- **On macOS the workers share one JSON report file**, so it holds one worker's results. On iOS each simulator clone has a report of its own.
+- **The workers write one JSON report between them**, with every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report.
 - **It needs a test per step**, the default. With one test per scenario, every scenario is a test of one class, which Xcode hands to one worker.
 - **Each scenario costs Xcode a little time to hand out**, so a parallel run pays off for scenarios that take a while, such as UI tests, more than for quick ones.

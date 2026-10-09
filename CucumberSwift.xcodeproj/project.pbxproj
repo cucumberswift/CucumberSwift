@@ -11,6 +11,7 @@
 		038EEA80244A21548F4B6DFF /* Positionable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3642B45B68C6343B91008C5A /* Positionable.swift */; };
 		0464BC0115537DACD7C2164B /* CollectionExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343358FD4E66CE32C7ABF6D8 /* CollectionExtensions.swift */; };
 		081FB63548F3A8CAAF3D54F8 /* UndefinedStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28DACBFA3E45CE73235B8ED3 /* UndefinedStepTests.swift */; };
+		0C875BCC6A72B4B79FD33509 /* ReportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5409CF929A8A6ADFE93B76E /* ReportFile.swift */; };
 		0E5179311CFBFB0C3D103F26 /* JSONReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A22F85448DE49049412E696 /* JSONReporter.swift */; };
 		15211A91D22BB36427F6E0F9 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = 34403C7ACE9D693AEAA7FB49 /* Features */; };
 		152678D2C29AA80A686008F0 /* CucumberSwiftExpressions in Frameworks */ = {isa = PBXBuildFile; productRef = B500FE921BF4BF1A9648EBA4 /* CucumberSwiftExpressions */; };
@@ -23,6 +24,7 @@
 		1DFC89A88CA651D7722F1469 /* AsyncIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BFC4AC8518624BC6134E5E0 /* AsyncIsolationTests.swift */; };
 		22A8213B548DAA379C6C8732 /* CucumberExpressionStepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */; };
 		24A75AEEBA738F6BE416FF5C /* CucumberStepTest.m in Sources */ = {isa = PBXBuildFile; fileRef = DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */; };
+		2748A4ED7ACBF4CDA22DC04A /* ReportFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE618725911A9587B6955609 /* ReportFileTests.swift */; };
 		29EFC81796EF2B9958D509C5 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96BBE62FF265DFC714FF9EA0 /* Errors.swift */; };
 		2D04AA4CC43AB8E84033A468 /* GeneratedTestNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */; };
 		2D72D4088AAD305BC6038BD7 /* FeatureFlagsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37DEF3781869D0B2555E6AF /* FeatureFlagsTests.swift */; };
@@ -328,6 +330,7 @@
 		B00C65C4B9909D770F8E4C38 /* TestCaseMethod.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCaseMethod.swift; sourceTree = "<group>"; };
 		B1D1E0D5690FAB4150E37FFE /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
 		B356E47594FD1FB60B48AAED /* VerboseReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerboseReporter.swift; sourceTree = "<group>"; };
+		B5409CF929A8A6ADFE93B76E /* ReportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFile.swift; sourceTree = "<group>"; };
 		B5F62DF94491251366BFE6D0 /* ReporterResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReporterResult.swift; sourceTree = "<group>"; };
 		B9233E6D52476E61D53F633A /* DuplicateStepDefinitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicateStepDefinitionTests.swift; sourceTree = "<group>"; };
 		B9429E744A8289D27041F659 /* Lexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lexer.swift; sourceTree = "<group>"; };
@@ -351,6 +354,7 @@
 		DD09C92DD03AFD4765446E70 /* ScenarioRunTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioRunTests.swift; sourceTree = "<group>"; };
 		DDC88E34B244FC44552A16C0 /* CucumberTestObservable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTestObservable.swift; sourceTree = "<group>"; };
 		DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CucumberStepTest.m; sourceTree = "<group>"; };
+		DE618725911A9587B6955609 /* ReportFileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFileTests.swift; sourceTree = "<group>"; };
 		DEA059D8DEDD462293ADB60B /* RuleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleTests.swift; sourceTree = "<group>"; };
 		DF8143BEABD12EB2F83CF388 /* CucumberSwiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberSwiftTests.swift; sourceTree = "<group>"; };
 		E0C44E8CCD702508CECBB73E /* GeneratedTestNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedTestNames.swift; sourceTree = "<group>"; };
@@ -575,6 +579,7 @@
 			children = (
 				0A22F85448DE49049412E696 /* JSONReporter.swift */,
 				B5F62DF94491251366BFE6D0 /* ReporterResult.swift */,
+				B5409CF929A8A6ADFE93B76E /* ReportFile.swift */,
 				B356E47594FD1FB60B48AAED /* VerboseReporter.swift */,
 			);
 			path = Reporter;
@@ -797,6 +802,7 @@
 			children = (
 				EE1ADBAACCE85FCB69F0BF9B /* CustomReporterTests.swift */,
 				7C130B41439BE4A0333AD09B /* ReporterTests.swift */,
+				DE618725911A9587B6955609 /* ReportFileTests.swift */,
 				A1468289F8DC67FAA8D3E667 /* Schema.json */,
 				F6649D7E0697DDC105796B27 /* VerboseReporterTests.swift */,
 			);
@@ -1048,6 +1054,7 @@
 				1A9BEB00D0199A934BBAFBDF /* TagTests.swift in Sources */,
 				79F283AFD904F44B71ADB6FE /* MightEqualOperatorTests.swift in Sources */,
 				B1CCDDA288AE05759A3608D7 /* CustomReporterTests.swift in Sources */,
+				2748A4ED7ACBF4CDA22DC04A /* ReportFileTests.swift in Sources */,
 				6B4A543BCCB35C350BB65F77 /* ReporterTests.swift in Sources */,
 				BED4FB179E9F0997A5F2EAB5 /* VerboseReporterTests.swift in Sources */,
 				D9EFB2266A4CA52E1F763B65 /* AmbiguousStepTests.swift in Sources */,
@@ -1133,6 +1140,7 @@
 				038EEA80244A21548F4B6DFF /* Positionable.swift in Sources */,
 				D02C4AB8F9CF4473CBFDCD01 /* Taggable.swift in Sources */,
 				0E5179311CFBFB0C3D103F26 /* JSONReporter.swift in Sources */,
+				0C875BCC6A72B4B79FD33509 /* ReportFile.swift in Sources */,
 				60D5BC94BAB3AAD02E7F6B68 /* ReporterResult.swift in Sources */,
 				52FF63B1194A3EB84813F805 /* VerboseReporter.swift in Sources */,
 				46697CBF7955EF5C4A951C14 /* AsyncStepRunner.swift in Sources */,

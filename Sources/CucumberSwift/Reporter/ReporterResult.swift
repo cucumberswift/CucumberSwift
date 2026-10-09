@@ -10,6 +10,7 @@ import Foundation
 
 public enum Reporter {
     static var reportURL: URL? {
+        if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
         let name = "_cucumberReport".appending(".json")
         if  let documentDirectory = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
             return documentDirectory.appendingPathComponent(name)

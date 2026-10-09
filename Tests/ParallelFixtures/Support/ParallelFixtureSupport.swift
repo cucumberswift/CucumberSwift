@@ -6,7 +6,8 @@
 //  steps ran once each, in order. CI checks the rest across workers: every scenario ran exactly once, and
 //  more than one worker ran them. For that, each run of a scenario writes a record, named after the
 //  scenario, the worker's process and a UUID, to the folder in the environment variable
-//  `PARALLEL_TEST_RECORDS`, when it is set.
+//  `PARALLEL_TEST_RECORDS`, when it is set. Every worker also writes the Cucumber JSON report to the file in
+//  `CUCUMBER_REPORT_PATH`, which CI checks holds every scenario once (#385).
 //
 
 import Foundation
@@ -17,6 +18,7 @@ enum ParallelFixtureSupport {
     /// Turns on experimental parallel testing and adds the hooks that check each scenario and record it.
     static func setUp() {
         Cucumber.parallelTesting = true
+        useReportInSandboxIfNeeded()
 
         var stepsRun = [Int]()
         BeforeScenario { _ in
@@ -30,6 +32,19 @@ enum ParallelFixtureSupport {
         AfterScenario { scenario in
             XCTAssertEqual(stepsRun, Array(scenario.steps.indices), "The steps of '\(scenario.title)' did not each run once, in order")
             record(scenario)
+        }
+    }
+
+    /// The UI test runner on macOS and Mac Catalyst is sandboxed and may not write to `CUCUMBER_REPORT_PATH`.
+    /// It then writes the report to `parallel-test-report/report.json` in its own temporary folder, where CI
+    /// collects it too. Everywhere else the environment variable is the setting.
+    private static func useReportInSandboxIfNeeded() {
+        guard let path = ProcessInfo.processInfo.environment["CUCUMBER_REPORT_PATH"], !path.isEmpty else { return }
+        let folder = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        if (try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)) == nil
+            || !FileManager.default.isWritableFile(atPath: folder) {
+            Cucumber.reportPath = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("parallel-test-report/report.json").path
         }
     }
 

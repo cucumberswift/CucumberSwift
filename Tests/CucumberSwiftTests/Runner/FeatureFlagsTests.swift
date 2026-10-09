@@ -15,7 +15,8 @@ class FeatureFlagsTests: XCTestCase {
         "CUCUMBER_READABLE_TEST_NAMES",
         "CUCUMBER_ONE_TEST_PER_SCENARIO",
         "CUCUMBER_GENERATE_REGEX_LITERALS",
-        "CUCUMBER_PARALLEL_TESTING"
+        "CUCUMBER_PARALLEL_TESTING",
+        "CUCUMBER_REPORT_PATH"
     ]
 
     private static func resetFlags() {
@@ -23,6 +24,7 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.oneTestPerScenario = nil
         Cucumber.generateRegexLiterals = nil
         Cucumber.parallelTesting = nil
+        Cucumber.reportPath = nil
         variables.forEach { Cucumber.shared.environment[$0] = nil }
     }
 
@@ -41,6 +43,28 @@ class FeatureFlagsTests: XCTestCase {
 
     func testRegexLiteralStepDefinitionsAreOffByDefault() {
         XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
+    }
+
+    func testReportPathIsUnsetByDefault() {
+        XCTAssertNil(FeatureFlags.reportPath)
+    }
+
+    func testReportPathComesFromTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "/tmp/from-environment.json"
+        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-environment.json")
+    }
+
+    func testReportPathStaticVariableWinsOverTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "/tmp/from-environment.json"
+        Cucumber.reportPath = "/tmp/from-code.json"
+        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-code.json")
+        Cucumber.reportPath = nil
+        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-environment.json")
+    }
+
+    func testEmptyReportPathIsIgnored() {
+        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "  "
+        XCTAssertNil(FeatureFlags.reportPath)
     }
 
     func testParallelTestingIsOffByDefault() {
