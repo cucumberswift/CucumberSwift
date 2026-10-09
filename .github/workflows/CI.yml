@@ -12,6 +12,17 @@ name: CI
 # it merges. The parallel tests skip the merge queue, run when the code changes
 # on pull requests and main (the full matrix on main), and run the full matrix on
 # every nightly and manual run (see parallel_tests).
+#
+# A pull request that merges through the merge queue is tested twice on one
+# commit: the merge_group run tests it, and when that passes, main moves to that
+# same commit, which starts a push run. So a push to main skips every job the
+# merge queue already ran when a merge_group run of this workflow tested the pushed
+# commit and passed or is still running, as the queue merges when the required
+# checks pass (.github/scripts/queue_checked.py, in the changes job), and reports
+# them as skipped. That keeps macOS runners free for the queue and pull requests.
+# The parallel tests, which the queue skips, still run on the push when their
+# files change. A push to main with no passing queue run, such as an admin's
+# direct push, and pushes to support/N.x, nightly and manual runs run everything.
 on:
   pull_request:
   merge_group:
@@ -58,7 +69,8 @@ jobs:
   # code (no_code), the macOS jobs that build and test code are skipped; on a
   # docs-only run, Script tests is skipped too; on a scripts-only run, Docs is.
   # A skipped job reports Skipped, which counts as passing for a required
-  # check. Pushes and manual runs always run everything. Each skipped job checks
+  # check. Pushes and manual runs count as changing code (but see queue_checked
+  # below for pushes to main). Each skipped job checks
   # `!cancelled()`, so if this job fails they run rather than skip. Path filters
   # on the whole workflow are not used: they would leave required checks waiting.
   # A matrix job skipped this way reports one check with its name unexpanded,
@@ -67,20 +79,26 @@ jobs:
   # without a matrix before requiring it.
   #
   # It also says whether the run changes a DocC catalog (catalog), so that SwiftPM
-  # tests compiles the documentation's Swift examples on a run with no code too, and
-  # whether the parallel tests run (see parallel_tests).
+  # tests compiles the documentation's Swift examples on a run with no code too,
+  # whether the parallel tests run (see parallel_tests), and whether a push to main
+  # is a commit the merge queue already checked (queue_checked, see the header).
+  # Every job but the parallel tests skips on queue_checked; like the others, each
+  # runs if this job fails.
   changes:
     name: Changed files
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
+      # To look up the merge queue's runs of this workflow.
+      actions: read
     outputs:
       docs_only: ${{ steps.changes.outputs.docs_only }}
       scripts_only: ${{ steps.changes.outputs.scripts_only }}
       no_code: ${{ steps.changes.outputs.no_code }}
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
+      queue_checked: ${{ steps.queue.outputs.queue_checked }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
       # no file contents.
@@ -118,6 +136,11 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      - name: Decide whether the merge queue already checked this push
+        id: queue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/queue_checked.py
 
   # Builds the DocC catalog as the Release workflow does, on every change but
   # one to Linux-run scripts only, which DocC never reads. --warnings-as-errors
@@ -126,7 +149,7 @@ jobs:
   docs:
     name: Docs
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -150,7 +173,7 @@ jobs:
   coverage_no_code:
     name: Coverage (no code)
     needs: changes
-    if: ${{ needs.changes.outputs.no_code == 'true' }}
+    if: ${{ needs.changes.outputs.no_code == 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -174,7 +197,7 @@ jobs:
   ios_tests:
     name: iOS tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
@@ -215,7 +238,7 @@ jobs:
   project_checks:
     name: Project checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -257,7 +280,7 @@ jobs:
   script_tests:
     name: Script tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -282,6 +305,8 @@ jobs:
   # GitHub publishes for it, as mise does.
   workflow_checks:
     name: Workflow checks
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -327,7 +352,7 @@ jobs:
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -417,7 +442,7 @@ jobs:
   catalyst_tests:
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
@@ -569,7 +594,7 @@ jobs:
   swiftpm_tests:
     name: SwiftPM tests
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') }}
+    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -654,7 +679,7 @@ jobs:
   fixture_tests:
     name: Fixture tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
@@ -692,7 +717,7 @@ jobs:
   bazel_tests:
     name: Bazel tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
