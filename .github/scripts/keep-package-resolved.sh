@@ -19,14 +19,19 @@ if [[ -e "$lockfile" ]]; then
   cp -p "$lockfile" "$saved" || { rm -f "$saved"; echo "Cannot save $lockfile" >&2; exit 1; }
   had_lockfile=true
 fi
+# Keeps the command's exit status, unless it succeeded and the file can't be put back.
 restore() {
+  local status=$?
   if [[ "$had_lockfile" == true ]]; then
-    cmp -s "$saved" "$lockfile" || cp -p "$saved" "$lockfile"
+    if ! cmp -s "$saved" "$lockfile" && ! cp -p "$saved" "$lockfile"; then
+      echo "Cannot restore $lockfile; a copy is at $saved" >&2
+      exit "$((status == 0 ? 1 : status))"
+    fi
   else
     rm -f "$lockfile"
   fi
   rm -f "$saved"
-  return 0
+  exit "$status"
 }
 # Also when the command is interrupted.
 trap restore EXIT
