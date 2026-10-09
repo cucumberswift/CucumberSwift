@@ -17,8 +17,35 @@ struct StepDefinition {
         let type: TypeSyntax?
     }
 
-    let literal: StringLiteralExprSyntax
+    /// Finds a node in a closure's own body: an `await` or a `try` in a nested closure or function belongs to that one.
+    final class BodyFinder: SyntaxAnyVisitor {
+        private let predicate: (Syntax) -> Bool
+        private var found = false
+
+        static func contains(in closure: ClosureExprSyntax, where predicate: @escaping (Syntax) -> Bool) -> Bool {
+            let finder = BodyFinder(predicate)
+            finder.walk(closure.statements)
+            return finder.found
+        }
+
+        private init(_ predicate: @escaping (Syntax) -> Bool) {
+            self.predicate = predicate
+            super.init(viewMode: .sourceAccurate)
+        }
+
+        override func visit(_: ClosureExprSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
+        override func visit(_: FunctionDeclSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
+        override func visitAny(_ node: Syntax) -> SyntaxVisitorContinueKind {
+            if predicate(node) { found = true }
+            return found ? .skipChildren : .visitChildren
+        }
+    }
+
+    /// The pattern as written: a string literal, with a Cucumber expression or a regular expression, or a regex literal.
+    let literal: ExprSyntax
     let pattern: StepPattern
+    /// What the regex literal captures, when the pattern is one.
+    let regex: RegexLiteralPattern?
     let closure: ClosureExprSyntax
     let parameters: [Parameter]
     /// The closure's last parameter, when it takes the `Step` after the arguments.
@@ -26,34 +53,49 @@ struct StepDefinition {
 
     init(_ node: some FreestandingMacroExpansionSyntax) throws {
         let arguments = Array(node.arguments)
-        guard let first = arguments.first,
-              let literal = first.expression.as(StringLiteralExprSyntax.self),
-              let text = literal.representedLiteralValue else {
-            throw DiagnosticsError(diagnostics: [
-                Diagnostic(node: arguments.first.map { Syntax($0.expression) } ?? Syntax(node),
-                           message: StepMessage.patternNotLiteral)
-            ])
-        }
+        let first = arguments.first?.expression
+        let literal = first?.as(StringLiteralExprSyntax.self)
+        let regexLiteral = first?.as(RegexLiteralExprSyntax.self)
+        let notLiteral = DiagnosticsError(diagnostics: [
+            Diagnostic(node: first.map { Syntax($0) } ?? Syntax(node), message: StepMessage.patternNotLiteral)
+        ])
+        guard literal?.representedLiteralValue != nil || regexLiteral != nil else { throw notLiteral }
         guard let closure = node.trailingClosure ?? arguments.dropFirst().first?.expression.as(ClosureExprSyntax.self) else {
             throw DiagnosticsError(diagnostics: [Diagnostic(node: Syntax(node), message: StepMessage.bodyNotClosure)])
         }
-        self.literal = literal
+        self.literal = (first ?? "").trimmed
         self.closure = closure
 
-        do {
-            pattern = try StepPattern(text)
-        } catch let problem as StepPattern.Problem {
-            throw DiagnosticsError(diagnostics: [Self.diagnostic(for: problem, in: literal)])
+        if let regexLiteral {
+            // A multi-line literal, whose pattern starts on the line after `#/`, uses extended syntax.
+            let text = regexLiteral.regex.text
+            let regex = RegexLiteralPattern(text, isExtended: text.first?.isNewline == true)
+            self.regex = regex
+            pattern = StepPattern(regexCaptures: regex.captures)
+        } else if let literal, let text = literal.representedLiteralValue {
+            regex = nil
+            do {
+                pattern = try StepPattern(text)
+            } catch let problem as StepPattern.Problem {
+                throw DiagnosticsError(diagnostics: [Self.diagnostic(for: problem, in: literal)])
+            }
+        } else {
+            throw notLiteral
         }
 
         var parameters = Self.parameters(of: closure)
-        if parameters.count == pattern.captures.count + 1, let last = parameters.last, Self.isStep(last) {
+        // When the macro can't count a regex literal's captures, a last argument that is the Step is the Step.
+        let takesStep = regex?.isCertain == false || parameters.count == pattern.captures.count + 1
+        if takesStep, let last = parameters.last, Self.isStep(last) {
             step = parameters.removeLast()
         } else {
             step = nil
         }
         self.parameters = parameters
 
+        // The compiler checks a regex literal's captures against the arguments in the expansion. The macro
+        // reports what it can say more clearly, with a fix-it, only when it is sure of the captures.
+        guard regex?.isCertain != false else { return }
         let diagnostics = parameters.count == pattern.captures.count ? typeDiagnostics() : [arityDiagnostic()]
         if !diagnostics.isEmpty { throw DiagnosticsError(diagnostics: diagnostics) }
     }
@@ -76,7 +118,7 @@ struct StepDefinition {
         return type == "Step" || type == "CucumberSwift.Step"
     }
 
-    private static func unique(_ name: String, avoiding used: Set<String>) -> String {
+    static func unique(_ name: String, avoiding used: Set<String>) -> String {
         var candidate = name
         var number = 2
         while used.contains(candidate) {
@@ -87,7 +129,7 @@ struct StepDefinition {
     }
 
     /// The closure's statements, moved to four spaces under the step definition.
-    private static func reindented(_ statements: CodeBlockItemListSyntax) -> String {
+    static func reindented(_ statements: CodeBlockItemListSyntax) -> String {
         let lines = statements.description
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { $0.allSatisfy(\.isWhitespace) ? "" : String($0) }
@@ -100,29 +142,15 @@ struct StepDefinition {
     }
 
     /// Whether the closure, or a closure inside it, has a capture list.
-    private static func hasCaptureList(_ closure: ClosureExprSyntax) -> Bool {
+    static func hasCaptureList(_ closure: ClosureExprSyntax) -> Bool {
         closure.tokens(viewMode: .sourceAccurate).contains { $0.parent?.is(ClosureCaptureClauseSyntax.self) == true }
     }
 
     /// Whether the closure's own body awaits, which makes Swift infer that it is async, without the keyword.
-    private static func awaits(_ closure: ClosureExprSyntax) -> Bool {
-        final class Finder: SyntaxVisitor {
-            var found = false
-            // An await in a nested closure or function makes only that one async.
-            override func visit(_: ClosureExprSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
-            override func visit(_: FunctionDeclSyntax) -> SyntaxVisitorContinueKind { .skipChildren }
-            override func visit(_: AwaitExprSyntax) -> SyntaxVisitorContinueKind {
-                found = true
-                return .skipChildren
-            }
-            override func visit(_ node: ForStmtSyntax) -> SyntaxVisitorContinueKind {
-                if node.awaitKeyword != nil { found = true }
-                return .visitChildren
-            }
+    static func awaits(_ closure: ClosureExprSyntax) -> Bool {
+        BodyFinder.contains(in: closure) { node in
+            node.is(AwaitExprSyntax.self) || node.as(ForStmtSyntax.self)?.awaitKeyword != nil
         }
-        let finder = Finder(viewMode: .sourceAccurate)
-        finder.walk(closure.statements)
-        return finder.found
     }
 
     // MARK: Diagnostics
@@ -142,6 +170,7 @@ struct StepDefinition {
 
     /// The step definition a user would write by hand.
     func expansion(keyword: String) -> ExprSyntax {
+        if let regex { return expansion(keyword: keyword, regex: regex) }
         let used = Set(parameters.map(\.name) + [step?.name].compactMap { $0 })
         let match = pattern.captures.isEmpty ? "_" : Self.unique("match", avoiding: used)
         let stepName = step?.name ?? "_"
@@ -177,7 +206,7 @@ struct StepDefinition {
 
         guard Self.hasCaptureList(closure) else {
             return """
-            \(raw: keyword)(\(literal.trimmed) as CucumberExpression) \(raw: opening)
+            \(raw: keyword)(\(literal) as CucumberExpression) \(raw: opening)
             \(raw: body.joined(separator: "\n"))
             }
             """
@@ -198,7 +227,7 @@ struct StepDefinition {
             let \(raw: constant): \(raw: type) = \(raw: opening)
         \(raw: indented.joined(separator: "\n"))
             }
-            return \(raw: keyword)(\(literal.trimmed) as CucumberExpression, callback: \(raw: constant))
+            return \(raw: keyword)(\(literal) as CucumberExpression, callback: \(raw: constant))
         }()
         """
     }
@@ -244,10 +273,19 @@ struct StepDefinition {
         zip(pattern.captures, parameters).compactMap { capture, parameter in
             guard let expected = capture.type, let type = parameter.type,
                   type.trimmedDescription != expected, type.trimmedDescription != "Swift.\(expected)" else { return nil }
+            // Whether a regex literal's capture is optional is the compiler's to say: the macro's reading
+            // of it only offers the fix.
+            if regex != nil, Self.isSubstring(type) { return nil }
             let replacement = TypeSyntax(IdentifierTypeSyntax(name: .identifier(expected)))
                 .with(\.leadingTrivia, type.leadingTrivia)
                 .with(\.trailingTrivia, type.trailingTrivia)
-            let message = StepMessage.wrongType(parameter: capture.parameter,
+            let source = switch (capture.parameter, regex) {
+                case ("anonymous", nil) where !pattern.isRegularExpression: "{}"
+                case ("anonymous", _): "A capture group"
+                case (_, nil): "{\(capture.parameter)}"
+                default: "The capture group '\(capture.parameter)'"
+            }
+            let message = StepMessage.wrongType(source: source,
                                                 expected: expected,
                                                 name: parameter.name,
                                                 actual: type.trimmedDescription)
@@ -263,12 +301,12 @@ enum StepMessage: DiagnosticMessage {
     case bodyNotClosure
     case invalidPattern(String)
     case wrongArity(expected: Int, actual: Int, isRegularExpression: Bool)
-    case wrongType(parameter: String, expected: String, name: String, actual: String)
+    case wrongType(source: String, expected: String, name: String, actual: String)
 
     var message: String {
         switch self {
             case .patternNotLiteral:
-                return "The step definition's pattern must be a string literal, so it can be checked when it compiles."
+                return "The step definition's pattern must be a string literal or a regex literal, so it can be checked when it compiles."
             case .bodyNotClosure:
                 return "The step definition's body must be a closure."
             case .invalidPattern(let problem):
@@ -277,8 +315,7 @@ enum StepMessage: DiagnosticMessage {
                 let what = isRegularExpression ? "capture group" : "parameter"
                 return "The pattern has \(expected) \(what)\(expected == 1 ? "" : "s"), but the closure takes \(actual) argument\(actual == 1 ? "" : "s"). "
                     + "Give the closure one argument per \(what), in order, optionally followed by the Step."
-            case let .wrongType(parameter, expected, name, actual):
-                let source = parameter == "anonymous" ? "A capture group" : "{\(parameter)}"
+            case let .wrongType(source, expected, name, actual):
                 return "\(source) gives \(expected), but '\(name)' is declared as \(actual)."
         }
     }

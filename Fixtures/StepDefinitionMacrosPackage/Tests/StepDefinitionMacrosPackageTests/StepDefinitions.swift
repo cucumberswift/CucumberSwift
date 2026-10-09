@@ -173,11 +173,63 @@ extension Cucumber: @retroactive StepImplementation {
         // A step definition that is commented out. CucumberSwiftLint ignores it, so it doesn't warn
         // that its regular expression, which has an unclosed group, does not compile.
         // Then(#/^a broken (step$/#) { _, _ in }
+
+        regexLiteralSteps()
     }
 
     /// The sum of the second column of the step's table, under its header row.
     private static func count(in step: Step) -> Int {
         let rows = step.dataTable?.rows.dropFirst() ?? []
         return rows.reduce(0) { $0 + (Int($1[1]) ?? 0) }
+    }
+
+    /// Step definitions with regex literals.
+    @MainActor private func regexLiteralSteps() {
+        let container = "basket"
+
+        // Regex literals: a numbered and a named capture, an optional one, none, a bare /…/ literal, which the
+        // Swift 6 language mode allows, and the Step.
+        #Given(#/^the shelf holds (\d+) cukes from "(?<city>[^"]*)"$/#) { (count: Substring, city: Substring) in
+            XCTAssertEqual(city, "Lisbon")
+            Basket.shared.cukes = Int(count) ?? -1
+        }
+
+        #When(#/^I take (\d+) cukes?( slowly)?$/#) { (count: Substring, slowly: Substring?) in
+            XCTAssertEqual(slowly == nil, count == "3")
+            Basket.shared.cukes -= Int(count) ?? 0
+        }
+
+        #When(#/^nothing happens$/#) {
+            XCTAssertEqual(Basket.shared.cukes, 0)
+        }
+
+        #Then(/^the shelf has (\d+) cukes? left$/) { (count: Substring) in
+            XCTAssertEqual(Basket.shared.cukes, Int(count))
+        }
+
+        #And(#/^the regex step says "(\w+)"$/#) { (word: Substring, step: Step) in
+            XCTAssert(step.keyword.contains(.and))
+            XCTAssertEqual(word, "shelf")
+        }
+
+        // Regex literals with effects and capture lists.
+        #Given(#/^the shelf holds (\d+) cukes from "(?<city>\w+)", counted by a captured clerk$/#) { [container] (count: Substring, city: Substring) throws in
+            XCTAssertEqual(container, "basket")
+            XCTAssertEqual(city, "Porto")
+            Basket.shared.cukes = try XCTUnwrap(Int(count))
+        }
+
+        #When(#/^I restock (\d+) cukes asynchronously$/#) { (count: Substring) async throws in
+            try await Task.sleep(nanoseconds: 1_000)
+            Basket.shared.cukes += Int(count) ?? 0
+        }
+
+        #Then(#/^the shelf has (\d+) cukes left, checked by a weak runner$/#) { [weak self] (count: Substring) async throws in
+            try await self?.basket.waitForCount(Int(count))
+        }
+
+        #ES_Dado(#/^tengo (?<cantidad>\d+) pepinos en la cesta$/#) { (cantidad: Substring) in
+            Basket.shared.cukes = Int(cantidad) ?? -1
+        }
     }
 }

@@ -88,7 +88,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 <doc:Checking-Step-Definitions> describes the macros in full: the argument each parameter gives, the mistakes the compiler reports, and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which are only in `CucumberSwiftMacros`, not in `CucumberSwiftTestingMacros`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. The step definition macros take only a string pattern, a string literal. A regex literal, such as `#/…/#`, works only with `Given` and the other step functions, and needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. It can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Checking-Step-Definitions#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
 `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
 

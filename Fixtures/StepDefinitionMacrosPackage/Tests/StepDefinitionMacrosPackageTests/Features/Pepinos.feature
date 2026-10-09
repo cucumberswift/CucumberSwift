@@ -26,3 +26,7 @@ Característica: Pasos localizados
       | inicio |
       | 1      |
       | 4      |
+
+  Escenario: Un paso en español con una expresión regular
+    Dado tengo 7 pepinos en la cesta
+    Entonces la cesta tiene 7 pepinos
