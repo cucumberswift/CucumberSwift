@@ -78,7 +78,7 @@ fi
 runner_records=("$HOME"/Library/Containers/org.cucumberswift.Parallel*.xctrunner/Data/tmp/parallel-test-records)
 for folder in "${runner_records[@]}"; do rm -rf "$folder"; done
 
-xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+.github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
 status=$?
