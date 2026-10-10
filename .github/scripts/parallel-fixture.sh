@@ -71,15 +71,12 @@ if [[ -n "${udid:-}" ]]; then
   xcrun simctl shutdown "$udid" 2>/dev/null || true
 fi
 
-# The sandboxed UI test runner's records from an earlier run on this Mac would be counted as this run's.
-rm -rf "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records
-
 xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
 status=$?
 # The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
-cp "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
+cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
 
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
