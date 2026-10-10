@@ -146,10 +146,10 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(names(second.read()), [["A", "B"]])
     }
 
-    func testTheReporterMergesItsFeaturesIntoTheSharedReportWhenParallelTestingIsOn() throws {
+    /// Runs one feature through the reporter with a report at `url` that another worker already wrote to,
+    /// and returns the names of the features the report holds afterwards.
+    private func featureNamesAfterARunBesideAnotherWorker() throws -> [String] {
         Cucumber.shared.reset()
-        Cucumber.parallelTesting = true
-        addTeardownBlock { Cucumber.parallelTesting = nil }
         Cucumber.reportPath = url.path
         addTeardownBlock { Cucumber.reportPath = nil }
         let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
@@ -161,24 +161,17 @@ class ReportFileTests: XCTestCase {
         }
         reporter.testSuiteStarted(at: Date())
         Cucumber.shared.executeFeatures()
-        let report = ReportFile(url: url).read()
-        XCTAssertEqual(report.compactMap { $0["name"] as? String }.sorted(), ["F1", "Other"])
+        return ReportFile(url: url).read().compactMap { $0["name"] as? String }
+    }
+
+    func testTheReporterMergesItsFeaturesIntoTheSharedReportWhenParallelTestingIsOn() throws {
+        Cucumber.parallelTesting = true
+        addTeardownBlock { Cucumber.parallelTesting = nil }
+        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker().sorted(), ["F1", "Other"])
     }
 
     func testTheReporterReplacesTheReportWhenParallelTestingIsOff() throws {
-        Cucumber.shared.reset()
-        Cucumber.reportPath = url.path
-        addTeardownBlock { Cucumber.reportPath = nil }
-        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-        ReportFile(url: url).merge([feature([scenario("Elsewhere", line: 3)], name: "Other", uri: "Other.feature")])
-        Feature("F1") {
-            Scenario("S1") {
-                Given(I: print(""))
-            }
-        }
-        reporter.testSuiteStarted(at: Date())
-        Cucumber.shared.executeFeatures()
-        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["F1"])
+        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker(), ["F1"])
     }
 
     func testTheReporterWritesToTheReportPathSetting() throws {

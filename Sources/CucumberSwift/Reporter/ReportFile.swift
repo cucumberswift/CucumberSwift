@@ -99,12 +99,10 @@ final class ReportFile: @unchecked Sendable {
         runDescriptor = descriptor
         // Holding the lock exclusively means no other worker is running; waiting for it while another
         // worker joins is what keeps two first workers from both emptying the report.
-        if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
-            if isStale(after: staleAfter) { withWriteLock { write([]) } }
-            flock(descriptor, LOCK_SH)
-        } else {
-            flock(descriptor, LOCK_SH)
+        if flock(descriptor, LOCK_EX | LOCK_NB) == 0, isStale(after: staleAfter) {
+            withWriteLock { write([]) }
         }
+        flock(descriptor, LOCK_SH)
     }
 
     private func isStale(after seconds: TimeInterval) -> Bool {
