@@ -39,7 +39,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Running-Tests-In-Xcode#Test-names> | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On | XCTest | — |
 | <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest | — |
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest | iOS 16, macOS 13 or tvOS 16 to run the regex literals it generates |
-| <doc:Running-Tests-In-Xcode#Parallel-testing> (experimental) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off | XCTest | Per platform: see the article |
+| <doc:Running-Scenarios-In-Parallel> (experimental) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off | XCTest | Per platform: see the article |
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest | — |
 | <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | — | All scenarios | XCTest | — |
 | <doc:Running-Tests-In-Xcode#Choose-scenarios-with-a-test-plan> | — | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | — |
