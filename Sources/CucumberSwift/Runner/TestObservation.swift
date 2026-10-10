@@ -44,6 +44,11 @@ extension Cucumber: XCTestObservation {
 final class RunningTestCaseObserver: NSObject, XCTestObservation {
     private(set) weak var testCase: XCTestCase?
 
+    /// A new run in the same process, such as one of Xcode's test iterations, runs each scenario once more.
+    func testBundleWillStart(_ testBundle: Bundle) {
+        ScenarioRuns.reset()
+    }
+
     func testCaseWillStart(_ testCase: XCTestCase) {
         self.testCase = testCase
     }
