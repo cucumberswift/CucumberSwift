@@ -94,6 +94,13 @@ for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp*
 done
 grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
 
+# PROBE389 (research, #389): what each process saw, from the probe's files.
+mkdir -p "$records-probe"
+cp "$HOME"/Library/Containers/*/Data/tmp/parallel-probe/* "$records-probe"/ 2>/dev/null || true
+for probe in "$records-probe"/*; do
+  [[ -f "$probe" ]] || continue
+  echo "PROBE389 $(basename "$probe" | sed -E 's/\.[0-9A-F-]{36}\.txt$//') $(grep -E '^(mainBundle|extra\.|config\.(testsDrivenByIDE|inProcessParallelizationEnabled|testBundleName)=|config=|env\.(SIMULATOR_DEVICE_NAME|XCTestConfigurationFilePath|XCODE_SCHEME_NAME)=)' "$probe" | cut -c1-300 | tr '\n' ' ')"
+done
 total=$(ls "$records" | wc -l | tr -d ' ')
 # Each record is <scenario>.<worker's process>.<UUID>.
 scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
