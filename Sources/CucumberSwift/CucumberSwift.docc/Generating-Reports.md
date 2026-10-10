@@ -35,7 +35,7 @@ TEST_RUNNER_CUCUMBER_REPORT_PATH="$HOME/CucumberReports/report.json" xcodebuild 
 ```
 
 ### One report for a parallel run
-With <doc:Running-Tests-In-Xcode#Parallel-testing> on, each worker is a process of its own, but they write one report. Each time a worker writes, it locks the report, reads it, adds its own features, writes the result to a temporary file in the same folder, moves that into place and unlocks. A feature whose scenarios ran in several workers has all of them, in the order of the feature file, and every scenario is in the report once.
+With <doc:Running-Scenarios-In-Parallel> on, each worker is a process of its own, but they write one report. Each time a worker writes, it locks the report, reads it, adds its own features, writes the result to a temporary file in the same folder, moves that into place and unlocks. A feature whose scenarios ran in several workers has all of them, in the order of the feature file, and every scenario is in the report once.
 
 - **Put the report where every worker reaches it.** On macOS and Mac Catalyst the default is already one file. On an iOS or tvOS Simulator, each clone has a documents folder of its own, so without `reportPath` there is one report in each clone, and the script above copies one of them. Set `reportPath` to a path on the Mac, as above, and the workers share one file.
 - **A new run replaces the old report.** The first worker of a run empties the report the last run left, when nothing is writing it and it hasn't been written for a minute. Delete the report before a run that starts within a minute of another's.

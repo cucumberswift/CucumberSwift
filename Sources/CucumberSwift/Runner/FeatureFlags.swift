@@ -118,8 +118,8 @@ extension Cucumber {
     ///
     /// It applies to a test per step, the default, not to ``oneTestPerScenario``. Each worker is a process
     /// of its own, so state your step definitions share and a feature's hooks are per worker, and on a
-    /// Simulator the JSON report needs ``reportPath``: see <doc:Running-Tests-In-Xcode#Parallel-testing>
-    /// before you turn it on.
+    /// Simulator the JSON report needs ``reportPath``: see <doc:Running-Scenarios-In-Parallel> before you
+    /// turn it on.
     public static var parallelTesting: Bool? {
         get { FeatureFlags.storage["parallelTesting"] }
         set { FeatureFlags.storage["parallelTesting"] = newValue }
