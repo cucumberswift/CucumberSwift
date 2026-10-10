@@ -104,7 +104,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/parallel-fixture\.sh$)'
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parallel-fixture|keep-package-resolved)\.sh$)'
           if [ "$EVENT" = merge_group ]; then
             run=false
           elif [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then

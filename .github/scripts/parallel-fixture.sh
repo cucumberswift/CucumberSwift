@@ -71,7 +71,7 @@ if [[ -n "${udid:-}" ]]; then
   xcrun simctl shutdown "$udid" 2>/dev/null || true
 fi
 
-xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+.github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
 status=$?
