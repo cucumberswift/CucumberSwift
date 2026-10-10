@@ -61,8 +61,17 @@ final class ReportFile: @unchecked Sendable {
         return merged
     }
 
+    /// Two workers read one feature file from different places when each runs from a copy of the test
+    /// bundle, as the UI test runner does on each Simulator clone, so the features are matched by their
+    /// path inside the `.xctest` bundle when they have one.
+    private static func identity(ofURI uri: String?) -> String? {
+        guard let uri else { return nil }
+        guard let bundle = uri.range(of: ".xctest/", options: .backwards) else { return uri }
+        return String(uri[bundle.upperBound...])
+    }
+
     private static func isSame(feature: [String: Any], as other: [String: Any]) -> Bool {
-        feature["uri"] as? String == other["uri"] as? String
+        identity(ofURI: feature["uri"] as? String) == identity(ofURI: other["uri"] as? String)
             && feature["line"] as? Int == other["line"] as? Int
             && feature["name"] as? String == other["name"] as? String
     }

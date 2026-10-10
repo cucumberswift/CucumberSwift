@@ -15,6 +15,7 @@ set -u
 WORKERS=${WORKERS:-3}
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
+EXPECTED_FEATURES=${EXPECTED_FEATURES:-2}
 temp=${RUNNER_TEMP:-$(mktemp -d)}
 
 case "$PLATFORM" in
@@ -126,7 +127,7 @@ fi
 
 # The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
 # in feature-file order.
-report_check=$(REPORT="$report" EXPECTED="$EXPECTED_SCENARIOS" python3 -c '
+report_check=$(REPORT="$report" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
 import json, os, sys
 try:
     features = json.load(open(os.environ["REPORT"]))
@@ -147,6 +148,8 @@ for feature in features:
 problems += ["%s ran %d times in the report" % (key[2], n) for key, n in seen.items() if n > 1]
 if len(seen) != int(os.environ["EXPECTED"]):
     problems.append("the report holds %d of %s scenarios" % (len(seen), os.environ["EXPECTED"]))
+if len(features) != int(os.environ["EXPECTED_FEATURES"]):
+    problems.append("the report holds %d features, not %s: a feature was split between workers" % (len(features), os.environ["EXPECTED_FEATURES"]))
 print("Report: %d scenarios in %d features" % (len(seen), len(features)))
 print("\n".join(problems))
 sys.exit(1 if problems else 0)
