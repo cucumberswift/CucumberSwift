@@ -1,4 +1,4 @@
-// LOCAL PROBE for #389 research. Never commit.
+// Research probe for #389, on a throwaway branch. Records a few allow-listed values, never the environment. Not for merge.
 import Foundation
 import XCTest
 
@@ -15,9 +15,12 @@ enum ParallelProbe {
         lines.append("mainBundle=\(Bundle.main.bundleIdentifier ?? "nil") path=\(Bundle.main.bundlePath)")
         lines.append("args=\(info.arguments)")
         extra.sorted { $0.key < $1.key }.forEach { lines.append("extra.\($0.key)=\($0.value)") }
-        for (key, value) in info.environment.sorted(by: { $0.key < $1.key }) {
-            lines.append("env.\(key)=\(value)")
+        // Only these variables are recorded, never the whole environment.
+        let environmentAllowList = ["SIMULATOR_DEVICE_NAME", "XCTestConfigurationFilePath", "XCODE_SCHEME_NAME", "XCTestSessionIdentifier"]
+        for key in environmentAllowList {
+            lines.append("env.\(key)=\(info.environment[key].map { $0.isEmpty ? "(empty)" : "(set)" } ?? "(absent)")")
         }
+        lines.append("env.SIMULATOR_DEVICE_NAME.value=\(info.environment["SIMULATOR_DEVICE_NAME"] ?? "(absent)")")
         lines.append(contentsOf: configuration())
         let dir = URL(fileURLWithPath: folder, isDirectory: true)
         let sandbox = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("parallel-probe")
@@ -48,7 +51,9 @@ enum ParallelProbe {
             if let props = class_copyPropertyList(current, &count) {
                 for i in 0..<Int(count) {
                     let name = String(cString: property_getName(props[i]))
-                    guard config.responds(to: NSSelectorFromString(name)) else { continue }
+                    guard ["testsDrivenByIDE", "inProcessParallelizationEnabled", "testBundleName", "productModuleName",
+                           "targetApplicationBundleID", "initializeForUITesting"].contains(name),
+                          config.responds(to: NSSelectorFromString(name)) else { continue }
                     let value = config.value(forKey: name).map { String(describing: $0) } ?? "nil"
                     out.append("config.\(name)=\(value.replacingOccurrences(of: "\n", with: " ").prefix(600))")
                 }
