@@ -50,16 +50,16 @@ class FeatureFlagsTests: XCTestCase {
     }
 
     func testReportPathComesFromTheEnvironmentVariable() {
-        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "/tmp/from-environment.json"
-        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-environment.json")
+        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "reports/from-environment.json"
+        XCTAssertEqual(FeatureFlags.reportPath, "reports/from-environment.json")
     }
 
     func testReportPathStaticVariableWinsOverTheEnvironmentVariable() {
-        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "/tmp/from-environment.json"
-        Cucumber.reportPath = "/tmp/from-code.json"
-        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-code.json")
+        Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "reports/from-environment.json"
+        Cucumber.reportPath = "reports/from-code.json"
+        XCTAssertEqual(FeatureFlags.reportPath, "reports/from-code.json")
         Cucumber.reportPath = nil
-        XCTAssertEqual(FeatureFlags.reportPath, "/tmp/from-environment.json")
+        XCTAssertEqual(FeatureFlags.reportPath, "reports/from-environment.json")
     }
 
     func testEmptyReportPathIsIgnored() {

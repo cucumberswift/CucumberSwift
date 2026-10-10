@@ -184,7 +184,7 @@ class ReportFileTests: XCTestCase {
     }
 
     func testAReporterMadeWithAPathKeepsIt() {
-        Cucumber.reportPath = "/somewhere/else.json"
+        Cucumber.reportPath = "elsewhere/else.json"
         addTeardownBlock { Cucumber.reportPath = nil }
         XCTAssertEqual(CucumberJSONReporter(reportPath: url).reportURL, url)
     }
