@@ -63,11 +63,15 @@ DOCC_CATALOG = ".docc"
 ROOT_DOCS = {"LICENSE"}
 DOCS_FOLDERS = (".github/ISSUE_TEMPLATE/",)
 # The scripts that only Linux jobs run, and their tests: Script tests runs the
-# tests, the changes jobs run docs_only.py, the Release workflow's plan and release
+# tests, the changes jobs run docs_only.py, queue_checked.py and parallel_matrix.py, the Release workflow's plan and release
 # jobs run release.py, and docs.yml runs publish-docs.sh.
 LINUX_SCRIPTS = {
     ".github/scripts/docs_only.py",
     ".github/scripts/test_docs_only.py",
+    ".github/scripts/queue_checked.py",
+    ".github/scripts/test_queue_checked.py",
+    ".github/scripts/parallel_matrix.py",
+    ".github/scripts/test_parallel_matrix.py",
     ".github/scripts/release.py",
     ".github/scripts/test_release.py",
     ".github/scripts/test_check_lockfiles.py",
