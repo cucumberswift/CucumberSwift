@@ -76,7 +76,10 @@ fi
 # empties it, so a local run would also count the records of an earlier one. Only the containers of the
 # fixtures' own bundle IDs, org.cucumberswift.Parallel*, are touched, never another app's.
 # Found again after the run, because a clean runner has no such container until the tests have run.
-runner_records() { ls -d "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records 2>/dev/null; }
+runner_records() {
+  ls -d "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records 2>/dev/null
+  return 0
+}
 runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
 
 .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
