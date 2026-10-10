@@ -11,7 +11,8 @@ name: CI
 # supports, and the oldest Bazel), so every change is checked on all of them before
 # it merges. The parallel tests skip the merge queue, run when the code changes
 # on pull requests and main (the full matrix on main), and run the full matrix on
-# every nightly and manual run (see parallel_tests).
+# every nightly and manual run (see parallel_tests). A manual run's inputs can
+# narrow the parallel tests to some combinations, and skip every other job.
 #
 # A pull request that merges through the merge queue is tested twice on one
 # commit: the merge_group run tests it, and when that passes, main moves to that
@@ -33,7 +34,29 @@ on:
   schedule:
     # Nightly at 04:23 UTC, off the hour to avoid GitHub's scheduling peak.
     - cron: '23 4 * * *'
+  # The defaults run everything. A change to parallel testing is narrowed to the
+  # combinations it concerns, for example: gh workflow run CI.yml --ref <branch>
+  # -f parallel_platforms=macOS,Catalyst -f parallel_kinds=UI -f parallel_only=true
+  # .github/scripts/parallel_matrix.py reads the lists, in the changes job.
   workflow_dispatch:
+    inputs:
+      parallel_platforms:
+        description: 'Parallel tests: all, or a comma-separated list of iOS, tvOS, macOS, Catalyst'
+        type: string
+        default: all
+      parallel_kinds:
+        description: 'Parallel tests: all, or a comma-separated list of hostless, hosted, UI'
+        type: string
+        default: all
+      parallel_xcode:
+        description: 'Parallel tests: all, 16 or 26'
+        type: choice
+        options: [all, '16', '26']
+        default: all
+      parallel_only:
+        description: 'Run only the parallel tests, and skip every other job'
+        type: boolean
+        default: false
 
 # A new push to a pull request cancels the run it replaces, so the old run stops
 # holding macOS runners that merge queue entries wait for. Every other run gets
@@ -83,7 +106,12 @@ jobs:
   # whether the parallel tests run (see parallel_tests), and whether a push to main
   # is a commit the merge queue already checked (queue_checked, see the header).
   # Every job but the parallel tests skips on queue_checked; like the others, each
-  # runs if this job fails.
+  # runs if this job fails. They also skip on a manual run with parallel_only, which
+  # they read from the inputs, so they skip even if this job fails.
+  #
+  # And it builds the parallel tests' matrix, as JSON, with
+  # .github/scripts/parallel_matrix.py, from the event and a manual run's inputs, and
+  # says whether parallel_smoke runs. An unknown platform or kind fails this job.
   changes:
     name: Changed files
     runs-on: ubuntu-24.04
@@ -98,6 +126,8 @@ jobs:
       no_code: ${{ steps.changes.outputs.no_code }}
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
+      parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
@@ -122,7 +152,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parallel-fixture|keep-package-resolved)\.sh$)'
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parallel-fixture|keep-package-resolved)\.sh$|\.github/scripts/parallel_matrix\.py$)'
           if [ "$EVENT" = merge_group ]; then
             run=false
           elif [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
@@ -136,6 +166,13 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      - name: Build the parallel tests' matrix
+        id: matrix
+        env:
+          PARALLEL_PLATFORMS: ${{ inputs.parallel_platforms }}
+          PARALLEL_KINDS: ${{ inputs.parallel_kinds }}
+          PARALLEL_XCODE: ${{ inputs.parallel_xcode }}
+        run: python3 .github/scripts/parallel_matrix.py
       - name: Decide whether the merge queue already checked this push
         id: queue
         env:
@@ -149,7 +186,7 @@ jobs:
   docs:
     name: Docs
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -173,7 +210,7 @@ jobs:
   coverage_no_code:
     name: Coverage (no code)
     needs: changes
-    if: ${{ needs.changes.outputs.no_code == 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ needs.changes.outputs.no_code == 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -197,7 +234,7 @@ jobs:
   ios_tests:
     name: iOS tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
@@ -238,7 +275,7 @@ jobs:
   project_checks:
     name: Project checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -280,7 +317,7 @@ jobs:
   script_tests:
     name: Script tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -306,7 +343,7 @@ jobs:
   workflow_checks:
     name: Workflow checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -352,7 +389,7 @@ jobs:
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -442,7 +479,7 @@ jobs:
   catalyst_tests:
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
@@ -499,14 +536,17 @@ jobs:
   # the first failure cancels the others. A pull request runs the hosted tests on each
   # platform with Xcode 26. Main, nightly and manual runs run every combination with
   # Xcode 26 on macos-26, and iOS and Mac Catalyst with Xcode 16.4 on macos-15 too.
-  # Nightly and manual runs also run tvOS and macOS with Xcode 16.4. Parallel testing
+  # Nightly and manual runs also run tvOS and macOS with Xcode 16.4. A manual run's
+  # inputs can narrow that to some platforms, kinds and one Xcode; the macOS hostless
+  # combination then runs first only when they include it. The changes job builds the
+  # matrix with .github/scripts/parallel_matrix.py. Parallel testing
   # states what it has been tried with, not the oldest supported Xcode (#325): 16.4 is
   # the oldest Xcode the image has Simulator runtimes for, and the pinned Tuist can't
   # generate the fixtures' project with Xcode 16.0.
   parallel_smoke:
     name: Parallel tests (macOS, hostless)
     needs: changes
-    if: needs.changes.outputs.parallel_tests == 'true'
+    if: needs.changes.outputs.parallel_tests == 'true' && needs.changes.outputs.parallel_smoke == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     permissions:
@@ -536,25 +576,23 @@ jobs:
   parallel_tests:
     name: Parallel tests (${{ matrix.platform }}, ${{ matrix.kind }}${{ matrix.xcode == '16' && ', Xcode 16' || '' }})
     needs: [changes, parallel_smoke]
-    if: needs.changes.outputs.parallel_tests == 'true'
+    # Runs after parallel_smoke passes, or without it when a manual run leaves it out.
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success'
+      && needs.changes.outputs.parallel_tests == 'true'
+      && needs.changes.outputs.parallel_matrix != '[]'
+      && (needs.parallel_smoke.result == 'success' || needs.parallel_smoke.result == 'skipped') }}
     runs-on: ${{ matrix.xcode == '16' && 'macos-15' || 'macos-26' }}
     timeout-minutes: 40
     permissions:
       contents: read
     strategy:
       fail-fast: true
-      # The values are what the check names show; the steps turn them into what
-      # parallel-fixture.sh takes. No `include`: an entry that matches no
-      # combination, as on a pull request, would add a job of its own.
+      # One entry per combination, each with xcode, platform and kind, from the changes
+      # job. The values are what the check names show; the steps turn them into what
+      # parallel-fixture.sh takes.
       matrix:
-        xcode: ${{ fromJSON(github.event_name == 'pull_request' && '["26"]' || '["16","26"]') }}
-        platform: [iOS, tvOS, macOS, Catalyst]
-        kind: ${{ fromJSON(github.event_name == 'pull_request' && '["hosted"]' || '["hostless","hosted","UI"]') }}
-        # Xcode 26's macOS hostless combination runs first, in parallel_smoke. Xcode 16.4's
-        # tvOS and macOS combinations run only in the nightly and manual runs.
-        exclude: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-          && '[{"xcode":"26","platform":"macOS","kind":"hostless"}]'
-          || '[{"xcode":"26","platform":"macOS","kind":"hostless"},{"xcode":"16","platform":"tvOS"},{"xcode":"16","platform":"macOS"}]') }}
+        include: ${{ fromJSON(needs.changes.outputs.parallel_matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -594,7 +632,7 @@ jobs:
   swiftpm_tests:
     name: SwiftPM tests
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -679,7 +717,7 @@ jobs:
   fixture_tests:
     name: Fixture tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
@@ -717,7 +755,7 @@ jobs:
   bazel_tests:
     name: Bazel tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' }}
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
