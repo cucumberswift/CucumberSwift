@@ -24,6 +24,7 @@ open class CucumberTest: XCTestCase {
         hasBeenBuilt = false
         featuresLoaded = false
         ParallelTesting.reset()
+        ScenarioRuns.reset()
     }
     #endif
 
@@ -59,7 +60,26 @@ open class CucumberTest: XCTestCase {
         // With experimental parallel testing, each scenario's class was made before XCTest listed the
         // classes to hand to its workers, and runs on its own, so it is not part of this suite.
         generateAlltests(suite, includeScenarios: !ParallelTesting.scenarioClassesMade)
+        if ParallelTesting.classesMadeTooLate, let test = classesMadeTooLateTest() {
+            suite.addTest(test)
+        }
         return suite
+    }
+
+    /// A test that fails, saying that parallel testing is on but each scenario's class was made too late
+    /// for XCTest to hand it to a worker. Its suite then holds every scenario, which every worker that
+    /// builds it runs.
+    static func classesMadeTooLateTest(reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestCase? {
+        let message = "Parallel testing is on, but CucumberSwift made each scenario's class after XCTest built CucumberTest's suite, "
+            + "so XCTest can't hand the scenarios to workers one by one. Every scenario is in CucumberTest's suite instead, "
+            + "and every worker that builds it runs them all. Turn parallel testing off with `Cucumber.parallelTesting = false`, "
+            + "or report the Xcode version and the kind of test target to CucumberSwift."
+        let method = TestCaseMethod(withName: "ScenarioClassesMadeTooLate") { reportFailure(message) }
+        return TestCaseGenerator.initWith(className: "CucumberSwiftParallelTesting", method: method)
+            .map { testCaseClass, methodSelector in
+                objc_registerClassPair(testCaseClass)
+                return testCaseClass.init(selector: methodSelector)
+            }
     }
 
     static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
@@ -344,6 +364,11 @@ extension Step {
         // Readable names show the keyword as written; camel-case names keep the ones tests already have.
         let text = "\(readable ? writtenKeyword : keywordText) \(match)"
         return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
+            // Counted before the guard below, which skips the steps of a scenario that already failed, so
+            // that a second start of such a scenario is still seen.
+            if let scenario = self.scenario, scenario.steps.first === self {
+                ScenarioRuns.recordStartAndCheck(of: scenario)
+            }
             guard !Cucumber.shared.failedScenarios.contains(where: { $0 === self.scenario }),
                   !StepTestCase.skippedScenarios.contains(where: { $0.scenario === self.scenario }) else { return }
             let startTime = Date()
