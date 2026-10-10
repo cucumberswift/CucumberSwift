@@ -65,6 +65,32 @@ class ScenarioRunsTests: XCTestCase {
         XCTAssertEqual(ScenarioRuns.recordStart(of: scenario), 1)
     }
 
+    func testASecondStartFailsTheRunningTest() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        let scenario = try XCTUnwrap(parseFeature().first)
+        ScenarioRuns.recordStartAndCheck(of: scenario, on: self)
+
+        XCTExpectFailure("The scenario started a second time") {
+            ScenarioRuns.recordStartAndCheck(of: scenario, on: self)
+        }
+    }
+
+    func testASecondStartFailsTheCurrentTestWhenNoTestIsKnownToBeRunning() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        let scenario = try XCTUnwrap(parseFeature().first)
+        ScenarioRuns.recordStartAndCheck(of: scenario, on: nil)
+
+        XCTExpectFailure("The scenario started a second time") {
+            ScenarioRuns.recordStartAndCheck(of: scenario, on: nil)
+        }
+    }
+
+    func testAFirstStartFailsNothing() throws {
+        let scenario = try XCTUnwrap(parseFeature().first)
+
+        ScenarioRuns.recordStartAndCheck(of: scenario, on: self)
+    }
+
     func testTheMessageNamesTheScenarioAndHowOftenItStarted() throws {
         let scenario = try XCTUnwrap(parseFeature().first)
 

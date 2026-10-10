@@ -74,12 +74,12 @@ open class CucumberTest: XCTestCase {
             + "so XCTest can't hand the scenarios to workers one by one. Every scenario is in CucumberTest's suite instead, "
             + "and every worker that builds it runs them all. Turn parallel testing off with `Cucumber.parallelTesting = false`, "
             + "or report the Xcode version and the kind of test target to CucumberSwift."
-        guard let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwiftParallelTesting",
-                                                                               method: TestCaseMethod(withName: "ScenarioClassesMadeTooLate", closure: { reportFailure(message) })) else {
-            return nil
-        }
-        objc_registerClassPair(testCaseClass)
-        return testCaseClass.init(selector: methodSelector)
+        return TestCaseGenerator.initWith(className: "CucumberSwiftParallelTesting",
+                                          method: TestCaseMethod(withName: "ScenarioClassesMadeTooLate", closure: { reportFailure(message) }))
+            .map { testCaseClass, methodSelector in
+                objc_registerClassPair(testCaseClass)
+                return testCaseClass.init(selector: methodSelector)
+            }
     }
 
     static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {

@@ -41,16 +41,16 @@ enum ScenarioRuns {
         starts.withLock { $0.removeAll() }
     }
 
-    /// Counts a start of the scenario, and fails the running test when it is not the first.
-    static func recordStartAndCheck(of scenario: Scenario) {
+    /// Counts a start of the scenario, and fails the running test when it is not the first. With no
+    /// running test known, it fails whatever test is current, without the feature-file location.
+    static func recordStartAndCheck(of scenario: Scenario, on runningTestCase: XCTestCase? = Cucumber.shared.runningTestCase) {
         let count = recordStart(of: scenario)
         guard count > 1 else { return }
-        let issue = repeatedScenarioIssue(for: scenario, count: count)
-        guard let runningTestCase = Cucumber.shared.runningTestCase else {
+        guard let runningTestCase = runningTestCase else {
             XCTFail(repeatedScenarioMessage(for: scenario, count: count))
             return
         }
-        runningTestCase.record(issue)
+        runningTestCase.record(repeatedScenarioIssue(for: scenario, count: count))
     }
 
     static func repeatedScenarioMessage(for scenario: Scenario, count: Int) -> String {
