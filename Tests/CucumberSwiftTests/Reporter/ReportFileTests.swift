@@ -77,15 +77,15 @@ class ReportFileTests: XCTestCase {
 
     func testWorkersRunningFromCopiesOfTheTestBundleMergeTheirFeature() {
         let file = ReportFile(url: url)
-        file.merge([feature([scenario("A", line: 3)], uri: "file:///clone-1/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
-        file.merge([feature([scenario("B", line: 6)], uri: "file:///clone-2/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
+        file.merge([feature([scenario("A", line: 3)], uri: "clone-1/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
+        file.merge([feature([scenario("B", line: 6)], uri: "clone-2/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
         XCTAssertEqual(names(file.read()), [["A", "B"]])
     }
 
     func testFeaturesWithTheSameNameInDifferentFilesStaySeparateInsideTheBundle() {
         let file = ReportFile(url: url)
-        file.merge([feature([scenario("A", line: 3)], uri: "file:///clone-1/Tests.xctest/Features/One/Checkout.feature")])
-        file.merge([feature([scenario("B", line: 3)], uri: "file:///clone-2/Tests.xctest/Features/Two/Checkout.feature")])
+        file.merge([feature([scenario("A", line: 3)], uri: "clone-1/Tests.xctest/Features/One/Checkout.feature")])
+        file.merge([feature([scenario("B", line: 3)], uri: "clone-2/Tests.xctest/Features/Two/Checkout.feature")])
         XCTAssertEqual(names(file.read()), [["A"], ["B"]])
     }
 
