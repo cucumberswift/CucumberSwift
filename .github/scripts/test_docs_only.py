@@ -79,6 +79,8 @@ class KindTests(unittest.TestCase):
             ".github/scripts/test_docs_only.py",
             ".github/scripts/release.py",
             ".github/scripts/test_release.py",
+            ".github/scripts/queue_checked.py",
+            ".github/scripts/test_queue_checked.py",
             ".github/scripts/test_check_lockfiles.py",
             ".github/scripts/test_gherkin_highlighting.py",
             ".github/scripts/publish-docs.sh",
