@@ -72,10 +72,10 @@ if [[ -n "${udid:-}" ]]; then
 fi
 
 # The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder, in the container of
-# the fixture's test runner, such as org.cucumberswift.ParallelUITests.xctrunner. Nothing else empties it, so
-# a local run would also count the records of an earlier one. Only the fixtures' runners' containers are
-# touched, never another app's.
-runner_records=("$HOME"/Library/Containers/org.cucumberswift.Parallel*.xctrunner/Data/tmp/parallel-test-records)
+# the container of the fixture's test runner, such as org.cucumberswift.ParallelUITests.xctrunner. Nothing else
+# empties it, so a local run would also count the records of an earlier one. Only the containers of the
+# fixtures' own bundle IDs, org.cucumberswift.Parallel*, are touched, never another app's.
+runner_records=("$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records)
 for folder in "${runner_records[@]}"; do rm -rf "$folder"; done
 
 .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
@@ -101,6 +101,10 @@ done
 grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
 
 total=$(ls "$records" | wc -l | tr -d ' ')
+if [[ "$total" -eq 0 ]]; then
+  echo "No records. Containers with a records folder:"
+  ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
+fi
 # Each record is <scenario>.<worker's process>.<UUID>.
 scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
 workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
