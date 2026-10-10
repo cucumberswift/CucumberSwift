@@ -13,7 +13,7 @@ A behaviour you can turn on or off has two switches:
 - an environment variable, `CUCUMBER_` plus the setting's name in upper snake case, such as `CUCUMBER_ONE_TEST_PER_SCENARIO`, and
 - a static variable on `Cucumber`, with the same name in lower camel case, such as `Cucumber.oneTestPerScenario`.
 
-The static variable wins when it is set, then the environment variable, then the default. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable.
+The static variable wins when it is set, then the environment variable, then the default. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable. A setting that takes a value rather than a switch, such as `Cucumber.reportPath`, follows the same order, with an optional `String` and the environment variable's text; an empty value counts as not set.
 
 **Static variables.** Set them in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
 
@@ -41,6 +41,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest | iOS 16, macOS 13 or tvOS 16 to run the regex literals it generates |
 | <doc:Running-Scenarios-In-Parallel> (experimental) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off | XCTest | Per platform: see the article |
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest | — |
+| <doc:Generating-Reports#Choose-where-the-report-is-written> | `Cucumber.reportPath` | `CUCUMBER_REPORT_PATH` | `_cucumberReport.json` in the documents folder | XCTest | — |
 | <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | — | All scenarios | XCTest | — |
 | <doc:Running-Tests-In-Xcode#Choose-scenarios-with-a-test-plan> | — | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | — |
 | <doc:Settings#Continue-after-a-failed-assertion> | `StepImplementation.continueTestingAfterFailure` | — | On | XCTest | — |

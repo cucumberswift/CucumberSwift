@@ -10,11 +10,11 @@ import Foundation
 enum FeatureFlags {
     /// The static variables' values. A computed static variable over locked storage is safe to read and
     /// set from any isolation, and doesn't warn in a consumer's Swift 6 target, as a stored one would.
-    final class Storage: @unchecked Sendable {
+    final class Storage<Value>: @unchecked Sendable {
         private let lock = NSLock()
-        private var values = [String: Bool]()
+        private var values = [String: Value]()
 
-        subscript(_ name: String) -> Bool? {
+        subscript(_ name: String) -> Value? {
             get {
                 lock.lock()
                 defer { lock.unlock() }
@@ -49,7 +49,16 @@ enum FeatureFlags {
         value(Cucumber.parallelTesting, environmentVariable: "CUCUMBER_PARALLEL_TESTING", default: false)
     }
 
-    static let storage = Storage()
+    /// Where the JSON report is written: the static variable, then `CUCUMBER_REPORT_PATH`. Nil when neither
+    /// is set, or is empty, so the report goes to its default place.
+    static var reportPath: String? {
+        let path = Cucumber.reportPath ?? Cucumber.shared.environment["CUCUMBER_REPORT_PATH"]
+        let trimmed = path?.trimmingCharacters(in: .whitespaces)
+        return trimmed?.isEmpty == false ? trimmed : nil
+    }
+
+    static let storage = Storage<Bool>()
+    static let stringStorage = Storage<String>()
 
     static func value(_ staticValue: Bool?, environmentVariable name: String, default defaultValue: Bool) -> Bool {
         staticValue ?? bool(Cucumber.shared.environment[name]) ?? defaultValue
@@ -108,10 +117,24 @@ extension Cucumber {
     /// when set, wins over the environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
     ///
     /// It applies to a test per step, the default, not to ``oneTestPerScenario``. Each worker is a process
-    /// of its own, so state your step definitions share, a feature's hooks and the JSON report are per
-    /// worker: see <doc:Running-Scenarios-In-Parallel> before you turn it on.
+    /// of its own, so state your step definitions share and a feature's hooks are per worker, and on a
+    /// Simulator the JSON report needs ``reportPath``: see <doc:Running-Scenarios-In-Parallel> before you
+    /// turn it on.
     public static var parallelTesting: Bool? {
         get { FeatureFlags.storage["parallelTesting"] }
         set { FeatureFlags.storage["parallelTesting"] = newValue }
+    }
+
+    /// Where the Cucumber JSON report is written, a full path to a file, such as `/Users/me/reports/cucumber.json`.
+    /// Without it the report is `_cucumberReport.json` in the documents
+    /// folder, which on a Simulator is inside the Simulator. Set this, or the environment variable
+    /// `CUCUMBER_REPORT_PATH`, to a path every worker of a parallel run can reach, such as one under
+    /// the Mac's home folder, which a Simulator reads as `SIMULATOR_HOST_HOME`, and the workers write one
+    /// report between them. This variable, when set, wins over the environment variable. Set it in your
+    /// `StepImplementation`'s `setupSteps()`. A reporter made with ``CucumberJSONReporter/init(reportPath:)``
+    /// keeps the path it was given.
+    public static var reportPath: String? {
+        get { FeatureFlags.stringStorage["reportPath"] }
+        set { FeatureFlags.stringStorage["reportPath"] = newValue }
     }
 }
