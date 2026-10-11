@@ -82,10 +82,14 @@ fi
 # fixtures' own bundle IDs, org.cucumberswift.Parallel*, are touched, never another app's.
 # Found again after the run, because a clean runner has no such container until the tests have run.
 runner_folders() {
-  ls -dt "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/"$1" 2>/dev/null
+  local name="$1"
+  ls -dt "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/"$name" 2>/dev/null
   return 0
 }
-runner_records() { runner_folders parallel-test-records; }
+runner_records() {
+  runner_folders parallel-test-records
+  return 0
+}
 for name in parallel-test-records parallel-test-report; do
   runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
 done
