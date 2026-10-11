@@ -97,14 +97,15 @@ runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
 grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
-# Each failing test and why, from the result bundle: the log names a failing test, not always why.
+# Each failing test and why, from the result bundle: the log names a failing test, not always why. The
+# whole list goes to a file that the run without the setting checks; only the first 30 are shown.
 failures="$temp/parallel-test-failures.txt"
 xcrun xcresulttool get test-results summary --path "$temp/parallel-test.xcresult" 2>/dev/null | python3 -c '
 import json, sys
-for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
+for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' > "$failures" || true
-cat "$failures"
+head -30 "$failures"
 # A fixture app that crashed leaves a report: show what it died of.
 for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
   echo "Crash report $(basename "$report"):"
