@@ -277,7 +277,7 @@ class ParallelTestingTests: XCTestCase {
     @available(iOS 14, macOS 11, tvOS 14, macCatalyst 14, *)
     func testTheObserverRecordsTheIssueOnTheTestThatStarted() {
         _ = parseFeature()
-        let observer = ParallelWorkerObserver(isParallelRun: { true })
+        let observer = ParallelWorkerObserver { true }
 
         XCTExpectFailure("The observer fails the first test of a parallel run without the setting") {
             observer.testCaseWillStart(self)
