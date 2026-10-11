@@ -92,10 +92,12 @@ echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(g
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
 grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
 # Each failing test and why, from the result bundle: the log names a failing test, not always why.
-# An aborted xcodebuild (exit 134, say) leaves no usable result bundle, so there is no summary to read.
-summary=$(xcrun xcresulttool get test-results summary --path "$temp/parallel-test.xcresult" 2>/dev/null)
-if [[ -z "$summary" ]]; then
-  echo "No test results summary: xcodebuild left no usable result bundle (exit status $status). See parallel-test.log."
+# An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
+summary=""
+if [[ ! -e "$temp/parallel-test.xcresult" ]]; then
+  echo "No test results summary: xcodebuild left no result bundle (exit status $status). See parallel-test.log."
+elif ! summary=$(xcrun xcresulttool get test-results summary --path "$temp/parallel-test.xcresult" 2>/dev/null) || [[ -z "$summary" ]]; then
+  echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See parallel-test.log."
 else
   echo "$summary" | python3 -c '
 import json, sys
