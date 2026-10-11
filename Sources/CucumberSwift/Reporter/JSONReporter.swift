@@ -69,7 +69,7 @@ public class CucumberJSONReporter: CucumberTestObserver {
             // Written by the same code as a parallel run's report, so the two are the same bytes.
             do {
                 try FileManager.default.createDirectory(at: reportURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try ReportFile.serialize(json)?.write(to: reportURL)
+                try ReportFile.serialize(json)?.write(to: reportURL, options: .atomic)
             } catch {
                 ReportFile.warn(reportURL, error.localizedDescription)
             }
