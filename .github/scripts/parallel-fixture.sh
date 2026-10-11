@@ -6,6 +6,8 @@
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
 #   [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
 #
+# Each worker also merges its results into one Cucumber JSON report, which must hold every scenario once.
+#
 # Each run of a scenario writes a record, named after the scenario, its worker's process and a UUID, so
 # that two runs never share one. xcodebuild's log can't show this, because it interleaves its own output
 # with the workers' and cuts test lines short.
@@ -13,6 +15,7 @@ set -u
 WORKERS=${WORKERS:-3}
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
+EXPECTED_FEATURES=${EXPECTED_FEATURES:-2}
 temp=${RUNNER_TEMP:-$(mktemp -d)}
 
 case "$PLATFORM" in
@@ -46,7 +49,9 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
 esac
 scheme="Parallel${KIND}Tests${suffix}"
 records="$temp/parallel-test-records"
-mkdir -p "$records"
+report="$temp/parallel-test-report/report.json"
+mkdir -p "$records" "$(dirname "$report")"
+rm -f "$report" "$report.lock" "$report.run"
 echo "Running $scheme on $destination with $WORKERS workers"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
@@ -76,17 +81,26 @@ fi
 # empties it, so a local run would also count the records of an earlier one. Only the containers of the
 # fixtures' own bundle IDs, org.cucumberswift.Parallel*, are touched, never another app's.
 # Found again after the run, because a clean runner has no such container until the tests have run.
-runner_records() {
-  ls -d "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records 2>/dev/null
+runner_folders() {
+  local name="$1"
+  ls -dt "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/"$name" 2>/dev/null
   return 0
 }
-runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
+runner_records() {
+  runner_folders parallel-test-records
+  return 0
+}
+for name in parallel-test-records parallel-test-report; do
+  runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+done
 
 .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
-  PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
+  PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" > parallel-test.log 2>&1
 status=$?
 runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+# It writes the report there too, and has only one worker, so there is nothing to merge it with.
+[[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
 
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
@@ -129,6 +143,59 @@ if [[ "$total" -ne "$scenarios" ]]; then
 fi
 if [[ "$workers" -lt "$min_workers" ]]; then
   echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
+  status=1
+fi
+
+# The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
+# in feature-file order.
+report_check=$(REPORT="$report" RECORDS="$records" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
+import json, os, sys
+try:
+    features = json.load(open(os.environ["REPORT"]))
+except (OSError, ValueError) as error:
+    print("The report is missing or is not JSON: %s" % error)
+    sys.exit(1)
+problems = []
+seen = {}
+# Features are in the order of their files, as a serial run lists them, whichever worker wrote first.
+def bundle_path(feature):
+    uri = feature.get("uri") or ""
+    return uri.rsplit(".xctest/", 1)[-1]
+paths = [bundle_path(feature) for feature in features]
+if paths != sorted(paths):
+    problems.append("features are not in the order of their files: %s" % ", ".join(paths))
+for feature in features:
+    lines = [scenario["line"] for scenario in feature.get("elements", [])]
+    if lines != sorted(lines):
+        problems.append("%s: scenarios are not in feature-file order" % feature.get("name"))
+    for scenario in feature.get("elements", []):
+        key = (feature.get("uri"), scenario["line"], scenario["name"])
+        seen[key] = seen.get(key, 0) + 1
+        if not scenario.get("steps"):
+            problems.append("%s has no steps" % scenario["name"])
+problems += ["%s ran %d times in the report" % (key[2], n) for key, n in seen.items() if n > 1]
+# Every scenario that recorded a run is in the report, under its own feature. A record is named
+# <feature> line <line> <scenario>, as ParallelFixtureSupport writes it, then <process>.<UUID>.
+import re
+def label(name):
+    return "".join(c if c.isalnum() else "-" for c in name)
+in_report = set(label("%s line %d %s" % (feature.get("name"), scenario["line"], scenario["name"]))
+                for feature in features for scenario in feature.get("elements", []))
+recorded = set(re.sub(r"\.[0-9]+\.[0-9A-F-]+$", "", name) for name in os.listdir(os.environ["RECORDS"]))
+problems += ["%s ran but is not in the report, or is under another feature" % name for name in sorted(recorded - in_report)]
+problems += ["%s is in the report but never ran" % name for name in sorted(in_report - recorded)]
+if len(seen) != int(os.environ["EXPECTED"]):
+    problems.append("the report holds %d of %s scenarios" % (len(seen), os.environ["EXPECTED"]))
+if len(features) != int(os.environ["EXPECTED_FEATURES"]):
+    problems.append("the report holds %d features, not %s: a feature was split between workers" % (len(features), os.environ["EXPECTED_FEATURES"]))
+print("Report: %d scenarios in %d features" % (len(seen), len(features)))
+print("\n".join(problems))
+sys.exit(1 if problems else 0)
+')
+report_status=$?
+echo "$report_check"
+if [[ "$report_status" -ne 0 ]]; then
+  echo "::error::The Cucumber JSON report does not hold every scenario exactly once." >&2
   status=1
 fi
 exit $status

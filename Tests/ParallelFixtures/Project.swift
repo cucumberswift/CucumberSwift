@@ -73,11 +73,15 @@ func schemes(for family: Family) -> [Scheme] {
             name: target,
             shared: true,
             buildAction: .buildAction(targets: [.target(target)]),
-            // The records folder reaches every kind of test runner through the scheme, filled from the
-            // build setting of the same name: CI passes PARALLEL_TEST_RECORDS=<folder> to xcodebuild.
+            // The records folder and the report's file reach every kind of test runner through the scheme,
+            // filled from build settings: CI passes PARALLEL_TEST_RECORDS=<folder> and
+            // PARALLEL_TEST_REPORT=<file>, which the workers get as CUCUMBER_REPORT_PATH, to xcodebuild.
             testAction: .targets(
                 [.testableTarget(target: .target(target), parallelization: .enabled)],
-                arguments: .arguments(environmentVariables: ["PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)"]),
+                arguments: .arguments(environmentVariables: [
+                    "PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)",
+                    "CUCUMBER_REPORT_PATH": "$(PARALLEL_TEST_REPORT)"
+                ]),
                 configuration: .debug,
                 expandVariableFromTarget: .target(target)
             )
