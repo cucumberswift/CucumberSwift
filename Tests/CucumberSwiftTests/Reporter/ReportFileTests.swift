@@ -94,72 +94,6 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(names(file.read()), [["A"], ["B"]])
     }
 
-    func testFeaturesAreInTheOrderOfTheirFilesWhicheverWorkerWritesFirst() {
-        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "a", file: "Accounts.feature"))
-        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "a"))
-        ReportFile(url: url).merge([checkout])
-        ReportFile(url: url).merge([accounts])
-        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
-    }
-
-    func testFeaturesOfWorkersRunningFromCopiesOfTheBundleAreOrderedByTheirPathInTheBundle() {
-        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "clone-9", file: "Accounts.feature"))
-        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "clone-1"))
-        ReportFile(url: url).merge([checkout])
-        ReportFile(url: url).merge([accounts])
-        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
-    }
-
-    func testFeaturesOfOneFileKeepTheOrderTheyAreDeclaredIn() {
-        let first = feature([scenario("A", line: 3)], name: "Second declared", uri: "Steps.swift")
-        var second = feature([scenario("B", line: 3)], name: "First declared", uri: "Steps.swift")
-        second["line"] = 20
-        var earlier = first
-        earlier["line"] = 10
-        ReportFile(url: url).merge([second])
-        ReportFile(url: url).merge([earlier])
-        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Second declared", "First declared"])
-    }
-
-    /// A serial run and a parallel run of the same features write the same bytes, but for each duration,
-    /// which differs from one run to the next.
-    func testASerialAndAParallelRunWriteTheSameReport() throws {
-        func report(parallel: Bool) throws -> String {
-            Cucumber.shared.reset()
-            Cucumber.parallelTesting = parallel ? true : nil
-            let path = folder.appendingPathComponent("\(parallel ? "parallel" : "serial")/report.json")
-            Cucumber.reportPath = path.path
-            let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-            Feature("Accounts") {
-                Scenario("Sign in") {
-                    Given(I: print(""))
-                    Then(I: print(""))
-                }
-                Scenario("Sign out") {
-                    Given(I: print(""))
-                }
-            }
-            Feature("Checkout") {
-                Scenario("Pay") {
-                    Given(I: print(""))
-                }
-            }
-            reporter.testSuiteStarted(at: Date())
-            Cucumber.shared.executeFeatures()
-            reporter.testSuiteFinished(at: Date())
-            let text = try String(contentsOf: path, encoding: .utf8)
-            return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
-        }
-        addTeardownBlock {
-            Cucumber.parallelTesting = nil
-            Cucumber.reportPath = nil
-        }
-        let serial = try report(parallel: false)
-        let parallel = try report(parallel: true)
-        XCTAssertTrue(serial.contains("Sign out"))
-        XCTAssertEqual(serial, parallel)
-    }
-
     func testDifferentFeaturesStaySeparate() {
         let file = ReportFile(url: url)
         file.merge([feature([scenario("Sign in", line: 3)], name: "Accounts", uri: "Accounts.feature")])
@@ -255,6 +189,104 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker().sorted(), ["F1", "Other"])
     }
 
+    func testTheReporterReplacesTheReportWhenParallelTestingIsOff() throws {
+        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker(), ["F1"])
+    }
+
+    func testTheReporterWritesToTheReportPathSetting() throws {
+        let path = folder.appendingPathComponent("elsewhere/report.json").path
+        Cucumber.reportPath = path
+        addTeardownBlock { Cucumber.reportPath = nil }
+        let reporter = try XCTUnwrap(CucumberJSONReporter())
+        XCTAssertEqual(reporter.reportURL.path, path)
+        XCTAssertEqual(Reporter.reportURL?.path, path)
+    }
+
+    func testASerialRunCreatesTheFolderOfTheReportPathSetting() throws {
+        Cucumber.shared.reset()
+        let nested = folder.appendingPathComponent("not/yet/there/report.json")
+        Cucumber.reportPath = nested.path
+        addTeardownBlock { Cucumber.reportPath = nil }
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        reporter.testSuiteStarted(at: Date())
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nested.path))
+    }
+
+    func testAReporterMadeWithAPathKeepsIt() {
+        Cucumber.reportPath = "elsewhere/else.json"
+        addTeardownBlock { Cucumber.reportPath = nil }
+        XCTAssertEqual(CucumberJSONReporter(reportPath: url).reportURL, url)
+    }
+}
+
+/// The order of a report's features, the bytes of its file, and when it is written (#385).
+extension ReportFileTests {
+    func testFeaturesAreInTheOrderOfTheirFilesWhicheverWorkerWritesFirst() {
+        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "a", file: "Accounts.feature"))
+        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "a"))
+        ReportFile(url: url).merge([checkout])
+        ReportFile(url: url).merge([accounts])
+        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
+    }
+
+    func testFeaturesOfWorkersRunningFromCopiesOfTheBundleAreOrderedByTheirPathInTheBundle() {
+        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "clone-9", file: "Accounts.feature"))
+        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "clone-1"))
+        ReportFile(url: url).merge([checkout])
+        ReportFile(url: url).merge([accounts])
+        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
+    }
+
+    func testFeaturesOfOneFileKeepTheOrderTheyAreDeclaredIn() {
+        let first = feature([scenario("A", line: 3)], name: "Second declared", uri: "Steps.swift")
+        var second = feature([scenario("B", line: 3)], name: "First declared", uri: "Steps.swift")
+        second["line"] = 20
+        var earlier = first
+        earlier["line"] = 10
+        ReportFile(url: url).merge([second])
+        ReportFile(url: url).merge([earlier])
+        XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Second declared", "First declared"])
+    }
+
+    /// A serial run and a parallel run of the same features write the same bytes, but for each duration,
+    /// which differs from one run to the next.
+    func testASerialAndAParallelRunWriteTheSameReport() throws {
+        func report(parallel: Bool) throws -> String {
+            Cucumber.shared.reset()
+            Cucumber.parallelTesting = parallel ? true : nil
+            let path = folder.appendingPathComponent("\(parallel ? "parallel" : "serial")/report.json")
+            Cucumber.reportPath = path.path
+            let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+            Feature("Accounts") {
+                Scenario("Sign in") {
+                    Given(I: print(""))
+                    Then(I: print(""))
+                }
+                Scenario("Sign out") {
+                    Given(I: print(""))
+                }
+            }
+            Feature("Checkout") {
+                Scenario("Pay") {
+                    Given(I: print(""))
+                }
+            }
+            reporter.testSuiteStarted(at: Date())
+            Cucumber.shared.executeFeatures()
+            reporter.testSuiteFinished(at: Date())
+            let text = try String(contentsOf: path, encoding: .utf8)
+            return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
+        }
+        addTeardownBlock {
+            Cucumber.parallelTesting = nil
+            Cucumber.reportPath = nil
+        }
+        let serial = try report(parallel: false)
+        let parallel = try report(parallel: true)
+        XCTAssertTrue(serial.contains("Sign out"))
+        XCTAssertEqual(serial, parallel)
+    }
+
     func testAParallelRunMergesWhereAScenarioFinishesNotForEveryStep() throws {
         Cucumber.shared.reset()
         Cucumber.parallelTesting = true
@@ -295,34 +327,5 @@ class ReportFileTests: XCTestCase {
         report.merge([feature([scenario("A", line: 3)])])
         XCTAssertEqual(warnings.count, 1)
         XCTAssertTrue(warnings.first?.contains(blocker.path) ?? false)
-    }
-
-    func testTheReporterReplacesTheReportWhenParallelTestingIsOff() throws {
-        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker(), ["F1"])
-    }
-
-    func testTheReporterWritesToTheReportPathSetting() throws {
-        let path = folder.appendingPathComponent("elsewhere/report.json").path
-        Cucumber.reportPath = path
-        addTeardownBlock { Cucumber.reportPath = nil }
-        let reporter = try XCTUnwrap(CucumberJSONReporter())
-        XCTAssertEqual(reporter.reportURL.path, path)
-        XCTAssertEqual(Reporter.reportURL?.path, path)
-    }
-
-    func testASerialRunCreatesTheFolderOfTheReportPathSetting() throws {
-        Cucumber.shared.reset()
-        let nested = folder.appendingPathComponent("not/yet/there/report.json")
-        Cucumber.reportPath = nested.path
-        addTeardownBlock { Cucumber.reportPath = nil }
-        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-        reporter.testSuiteStarted(at: Date())
-        XCTAssertTrue(FileManager.default.fileExists(atPath: nested.path))
-    }
-
-    func testAReporterMadeWithAPathKeepsIt() {
-        Cucumber.reportPath = "elsewhere/else.json"
-        addTeardownBlock { Cucumber.reportPath = nil }
-        XCTAssertEqual(CucumberJSONReporter(reportPath: url).reportURL, url)
     }
 }

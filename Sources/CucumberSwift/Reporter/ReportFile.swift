@@ -13,6 +13,9 @@ import Foundation
 final class ReportFile: @unchecked Sendable {
     private static let filesLock = NSLock()
     private static var files = [String: ReportFile]()
+    private static var warned = Set<String>()
+    /// Where a warning goes: stderr, unless a test says otherwise.
+    static var warningSink: (String) -> Void = { FileHandle.standardError.write(Data(($0 + "\n").utf8)) }
 
     let url: URL
     /// Taken exclusively for each read, merge and write of the report.
@@ -24,9 +27,6 @@ final class ReportFile: @unchecked Sendable {
     private let writeLock = NSLock()
     /// How many times this process merged into the report, for the reporter's tests.
     private(set) var merges = 0
-    private static var warned = Set<String>()
-    /// Where a warning goes: stderr, unless a test says otherwise.
-    static var warningSink: (String) -> Void = { FileHandle.standardError.write(Data(($0 + "\n").utf8)) }
 
     /// The report at `url` for this process, which joins the report's run once.
     static func at(_ url: URL) -> ReportFile {
@@ -112,6 +112,15 @@ final class ReportFile: @unchecked Sendable {
             .map(\.element)
     }
 
+    /// Says on stderr that the report couldn't be written, once for each report: a missing report is
+    /// otherwise silent, and every write after the first fails the same way.
+    static func warn(_ url: URL, _ reason: String) {
+        filesLock.lock()
+        defer { filesLock.unlock() }
+        guard warned.insert(url.path).inserted else { return }
+        warningSink("CucumberSwift: couldn't write the Cucumber JSON report at \(url.path): \(reason)")
+    }
+
     init(url: URL) {
         self.url = url
     }
@@ -156,15 +165,6 @@ final class ReportFile: @unchecked Sendable {
             merges += 1
             write(Self.merge(features, into: read()))
         }
-    }
-
-    /// Says on stderr that the report couldn't be written, once for each report: a missing report is
-    /// otherwise silent, and every write after the first fails the same way.
-    static func warn(_ url: URL, _ reason: String) {
-        filesLock.lock()
-        defer { filesLock.unlock() }
-        guard warned.insert(url.path).inserted else { return }
-        warningSink("CucumberSwift: couldn't write the Cucumber JSON report at \(url.path): \(reason)")
     }
 
     /// The features in the report: none when it is missing, empty or not a report.
