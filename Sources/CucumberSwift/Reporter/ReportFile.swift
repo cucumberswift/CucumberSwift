@@ -22,6 +22,11 @@ final class ReportFile: @unchecked Sendable {
     private var runDescriptor: Int32 = -1
     private let joinLock = NSLock()
     private let writeLock = NSLock()
+    /// How many times this process merged into the report, for the reporter's tests.
+    private(set) var merges = 0
+    private static var warned = Set<String>()
+    /// Where a warning goes: stderr, unless a test says otherwise.
+    static var warningSink: (String) -> Void = { FileHandle.standardError.write(Data(($0 + "\n").utf8)) }
 
     /// The report at `url` for this process, which joins the report's run once.
     static func at(_ url: URL) -> ReportFile {
@@ -148,8 +153,18 @@ final class ReportFile: @unchecked Sendable {
     /// Merges a worker's features, as the reporter encodes them, into the report.
     func merge(_ features: [[String: Any]]) {
         withWriteLock {
+            merges += 1
             write(Self.merge(features, into: read()))
         }
+    }
+
+    /// Says on stderr that the report couldn't be written, once for each report: a missing report is
+    /// otherwise silent, and every write after the first fails the same way.
+    static func warn(_ url: URL, _ reason: String) {
+        filesLock.lock()
+        defer { filesLock.unlock() }
+        guard warned.insert(url.path).inserted else { return }
+        warningSink("CucumberSwift: couldn't write the Cucumber JSON report at \(url.path): \(reason)")
     }
 
     /// The features in the report: none when it is missing, empty or not a report.
@@ -164,11 +179,22 @@ final class ReportFile: @unchecked Sendable {
     private func withWriteLock(_ body: () -> Void) {
         writeLock.lock()
         defer { writeLock.unlock() }
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        } catch {
+            Self.warn(url, "the folder can't be created (\(error.localizedDescription))")
+            return
+        }
         let descriptor = open(writeLockPath, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
-        guard descriptor >= 0 else { return }
+        guard descriptor >= 0 else {
+            Self.warn(url, "the lock file \(writeLockPath) can't be created (\(String(cString: strerror(errno))))")
+            return
+        }
         defer { close(descriptor) }
-        guard flock(descriptor, LOCK_EX) == 0 else { return }
+        guard flock(descriptor, LOCK_EX) == 0 else {
+            Self.warn(url, "the lock file can't be locked (\(String(cString: strerror(errno))))")
+            return
+        }
         defer { flock(descriptor, LOCK_UN) }
         body()
     }
@@ -176,7 +202,14 @@ final class ReportFile: @unchecked Sendable {
     /// Writes to a temporary file in the report's folder and moves it into place, so that nothing reads
     /// half a report.
     private func write(_ features: [[String: Any]]) {
-        guard let data = Self.serialize(features) else { return }
-        try? data.write(to: url, options: .atomic)
+        guard let data = Self.serialize(features) else {
+            Self.warn(url, "the results can't be encoded as JSON")
+            return
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            Self.warn(url, error.localizedDescription)
+        }
     }
 }

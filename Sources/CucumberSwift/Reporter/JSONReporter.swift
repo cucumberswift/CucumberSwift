@@ -54,15 +54,25 @@ public class CucumberJSONReporter: CucumberTestObserver {
 
     /// Writes the report. With parallel testing on, every worker writes to the same file, so this merges
     /// the worker's features into it under a lock; otherwise it is the run's only writer and replaces it.
-    private func save() {
+    ///
+    /// A parallel run merges only where a scenario or a feature finishes, and where the worker's suite
+    /// starts and finishes: a merge reads, parses and rewrites the whole report, and a merge for every step
+    /// of every worker would grow with the report. A scenario that never finishes, because its worker was
+    /// killed, isn't in the report; every scenario that finished is.
+    private func save(atBoundary: Bool = false) {
+        if FeatureFlags.isParallelTesting && !atBoundary { return }
         guard let data = try? encoder.encode(features),
               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
         if FeatureFlags.isParallelTesting {
             ReportFile.at(reportURL).merge(json)
         } else {
             // Written by the same code as a parallel run's report, so the two are the same bytes.
-            try? FileManager.default.createDirectory(at: reportURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? ReportFile.serialize(json)?.write(to: reportURL)
+            do {
+                try FileManager.default.createDirectory(at: reportURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try ReportFile.serialize(json)?.write(to: reportURL)
+            } catch {
+                ReportFile.warn(reportURL, error.localizedDescription)
+            }
         }
     }
 
@@ -72,7 +82,7 @@ public class CucumberJSONReporter: CucumberTestObserver {
             // features then would leave the scenario in progress with a feature that is no longer in the
             // report, and lose the rest of the worker's scenarios. The report is where the run starts over.
             ReportFile.at(reportURL).joinRun()
-            save()
+            save(atBoundary: true)
             return
         }
         defer { save() }
@@ -83,7 +93,7 @@ public class CucumberJSONReporter: CucumberTestObserver {
     }
 
     public func testSuiteFinished(at: Date) {
-        save()
+        save(atBoundary: true)
     }
 
     public func didStart(feature: CucumberSwift.Feature, at date: Date) {
@@ -121,11 +131,11 @@ public class CucumberJSONReporter: CucumberTestObserver {
     }
 
     public func didFinish(feature: CucumberSwift.Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        save()
+        save(atBoundary: true)
     }
 
     public func didFinish(scenario: CucumberSwift.Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        save()
+        save(atBoundary: true)
     }
 
     public func didFinish(step: CucumberSwift.Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {

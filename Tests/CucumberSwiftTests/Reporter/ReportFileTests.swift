@@ -255,6 +255,48 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker().sorted(), ["F1", "Other"])
     }
 
+    func testAParallelRunMergesWhereAScenarioFinishesNotForEveryStep() throws {
+        Cucumber.shared.reset()
+        Cucumber.parallelTesting = true
+        Cucumber.reportPath = url.path
+        addTeardownBlock {
+            Cucumber.parallelTesting = nil
+            Cucumber.reportPath = nil
+        }
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        Feature("F1") {
+            Scenario("S1") {
+                Given(I: print(""))
+                When(I: print(""))
+                Then(I: print(""))
+                Then(I: print(""))
+            }
+        }
+        reporter.testSuiteStarted(at: Date())
+        Cucumber.shared.executeFeatures()
+
+        // The suite's start, then the scenario and the feature finishing: not a merge for each of the
+        // steps' four starts and four finishes, nor for the starts of the feature and the scenario.
+        XCTAssertLessThanOrEqual(ReportFile.at(url).merges, 3)
+        let steps = ReportFile(url: url).read().first?["elements"] as? [[String: Any]]
+        XCTAssertEqual((steps?.first?["steps"] as? [[String: Any]])?.count, 4)
+    }
+
+    func testAReportThatCantBeWrittenIsSaidSoOnceNotSilently() throws {
+        let blocker = folder.appendingPathComponent("blocker")
+        try Data().write(to: blocker)
+        let report = ReportFile(url: blocker.appendingPathComponent("report.json"))
+        var warnings = [String]()
+        let sink = ReportFile.warningSink
+        ReportFile.warningSink = { warnings.append($0) }
+        addTeardownBlock { ReportFile.warningSink = sink }
+
+        report.merge([feature([scenario("A", line: 3)])])
+        report.merge([feature([scenario("A", line: 3)])])
+        XCTAssertEqual(warnings.count, 1)
+        XCTAssertTrue(warnings.first?.contains(blocker.path) ?? false)
+    }
+
     func testTheReporterReplacesTheReportWhenParallelTestingIsOff() throws {
         XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker(), ["F1"])
     }
