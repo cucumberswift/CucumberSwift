@@ -157,6 +157,13 @@ except (OSError, ValueError) as error:
     sys.exit(1)
 problems = []
 seen = {}
+# Features are in the order of their files, as a serial run lists them, whichever worker wrote first.
+def bundle_path(feature):
+    uri = feature.get("uri") or ""
+    return uri.rsplit(".xctest/", 1)[-1]
+paths = [bundle_path(feature) for feature in features]
+if paths != sorted(paths):
+    problems.append("features are not in the order of their files: %s" % ", ".join(paths))
 for feature in features:
     lines = [scenario["line"] for scenario in feature.get("elements", [])]
     if lines != sorted(lines):

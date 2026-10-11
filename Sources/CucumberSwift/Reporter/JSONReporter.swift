@@ -55,14 +55,14 @@ public class CucumberJSONReporter: CucumberTestObserver {
     /// Writes the report. With parallel testing on, every worker writes to the same file, so this merges
     /// the worker's features into it under a lock; otherwise it is the run's only writer and replaces it.
     private func save() {
+        guard let data = try? encoder.encode(features),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
         if FeatureFlags.isParallelTesting {
-            let file = ReportFile.at(reportURL)
-            guard let data = try? encoder.encode(features),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-            file.merge(json)
+            ReportFile.at(reportURL).merge(json)
         } else {
+            // Written by the same code as a parallel run's report, so the two are the same bytes.
             try? FileManager.default.createDirectory(at: reportURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? encoder.encode(features).write(to: reportURL)
+            try? ReportFile.serialize(json)?.write(to: reportURL)
         }
     }
 
