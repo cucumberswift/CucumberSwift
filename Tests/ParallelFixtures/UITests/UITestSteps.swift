@@ -21,29 +21,39 @@ enum UITestApp {
     /// The count the scenario expects the app to show: 0 once the cart is emptied, one more for each item added.
     static var expected = 0
 
-    /// The element that shows the item count. Found by its identifier, or by its text, whatever kind of
-    /// element the platform makes of it, and waited for, since the first launch on a new simulator clone can
-    /// be slow.
-    static func itemCount() -> XCUIElement? {
+    /// The element that shows the item count, found by its identifier, or by its text, whatever kind of
+    /// element the platform makes of it. A new query each time, so it reads what the app shows now.
+    static func itemCount() -> XCUIElement {
         let byIdentifier = app.descendants(matching: .any)["items"]
-        let byText = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Items:' OR value BEGINSWITH 'Items:'")).firstMatch
-        let found = byIdentifier.waitForExistence(timeout: 30) ? byIdentifier : byText
-        guard found.exists else {
-            XCTFail("The app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
-            return nil
-        }
-        return found
+        if byIdentifier.exists { return byIdentifier }
+        return app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Items:' OR value BEGINSWITH 'Items:'")).firstMatch
     }
 
     /// Waits up to 30 seconds for the app to show `count` items: on a busy runner the app can show a tap a
-    /// moment after the tap returns. When it doesn't, the failure says what the app shows instead.
+    /// moment after the tap returns, and the first launch on a new simulator clone can be slow. Each pass
+    /// queries the element afresh and compares its label and value, rather than a predicate expectation,
+    /// which reported a count it was not comparing (#375). When the app doesn't show the count, the failure
+    /// says what it showed last.
     static func waitForItems(_ count: Int, _ failure: String) {
-        guard let element = itemCount() else { return }
         let text = "Items: \(count)"
-        let shows = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@ OR value == %@", text, text), object: element)
-        guard XCTWaiter().wait(for: [shows], timeout: 30) != .completed else { return }
-        let shown = element.label.isEmpty ? (element.value as? String ?? "") : element.label
-        XCTFail("\(failure): the app shows '\(shown)', not '\(text)'")
+        let deadline = Date().addingTimeInterval(30)
+        var lastSeen: String?
+        while true {
+            let element = itemCount()
+            if element.exists {
+                let label = element.label
+                let value = element.value as? String ?? ""
+                if label == text || value == text { return }
+                lastSeen = "label '\(label)', value '\(value)'"
+            }
+            if Date() >= deadline { break }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        guard let lastSeen else {
+            XCTFail("\(failure): the app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
+            return
+        }
+        XCTFail("\(failure): expected '\(text)', the app last showed \(lastSeen)")
     }
 
     #if os(tvOS)
