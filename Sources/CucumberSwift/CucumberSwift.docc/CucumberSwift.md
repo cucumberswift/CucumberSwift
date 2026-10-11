@@ -26,6 +26,7 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Tests-With-Bazel>
 - <doc:Running-Feature-Files-With-Swift-Testing>
+- <doc:Running-Scenarios-In-Parallel>
 - <doc:Matching-Steps>
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>

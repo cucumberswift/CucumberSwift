@@ -33,7 +33,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. Each sa
 | <doc:Running-Feature-Files-With-Swift-Testing>, and <doc:Checking-Step-Definitions> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Checking-Step-Definitions> in an Xcode or Tuist project | Xcode 26.4 | Xcode 26.4 |
 | <doc:Checking-Step-Definitions#Convert-existing-step-definitions> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
-| <doc:Running-Tests-In-Xcode#Parallel-testing> (experimental) | Per platform: the article lists what has been tried | The versions its CI jobs run |
+| <doc:Running-Scenarios-In-Parallel> (experimental) | Per platform: the article lists what has been tried | The versions its CI jobs run |
 | Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
 
 An article about such a feature shows its requirement as a badge at the top of the page, such as Xcode 16.3, and has a "Requirements" section that says why. A setting that needs more than the oldest supported Xcode says so in its documentation and in the "Requires" column of <doc:Settings>. A requirement on the OS your tests run on is Swift's `@available` on the API, which this documentation shows by itself.

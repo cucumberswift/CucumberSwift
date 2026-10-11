@@ -19,7 +19,8 @@ run = "tuist generate --no-open"
 # Not committed: Tuist names the local package's folder after the checkout's folder, which differs
 # from clone to clone. CI generates it before running the fixtures.
 description = "Generate the parallel testing fixtures' project from Tests/ParallelFixtures/Project.swift"
-run = "tuist generate --path Tests/ParallelFixtures --no-open"
+# keep-package-resolved.sh puts back the Package.resolved that resolving the project rewrites.
+run = ".github/scripts/keep-package-resolved.sh tuist generate --path Tests/ParallelFixtures --no-open"
 
 [tasks.check-project]
 description = "Fail if CucumberSwift.xcodeproj differs from what Project.swift generates"
@@ -104,8 +105,9 @@ for fixture in Fixtures/*/; do
     fi
     build="$fixture/Derived/xcodebuild"
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
-    with_xcode tuist generate --no-open --path "$fixture"
-    with_xcode xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
+    # Resolving the project rewrites the checkout's Package.resolved, so each step puts it back.
+    with_xcode .github/scripts/keep-package-resolved.sh tuist generate --no-open --path "$fixture"
+    with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
       -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
   fi
   cat "$log"
