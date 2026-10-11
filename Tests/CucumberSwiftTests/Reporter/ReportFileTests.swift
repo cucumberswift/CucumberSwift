@@ -95,16 +95,16 @@ class ReportFileTests: XCTestCase {
     }
 
     func testFeaturesAreInTheOrderOfTheirFilesWhicheverWorkerWritesFirst() {
-        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: "file:///a/Tests.xctest/Features/Accounts.feature")
-        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: "file:///a/Tests.xctest/Features/Checkout.feature")
+        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "a", file: "Accounts.feature"))
+        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "a"))
         ReportFile(url: url).merge([checkout])
         ReportFile(url: url).merge([accounts])
         XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
     }
 
     func testFeaturesOfWorkersRunningFromCopiesOfTheBundleAreOrderedByTheirPathInTheBundle() {
-        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: "file:///clone-9/Tests.xctest/Features/Accounts.feature")
-        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: "file:///clone-1/Tests.xctest/Features/Checkout.feature")
+        let accounts = feature([scenario("Sign in", line: 3)], name: "Accounts", uri: bundleURI(copy: "clone-9", file: "Accounts.feature"))
+        let checkout = feature([scenario("Pay", line: 3)], name: "Checkout", uri: bundleURI(copy: "clone-1"))
         ReportFile(url: url).merge([checkout])
         ReportFile(url: url).merge([accounts])
         XCTAssertEqual(ReportFile(url: url).read().compactMap { $0["name"] as? String }, ["Accounts", "Checkout"])
