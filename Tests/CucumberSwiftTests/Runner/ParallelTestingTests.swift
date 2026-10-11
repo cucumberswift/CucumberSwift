@@ -17,6 +17,8 @@ class ParallelTestingTests: XCTestCase {
         Cucumber.oneTestPerScenario = nil
         Cucumber.shared.reset()
         CucumberTest.resetSetUp()
+        ParallelWorkerObserver.reported.withLock { $0 = false }
+        ParallelWorkerObserver.parallelRunProbe.withLock { $0 = { ParallelWorkerObserver.isParallelRun() } }
     }
 
     override func setUpWithError() throws {
@@ -235,5 +237,39 @@ class ParallelTestingTests: XCTestCase {
         addTeardownBlock { Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING"] = nil }
 
         XCTAssertEqual(issues(isParallelRun: true), [])
+    }
+
+    // Without the setting the scenarios would run in every worker, and xcodebuild can crash on them, so
+    // CucumberTest's suite is one failing test instead of the scenarios, and the run fails once.
+    func testTheSuiteIsOneFailingTestInsteadOfTheScenariosInAParallelRunWithoutTheSetting() {
+        _ = parseFeature()
+
+        let suite = CucumberTest.failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message)
+
+        XCTAssertTrue(ParallelWorkerObserver.isMissingSetting { true })
+        XCTAssertEqual(suite.tests.map(\.name).count, 1)
+        XCTAssertTrue(suite.tests.first?.name.contains("ParallelTestingIsOff") == true, "\(suite.tests.map(\.name))")
+    }
+
+    // A parallel worker told the run is wrong must not be told twice: the suite's failing test is started
+    // after CucumberTest's suite reported it.
+    func testTheObserverDoesNotReportAgainOnceTheSuiteDid() {
+        _ = parseFeature()
+        ParallelWorkerObserver.reported.withLock { $0 = true }
+
+        XCTAssertEqual(issues(isParallelRun: true), [])
+    }
+
+    // Without the setting, a worker's CucumberTest suite is the failing test, and no scenario runs.
+    func testCucumberTestHoldsOneFailingTestInsteadOfTheScenariosInAParallelRunWithoutTheSetting() {
+        let title = parseFeature()
+        ParallelWorkerObserver.parallelRunProbe.withLock { $0 = { true } }
+
+        let names = CucumberTest.defaultTestSuite.tests.map(\.name)
+
+        XCTAssertEqual(names.count, 1, "\(names)")
+        XCTAssertTrue(names.first?.contains("ParallelTestingIsOff") == true, "\(names)")
+        XCTAssertFalse(names.contains { $0.contains(title) }, "\(names)")
+        XCTAssertTrue(ParallelWorkerObserver.reported.snapshot)
     }
 }

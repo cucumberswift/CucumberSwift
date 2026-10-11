@@ -55,6 +55,14 @@ open class CucumberTest: XCTestCase {
             return noFeaturesSuite(bundle: bundle)
         }
 
+        // In a parallel worker without the setting, every scenario would run in every worker, and xcodebuild
+        // can crash as two workers record scenarios with the same name (#389). So the run fails with a message
+        // that names the setting, and no scenario runs.
+        if ParallelWorkerObserver.isMissingSetting() {
+            ParallelWorkerObserver.reported.withLock { $0 = true }
+            return failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message)
+        }
+
         let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
         // With experimental parallel testing, each scenario's class was made before XCTest listed the
         // classes to hand to its workers, and runs on its own, so it is not part of this suite.
@@ -63,10 +71,14 @@ open class CucumberTest: XCTestCase {
     }
 
     static func noFeaturesSuite(bundle: Bundle?, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
+        failureSuite(method: "FoundNoFeatures", message: noFeaturesMessage(bundle: bundle), reportFailure: reportFailure)
+    }
+
+    /// A suite with one test, which fails with `message`, in place of the suite that would run the scenarios.
+    static func failureSuite(method: String, message: String, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
         let suite = XCTestSuite(name: String(describing: CucumberTest.self))
-        let message = noFeaturesMessage(bundle: bundle)
         if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwift",
-                                                                            method: TestCaseMethod(withName: "FoundNoFeatures", closure: { reportFailure(message) })) {
+                                                                            method: TestCaseMethod(withName: method, closure: { reportFailure(message) })) {
             objc_registerClassPair(testCaseClass)
             suite.addTest(testCaseClass.init(selector: methodSelector))
         }

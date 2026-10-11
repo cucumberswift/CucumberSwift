@@ -59,7 +59,7 @@ final class RunningTestCaseObserver: NSObject, XCTestObservation {
 /// A process learns that parallel testing is on only from XCTest's private `XCTestConfiguration`, whose
 /// `inProcessParallelizationEnabled` and `testsDrivenByIDE` are set once XCTest starts the test bundle: too late to turn the mode
 /// on, because each scenario's class has to exist while the bundle loads. So the run fails instead, with a
-/// message that names the setting, on the first test of each process. If a new Xcode renames a property,
+/// message that names the setting, on the first test of each process, when CucumberTest's suite didn't already fail the run in place of the scenarios. If a new Xcode renames a property,
 /// nothing is found and a run behaves as it did before.
 final class ParallelWorkerObserver: NSObject, XCTestObservation {
     /// The failure's message.
@@ -68,17 +68,15 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
         + "or the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`, or turn off parallel testing for this test target. "
         + "See \"Running Scenarios in Parallel\" in CucumberSwift's documentation."
 
-    private var hasChecked = false
-    private let isParallelRun: () -> Bool
-    private let report: (XCTestCase, XCTIssue) -> Void
+    /// Whether a failure was reported, by the suite CucumberTest builds or by this observer, so that it is once.
+    static let reported = Locked(false)
 
-    /// The closures are replaceable for tests: a unit test run is not a parallel worker, and an issue
-    /// recorded on it would fail it.
-    init(isParallelRun: @escaping () -> Bool = ParallelWorkerObserver.isParallelRun,
-         report: @escaping (XCTestCase, XCTIssue) -> Void = { $0.record($1) }) {
-        self.isParallelRun = isParallelRun
-        self.report = report
-    }
+    /// How a process is found to be a parallel worker. Tests replace it: a unit test run is not one.
+    static let parallelRunProbe = Locked<() -> Bool> { ParallelWorkerObserver.isParallelRun() }
+
+    private var hasChecked = false
+    private let isParallelRun: (() -> Bool)?
+    private let report: (XCTestCase, XCTIssue) -> Void
 
     /// Whether Xcode runs this process as a worker of a parallel test run: both its properties are set. Either
     /// alone is not enough: `inProcessParallelizationEnabled` is also set under `swift test`, which runs
@@ -98,23 +96,29 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
 
     /// Whether this parallel run has the setting off, so that its scenarios run wrongly. With one test per
     /// scenario every scenario is a test of one class, which a parallel run is correct for.
-    @MainActor
-    private func isMissingSetting() -> Bool {
+    static func isMissingSetting(isParallelRun: (() -> Bool)? = nil) -> Bool {
         guard Cucumber.shared is StepImplementation else { return false }
         // The flag can be set in setupSteps(), which may not have run in a process that was handed no test of
         // CucumberTest's.
         CucumberTest.loadFeaturesIfNeeded()
         guard !FeatureFlags.isParallelTesting, !FeatureFlags.isOneTestPerScenario else { return false }
-        return isParallelRun()
+        return (isParallelRun ?? parallelRunProbe.snapshot)()
+    }
+
+    /// The closures are replaceable for tests: a unit test run is not a parallel worker, and an issue
+    /// recorded on it would fail it.
+    init(isParallelRun: (() -> Bool)? = nil,
+         report: @escaping (XCTestCase, XCTIssue) -> Void = { $0.record($1) }) {
+        self.isParallelRun = isParallelRun
+        self.report = report
     }
 
     func testCaseWillStart(_ testCase: XCTestCase) {
-        guard !hasChecked, Thread.isMainThread else { return }
+        guard !hasChecked, !Self.reported.snapshot else { return }
         hasChecked = true
-        MainActor.assumeIsolated {
-            guard isMissingSetting() else { return }
-            FileHandle.standardError.write(Data(("CucumberSwift: " + Self.message + "\n").utf8))
-            report(testCase, XCTIssue(type: .assertionFailure, compactDescription: Self.message))
-        }
+        guard Self.isMissingSetting(isParallelRun: isParallelRun) else { return }
+        Self.reported.withLock { $0 = true }
+        FileHandle.standardError.write(Data(("CucumberSwift: " + Self.message + "\n").utf8))
+        report(testCase, XCTIssue(type: .assertionFailure, compactDescription: Self.message))
     }
 }
