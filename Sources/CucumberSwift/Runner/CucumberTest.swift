@@ -61,7 +61,8 @@ open class CucumberTest: XCTestCase {
         // that names the setting, and no scenario runs.
         if ParallelWorkerObserver.isMissingSetting() {
             ParallelWorkerObserver.reported.withLock { $0 = true }
-            return failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message)
+            return failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message,
+                                name: "CucumberSwiftParallelTestingIsOff\(ProcessInfo.processInfo.processIdentifier)")
         }
 
         let suite = XCTestSuite(forTestCaseClass: CucumberTest.self)
@@ -95,9 +96,12 @@ open class CucumberTest: XCTestCase {
     }
 
     /// A suite with one test, which fails with `message`, in place of the suite that would run the scenarios.
-    static func failureSuite(method: String, message: String, reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
-        let suite = XCTestSuite(name: String(describing: CucumberTest.self))
-        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: "CucumberSwift",
+    /// The class and suite are named by `name`: in a parallel run two workers can each run one, and
+    /// xcodebuild can crash when two suites with the same name run at once.
+    static func failureSuite(method: String, message: String, name: String = "CucumberSwift",
+                             reportFailure: @escaping (String) -> Void = { XCTFail($0) }) -> XCTestSuite {
+        let suite = XCTestSuite(name: name == "CucumberSwift" ? String(describing: CucumberTest.self) : name)
+        if let (testCaseClass, methodSelector) = TestCaseGenerator.initWith(className: name,
                                                                             method: TestCaseMethod(withName: method, closure: { reportFailure(message) })) {
             objc_registerClassPair(testCaseClass)
             suite.addTest(testCaseClass.init(selector: methodSelector))

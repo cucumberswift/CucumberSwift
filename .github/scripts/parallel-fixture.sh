@@ -125,6 +125,7 @@ if [[ "${WITHOUT_SETTING:-}" = "YES" ]]; then
     echo "The run without Cucumber.parallelTesting failed only with CucumberSwift's message ($matching failures), and ran no scenario"
     exit 0
   fi
+  echo "The end of the log:"; tail -40 parallel-test.log | cut -c1-400
   echo "::error::The run without Cucumber.parallelTesting must fail only with CucumberSwift's message and run no scenario: xcodebuild exit status $status, $matching failures with the message, $others with another, $ran scenario records." >&2
   exit 1
 fi

@@ -244,9 +244,11 @@ class ParallelTestingTests: XCTestCase {
     func testTheSuiteIsOneFailingTestInsteadOfTheScenariosInAParallelRunWithoutTheSetting() {
         _ = parseFeature()
 
-        let suite = CucumberTest.failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message)
+        let name = "CucumberSwiftParallelTestingIsOff\(ProcessInfo.processInfo.processIdentifier)"
+        let suite = CucumberTest.failureSuite(method: "ParallelTestingIsOff", message: ParallelWorkerObserver.message, name: name)
 
         XCTAssertTrue(ParallelWorkerObserver.isMissingSetting { true })
+        XCTAssertEqual(suite.name, name)
         XCTAssertEqual(suite.tests.map(\.name).count, 1)
         XCTAssertTrue(suite.tests.first?.name.contains("ParallelTestingIsOff") == true, "\(suite.tests.map(\.name))")
     }
