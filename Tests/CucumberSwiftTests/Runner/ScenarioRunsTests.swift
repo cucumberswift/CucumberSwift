@@ -85,6 +85,32 @@ class ScenarioRunsTests: XCTestCase {
         }
     }
 
+    func testASecondStartIsAttributedToItsOwnScenarioAfterAnotherScenarioRan() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        let scenarios = parseFeature()
+        let (first, second) = (try XCTUnwrap(scenarios.first), try XCTUnwrap(scenarios.last))
+        ScenarioRuns.recordStartAndCheck(of: first, on: self)
+        ScenarioRuns.recordStartAndCheck(of: second, on: self)
+        // The step the scenario that ran last left behind, which a failure would otherwise be put on.
+        Cucumber.shared.currentStep = second.steps.last
+
+        XCTExpectFailure("The first scenario started a second time") {
+            ScenarioRuns.recordStartAndCheck(of: first, on: self)
+        }
+
+        XCTAssertTrue(Cucumber.shared.currentStep === first.steps.first)
+    }
+
+    func testAFirstStartLeavesTheCurrentStepAlone() throws {
+        let scenarios = parseFeature()
+        let step = try XCTUnwrap(scenarios.last?.steps.last)
+        Cucumber.shared.currentStep = step
+
+        ScenarioRuns.recordStartAndCheck(of: try XCTUnwrap(scenarios.first), on: self)
+
+        XCTAssertTrue(Cucumber.shared.currentStep === step)
+    }
+
     func testAFirstStartFailsNothing() throws {
         let scenario = try XCTUnwrap(parseFeature().first)
 

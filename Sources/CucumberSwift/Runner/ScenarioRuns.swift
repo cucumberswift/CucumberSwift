@@ -46,6 +46,10 @@ enum ScenarioRuns {
     static func recordStartAndCheck(of scenario: Scenario, on runningTestCase: XCTestCase? = Cucumber.shared.runningTestCase) {
         let count = recordStart(of: scenario)
         guard count > 1 else { return }
+        // The failure observer marks the current step, which is still the last step of the scenario that
+        // ran before this one. Make it this scenario's first step, so that the failure lands on the scenario
+        // that started again, and its remaining steps are skipped instead of running a second time.
+        Cucumber.shared.currentStep = scenario.steps.first
         guard let runningTestCase = runningTestCase else {
             XCTFail(repeatedScenarioMessage(for: scenario, count: count))
             return
