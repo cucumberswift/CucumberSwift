@@ -3,8 +3,12 @@
 //  ParallelFixtures
 //
 //  The step definitions of the UI test fixture. Each scenario drives the app's cart: tapping on iOS,
-//  clicking on macOS, and pressing the remote's select button on tvOS, where the Add button is the only one
-//  that can be focused.
+//  clicking on macOS, and on tvOS pressing the remote's buttons, which act on the focused button.
+//
+//  On a Simulator the app runs for the whole worker, so one app serves every scenario that worker runs:
+//  all of them when Xcode chooses one worker. So each scenario first empties the cart, and every step
+//  waits until the app shows the count it expects before going on. No step reads a count left by an
+//  earlier scenario.
 //
 
 import Foundation
@@ -14,33 +18,65 @@ import CucumberSwift
 @MainActor
 enum UITestApp {
     static let app = XCUIApplication()
-    /// The count the app showed when the scenario began. On a Simulator the app runs for the whole worker,
-    /// so the cart keeps the items of the scenarios before, and a scenario counts from here.
-    static var start = 0
+    /// The count the scenario expects the app to show: 0 once the cart is emptied, one more for each item added.
+    static var expected = 0
 
-    /// The item count the app shows. Found by its identifier, or by its text, whatever kind of element the
-    /// platform makes of it, and waited for, since the first launch on a new simulator clone can be slow.
-    /// Given an expected count, it also waits up to 30 seconds for the app to show it: on a busy runner the
-    /// app can show the last tap a moment after the tap returns. When it isn't there, the failure shows
-    /// what the app does show.
-    static func items(expecting expected: String? = nil) -> String {
+    /// The element that shows the item count. Found by its identifier, or by its text, whatever kind of
+    /// element the platform makes of it, and waited for, since the first launch on a new simulator clone can
+    /// be slow.
+    static func itemCount() -> XCUIElement? {
         let byIdentifier = app.descendants(matching: .any)["items"]
         let byText = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'Items:' OR value BEGINSWITH 'Items:'")).firstMatch
         let found = byIdentifier.waitForExistence(timeout: 30) ? byIdentifier : byText
         guard found.exists else {
             XCTFail("The app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
-            return ""
+            return nil
         }
-        func text() -> String { found.label.isEmpty ? (found.value as? String ?? "") : found.label }
-        var shown = text()
-        let deadline = Date().addingTimeInterval(30)
-        while let expected, shown != expected, Date() < deadline {
-            Thread.sleep(forTimeInterval: 0.25)
-            shown = text()
-        }
-        return shown
+        return found
     }
 
+    /// Waits up to 30 seconds for the app to show `count` items: on a busy runner the app can show a tap a
+    /// moment after the tap returns. When it doesn't, the failure says what the app shows instead.
+    static func waitForItems(_ count: Int, _ failure: String) {
+        guard let element = itemCount() else { return }
+        let text = "Items: \(count)"
+        let shows = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@ OR value == %@", text, text), object: element)
+        guard XCTWaiter().wait(for: [shows], timeout: 30) != .completed else { return }
+        let shown = element.label.isEmpty ? (element.value as? String ?? "") : element.label
+        XCTFail("\(failure): the app shows '\(shown)', not '\(text)'")
+    }
+
+    #if os(tvOS)
+    /// Waits up to 30 seconds for a button to have the focus, since the remote's buttons act on it.
+    static func waitForFocus(on button: XCUIElement) {
+        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasFocus == true"), object: button)
+        if XCTWaiter().wait(for: [focused], timeout: 30) != .completed {
+            XCTFail("The '\(button.identifier)' button did not get the focus. What the app shows: \(app.debugDescription.prefix(1_500))")
+        }
+    }
+    #endif
+
+    /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and
+    /// back up to Add, where the app put it when it started.
+    static func empty() {
+        #if os(tvOS)
+        XCUIRemote.shared.press(.down)
+        waitForFocus(on: app.buttons["empty"])
+        XCUIRemote.shared.press(.select)
+        #elseif os(macOS)
+        app.buttons["empty"].click()
+        #else
+        app.buttons["empty"].tap()
+        #endif
+        expected = 0
+        waitForItems(0, "The cart did not empty")
+        #if os(tvOS)
+        XCUIRemote.shared.press(.up)
+        waitForFocus(on: app.buttons["add"])
+        #endif
+    }
+
+    /// Adds an item, and waits until the app counts it, so that the next tap starts from a known count.
     static func add() {
         #if os(tvOS)
         XCUIRemote.shared.press(.select)
@@ -49,6 +85,8 @@ enum UITestApp {
         #else
         app.buttons["add"].tap()
         #endif
+        expected += 1
+        waitForItems(expected, "The app did not count an added item")
     }
 }
 
@@ -84,11 +122,7 @@ extension Cucumber: StepImplementation {
 
         Given("a fresh cart") { _, _ in
             MainActor.assumeIsolated {
-                let shown = UITestApp.items()
-                guard let count = Int(shown.dropFirst("Items: ".count)), shown.hasPrefix("Items: ") else {
-                    return XCTFail("The app shows no item count it can read: '\(shown)'")
-                }
-                UITestApp.start = count
+                UITestApp.empty()
             }
         }
         When("I add {int} items") { match, _ in
@@ -102,8 +136,7 @@ extension Cucumber: StepImplementation {
         Then("the cart holds {int} items") { match, _ in
             let count = try match.first(\.int)
             MainActor.assumeIsolated {
-                let expected = "Items: \(UITestApp.start + count)"
-                XCTAssertEqual(UITestApp.items(expecting: expected), expected)
+                UITestApp.waitForItems(count, "The cart does not hold \(count) items")
             }
         }
         // Long enough that Xcode hands the scenarios to more than one worker.
