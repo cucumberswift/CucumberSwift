@@ -71,7 +71,8 @@ final class ReportFile: @unchecked Sendable {
     /// report of a serial run and of a parallel run are written the same way, and one run's report is the
     /// same bytes each time it is written.
     static func serialize(_ features: [[String: Any]]) -> Data? {
-        try? JSONSerialization.data(withJSONObject: features, options: [.prettyPrinted, .sortedKeys])
+        guard JSONSerialization.isValidJSONObject(features) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: features, options: [.prettyPrinted, .sortedKeys])
     }
 
     /// Two workers read one feature file from different places when each runs from a copy of the test
@@ -186,13 +187,9 @@ final class ReportFile: @unchecked Sendable {
             return
         }
         let descriptor = open(writeLockPath, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
-        guard descriptor >= 0 else {
-            Self.warn(url, "the lock file \(writeLockPath) can't be created (\(String(cString: strerror(errno))))")
-            return
-        }
-        defer { close(descriptor) }
-        guard flock(descriptor, LOCK_EX) == 0 else {
-            Self.warn(url, "the lock file can't be locked (\(String(cString: strerror(errno))))")
+        defer { if descriptor >= 0 { close(descriptor) } }
+        guard descriptor >= 0, flock(descriptor, LOCK_EX) == 0 else {
+            Self.warn(url, "the lock file \(writeLockPath) can't be created or locked (\(String(cString: strerror(errno))))")
             return
         }
         defer { flock(descriptor, LOCK_UN) }

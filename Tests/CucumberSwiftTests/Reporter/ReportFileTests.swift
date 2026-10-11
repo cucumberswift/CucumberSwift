@@ -328,4 +328,50 @@ extension ReportFileTests {
         XCTAssertEqual(warnings.count, 1)
         XCTAssertTrue(warnings.first?.contains(blocker.path) ?? false)
     }
+
+    /// What a report that can't be written says, for each way it can't be.
+    private func warnings(whenWriting report: ReportFile, features: [[String: Any]]? = nil) -> [String] {
+        var warnings = [String]()
+        let sink = ReportFile.warningSink
+        ReportFile.warningSink = { warnings.append($0) }
+        addTeardownBlock { ReportFile.warningSink = sink }
+        report.merge(features ?? [feature([scenario("A", line: 3)])])
+        ReportFile.warningSink = sink
+        return warnings
+    }
+
+    func testAReportThatIsAFolderIsSaidSo() throws {
+        let asFolder = folder.appendingPathComponent("a-folder.json")
+        try FileManager.default.createDirectory(at: asFolder, withIntermediateDirectories: true)
+        XCTAssertEqual(warnings(whenWriting: ReportFile(url: asFolder)).count, 1)
+    }
+
+    func testALockFileThatCantBeCreatedIsSaidSo() throws {
+        let report = folder.appendingPathComponent("locked.json")
+        try FileManager.default.createDirectory(at: URL(fileURLWithPath: report.path + ".lock"), withIntermediateDirectories: true)
+        let said = warnings(whenWriting: ReportFile(url: report))
+        XCTAssertEqual(said.count, 1)
+        XCTAssertTrue(said.first?.contains(".lock") ?? false)
+    }
+
+    func testResultsThatCantBeEncodedAreSaidSoAndDontCrash() {
+        let unencodable = feature([scenario("A", line: 3)], name: "Bad")
+            .merging(["duration": Double.nan]) { _, new in new }
+        XCTAssertEqual(warnings(whenWriting: ReportFile(url: url), features: [unencodable]).count, 1)
+    }
+
+    func testASerialRunSaysWhenItCantWriteItsReport() throws {
+        let blocker = folder.appendingPathComponent("serial-blocker")
+        try Data().write(to: blocker)
+        Cucumber.shared.reset()
+        Cucumber.reportPath = blocker.appendingPathComponent("report.json").path
+        addTeardownBlock { Cucumber.reportPath = nil }
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        var said = [String]()
+        let sink = ReportFile.warningSink
+        ReportFile.warningSink = { said.append($0) }
+        addTeardownBlock { ReportFile.warningSink = sink }
+        reporter.testSuiteStarted(at: Date())
+        XCTAssertEqual(said.count, 1)
+    }
 }
