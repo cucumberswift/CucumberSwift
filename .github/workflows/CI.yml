@@ -336,9 +336,11 @@ jobs:
           persist-credentials: false
           # The DocC catalog and the stubs too, which test_docs_examples.py reads,
           # and the Gherkin highlighting for Xcode, which test_gherkin_highlighting.py
-          # checks against the catalog's "Running Tests in Xcode" article.
+          # checks against the catalog's "Running Tests in Xcode" article. And the
+          # workflows, which test_queue_checked.py checks the release bot against.
           sparse-checkout: |
             .github/scripts
+            .github/workflows
             Sources/CucumberSwift/CucumberSwift.docc
             Tests/DocumentationExamples
             Tools/Xcode
