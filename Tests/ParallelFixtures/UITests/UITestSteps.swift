@@ -35,25 +35,24 @@ enum UITestApp {
     /// which reported a count it was not comparing (#375). When the app doesn't show the count, the failure
     /// says what it showed last.
     static func waitForItems(_ count: Int, _ failure: String) {
-        let text = "Items: \(count)"
-        let deadline = Date().addingTimeInterval(30)
-        var lastSeen: String?
-        while true {
-            let element = itemCount()
-            if element.exists {
-                let label = element.label
-                let value = element.value as? String ?? ""
-                if label == text || value == text { return }
-                lastSeen = "label '\(label)', value '\(value)'"
-            }
-            if Date() >= deadline { break }
-            Thread.sleep(forTimeInterval: 0.25)
-        }
+        let outcome = ItemCountWait.wait(
+            for: count,
+            timeout: 30,
+            interval: 0.25,
+            read: {
+                let element = itemCount()
+                guard element.exists else { return nil }
+                return ItemCountWait.Reading(label: element.label, value: element.value as? String ?? "")
+            },
+            now: { Date() },
+            sleep: { Thread.sleep(forTimeInterval: $0) }
+        )
+        guard case .timedOut(let lastSeen) = outcome else { return }
         guard let lastSeen else {
             XCTFail("\(failure): the app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
             return
         }
-        XCTFail("\(failure): expected '\(text)', the app last showed \(lastSeen)")
+        XCTFail("\(failure): expected '\(ItemCountWait.text(for: count))', the app last showed label '\(lastSeen.label)', value '\(lastSeen.value)'")
     }
 
     #if os(tvOS)
