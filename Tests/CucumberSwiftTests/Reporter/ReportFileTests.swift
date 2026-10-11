@@ -27,6 +27,11 @@ class ReportFileTests: XCTestCase {
         ["name": name, "uri": uri, "line": 1, "keyword": "Feature", "elements": scenarios]
     }
 
+    /// The URI of a feature file as a worker running from `copy` of the test bundle reads it.
+    private func bundleURI(copy: String, folder: [String] = [], file: String = "Checkout.feature") -> String {
+        ([copy, "Tests.xctest", "Features"] + folder + [file]).joined(separator: "/")
+    }
+
     private func names(_ features: [[String: Any]]) -> [[String]] {
         features.map { ($0["elements"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String } }
     }
@@ -77,15 +82,15 @@ class ReportFileTests: XCTestCase {
 
     func testWorkersRunningFromCopiesOfTheTestBundleMergeTheirFeature() {
         let file = ReportFile(url: url)
-        file.merge([feature([scenario("A", line: 3)], uri: "clone-1/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
-        file.merge([feature([scenario("B", line: 6)], uri: "clone-2/Runner.app/PlugIns/Tests.xctest/Features/Checkout.feature")])
+        file.merge([feature([scenario("A", line: 3)], uri: bundleURI(copy: "clone-1"))])
+        file.merge([feature([scenario("B", line: 6)], uri: bundleURI(copy: "clone-2"))])
         XCTAssertEqual(names(file.read()), [["A", "B"]])
     }
 
     func testFeaturesWithTheSameNameInDifferentFilesStaySeparateInsideTheBundle() {
         let file = ReportFile(url: url)
-        file.merge([feature([scenario("A", line: 3)], uri: "clone-1/Tests.xctest/Features/One/Checkout.feature")])
-        file.merge([feature([scenario("B", line: 3)], uri: "clone-2/Tests.xctest/Features/Two/Checkout.feature")])
+        file.merge([feature([scenario("A", line: 3)], uri: bundleURI(copy: "clone-1", folder: ["One"]))])
+        file.merge([feature([scenario("B", line: 3)], uri: bundleURI(copy: "clone-2", folder: ["Two"]))])
         XCTAssertEqual(names(file.read()), [["A"], ["B"]])
     }
 
