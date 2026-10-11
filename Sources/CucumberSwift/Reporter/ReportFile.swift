@@ -36,7 +36,8 @@ final class ReportFile: @unchecked Sendable {
     /// Adds a worker's features to the report's. A feature already in the report, by its URI, line and
     /// name, takes the worker's version of each of its scenarios, by line and name, and keeps the others'
     /// scenarios, in feature-file order. A worker writes its features again as it runs, so each write
-    /// replaces what the worker wrote before.
+    /// replaces what the worker wrote before. The features are in the order of their files, which is the
+    /// order a serial run lists them in, whichever worker wrote first.
     static func merge(_ ours: [[String: Any]], into report: [[String: Any]]) -> [[String: Any]] {
         var merged = report
         for feature in ours {
@@ -58,7 +59,14 @@ final class ReportFile: @unchecked Sendable {
                 merged.append(updated)
             }
         }
-        return merged
+        return inFileOrder(features: merged)
+    }
+
+    /// The report's bytes: the features, as the reporter encodes them, with their keys sorted, so that the
+    /// report of a serial run and of a parallel run are written the same way, and one run's report is the
+    /// same bytes each time it is written.
+    static func serialize(_ features: [[String: Any]]) -> Data? {
+        try? JSONSerialization.data(withJSONObject: features, options: [.prettyPrinted, .sortedKeys])
     }
 
     /// Two workers read one feature file from different places when each runs from a copy of the test
@@ -78,6 +86,19 @@ final class ReportFile: @unchecked Sendable {
 
     private static func isSame(scenario: [String: Any], as other: [String: Any]) -> Bool {
         scenario["line"] as? Int == other["line"] as? Int && scenario["name"] as? String == other["name"] as? String
+    }
+
+    /// Features in the order of their files, the order a serial run reads them in (sorted by URI), and
+    /// features of one file in the order they are declared. The sort is stable.
+    private static func inFileOrder(features: [[String: Any]]) -> [[String: Any]] {
+        features.enumerated()
+            .sorted {
+                let (left, right) = (identity(ofURI: $0.element["uri"] as? String) ?? "", identity(ofURI: $1.element["uri"] as? String) ?? "")
+                if left != right { return left < right }
+                let (leftLine, rightLine) = ($0.element["line"] as? Int ?? 0, $1.element["line"] as? Int ?? 0)
+                return (leftLine, $0.offset) < (rightLine, $1.offset)
+            }
+            .map(\.element)
     }
 
     private static func inFileOrder(_ scenarios: [[String: Any]]) -> [[String: Any]] {
@@ -155,7 +176,7 @@ final class ReportFile: @unchecked Sendable {
     /// Writes to a temporary file in the report's folder and moves it into place, so that nothing reads
     /// half a report.
     private func write(_ features: [[String: Any]]) {
-        guard let data = try? JSONSerialization.data(withJSONObject: features, options: [.prettyPrinted, .sortedKeys]) else { return }
+        guard let data = Self.serialize(features) else { return }
         try? data.write(to: url, options: .atomic)
     }
 }
