@@ -27,7 +27,7 @@ final class ItemCountWaitTests: XCTestCase {
             timeout: 30,
             interval: 0.25,
             // The last reading repeats, like an app that has stopped changing.
-            read: { reads.count > 1 ? reads.removeFirst() : reads.first ?? nil },
+            read: { reads.count > 1 ? reads.removeFirst() : reads.first.flatMap { $0 } },
             now: { clock.now },
             sleep: clock.sleep
         )
