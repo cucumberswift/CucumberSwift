@@ -55,6 +55,7 @@ public class CucumberJSONReporter: CucumberTestObserver {
                   let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             file.merge(json)
         } else {
+            try? FileManager.default.createDirectory(at: reportURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? encoder.encode(features).write(to: reportURL)
         }
     }

@@ -197,6 +197,16 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(Reporter.reportURL?.path, path)
     }
 
+    func testASerialRunCreatesTheFolderOfTheReportPathSetting() throws {
+        Cucumber.shared.reset()
+        let nested = folder.appendingPathComponent("not/yet/there/report.json")
+        Cucumber.reportPath = nested.path
+        addTeardownBlock { Cucumber.reportPath = nil }
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        reporter.testSuiteStarted(at: Date())
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nested.path))
+    }
+
     func testAReporterMadeWithAPathKeepsIt() {
         Cucumber.reportPath = "elsewhere/else.json"
         addTeardownBlock { Cucumber.reportPath = nil }

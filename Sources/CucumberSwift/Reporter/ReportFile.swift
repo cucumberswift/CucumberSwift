@@ -106,8 +106,11 @@ final class ReportFile: @unchecked Sendable {
         let descriptor = open(runLockPath, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
         guard descriptor >= 0 else { return }
         runDescriptor = descriptor
-        // Holding the lock exclusively means no other worker is running; waiting for it while another
-        // worker joins is what keeps two first workers from both emptying the report.
+        // Getting the lock exclusively means no other worker holds the run, so this may be a new run's
+        // first worker. Then `flock` below turns it into a shared lock, which on some systems drops the
+        // lock for a moment, and another worker can take it exclusively. That worker finds a report the
+        // first one has just written, which isn't stale, so it leaves it alone: two first workers never
+        // both empty it, but only because of the age check.
         if flock(descriptor, LOCK_EX | LOCK_NB) == 0, isStale(after: staleAfter) {
             withWriteLock { write([]) }
         }
