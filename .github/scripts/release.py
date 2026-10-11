@@ -27,6 +27,8 @@ BRANCH = re.compile(r"^(main|support/(0|[1-9][0-9]*)\.x)\Z")
 RANK = {"patch": 1, "minor": 2, "major": 3}
 # Version commits made by this workflow, and by the automation it replaced.
 VERSION_COMMIT = re.compile(r"^(chore: set version |\[ci skip\] Apply automatic changes)")
+# The message of the version commit this workflow makes. queue_checked.py reads it too.
+VERSION_MESSAGE = "chore: set version {}"
 
 
 def fail(message):
@@ -532,7 +534,7 @@ def publish():
     version, latest = os.environ["VERSION"], os.environ["LATEST"]
     if not SEMVER.match(version) or latest not in ("true", "false"):
         fail("Unexpected version.")
-    message = f"chore: set version {version}"
+    message = VERSION_MESSAGE.format(version)
     # The bot that makes the version commit: the release app's, passed in by the workflow.
     bot = os.environ.get("RELEASE_BOT") or "github-actions[bot]"
 
