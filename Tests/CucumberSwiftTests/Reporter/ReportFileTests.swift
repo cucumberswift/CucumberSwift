@@ -310,8 +310,10 @@ extension ReportFileTests {
         // The suite's start, then the scenario and the feature finishing: not a merge for each of the
         // steps' four starts and four finishes, nor for the starts of the feature and the scenario.
         XCTAssertLessThanOrEqual(ReportFile.at(url).merges, 3)
-        let steps = ReportFile(url: url).read().first?["elements"] as? [[String: Any]]
-        XCTAssertEqual((steps?.first?["steps"] as? [[String: Any]])?.count, 4)
+        // Features other tests parsed from strings may be in the report too, ahead of F1.
+        let feature = ReportFile(url: url).read().first { $0["name"] as? String == "F1" }
+        let scenarios = feature?["elements"] as? [[String: Any]]
+        XCTAssertEqual((scenarios?.first?["steps"] as? [[String: Any]])?.count, 4)
     }
 
     func testAReportThatCantBeWrittenIsSaidSoOnceNotSilently() throws {
