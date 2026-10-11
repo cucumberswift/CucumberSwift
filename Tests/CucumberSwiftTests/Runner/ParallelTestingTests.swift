@@ -275,15 +275,14 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertTrue(ParallelWorkerObserver.reported.snapshot)
     }
 
-    // The failure XCTest shows is an issue on the test that started first.
+    // The failure XCTest shows is an issue on the test that started first, recorded while that test runs.
     @available(iOS 14, macOS 11, tvOS 14, macCatalyst 14, *)
-    func testTheObserverRecordsTheIssueOnTheTestThatStarted() {
+    func testTheObserverRecordsTheIssueOnTheTestThatStartedWhileItRuns() {
         _ = parseFeature()
         let observer = ParallelWorkerObserver { true }
+        XCTExpectFailure("The observer fails the first test of a parallel run without the setting")
 
-        XCTExpectFailure("The observer fails the first test of a parallel run without the setting") {
-            observer.testCaseWillStart(self)
-        }
+        observer.testCaseWillStart(self)
 
         XCTAssertTrue(ParallelWorkerObserver.reported.snapshot)
     }

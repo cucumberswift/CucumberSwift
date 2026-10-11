@@ -128,7 +128,9 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
         if let report = report {
             report(testCase, issue)
         } else {
-            testCase.record(issue)
+            // Not recorded here: XCTest has not started the test yet, and xcodebuild rejects an issue for a test
+            // that is not running. A teardown block runs inside the test.
+            testCase.addTeardownBlock { testCase.record(issue) }
         }
     }
 }
