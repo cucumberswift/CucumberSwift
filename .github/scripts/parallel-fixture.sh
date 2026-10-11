@@ -71,12 +71,22 @@ if [[ -n "${udid:-}" ]]; then
   xcrun simctl shutdown "$udid" 2>/dev/null || true
 fi
 
+# The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder, in the container of
+# the container of the fixture's test runner, such as org.cucumberswift.ParallelUITests.xctrunner. Nothing else
+# empties it, so a local run would also count the records of an earlier one. Only the containers of the
+# fixtures' own bundle IDs, org.cucumberswift.Parallel*, are touched, never another app's.
+# Found again after the run, because a clean runner has no such container until the tests have run.
+runner_records() {
+  ls -d "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records 2>/dev/null
+  return 0
+}
+runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
+
 .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
   PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
 status=$?
-# The sandboxed UI test runner on macOS and Mac Catalyst records in its own temporary folder.
-cp "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records/* "$records"/ 2>/dev/null || true
+runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
 
 echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
 grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
@@ -95,6 +105,10 @@ done
 grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
 
 total=$(ls "$records" | wc -l | tr -d ' ')
+if [[ "$total" -eq 0 ]]; then
+  echo "No records. Containers with a records folder:"
+  ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
+fi
 # Each record is <scenario>.<worker's process>.<UUID>.
 scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
 workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
