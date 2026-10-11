@@ -84,13 +84,11 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
     /// such configuration, or not these properties.
     static func isParallelRun() -> Bool {
         let configurationSelector = NSSelectorFromString("activeTestConfiguration")
-        guard let configurationClass = NSClassFromString("XCTestConfiguration") as? NSObject.Type,
-              configurationClass.responds(to: configurationSelector),
-              let configuration = configurationClass.perform(configurationSelector)?.takeUnretainedValue() as? NSObject else {
-            return false
+        let configuration = (NSClassFromString("XCTestConfiguration") as? NSObject.Type).flatMap {
+            $0.responds(to: configurationSelector) ? $0.perform(configurationSelector)?.takeUnretainedValue() as? NSObject : nil
         }
         return ["inProcessParallelizationEnabled", "testsDrivenByIDE"].allSatisfy { name in
-            configuration.responds(to: NSSelectorFromString(name)) && (configuration.value(forKey: name) as? Bool) == true
+            configuration?.responds(to: NSSelectorFromString(name)) == true && (configuration?.value(forKey: name) as? Bool) == true
         }
     }
 
