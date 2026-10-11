@@ -26,11 +26,14 @@ extension Cucumber {
         environment["CUCUMBER_TAGS"] = nil
         hookedFeatures.removeAll()
         hookedScenarios.removeAll()
+        ScenarioRuns.reset()
     }
 
     /// Runs every step's test. Many of these tests define only the steps they look at, so a step with no
     /// step definition, which fails its own test (#262), is an expected failure here, and nothing else is.
     func executeFeatures(callDefaultTestSuite: Bool = false) {
+        // A test may run its features more than once, with more step definitions each time.
+        ScenarioRuns.reset()
         if callDefaultTestSuite { _ = CucumberTest.defaultTestSuite }
         let suite = XCTestSuite(name: "Dummy")
         CucumberTest.generateAlltests(suite)

@@ -12,6 +12,41 @@
 //  bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
+//  Where the classes are made, and when (#386)
+//
+//  - `makeScenarioClasses()` is the one place that makes them. `prepare()` decides whether to, and
+//    `prepareWhenLoaded()` is what runs when the bundle loads.
+//  - What runs at load is `CucumberStepTest.+load`, in the CucumberSwiftObjC target, because Swift can't
+//    run code when an image loads. It asks `CucumberTestSupport.prepareForParallelTesting()`, by class
+//    name, as the Objective-C target can't import this module. Every test bundle that links CucumberSwift
+//    loads it, so no `NSPrincipalClass` or other setup is needed, and a SwiftPM test target, which can't
+//    set one, works the same.
+//  - Measured with Xcode 26.2, tracing the time of each call, on the iOS Simulator, Mac Catalyst and macOS,
+//    for unit tests with and without a host app and with CucumberSwift linked statically and as a framework:
+//    the classes were made on the main thread 0.01 to 0.02 seconds after `+load` ran, and XCTest first
+//    asked a class for its suite 0.04 to 1.3 seconds after that. Each scenario ran once. A hosted bundle
+//    loads into the app, and was no later than a hostless one. See
+//    https://github.com/cucumberswift/CucumberSwift/issues/386 for the measurements.
+//  - A bundle loaded off the main thread is the one case that is not early by construction: it prepares
+//    once the main actor is free, which can be after XCTest built CucumberTest's suite. CucumberTest
+//    then holds every scenario, and `CucumberTest.defaultTestSuite` adds a failing test saying so,
+//    instead of leaving a run that quietly runs scenarios twice. `classesMadeTooLate` says when.
+//
+//  Apple says Xcode hands out whole test classes, one at a time to each destination: "Xcode build will
+//  distribute tests to each run destination by class" (WWDC20, "Get your test results faster",
+//  https://developer.apple.com/videos/play/wwdc2020/10221/). That is why a scenario needs a class.
+//  That a target hosted in an app runs in one worker on the Simulators and Mac Catalyst is Xcode's
+//  behaviour, measured and not documented by Apple that we found: plain XCTest classes, with no
+//  CucumberSwift, ran in one worker there too, as the fixtures in Tests/ParallelFixtures show. Only on
+//  macOS did a hosted target run in parallel.
+//
+//  What is checked
+//
+//  `ScenarioRuns` counts the starts of each scenario in a process and fails the test that starts one a
+//  second time. Together with `classesMadeTooLate`, that covers the ways a parallel run repeats a
+//  scenario. A scenario that did not run is not reported, because a scenario skipped on purpose looks
+//  the same from inside a process.
+//
 
 import Foundation
 import XCTest
@@ -26,6 +61,14 @@ enum ParallelTesting {
 
     nonisolated static var scenarioClassesMade: Bool {
         classesMade.snapshot
+    }
+
+    /// Whether parallel testing is on, and yet each scenario's class was not made before XCTest asked
+    /// CucumberTest for its suite. XCTest can't hand those scenarios to workers, so CucumberTest's suite
+    /// holds them instead, and every worker that builds it runs them all. Read when CucumberTest builds
+    /// its suite, once the features are loaded and the flag can be set.
+    nonisolated static var classesMadeTooLate: Bool {
+        FeatureFlags.isParallelTesting && !FeatureFlags.isOneTestPerScenario && !scenarioClassesMade
     }
 
     /// The bundle of each scenario's class: the test bundle. A class made at run time belongs to no image,
