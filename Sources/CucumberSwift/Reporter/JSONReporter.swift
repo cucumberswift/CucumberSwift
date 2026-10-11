@@ -22,6 +22,12 @@ public class CucumberJSONReporter: CucumberTestObserver {
     private var currentFeature: Feature?
     private var currentScenario: Scenario?
     private var currentStep: Step?
+    /// The report's entry for each feature, scenario and step, by the object it describes. In a parallel
+    /// run a worker runs scenarios of several features in turn, so the feature that started last is not
+    /// always the feature of the scenario that starts now.
+    private var featureEntries = [ObjectIdentifier: Feature]()
+    private var scenarioEntries = [ObjectIdentifier: Scenario]()
+    private var stepEntries = [ObjectIdentifier: Step]()
     private var encoder: JSONEncoder = {
         var encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
@@ -71,6 +77,9 @@ public class CucumberJSONReporter: CucumberTestObserver {
         }
         defer { save() }
         features.removeAll()
+        featureEntries.removeAll()
+        scenarioEntries.removeAll()
+        stepEntries.removeAll()
     }
 
     public func testSuiteFinished(at: Date) {
@@ -79,20 +88,36 @@ public class CucumberJSONReporter: CucumberTestObserver {
 
     public func didStart(feature: CucumberSwift.Feature, at date: Date) {
         defer { save() }
-        features.append(Feature(feature))
-        currentFeature = features.last
+        currentFeature = entry(for: feature)
     }
 
     public func didStart(scenario: CucumberSwift.Scenario, at date: Date) {
         defer { save() }
-        currentFeature?.elements.append(Scenario(scenario))
-        currentScenario = currentFeature?.elements.last
+        let owner = scenario.feature.map(entry(for:)) ?? currentFeature
+        let entry = Scenario(scenario)
+        owner?.elements.append(entry)
+        scenarioEntries[ObjectIdentifier(scenario)] = entry
+        currentScenario = entry
     }
 
     public func didStart(step: CucumberSwift.Step, at date: Date) {
         defer { save() }
-        currentScenario?.steps.append(Step(step))
-        currentStep = currentScenario?.steps.last
+        let owner = step.scenario.flatMap { scenarioEntries[ObjectIdentifier($0)] } ?? currentScenario
+        let entry = Step(step)
+        owner?.steps.append(entry)
+        stepEntries[ObjectIdentifier(step)] = entry
+        currentStep = entry
+    }
+
+    /// The report's entry for a feature, added the first time it is asked for.
+    private func entry(for feature: CucumberSwift.Feature) -> Feature {
+        if let existing = featureEntries[ObjectIdentifier(feature)], features.contains(where: { $0 === existing }) {
+            return existing
+        }
+        let entry = Feature(feature)
+        features.append(entry)
+        featureEntries[ObjectIdentifier(feature)] = entry
+        return entry
     }
 
     public func didFinish(feature: CucumberSwift.Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
@@ -105,8 +130,9 @@ public class CucumberJSONReporter: CucumberTestObserver {
 
     public func didFinish(step: CucumberSwift.Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
         defer { save() }
-        currentStep?.result = result
-        currentStep?.duration = duration
+        let entry = stepEntries[ObjectIdentifier(step)] ?? currentStep
+        entry?.result = result
+        entry?.duration = duration
     }
 }
 

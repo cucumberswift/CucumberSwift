@@ -148,7 +148,7 @@ fi
 
 # The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
 # in feature-file order.
-report_check=$(REPORT="$report" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
+report_check=$(REPORT="$report" RECORDS="$records" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
 import json, os, sys
 try:
     features = json.load(open(os.environ["REPORT"]))
@@ -167,6 +167,16 @@ for feature in features:
         if not scenario.get("steps"):
             problems.append("%s has no steps" % scenario["name"])
 problems += ["%s ran %d times in the report" % (key[2], n) for key, n in seen.items() if n > 1]
+# Every scenario that recorded a run is in the report, under its own feature. A record is named
+# <feature> line <line> <scenario>, as ParallelFixtureSupport writes it, then <process>.<UUID>.
+import re
+def label(name):
+    return "".join(c if c.isalnum() else "-" for c in name)
+in_report = set(label("%s line %d %s" % (feature.get("name"), scenario["line"], scenario["name"]))
+                for feature in features for scenario in feature.get("elements", []))
+recorded = set(re.sub(r"\.[0-9]+\.[0-9A-F-]+$", "", name) for name in os.listdir(os.environ["RECORDS"]))
+problems += ["%s ran but is not in the report, or is under another feature" % name for name in sorted(recorded - in_report)]
+problems += ["%s is in the report but never ran" % name for name in sorted(in_report - recorded)]
 if len(seen) != int(os.environ["EXPECTED"]):
     problems.append("the report holds %d of %s scenarios" % (len(seen), os.environ["EXPECTED"]))
 if len(features) != int(os.environ["EXPECTED_FEATURES"]):
