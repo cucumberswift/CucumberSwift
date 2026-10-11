@@ -85,8 +85,10 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
 
     /// Whether Xcode runs this process as a worker of a parallel test run: both its properties are set. Either
     /// alone is not enough: `inProcessParallelizationEnabled` is also set under `swift test`, which runs
-    /// serially, and `testsDrivenByIDE` is `0` in a Mac Catalyst app's worker. `false` when XCTest has no
-    /// such configuration, or not these properties.
+    /// serially, and `testsDrivenByIDE` is `0` in a Mac Catalyst app's worker, which is then not found on
+    /// purpose: Xcode runs the tests of a target hosted in an app in one worker there, which runs each scenario
+    /// once, as a serial run does, and nothing separates that worker from `swift test`. `false` when XCTest has
+    /// no such configuration, or not these properties.
     static func isParallelRun() -> Bool {
         let configurationSelector = NSSelectorFromString("activeTestConfiguration")
         let configuration = (NSClassFromString("XCTestConfiguration") as? NSObject.Type).flatMap {

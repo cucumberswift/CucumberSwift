@@ -48,7 +48,8 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
     destination="platform=$PLATFORM,id=$udid" ;;
 esac
 scheme="Parallel${KIND}Tests${suffix}"
-records="$temp/parallel-test-records"
+# A run without the setting has a folder of its own, so that it holds only that run's records.
+records="$temp/parallel-test-records${WITHOUT_SETTING:+-without-setting}"
 mkdir -p "$records"
 echo "Running $scheme on $destination with $WORKERS workers"
 
@@ -111,14 +112,19 @@ for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp*
 done
 grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
 
-# The run must fail with CucumberSwift's message, which names the setting, and not pass or fail some other way.
+# The run must fail, every failure in the result bundle must be CucumberSwift's message, which names the
+# setting, at least one must be, and no scenario may have run: the message alone doesn't show that the
+# scenarios were held back, nor that nothing else failed.
 if [[ "${WITHOUT_SETTING:-}" = "YES" ]]; then
   message="parallel testing is off"
-  if [[ "$status" -ne 0 ]] && cat "$failures" parallel-test.log | grep -q "$message"; then
-    echo "The run without Cucumber.parallelTesting failed with CucumberSwift's message, as it should"
+  matching=$(grep '^Failed:' "$failures" | grep -c "$message" || true)
+  others=$(grep '^Failed:' "$failures" | grep -vc "$message" || true)
+  ran=$(ls "$records" | wc -l | tr -d ' ')
+  if [[ "$status" -ne 0 && "$matching" -ge 1 && "$others" -eq 0 && "$ran" -eq 0 ]]; then
+    echo "The run without Cucumber.parallelTesting failed only with CucumberSwift's message ($matching failures), and ran no scenario"
     exit 0
   fi
-  echo "::error::The run without Cucumber.parallelTesting did not fail with CucumberSwift's message (xcodebuild exit status $status)." >&2
+  echo "::error::The run without Cucumber.parallelTesting must fail only with CucumberSwift's message and run no scenario: xcodebuild exit status $status, $matching failures with the message, $others with another, $ran scenario records." >&2
   exit 1
 fi
 
