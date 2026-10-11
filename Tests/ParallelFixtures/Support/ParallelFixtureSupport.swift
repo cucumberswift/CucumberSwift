@@ -15,8 +15,12 @@ import CucumberSwift
 
 enum ParallelFixtureSupport {
     /// Turns on experimental parallel testing and adds the hooks that check each scenario and record it.
+    /// CI sets `PARALLEL_FIXTURE_WITHOUT_SETTING=YES` to leave the setting out and check that Xcode's
+    /// parallel testing then fails with CucumberSwift's message (#389).
     static func setUp() {
-        Cucumber.parallelTesting = true
+        if ProcessInfo.processInfo.environment["PARALLEL_FIXTURE_WITHOUT_SETTING"] != "YES" {
+            Cucumber.parallelTesting = true
+        }
 
         var stepsRun = [Int]()
         BeforeScenario { _ in

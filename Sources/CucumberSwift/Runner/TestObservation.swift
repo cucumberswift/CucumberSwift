@@ -52,3 +52,69 @@ final class RunningTestCaseObserver: NSObject, XCTestObservation {
         if self.testCase === testCase { self.testCase = nil }
     }
 }
+
+/// Fails a run that Xcode runs in parallel without `Cucumber.parallelTesting`, where scenarios run in every
+/// worker, or not at all, and the run can still pass (#389).
+///
+/// A process learns that parallel testing is on only from XCTest's private `XCTestConfiguration`, whose
+/// `inProcessParallelizationEnabled` and `testsDrivenByIDE` are set once XCTest starts the test bundle: too late to turn the mode
+/// on, because each scenario's class has to exist while the bundle loads. So the run fails instead, with a
+/// message that names the setting, on the first test of each process. If a new Xcode renames a property,
+/// nothing is found and a run behaves as it did before.
+final class ParallelWorkerObserver: NSObject, XCTestObservation {
+    /// The failure's message.
+    static let message = "Xcode is running these tests in parallel, but CucumberSwift's parallel testing is off, so scenarios run "
+        + "in every worker, or not at all, and the run can still pass. Set `Cucumber.parallelTesting = true` in `setupSteps()`, "
+        + "or the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`, or turn off parallel testing for this test target. "
+        + "See \"Running Scenarios in Parallel\" in CucumberSwift's documentation."
+
+    private var hasChecked = false
+    private let isParallelRun: () -> Bool
+    private let report: (XCTestCase, XCTIssue) -> Void
+
+    /// The closures are replaceable for tests: a unit test run is not a parallel worker, and an issue
+    /// recorded on it would fail it.
+    init(isParallelRun: @escaping () -> Bool = ParallelWorkerObserver.isParallelRun,
+         report: @escaping (XCTestCase, XCTIssue) -> Void = { $0.record($1) }) {
+        self.isParallelRun = isParallelRun
+        self.report = report
+    }
+
+    /// Whether Xcode runs this process as a worker of a parallel test run: both its properties are set. Either
+    /// alone is not enough: `inProcessParallelizationEnabled` is also set under `swift test`, which runs
+    /// serially, and `testsDrivenByIDE` is `0` in a Mac Catalyst app's worker. `false` when XCTest has no
+    /// such configuration, or not these properties.
+    static func isParallelRun() -> Bool {
+        let configurationSelector = NSSelectorFromString("activeTestConfiguration")
+        guard let configurationClass = NSClassFromString("XCTestConfiguration") as? NSObject.Type,
+              configurationClass.responds(to: configurationSelector),
+              let configuration = configurationClass.perform(configurationSelector)?.takeUnretainedValue() as? NSObject else {
+            return false
+        }
+        return ["inProcessParallelizationEnabled", "testsDrivenByIDE"].allSatisfy { name in
+            configuration.responds(to: NSSelectorFromString(name)) && (configuration.value(forKey: name) as? Bool) == true
+        }
+    }
+
+    /// Whether this parallel run has the setting off, so that its scenarios run wrongly. With one test per
+    /// scenario every scenario is a test of one class, which a parallel run is correct for.
+    @MainActor
+    private func isMissingSetting() -> Bool {
+        guard Cucumber.shared is StepImplementation else { return false }
+        // The flag can be set in setupSteps(), which may not have run in a process that was handed no test of
+        // CucumberTest's.
+        CucumberTest.loadFeaturesIfNeeded()
+        guard !FeatureFlags.isParallelTesting, !FeatureFlags.isOneTestPerScenario else { return false }
+        return isParallelRun()
+    }
+
+    func testCaseWillStart(_ testCase: XCTestCase) {
+        guard !hasChecked, Thread.isMainThread else { return }
+        hasChecked = true
+        MainActor.assumeIsolated {
+            guard isMissingSetting() else { return }
+            FileHandle.standardError.write(Data(("CucumberSwift: " + Self.message + "\n").utf8))
+            report(testCase, XCTIssue(type: .assertionFailure, compactDescription: Self.message))
+        }
+    }
+}

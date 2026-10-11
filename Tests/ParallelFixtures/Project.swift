@@ -74,10 +74,14 @@ func schemes(for family: Family) -> [Scheme] {
             shared: true,
             buildAction: .buildAction(targets: [.target(target)]),
             // The records folder reaches every kind of test runner through the scheme, filled from the
-            // build setting of the same name: CI passes PARALLEL_TEST_RECORDS=<folder> to xcodebuild.
+            // build setting of the same name: CI passes PARALLEL_TEST_RECORDS=<folder> to xcodebuild. So does
+            // PARALLEL_FIXTURE_WITHOUT_SETTING=YES, which leaves out Cucumber.parallelTesting (#389).
             testAction: .targets(
                 [.testableTarget(target: .target(target), parallelization: .enabled)],
-                arguments: .arguments(environmentVariables: ["PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)"]),
+                arguments: .arguments(environmentVariables: [
+                    "PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)",
+                    "PARALLEL_FIXTURE_WITHOUT_SETTING": "$(PARALLEL_FIXTURE_WITHOUT_SETTING)"
+                ]),
                 configuration: .debug,
                 expandVariableFromTarget: .target(target)
             )

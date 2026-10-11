@@ -187,4 +187,53 @@ class ParallelTestingTests: XCTestCase {
 
         XCTAssertFalse(ParallelTesting.scenarioClassesMade)
     }
+
+    // Xcode's parallel testing without the setting runs scenarios in every worker, or not at all, and the run
+    // can pass (#389), so the first test of a parallel worker fails with a message that names the setting.
+    private func issues(isParallelRun: Bool, tests: Int = 2) -> [String] {
+        var messages = [String]()
+        let observer = ParallelWorkerObserver(isParallelRun: { isParallelRun }, report: { _, issue in
+            messages.append(issue.compactDescription)
+        })
+        _ = parseFeature()
+        (0..<tests).forEach { _ in observer.testCaseWillStart(self) }
+        return messages
+    }
+
+    func testAParallelRunWithoutTheSettingFailsOnceWithAMessageNamingIt() {
+        let messages = issues(isParallelRun: true)
+
+        XCTAssertEqual(messages, [ParallelWorkerObserver.message])
+        XCTAssertTrue(ParallelWorkerObserver.message.contains("Cucumber.parallelTesting = true"))
+        XCTAssertTrue(ParallelWorkerObserver.message.contains("CUCUMBER_PARALLEL_TESTING"))
+    }
+
+    func testAParallelRunWithTheSettingOffExplicitlyFails() {
+        Cucumber.parallelTesting = false
+
+        XCTAssertEqual(issues(isParallelRun: true).count, 1)
+    }
+
+    func testASerialRunDoesNotFail() {
+        XCTAssertEqual(issues(isParallelRun: false), [])
+    }
+
+    func testAParallelRunWithTheSettingOnDoesNotFail() {
+        Cucumber.parallelTesting = true
+
+        XCTAssertEqual(issues(isParallelRun: true), [])
+    }
+
+    func testAParallelRunWithOneTestPerScenarioDoesNotFail() {
+        Cucumber.oneTestPerScenario = true
+
+        XCTAssertEqual(issues(isParallelRun: true), [])
+    }
+
+    func testTheSettingIsReadFromTheEnvironmentToo() {
+        Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING"] = "YES"
+        addTeardownBlock { Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING"] = nil }
+
+        XCTAssertEqual(issues(isParallelRun: true), [])
+    }
 }

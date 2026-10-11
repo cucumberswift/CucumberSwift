@@ -12,6 +12,9 @@
 //  bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
+//  Without the setting, a parallel run is wrong, and can pass (#389). The first test to start in a
+//  process says so, as a failure that names the setting: see `ParallelWorkerObserver` in TestObservation.swift.
+//
 
 import Foundation
 import XCTest
