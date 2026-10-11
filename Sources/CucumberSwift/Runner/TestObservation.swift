@@ -76,7 +76,7 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
 
     private var hasChecked = false
     private let isParallelRun: (() -> Bool)?
-    private let report: (XCTestCase, XCTIssue) -> Void
+    private let report: ((XCTestCase, XCTIssue) -> Void)?
 
     /// Whether Xcode runs this process as a worker of a parallel test run: both its properties are set. Either
     /// alone is not enough: `inProcessParallelizationEnabled` is also set under `swift test`, which runs
@@ -108,7 +108,7 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
     /// The closures are replaceable for tests: a unit test run is not a parallel worker, and an issue
     /// recorded on it would fail it.
     init(isParallelRun: (() -> Bool)? = nil,
-         report: @escaping (XCTestCase, XCTIssue) -> Void = { $0.record($1) }) {
+         report: ((XCTestCase, XCTIssue) -> Void)? = nil) {
         self.isParallelRun = isParallelRun
         self.report = report
     }
@@ -119,6 +119,11 @@ final class ParallelWorkerObserver: NSObject, XCTestObservation {
         guard Self.isMissingSetting(isParallelRun: isParallelRun) else { return }
         Self.reported.withLock { $0 = true }
         FileHandle.standardError.write(Data(("CucumberSwift: " + Self.message + "\n").utf8))
-        report(testCase, XCTIssue(type: .assertionFailure, compactDescription: Self.message))
+        let issue = XCTIssue(type: .assertionFailure, compactDescription: Self.message)
+        if let report = report {
+            report(testCase, issue)
+        } else {
+            testCase.record(issue)
+        }
     }
 }

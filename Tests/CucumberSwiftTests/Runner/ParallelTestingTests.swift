@@ -272,4 +272,17 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertFalse(names.contains { $0.contains(title) }, "\(names)")
         XCTAssertTrue(ParallelWorkerObserver.reported.snapshot)
     }
+
+    // The failure XCTest shows is an issue on the test that started first.
+    @available(iOS 14, macOS 11, tvOS 14, macCatalyst 14, *)
+    func testTheObserverRecordsTheIssueOnTheTestThatStarted() {
+        _ = parseFeature()
+        let observer = ParallelWorkerObserver(isParallelRun: { true })
+
+        XCTExpectFailure("The observer fails the first test of a parallel run without the setting") {
+            observer.testCaseWillStart(self)
+        }
+
+        XCTAssertTrue(ParallelWorkerObserver.reported.snapshot)
+    }
 }
