@@ -55,9 +55,67 @@ def line_of(scenario: str) -> int:
     return int(parts[1]) if len(parts) > 1 and parts[0] == "line" and parts[1].isdigit() else 0
 
 
+def scenario_errors(records: List[Record], unit: str, expected_scenarios: int, min_workers: int) -> List[str]:
+    """Every scenario ran exactly once, and with the scenario unit, in enough workers."""
+    errors = []
+    scenario_runs = Counter((r.feature, r.scenario) for r in records if r.kind == "scenario")
+    workers = {r.process for r in records if r.kind == "scenario"}
+    for (feature, scenario), count in sorted(scenario_runs.items()):
+        if count > 1:
+            errors.append(f"Ran {count} times: {feature} {scenario}")
+    if len(scenario_runs) != expected_scenarios:
+        errors.append(f"{len(scenario_runs)} of {expected_scenarios} scenarios ran. If you changed the fixtures' "
+                      "features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh.")
+    if unit == "scenario" and len(workers) < min_workers:
+        errors.append(f"The scenarios ran in {len(workers)} workers, and plain XCTest classes in at least "
+                      f"{min_workers}, so they did not run in parallel.")
+    return errors
+
+
+def worker_errors(feature: str, worker: str, worker_records: List[Record], unit: str) -> List[str]:
+    """What a worker's records of one feature must satisfy, in the order the worker wrote them."""
+    kinds = [r.kind for r in worker_records]
+    before, after = kinds.count("before"), kinds.count("after")
+    if "scenario" not in kinds:
+        if before or after:
+            return [f"Worker {worker} ran no scenario of '{feature}', but ran BeforeFeature "
+                    f"{before} times and AfterFeature {after} times for it."]
+        return []
+    if before != 1 or after != 1:
+        return [f"Worker {worker} ran scenarios of '{feature}', and BeforeFeature {before} times "
+                f"and AfterFeature {after} times for it, not once each."]
+    errors = []
+    if kinds[0] != "before" or kinds[-1] != "after":
+        errors.append(f"In worker {worker}, the records of '{feature}' are in the order "
+                      f"{', '.join(kinds)}: BeforeFeature should come first and AfterFeature last.")
+    lines_run = [line_of(r.scenario) for r in worker_records if r.kind == "scenario"]
+    if unit == "feature" and lines_run != sorted(lines_run):
+        errors.append(f"With whole features, worker {worker} ran the scenarios of '{feature}' at lines "
+                      f"{', '.join(map(str, lines_run))}, not in the feature file's order.")
+    return errors
+
+
+def hook_errors(records: List[Record], unit: str) -> Tuple[List[str], List[str]]:
+    """The summary lines and errors for each feature's hooks, by worker."""
+    by_feature = defaultdict(lambda: defaultdict(list))
+    for record in sorted(records, key=lambda r: (r.process, r.sequence)):
+        by_feature[record.feature][record.process].append(record)
+    lines, errors = [], []
+    for feature, by_worker in sorted(by_feature.items()):
+        lines.append(f"  {feature}: " + ", ".join(
+            f"worker {w} {sum(r.kind == 'before' for r in rs)}/{sum(r.kind == 'scenario' for r in rs)}/"
+            f"{sum(r.kind == 'after' for r in rs)}" for w, rs in sorted(by_worker.items())))
+        running = [w for w, rs in by_worker.items() if any(r.kind == "scenario" for r in rs)]
+        if unit == "feature" and len(running) > 1:
+            errors.append(f"With whole features, '{feature}' ran its scenarios in {len(running)} workers, not one.")
+        for worker, worker_records in sorted(by_worker.items()):
+            errors.extend(worker_errors(feature, worker, worker_records, unit))
+    return lines, errors
+
+
 def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int) -> Tuple[List[str], List[str]]:
     """What to print, and the errors, for the records' file names."""
-    lines, errors = [], []
+    errors = []
     records = []
     for name in names:
         record = parse(name)
@@ -68,54 +126,13 @@ def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int
 
     scenario_runs = Counter((r.feature, r.scenario) for r in records if r.kind == "scenario")
     workers = {r.process for r in records if r.kind == "scenario"}
-    lines.append(f"Scenario records: {sum(scenario_runs.values())} for {len(scenario_runs)} scenarios, "
-                 f"from {len(workers)} workers ({expected_scenarios} scenarios expected)")
-    for (feature, scenario), count in sorted(scenario_runs.items()):
-        if count > 1:
-            errors.append(f"Ran {count} times: {feature} {scenario}")
-    if len(scenario_runs) != expected_scenarios:
-        errors.append(f"{len(scenario_runs)} of {expected_scenarios} scenarios ran. If you changed the fixtures' "
-                      "features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh.")
-    if unit == "scenario" and len(workers) < min_workers:
-        errors.append(f"The scenarios ran in {len(workers)} workers, and plain XCTest classes in at least "
-                      f"{min_workers}, so they did not run in parallel.")
-
-    # Each feature's records, by worker, in the order the worker wrote them.
-    by_feature = defaultdict(lambda: defaultdict(list))
-    for record in sorted(records, key=lambda r: (r.process, r.sequence)):
-        by_feature[record.feature][record.process].append(record)
-
-    hook_counts = []
-    for feature, by_worker in sorted(by_feature.items()):
-        running = sorted(w for w, rs in by_worker.items() if any(r.kind == "scenario" for r in rs))
-        hook_counts.append(f"{feature}: " + ", ".join(
-            f"worker {w} {sum(r.kind == 'before' for r in rs)}/{sum(r.kind == 'scenario' for r in rs)}/"
-            f"{sum(r.kind == 'after' for r in rs)}" for w, rs in sorted(by_worker.items())))
-        if unit == "feature" and len(running) > 1:
-            errors.append(f"With whole features, '{feature}' ran its scenarios in {len(running)} workers, not one.")
-        for worker, worker_records in sorted(by_worker.items()):
-            kinds = [r.kind for r in worker_records]
-            runs_scenarios = "scenario" in kinds
-            before, after = kinds.count("before"), kinds.count("after")
-            if not runs_scenarios:
-                if before or after:
-                    errors.append(f"Worker {worker} ran no scenario of '{feature}', but ran BeforeFeature "
-                                  f"{before} times and AfterFeature {after} times for it.")
-                continue
-            if before != 1 or after != 1:
-                errors.append(f"Worker {worker} ran scenarios of '{feature}', and BeforeFeature {before} times "
-                              f"and AfterFeature {after} times for it, not once each.")
-                continue
-            if kinds[0] != "before" or kinds[-1] != "after":
-                errors.append(f"In worker {worker}, the records of '{feature}' are in the order "
-                              f"{', '.join(kinds)}: BeforeFeature should come first and AfterFeature last.")
-            lines_run = [line_of(r.scenario) for r in worker_records if r.kind == "scenario"]
-            if unit == "feature" and lines_run != sorted(lines_run):
-                errors.append(f"With whole features, worker {worker} ran the scenarios of '{feature}' at lines "
-                              f"{', '.join(map(str, lines_run))}, not in the feature file's order.")
+    lines = [f"Scenario records: {sum(scenario_runs.values())} for {len(scenario_runs)} scenarios, "
+             f"from {len(workers)} workers ({expected_scenarios} scenarios expected)"]
+    errors += scenario_errors(records, unit, expected_scenarios, min_workers)
+    hook_lines, hook_problems = hook_errors(records, unit)
     lines.append("Feature hooks, as BeforeFeature/scenarios/AfterFeature in each worker:")
-    lines.extend(f"  {line}" for line in hook_counts)
-    return lines, errors
+    lines.extend(hook_lines)
+    return lines, errors + hook_problems
 
 
 def main(argv: Optional[List[str]] = None) -> int:
