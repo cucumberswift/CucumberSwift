@@ -1,13 +1,13 @@
 {
-  "originHash" : "5b0104d6c01f656a581055df6c1fe0161f42c2f9c11e355900094e06aa59cf9a",
+  "originHash" : "67d19c4f42cbcd04bfc73a3f419655f3cbaa91d665e95d0fc8efd924c863d4ee",
   "pins" : [
     {
       "identity" : "cucumberswiftexpressions",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/cucumberswift/CucumberSwiftExpressions.git",
       "state" : {
-        "revision" : "b28667e9009cd6c40a7de321ca973237fc9d05fc",
-        "version" : "1.4.1"
+        "revision" : "ab4c6482d3230d24a13814a961b6fff1d50f830f",
+        "version" : "1.4.2"
       }
     },
     {
@@ -53,15 +53,6 @@
       "state" : {
         "revision" : "b45d1f2ed151d057b54504d653e0da5552844e34",
         "version" : "1.0.0"
-      }
-    },
-    {
-      "identity" : "swift-syntax",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-syntax.git",
-      "state" : {
-        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
-        "version" : "602.0.0"
       }
     }
   ],
