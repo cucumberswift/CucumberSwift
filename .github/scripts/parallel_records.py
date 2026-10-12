@@ -19,8 +19,12 @@ It fails unless:
 - with the feature unit, each feature's scenarios all ran in one worker, which ran each of its hooks
   once, and no other worker ran them.
 
+- with --check-order, and every scenario run by one worker, the scenarios ran in the order of the
+  feature files: the features sorted by path, then each feature's scenarios by line (#388). Only for
+  a run with Xcode's parallel testing off: with it on, a worker gets its classes in Xcode's order.
+
   python3 .github/scripts/parallel_records.py <folder> --unit scenario|feature \\
-      --expected-scenarios 10 [--min-workers 2]
+      --expected-scenarios 10 [--min-workers 2] [--check-order]
 
 Only the standard library is used.
 """
@@ -95,6 +99,49 @@ def worker_errors(feature: str, worker: str, worker_records: List[Record], unit:
     return errors
 
 
+# The fixtures' feature files, whose order --check-order compares the records with.
+FEATURES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir,
+                               "Tests", "ParallelFixtures", "Features")
+
+
+def record_part(text: str) -> str:
+    """A title as it appears in a record's file name: only letters, numbers and dashes."""
+    return "".join(c if c.isalnum() else "-" for c in text)
+
+
+def feature_titles(folder: str) -> List[str]:
+    """The titles of the feature files in the folder, as in a record's name, in the order of their paths."""
+    titles = []
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".feature"):
+            continue
+        with open(os.path.join(folder, name), encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip().startswith("Feature:"):
+                    titles.append(record_part(line.split(":", 1)[1].strip()))
+                    break
+    return titles
+
+
+def order_check(records: List[Record], feature_order: List[str]) -> Tuple[List[str], List[str]]:
+    """When one worker ran every scenario, whether it ran them in the order of the feature files."""
+    workers = {r.process for r in records if r.kind == "scenario"}
+    if len(workers) != 1:
+        return [f"Not checking the order of the scenarios: they ran in {len(workers)} workers"], []
+    ran = [(r.feature, r.scenario) for r in sorted(records, key=lambda r: (r.process, r.sequence))
+           if r.kind == "scenario"]
+    rank = {title: index for index, title in enumerate(feature_order)}
+    unknown = sorted({feature for feature, _ in ran if feature not in rank})
+    if unknown:
+        return [], [f"Records name features not in the feature files: {', '.join(unknown)}"]
+    expected = sorted(ran, key=lambda run: (rank.get(run[0], len(rank)), line_of(run[1])))
+    if ran == expected:
+        return ["The scenarios ran in one worker, in the order of the feature files"], []
+    return [], ["The scenarios ran in one worker, but not in the order of the feature files. "
+                f"Ran: {', '.join(f'{f} {s}' for f, s in ran)}. "
+                f"Expected: {', '.join(f'{f} {s}' for f, s in expected)}."]
+
+
 def hook_errors(records: List[Record], unit: str) -> Tuple[List[str], List[str]]:
     """The summary lines and errors for each feature's hooks, by worker."""
     by_feature = defaultdict(lambda: defaultdict(list))
@@ -113,8 +160,10 @@ def hook_errors(records: List[Record], unit: str) -> Tuple[List[str], List[str]]
     return lines, errors
 
 
-def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int) -> Tuple[List[str], List[str]]:
-    """What to print, and the errors, for the records' file names."""
+def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int,
+          feature_order: Optional[List[str]] = None) -> Tuple[List[str], List[str]]:
+    """What to print, and the errors, for the records' file names. With feature_order, the titles of the
+    features in the order of their files, it also checks the order of the scenarios (see order_check)."""
     errors = []
     records = []
     for name in names:
@@ -129,6 +178,10 @@ def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int
     lines = [f"Scenario records: {sum(scenario_runs.values())} for {len(scenario_runs)} scenarios, "
              f"from {len(workers)} workers ({expected_scenarios} scenarios expected)"]
     errors += scenario_errors(records, unit, expected_scenarios, min_workers)
+    if feature_order is not None:
+        order_lines, order_problems = order_check(records, feature_order)
+        lines += order_lines
+        errors += order_problems
     hook_lines, hook_problems = hook_errors(records, unit)
     lines.append("Feature hooks, as BeforeFeature/scenarios/AfterFeature in each worker:")
     lines.extend(hook_lines)
@@ -141,9 +194,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--unit", choices=("scenario", "feature"), required=True)
     parser.add_argument("--expected-scenarios", type=int, required=True)
     parser.add_argument("--min-workers", type=int, default=1)
+    parser.add_argument("--check-order", action="store_true",
+                        help="check that scenarios run by one worker ran in the order of the fixtures' feature files")
     args = parser.parse_args(argv)
     names = sorted(os.listdir(args.folder)) if os.path.isdir(args.folder) else []
-    lines, errors = check(names, args.unit, args.expected_scenarios, args.min_workers)
+    feature_order = feature_titles(FEATURES_FOLDER) if args.check_order else None
+    lines, errors = check(names, args.unit, args.expected_scenarios, args.min_workers, feature_order)
     for line in lines:
         print(line)
     for error in errors:

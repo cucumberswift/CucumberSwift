@@ -128,30 +128,29 @@ open class CucumberTest: XCTestCase {
         stubTests.forEach { stubsSuite.addTest($0) }
         rootSuite.addTest(stubsSuite)
 
+        // With experimental parallel testing, each scenario's class was made before XCTest listed the
+        // classes to hand to its workers, and runs on its own, so it is not part of this suite.
+        guard includeScenarios else { return }
         if FeatureFlags.isOneTestPerScenario {
             addScenarioTests(to: rootSuite)
             return
         }
 
-        guard includeScenarios else { return }
         scenarioSuites().forEach { rootSuite.addTest($0) }
     }
 
     /// A suite for each scenario that will run, holding the tests of the class made for it: one for each step.
     static func scenarioSuites() -> [XCTestSuite] {
-        var suites = [XCTestSuite]()
-        for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
-            let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter()
-
-            for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
-                let childSuite = XCTestSuite(name: className + generatedTestName(scenario.title))
-                var tests = [XCTestCase]()
-                createTestCaseFor(className: className, scenario: scenario, tests: &tests)
-                tests.forEach { childSuite.addTest($0) }
-                suites.append(childSuite)
-            }
+        let delimiter = readFeatureScenarioDelimiter()
+        return scenariosToRun().map { run in
+            let (feature, scenario) = (run.feature, run.scenario)
+            let className = run.prefix + generatedTestName(feature.title) + delimiter
+            let childSuite = XCTestSuite(name: className + generatedTestName(scenario.title))
+            var tests = [XCTestCase]()
+            createTestCaseFor(className: className, scenario: scenario, tests: &tests)
+            tests.forEach { childSuite.addTest($0) }
+            return childSuite
         }
-        return suites
     }
 
     private static func createTestCaseForStubs(_ tests: inout [XCTestCase]) {

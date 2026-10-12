@@ -138,10 +138,13 @@ extension Cucumber {
     /// environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`, to try it. This variable,
     /// when set, wins over the environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
     ///
-    /// It applies to a test per step, the default, not to ``oneTestPerScenario``. Each worker is a process
-    /// of its own, so state your step definitions share and a feature's hooks are per worker, and on a
-    /// Simulator the JSON report needs ``reportPath``: see <doc:Running-Scenarios-In-Parallel> before you
-    /// turn it on. ``parallelTestingUnit`` says whether Xcode hands out each scenario or each whole feature.
+    /// It applies with a test per step, the default, and with ``oneTestPerScenario``: each scenario is a
+    /// test class of its own, or each feature is, with ``parallelTestingUnit``. A scenario's or feature's
+    /// class name starts with its position in your feature files, such as
+    /// `F01 S02 › Checkout › Pay with a gift card`, so that a serial run keeps the order of the files.
+    /// Each worker is a process of its own, so state your step definitions share and a feature's hooks are
+    /// per worker, and on a Simulator the JSON report needs ``reportPath``: see
+    /// <doc:Running-Scenarios-In-Parallel> before you turn it on.
     public static var parallelTesting: Bool? {
         get { FeatureFlags.storage["parallelTesting"] }
         set { FeatureFlags.storage["parallelTesting"] = newValue }

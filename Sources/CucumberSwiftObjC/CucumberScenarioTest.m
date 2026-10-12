@@ -21,7 +21,8 @@ static Class<CucumberTestSupport> _Nullable CucumberTestSupport(void) {
 /// Xcode's test navigator runs one scenario by asking XCTest for `CucumberScenarioTest/<its name>`.
 /// Nothing has added that test yet, so the Objective-C runtime asks here, and CucumberSwift adds it.
 + (BOOL)resolveInstanceMethod:(SEL)sel {
-    if ([CucumberTestSupport() resolveScenarioTestNamed:NSStringFromSelector(sel)]) {
+    // Not for the class made for each scenario with parallel testing: its test exists from the start.
+    if (self == [CucumberScenarioTest class] && [CucumberTestSupport() resolveScenarioTestNamed:NSStringFromSelector(sel)]) {
         return YES;
     }
     return [super resolveInstanceMethod:sel];

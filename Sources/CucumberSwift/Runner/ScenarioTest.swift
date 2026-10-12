@@ -88,9 +88,61 @@ extension CucumberTest {
         }
     }
 
+    /// With parallel testing, a suite for each scenario that will run, as `scenarioSuites()` makes for a
+    /// test per step: a class of its own, a subclass of `CucumberScenarioTest` so that a failure is still
+    /// recorded at the step's line, with one test, named after the scenario. Xcode can then hand each
+    /// scenario to a worker. The class's name is `scenarioSuites()`'s, so that XCTest lists the classes in
+    /// the order of the feature files.
+    static func scenarioTestSuites() -> [XCTestSuite] {
+        guard let base = scenarioTestClass else { return [] }
+        let delimiter = readFeatureScenarioDelimiter()
+        return scenariosToRun().compactMap { run in
+            let (feature, scenario) = (run.feature, run.scenario)
+            let className = run.prefix + generatedTestName(feature.title) + delimiter + generatedTestName(scenario.title)
+            guard let testClass = TestCaseGenerator.makeClass(className: className, superclass: base) else { return nil }
+            objc_registerClassPair(testClass)
+            let suite = XCTestSuite(name: className)
+            if let selector = addScenarioMethod(named: generatedTestName(scenario.title), running: scenario, to: testClass) {
+                suite.addTest(testClass.init(selector: selector))
+            }
+            return suite
+        }
+    }
+
+    /// With parallel testing, ``ParallelTestingUnit/feature`` and one test per scenario: a suite for each
+    /// feature with a scenario that will run, holding the tests of the class made for the feature, one for
+    /// each such scenario, in the feature file's order, and the feature's last step. Xcode then hands the
+    /// feature to one worker. The class is a subclass of `CucumberScenarioTest`, and its tests' names start
+    /// with the scenario's position (`Scenario.methodName`), so that Xcode runs them in that order.
+    static func featureTestSuites() -> [(suite: XCTestSuite, lastStep: Step)] {
+        guard let base = scenarioTestClass else { return [] }
+        var suites = [(suite: XCTestSuite, lastStep: Step)]()
+        for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
+            let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
+            guard let lastStep = scenarios.last(where: { !$0.steps.isEmpty })?.steps.last else { continue }
+            // The feature's position in the name keeps two features with the same title apart.
+            let name = featureOrderPrefix(of: feature) + generatedTestName(feature.title)
+            guard let testClass = TestCaseGenerator.makeClass(className: name, superclass: base) else { continue }
+            objc_registerClassPair(testClass)
+            let suite = XCTestSuite(name: name)
+            for scenario in scenarios {
+                let position = feature.scenarios.firstIndex { $0 === scenario } ?? 0
+                let method = Scenario.methodName(for: scenario.title,
+                                                 at: position,
+                                                 of: feature.scenarios.count,
+                                                 readable: FeatureFlags.isReadableTestNames)
+                if let selector = addScenarioMethod(named: method, running: scenario, to: testClass) {
+                    suite.addTest(testClass.init(selector: selector))
+                }
+            }
+            suites.append((suite, lastStep))
+        }
+        return suites
+    }
+
     @discardableResult
-    static func addScenarioMethod(named name: String, running scenario: Scenario) -> Selector? {
-        guard let testClass = scenarioTestClass else { return nil }
+    static func addScenarioMethod(named name: String, running scenario: Scenario, to scenarioClass: XCTestCase.Type? = nil) -> Selector? {
+        guard let testClass = scenarioClass ?? scenarioTestClass else { return nil }
         let selector = sel_registerName(name + errorSuffix)
         let body: @convention(block) (XCTestCase, AutoreleasingUnsafeMutablePointer<NSError?>?) -> Bool = { test, error in
             guard let skip = run(scenario, on: test) else { return true }
