@@ -1,4 +1,6 @@
-Feature: Parallel accounts
+# The title sorts after the checkout feature's, though this file comes first, so that XCTest's order of
+# classes by name is not the order of the files, and CI can tell a run in the files' order from one that is not.
+Feature: Parallel user accounts
 
     Scenario: Sign in
         Given a fresh cart

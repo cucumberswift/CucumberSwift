@@ -9,7 +9,8 @@
 //  CucumberTest or a subclass of it.
 //
 //  With `Cucumber.parallelTesting`, each scenario's class is made while XCTest loads the test
-//  bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
+//  bundle, and answers `defaultTestSuite` with its steps, or with its one test when
+//  `Cucumber.oneTestPerScenario` is on (#388). XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
 //  With `Cucumber.parallelTestingUnit = .feature` (#387), each feature's class is made instead, holding
@@ -22,6 +23,11 @@
 //  of a feature class's last test, or else in `testBundleDidFinish`, once per worker for each feature that
 //  worker started (`Cucumber.finishStartedFeatures`). XCTest calls that once in every worker, after its
 //  last test, and drops any failure recorded there, so an async hook's error is printed instead.
+//
+//  XCTest lists the classes by name, so each class's name starts with the feature's and the scenario's
+//  position in the feature files, zero-padded (`F01 S02 › …`, or `F01 › …` for a feature's class), which
+//  makes a serial run's order the files' order (see `CucumberTest.scenarioOrderPrefix`). Without
+//  `parallelTesting`, CucumberTest builds its suite in the files' order itself, and the names don't change.
 //
 //  Where the classes are made, and when (#386)
 //
@@ -79,7 +85,7 @@ enum ParallelTesting {
     /// holds them instead, and every worker that builds it runs them all. Read when CucumberTest builds
     /// its suite, once the features are loaded and the flag can be set.
     nonisolated static var classesMadeTooLate: Bool {
-        FeatureFlags.isParallelTesting && !FeatureFlags.isOneTestPerScenario && !scenarioClassesMade
+        FeatureFlags.isParallelTesting && !scenarioClassesMade
     }
 
     /// The bundle of each scenario's class: the test bundle. A class made at run time belongs to no image,
@@ -129,9 +135,7 @@ enum ParallelTesting {
         guard !CucumberTest.hasBeenBuilt, !scenarioClassesMade, Cucumber.shared is StepImplementation else { return }
         // The flag can be set in setupSteps(), so the features and steps are loaded first.
         CucumberTest.loadFeaturesIfNeeded()
-        guard FeatureFlags.isParallelTesting,
-              !FeatureFlags.isOneTestPerScenario,
-              !Cucumber.shared.features.isEmpty else { return }
+        guard FeatureFlags.isParallelTesting, !Cucumber.shared.features.isEmpty else { return }
         makeScenarioClasses()
     }
 
@@ -144,13 +148,16 @@ enum ParallelTesting {
     /// of all of the feature's scenarios, so that XCTest hands the whole feature to one worker.
     static func makeScenarioClasses() {
         let testBundle = (Cucumber.shared as? StepImplementation)?.bundle
+        // With one test per scenario, a class's tests are the scenario's, as `CucumberScenarioTest`'s are,
+        // and the class is a subclass of it. Otherwise a class has a test for each step.
+        let oneTestPerScenario = FeatureFlags.isOneTestPerScenario
         let suites: [XCTestSuite]
         if FeatureFlags.parallelTestingUnit == .feature {
-            let featureSuites = CucumberTest.featureSuites()
+            let featureSuites = oneTestPerScenario ? CucumberTest.featureTestSuites() : CucumberTest.featureSuites()
             featureLastSteps.withLock { $0 = Set(featureSuites.map { ObjectIdentifier($0.lastStep) }) }
             suites = featureSuites.map(\.suite)
         } else {
-            suites = CucumberTest.scenarioSuites()
+            suites = oneTestPerScenario ? CucumberTest.scenarioTestSuites() : CucumberTest.scenarioSuites()
         }
         for scenarioSuite in suites {
             guard let testClass = scenarioSuite.tests.first.map({ type(of: $0) }) else { continue }
@@ -203,7 +210,9 @@ extension CucumberTest {
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
             guard let lastStep = scenarios.last(where: { !$0.steps.isEmpty })?.steps.last else { continue }
-            let base = generatedTestName(feature.title)
+            // Prefixed with the feature's position, so that a serial run, which XCTest orders by name, runs
+            // the features in the feature files' order (#388).
+            let base = featureOrderPrefix(of: feature) + generatedTestName(feature.title)
             var name = base
             var count = 1
             while names.contains(name) {

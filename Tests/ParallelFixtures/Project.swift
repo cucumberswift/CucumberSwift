@@ -73,14 +73,17 @@ func schemes(for family: Family) -> [Scheme] {
             name: target,
             shared: true,
             buildAction: .buildAction(targets: [.target(target)]),
-            // The records folder and the parallel testing unit reach every kind of test runner through the
-            // scheme, filled from the build settings of the same names: CI passes
-            // PARALLEL_TEST_RECORDS=<folder> and CUCUMBER_PARALLEL_TESTING_UNIT=<unit> to xcodebuild.
+            // The records folder, the parallel testing unit and the layout reach every kind of test runner
+            // through the scheme, filled from the build settings of the same names: CI passes
+            // PARALLEL_TEST_RECORDS=<folder>, CUCUMBER_PARALLEL_TESTING_UNIT=<unit> and
+            // CUCUMBER_ONE_TEST_PER_SCENARIO=<YES|NO> to xcodebuild. A setting that is not passed is empty,
+            // which CucumberSwift reads as not set.
             testAction: .targets(
                 [.testableTarget(target: .target(target), parallelization: .enabled)],
                 arguments: .arguments(environmentVariables: [
                     "PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)",
-                    "CUCUMBER_PARALLEL_TESTING_UNIT": "$(CUCUMBER_PARALLEL_TESTING_UNIT)"
+                    "CUCUMBER_PARALLEL_TESTING_UNIT": "$(CUCUMBER_PARALLEL_TESTING_UNIT)",
+                    "CUCUMBER_ONE_TEST_PER_SCENARIO": "$(CUCUMBER_ONE_TEST_PER_SCENARIO)"
                 ]),
                 configuration: .debug,
                 expandVariableFromTarget: .target(target)

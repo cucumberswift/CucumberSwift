@@ -121,6 +121,8 @@ xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 1
 
 The test's name is its feature's and its scenario's, as the test navigator shows it. A scenario whose name repeats another's in the same feature gets a number, as in `Checkout › Pay 2`.
 
+With parallel testing on, a scenario's test is in a class of its own, named with its position in the feature files: see <doc:Running-Scenarios-In-Parallel#Test-names-with-parallel-testing>.
+
 ### Skip a scenario
 
 To skip a scenario, for example when a service it needs is unavailable, throw `XCTSkip` from a step definition:

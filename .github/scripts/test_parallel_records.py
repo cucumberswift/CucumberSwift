@@ -100,6 +100,46 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(self.errors(names), [])
 
 
+class FileOrderTests(unittest.TestCase):
+    ORDER = ["Accounts", "Checkout"]
+
+    def check(self, names, unit="scenario"):
+        return parallel_records.check(names, unit, 3, 1, self.ORDER)
+
+    def test_scenarios_in_the_files_order_in_one_worker_pass(self):
+        names = worker(1, "Accounts", [A1, A2]) + worker(1, "Checkout", [B1], start=10)
+        lines, errors = self.check(names)
+        self.assertEqual(errors, [])
+        self.assertIn("The scenarios ran in one worker, in the order of the feature files", lines)
+
+    def test_features_in_the_wrong_order_in_one_worker_fail(self):
+        names = worker(1, "Checkout", [B1]) + worker(1, "Accounts", [A1, A2], start=10)
+        errors = self.check(names)[1]
+        self.assertTrue(any("not in the order of the feature files" in e for e in errors), errors)
+
+    def test_scenarios_in_the_wrong_order_in_one_worker_fail(self):
+        names = worker(1, "Accounts", [A2, A1]) + worker(1, "Checkout", [B1], start=10)
+        errors = self.check(names)[1]
+        self.assertTrue(any("not in the order of the feature files" in e for e in errors), errors)
+
+    def test_the_order_is_not_checked_when_several_workers_ran_scenarios(self):
+        names = worker(1, "Checkout", [B1]) + worker(2, "Accounts", [A2, A1], start=1)
+        lines, errors = self.check(names)
+        self.assertEqual(errors, [])
+        self.assertIn("Not checking the order of the scenarios: they ran in 2 workers", lines)
+
+    def test_the_order_is_not_checked_without_the_features(self):
+        names = worker(1, "Checkout", [B1]) + worker(1, "Accounts", [A1, A2], start=10)
+        self.assertEqual(parallel_records.check(names, "scenario", 3, 1)[1], [])
+
+    def test_titles_are_read_from_the_feature_files_in_path_order(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for file, title in [("B.feature", "Second one"), ("A.feature", "First one"), ("c.txt", "Not one")]:
+                with open(os.path.join(folder, file), "w") as handle:
+                    handle.write(f"# a comment\nFeature: {title}\n  Scenario: x\n")
+            self.assertEqual(parallel_records.feature_titles(folder), ["First-one", "Second-one"])
+
+
 class MainTests(unittest.TestCase):
     def run_main(self, names, *args):
         with tempfile.TemporaryDirectory() as folder:

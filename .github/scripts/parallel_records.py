@@ -19,8 +19,11 @@ It fails unless:
 - with the feature unit, each feature's scenarios all ran in one worker, which ran each of its hooks
   once, and no other worker ran them.
 
+- with --features, and every scenario run by one worker, the scenarios ran in the order of the
+  feature files: the features sorted by path, then each feature's scenarios by line (#388).
+
   python3 .github/scripts/parallel_records.py <folder> --unit scenario|feature \\
-      --expected-scenarios 10 [--min-workers 2]
+      --expected-scenarios 10 [--min-workers 2] [--features <folder of .feature files>]
 
 Only the standard library is used.
 """
@@ -55,8 +58,31 @@ def line_of(scenario: str) -> int:
     return int(parts[1]) if len(parts) > 1 and parts[0] == "line" and parts[1].isdigit() else 0
 
 
-def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int) -> Tuple[List[str], List[str]]:
-    """What to print, and the errors, for the records' file names."""
+def record_part(text: str) -> str:
+    """A title as it appears in a record's file name: only letters, numbers and dashes."""
+    return "".join(c if c.isalnum() else "-" for c in text)
+
+
+def feature_titles(folder: str) -> List[str]:
+    """The titles of the feature files in the folder, as in a record's name, in the order of their paths."""
+    titles = []
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".feature"):
+            continue
+        with open(os.path.join(folder, name), encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip().startswith("Feature:"):
+                    titles.append(record_part(line.split(":", 1)[1].strip()))
+                    break
+    return titles
+
+
+def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int,
+          feature_order: Optional[List[str]] = None) -> Tuple[List[str], List[str]]:
+    """What to print, and the errors, for the records' file names.
+
+    With feature_order, the titles of the features in the order of their files, and every scenario run by
+    one worker, it also fails unless the scenarios ran in the order of the feature files."""
     lines, errors = [], []
     records = []
     for name in names:
@@ -79,6 +105,21 @@ def check(names: List[str], unit: str, expected_scenarios: int, min_workers: int
     if unit == "scenario" and len(workers) < min_workers:
         errors.append(f"The scenarios ran in {len(workers)} workers, and plain XCTest classes in at least "
                       f"{min_workers}, so they did not run in parallel.")
+
+    if feature_order is not None:
+        if len(workers) == 1:
+            ran = [(r.feature, r.scenario) for r in sorted(records, key=lambda r: (r.process, r.sequence))
+                   if r.kind == "scenario"]
+            rank = {title: index for index, title in enumerate(feature_order)}
+            expected = sorted(ran, key=lambda run: (rank.get(run[0], len(rank)), line_of(run[1])))
+            if ran == expected:
+                lines.append("The scenarios ran in one worker, in the order of the feature files")
+            else:
+                errors.append("The scenarios ran in one worker, but not in the order of the feature files. "
+                              f"Ran: {', '.join(f'{f} {s}' for f, s in ran)}. "
+                              f"Expected: {', '.join(f'{f} {s}' for f, s in expected)}.")
+        else:
+            lines.append(f"Not checking the order of the scenarios: they ran in {len(workers)} workers")
 
     # Each feature's records, by worker, in the order the worker wrote them.
     by_feature = defaultdict(lambda: defaultdict(list))
@@ -124,9 +165,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--unit", choices=("scenario", "feature"), required=True)
     parser.add_argument("--expected-scenarios", type=int, required=True)
     parser.add_argument("--min-workers", type=int, default=1)
+    parser.add_argument("--features", help="the folder of the feature files, to check the order of the scenarios")
     args = parser.parse_args(argv)
     names = sorted(os.listdir(args.folder)) if os.path.isdir(args.folder) else []
-    lines, errors = check(names, args.unit, args.expected_scenarios, args.min_workers)
+    feature_order = feature_titles(args.features) if args.features else None
+    lines, errors = check(names, args.unit, args.expected_scenarios, args.min_workers, feature_order)
     for line in lines:
         print(line)
     for error in errors:

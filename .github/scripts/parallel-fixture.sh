@@ -5,10 +5,17 @@
 # Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [UNIT=scenario|feature|both] [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
+#   [UNIT=scenario|feature|both] [LAYOUT=step|scenario|alternate] [WORKERS=3] [EXPECTED_SCENARIOS=10] \
+#   .github/scripts/parallel-fixture.sh
 #
 # UNIT is what Xcode hands to a worker, passed to the tests as CUCUMBER_PARALLEL_TESTING_UNIT: each
 # scenario (the default), each whole feature, or both, one after the other, with a records folder each.
+#
+# LAYOUT is a test per step (the default) or one test per scenario (#388), passed to the tests as
+# CUCUMBER_ONE_TEST_PER_SCENARIO. With UNIT=both, `alternate` runs the scenario unit with a test per step
+# and the feature unit with one test per scenario, so one job runs both layouts and both units in a way
+# that makes each way of making a class run. When one worker runs every scenario, the scenarios must have
+# run in the order of the feature files.
 #
 # Each run of a scenario and each feature hook writes a record, named after its worker's process, its
 # position among that process's records, what it records, and a UUID, so that two runs never share one.
@@ -21,6 +28,10 @@ case "$UNIT" in
   scenario|feature) units=("$UNIT") ;;
   both) units=(scenario feature) ;;
   *) echo "::error::UNIT must be scenario, feature or both, not '$UNIT'." >&2; exit 1 ;;
+esac
+case "${LAYOUT:-step}" in
+  step|scenario|alternate) ;;
+  *) echo "::error::LAYOUT must be step, scenario or alternate, not '$LAYOUT'." >&2; exit 1 ;;
 esac
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
@@ -56,7 +67,7 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
     destination="platform=$PLATFORM,id=$udid" ;;
 esac
 scheme="Parallel${KIND}Tests${suffix}"
-echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}"
+echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}, with a test per ${LAYOUT:-step}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
 # a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
@@ -93,15 +104,20 @@ runner_records() {
 # Runs the tests once, handing out each $1 (scenario or feature), and checks the records.
 run_unit() {
   local unit=$1 records="$temp/parallel-test-records-$1" log="parallel-test-$1.log" result="$temp/parallel-test-$1.xcresult"
-  local status
-  echo "::group::Each $unit"
+  local status layout=${LAYOUT:-step} one_test_per_scenario
+  if [[ "$layout" = alternate ]]; then
+    [[ "$unit" = scenario ]] && layout=step || layout=scenario
+  fi
+  [[ "$layout" = scenario ]] && one_test_per_scenario=YES || one_test_per_scenario=NO
+  echo "::group::Each $unit, with a test per $layout"
   rm -rf "$records" "$result"
   mkdir -p "$records"
   runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
 
   .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
     -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$result" \
-    PARALLEL_TEST_RECORDS="$records" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" > "$log" 2>&1
+    PARALLEL_TEST_RECORDS="$records" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
+    CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" > "$log" 2>&1
   status=$?
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
 
@@ -132,9 +148,9 @@ for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
   python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
-    --min-workers $(( control < 2 ? control : 2 )) || status=1
+    --min-workers $(( control < 2 ? control : 2 )) --features Tests/ParallelFixtures/Features || status=1
   echo "::endgroup::"
-  [[ "$status" -eq 0 ]] || echo "::error::The run handing out each $unit failed." >&2
+  [[ "$status" -eq 0 ]] || echo "::error::The run handing out each $unit, with a test per $layout, failed." >&2
   return "$status"
 }
 
