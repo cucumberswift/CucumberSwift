@@ -20,9 +20,13 @@ enum ParallelFixtureSupport {
     private static var sequence = 0
 
     /// Turns on experimental parallel testing and adds the hooks that check each scenario and record it,
-    /// and record each feature hook. CI chooses the unit with `CUCUMBER_PARALLEL_TESTING_UNIT`.
+    /// and record each feature hook. CI chooses the unit with `CUCUMBER_PARALLEL_TESTING_UNIT`, and sets
+    /// `PARALLEL_FIXTURE_WITHOUT_SETTING=YES` to leave the setting out and check that Xcode's parallel
+    /// testing then fails with CucumberSwift's message (#389).
     static func setUp() {
-        Cucumber.parallelTesting = true
+        if ProcessInfo.processInfo.environment["PARALLEL_FIXTURE_WITHOUT_SETTING"] != "YES" {
+            Cucumber.parallelTesting = true
+        }
         useReportInSandboxIfNeeded()
 
         BeforeFeature { feature in
