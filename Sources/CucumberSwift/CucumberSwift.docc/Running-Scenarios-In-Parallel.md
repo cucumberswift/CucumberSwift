@@ -4,7 +4,7 @@ Spread your scenarios across Xcode's parallel test workers. Experimental, and of
 
 ## Overview
 
-Xcode's parallel testing, the **Execute in parallel** option on a test target in a scheme or test plan, or `xcodebuild -parallel-testing-enabled YES`, runs tests in several worker processes, on clones of the simulator for iOS. It hands each worker whole test classes. By default CucumberSwift's scenarios don't run correctly in parallel: depending on the setup, each one runs in every worker, or not at all, and the run can still pass. Leave parallel testing off for a CucumberSwift test target unless you turn on this experiment.
+Xcode's parallel testing, the **Execute in parallel** option on a test target in a scheme or test plan, or `xcodebuild -parallel-testing-enabled YES`, runs tests in several worker processes, on clones of the simulator for iOS. It hands each worker whole test classes. Without this experiment, CucumberSwift's scenarios don't run correctly in parallel: depending on the setup, each one runs in every worker, or not at all, and the run can still pass. So when Xcode runs a CucumberSwift test target in parallel and the experiment is off, the run fails: the first test of each worker fails with a message that names the setting. Turn the experiment on, or turn parallel testing off for the target.
 
 With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES` (the value is case-insensitive, and `TRUE` or `1` work too: see <doc:Settings>), each scenario is a test class of its own, which Xcode hands to one worker, with a test per step, the default, and with one test per scenario (``Cucumber/oneTestPerScenario``). The scenario's steps run in order in that worker, as they do in a serial run. A serial run with the experiment on also runs each scenario as a class of its own, once, in the order of the feature files: each class's name starts with its position in them, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
 
@@ -19,22 +19,24 @@ What works today and what doesn't, from what we have run with Xcode 16.4 and Xco
 | Unit tests without a host app run in parallel | Yes | Yes | Yes | Yes |
 | Unit tests hosted in an app run in parallel | No | No | Yes | No |
 | UI tests run in parallel | Yes | Yes | No | No |
-| Each scenario runs once, in a worker of its own (`.scenario`) | Yes | Yes | Yes | Yes |
+| Each scenario runs once, assigned to one worker (`.scenario`) | Yes | Yes | Yes | Yes |
 | Each feature runs whole in one worker (`.feature`) | Not checked | Not checked | Yes | Not checked |
 | One test per scenario (``Cucumber/oneTestPerScenario``) | Yes | Yes | Yes | Yes |
 | A serial run keeps the order of the feature files | Not checked | Not checked | Yes | Not checked |
 | `BeforeFeature` and `AfterFeature` run in each worker that runs the feature | Yes | Yes | Yes | Yes |
 | Scenario and step hooks run as they do in a serial run | Yes | Yes | Yes | Yes |
-| One JSON report holds every worker's results | Yes, with `reportPath` | Yes, with `reportPath` | Yes | Yes |
+| One shared JSON report holds every scenario once | Yes, with `reportPath` | Yes, with `reportPath` | Yes | Yes |
 | A scenario that starts twice in one worker fails at its line | Yes | Yes | Yes | Yes |
 | Classes made too late for XCTest to list them fail the run | Yes | Yes | Yes | Yes |
+| A parallel run with `Cucumber.parallelTesting` off fails with a message that names the setting | Yes | Yes | Yes | Yes |
 | State your step definitions share is shared between workers | No | No | No | No |
 | A scenario that didn't run is reported | No | No | No | No |
 
 - **No** for a row about running in parallel means the scenarios still run correctly, in one worker. On the Simulators and Mac Catalyst, Xcode runs the tests of a target hosted in an app in one worker, plain XCTest tests too. That is how Xcode runs them, which we measured and found no Apple documentation for, not something CucumberSwift decides. UI tests on macOS and Mac Catalyst have only been tried with one worker, so we don't know whether they would run in parallel.
 - **Order:** a serial run is one with Xcode's parallel testing off. With it on, Xcode gives each worker its classes in an order of its own, so the scenarios of a worker don't run in the order of the feature files. CucumberSwift's classes are named so that XCTest's order by name is the order of the files: see <doc:Running-Scenarios-In-Parallel#Test-names>.
+- **A parallel run with `Cucumber.parallelTesting` off:** the first test of each worker fails with a message that names the setting. It relies on Xcode's private API, which a new Xcode can change: the run then behaves as it did before, without the message. It doesn't notice a unit test target hosted in an app on Mac Catalyst either, where Xcode runs the tests in one worker. And with one test per scenario nothing fails: that mode is not affected.
 - **Feature hooks:** when they run depends on what Xcode hands out: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
-- **The JSON report:** the workers write one report between them, with every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report.
+- **The JSON report:** every worker writes to the same report, which holds every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report.
 - **State:** each worker is a process of its own, so a variable that counts scenarios counts only that worker's.
 - **A scenario that didn't run:** from inside a worker, CucumberSwift can't tell a scenario your test plan, `-skip-testing` or a rerun of failed tests left out on purpose from one that went missing.
 

@@ -5,8 +5,12 @@
 # Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [UNIT=scenario|feature|both] [LAYOUT=step|scenario|alternate] [SERIAL=yes] [WORKERS=3] [EXPECTED_SCENARIOS=10] \
-#   .github/scripts/parallel-fixture.sh
+#   [UNIT=scenario|feature|both] [LAYOUT=step|scenario|alternate] [SERIAL=yes] [WORKERS=3] \
+#   [EXPECTED_SCENARIOS=10] [WITHOUT_SETTING=YES] .github/scripts/parallel-fixture.sh
+#
+# With WITHOUT_SETTING=YES the fixture leaves out `Cucumber.parallelTesting`, and the run must fail with
+# CucumberSwift's message naming it (#389) instead of running the scenarios wrongly. It is one run, whatever
+# UNIT is, with a test per step, whatever LAYOUT is.
 #
 # UNIT is what Xcode hands to a worker, passed to the tests as CUCUMBER_PARALLEL_TESTING_UNIT: each
 # scenario (the default), each whole feature, or both, one after the other, with a records folder and
@@ -36,6 +40,8 @@ case "${LAYOUT:-step}" in
   step|scenario|alternate) ;;
   *) echo "::error::LAYOUT must be step, scenario or alternate, not '$LAYOUT'." >&2; exit 1 ;;
 esac
+# Without the setting there is no unit to hand out, so it is one run.
+[[ "${WITHOUT_SETTING:-}" = "YES" ]] && units=(scenario)
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
 EXPECTED_FEATURES=${EXPECTED_FEATURES:-2}
@@ -115,11 +121,15 @@ runner_records() {
 # order of the feature files: that is what XCTest's order by class name gives (#388). Under Xcode's parallel
 # testing a worker gets its classes in an order of Xcode's own, so the order is only checked in a serial run.
 run_unit() {
-  local unit=$1 mode=${2:-parallel} name_suffix="$1${2:+-$2}"
+  local unit=$1 mode=${2:-parallel}
+  # A run without the setting, and a serial run, have files of their own, so that each holds only its run's records.
+  local name_suffix="$1${2:+-$2}${WITHOUT_SETTING:+-without-setting}"
   local records="$temp/parallel-test-records-$name_suffix" log="parallel-test-$name_suffix.log" result="$temp/parallel-test-$name_suffix.xcresult"
   local report="$temp/parallel-test-report-$name_suffix/report.json"
   local status layout=${LAYOUT:-step} one_test_per_scenario parallel_flags=(-parallel-testing-worker-count "$WORKERS")
   [[ "$mode" = serial ]] && parallel_flags=(-parallel-testing-enabled NO)
+  # One test per scenario is not affected by a missing setting, so that run has a test per step.
+  [[ "${WITHOUT_SETTING:-}" = "YES" ]] && layout=step
   if [[ "$layout" = alternate ]]; then
     [[ "$unit" = scenario ]] && layout=step || layout=scenario
   fi
@@ -134,7 +144,8 @@ run_unit() {
   .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
     "${parallel_flags[@]}" -resultBundlePath "$result" \
     PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
-    CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" > "$log" 2>&1
+    CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
+    PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
   status=$?
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
@@ -144,8 +155,11 @@ run_unit() {
   grep -E 'error: ' "$log" | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
   grep -oE 'Could not record [^"]*' "$log" | sort -u | head -5
   grep -E '^CucumberSwift: the hook at ' "$log" | sort -u | head -5
-  # Each failing test and why, from the result bundle: the log names a failing test, not always why.
+  # Each failing test and why, from the result bundle: the log names a failing test, not always why. The
+  # whole list goes to a file that the run without the setting checks; only the first 30 are shown.
   # An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
+  local failures="$temp/parallel-test-failures-$unit$suffix.txt"
+  : > "$failures"
   local summary=""
   if [[ ! -e "$result" ]]; then
     echo "No test results summary: xcodebuild left no result bundle (exit status $status). See $log."
@@ -154,9 +168,10 @@ run_unit() {
   else
     echo "$summary" | python3 -c '
 import json, sys
-for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
+for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
-' || true
+' > "$failures" || true
+    head -30 "$failures"
   fi
   # A fixture app that crashed leaves a report: show what it died of.
   for crash in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
@@ -164,6 +179,24 @@ for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
     grep -E '"(exception|termination|asi)"' "$crash" | head -5
   done
   grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' "$log" | head -30
+
+  # The run must fail, every failure in the result bundle must be CucumberSwift's message, which names the
+  # setting, at least one must be, and no scenario may have run: the message alone doesn't show that the
+  # scenarios were held back, nor that nothing else failed.
+  if [[ "${WITHOUT_SETTING:-}" = "YES" ]]; then
+    local message="parallel testing is off" matching others ran
+    matching=$(grep '^Failed:' "$failures" | grep -c "$message" || true)
+    others=$(grep '^Failed:' "$failures" | grep -vc "$message" || true)
+    ran=$(ls "$records" | wc -l | tr -d ' ')
+    echo "::endgroup::"
+    if [[ "$status" -ne 0 && "$matching" -ge 1 && "$others" -eq 0 && "$ran" -eq 0 ]]; then
+      echo "The run without Cucumber.parallelTesting failed only with CucumberSwift's message ($matching failures), and ran no scenario"
+      return 0
+    fi
+    echo "The end of the log:"; tail -40 "$log" | cut -c1-400
+    echo "::error::The run without Cucumber.parallelTesting must fail only with CucumberSwift's message and run no scenario: xcodebuild exit status $status, $matching failures with the message, $others with another, $ran scenario records." >&2
+    return 1
+  fi
 
   if [[ -z "$(ls "$records")" ]]; then
     echo "No records. Containers with a records folder:"
@@ -248,7 +281,7 @@ for unit in "${units[@]}"; do
   run_unit "$unit" || status=1
 done
 # One run for each unit with parallel testing off in Xcode, to check the order of a serial run (#388).
-if [[ "${SERIAL:-no}" = yes ]]; then
+if [[ "${SERIAL:-no}" = yes && "${WITHOUT_SETTING:-}" != "YES" ]]; then
   for unit in "${units[@]}"; do
     run_unit "$unit" serial || status=1
   done
