@@ -131,6 +131,9 @@ def order_check(records: List[Record], feature_order: List[str]) -> Tuple[List[s
     ran = [(r.feature, r.scenario) for r in sorted(records, key=lambda r: (r.process, r.sequence))
            if r.kind == "scenario"]
     rank = {title: index for index, title in enumerate(feature_order)}
+    unknown = sorted({feature for feature, _ in ran if feature not in rank})
+    if unknown:
+        return [], [f"Records name features not in the feature files: {', '.join(unknown)}"]
     expected = sorted(ran, key=lambda run: (rank.get(run[0], len(rank)), line_of(run[1])))
     if ran == expected:
         return ["The scenarios ran in one worker, in the order of the feature files"], []

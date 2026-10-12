@@ -128,6 +128,11 @@ class FileOrderTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertIn("Not checking the order of the scenarios: they ran in 2 workers", lines)
 
+    def test_a_feature_that_is_not_in_the_feature_files_fails(self):
+        names = worker(1, "Accounts", [A1, A2]) + worker(1, "Elsewhere", [B1], start=10)
+        errors = self.check(names)[1]
+        self.assertTrue(any("not in the feature files: Elsewhere" in e for e in errors), errors)
+
     def test_the_order_is_not_checked_without_the_features(self):
         names = worker(1, "Checkout", [B1]) + worker(1, "Accounts", [A1, A2], start=10)
         self.assertEqual(parallel_records.check(names, "scenario", 3, 1)[1], [])
