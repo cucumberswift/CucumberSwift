@@ -14,7 +14,9 @@ import XCTest
 class ParallelTestingTests: XCTestCase {
     private static func reset() {
         Cucumber.parallelTesting = nil
+        Cucumber.parallelTestingUnit = nil
         Cucumber.oneTestPerScenario = nil
+        Cucumber.readableTestNames = nil
         Cucumber.shared.reset()
         CucumberTest.resetSetUp()
         ParallelWorkerObserver.reported.withLock { $0 = false }
@@ -188,6 +190,93 @@ class ParallelTestingTests: XCTestCase {
         ParallelTesting.prepare()
 
         XCTAssertFalse(ParallelTesting.scenarioClassesMade)
+    }
+
+    // MARK: Whole features
+
+    /// Parses two features, the first with two scenarios of the same title, and returns their titles.
+    private func parseFeatures() -> (first: String, second: String) {
+        let first = "Parallel \(UUID().uuidString)"
+        let second = "Parallel \(UUID().uuidString)"
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: \(first)
+           Scenario: Pay by card
+             Given a cart
+             When I pay by card
+           Scenario: Pay with a gift card
+             Given a cart
+           Scenario: Pay by card
+             Given a cart
+        """)
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: \(second)
+           Scenario: Sign in
+             Given a cart
+        """)
+        CucumberTest.featuresLoaded = true
+        return (first, second)
+    }
+
+    // Xcode runs a class's tests sorted by name, so the names sort into the feature file's order, and a
+    // result bundle names a test by its class and method, so two scenarios with the same title stay apart.
+    @MainActor
+    func testWithWholeFeaturesEachFeatureGetsAClassWhoseTestsSortIntoTheFeatureFilesOrder() throws {
+        let (first, _) = parseFeatures()
+        Cucumber.parallelTestingUnit = .feature
+
+        ParallelTesting.makeScenarioClasses()
+
+        let featureClass = try XCTUnwrap(NSClassFromString(first) as? XCTestCase.Type)
+        let names = featureClass.defaultTestSuite.tests.map(\.name)
+        XCTAssertEqual(
+            names,
+            [
+                "-[\(first) 1 \u{203A} Pay by card \u{203A} 1 \u{203A} Given a cart]",
+                "-[\(first) 1 \u{203A} Pay by card \u{203A} 2 \u{203A} When I pay by card]",
+                "-[\(first) 2 \u{203A} Pay with a gift card \u{203A} 1 \u{203A} Given a cart]",
+                "-[\(first) 3 \u{203A} Pay by card \u{203A} 1 \u{203A} Given a cart]"
+            ]
+        )
+        XCTAssertEqual(names, names.sorted())
+        XCTAssertEqual(featureClass.defaultTestSuite.name, first)
+        XCTAssertNil(scenarioClass(first, "Pay with a gift card"))
+        XCTAssertTrue(ParallelTesting.scenarioClassesMade)
+    }
+
+    @MainActor
+    func testWithWholeFeaturesAndCamelCaseNamesTheTestsSortIntoTheFeatureFilesOrder() throws {
+        Cucumber.readableTestNames = false
+        let title = "Parallel\(UUID().uuidString.replacingOccurrences(of: "-", with: ""))"
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: \(title)
+        \((1...10).map { "   Scenario: Pay \($0)\n     Given a cart" }.joined(separator: "\n"))
+        """)
+        CucumberTest.featuresLoaded = true
+        Cucumber.parallelTestingUnit = .feature
+
+        ParallelTesting.makeScenarioClasses()
+
+        let className = CucumberTest.generatedTestName(title, readable: false)
+        let featureClass = try XCTUnwrap(NSClassFromString(className) as? XCTestCase.Type)
+        let names = featureClass.defaultTestSuite.tests.map(\.name)
+        XCTAssertEqual(names.count, 10)
+        XCTAssertEqual(names.first, "-[\(className) Scenario01_Pay1_Step000_GivenACart]")
+        XCTAssertEqual(names.last, "-[\(className) Scenario10_Pay10_Step000_GivenACart]")
+        XCTAssertEqual(names, names.sorted())
+    }
+
+    @MainActor
+    func testWithWholeFeaturesTwoFeaturesWithTheSameTitleGetClassesWithDifferentNames() throws {
+        let title = "Parallel \(UUID().uuidString)"
+        Cucumber.shared.parseIntoFeatures("Feature: \(title)\n   Scenario: Pay\n     Given a cart")
+        Cucumber.shared.parseIntoFeatures("Feature: \(title)\n   Scenario: Pay\n     Given a cart")
+        CucumberTest.featuresLoaded = true
+        Cucumber.parallelTestingUnit = .feature
+
+        ParallelTesting.makeScenarioClasses()
+
+        XCTAssertEqual(try XCTUnwrap(NSClassFromString(title) as? XCTestCase.Type).defaultTestSuite.tests.count, 1)
+        XCTAssertEqual(try XCTUnwrap(NSClassFromString(title + " 2") as? XCTestCase.Type).defaultTestSuite.name, title + " 2")
     }
 
     // Xcode's parallel testing without the setting runs scenarios in every worker, or not at all, and the run

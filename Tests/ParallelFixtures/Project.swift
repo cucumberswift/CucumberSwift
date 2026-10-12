@@ -75,15 +75,17 @@ func schemes(for family: Family) -> [Scheme] {
             name: target,
             shared: true,
             buildAction: .buildAction(targets: [.target(target)]),
-            // The records folder and the report's file reach every kind of test runner through the scheme,
-            // filled from build settings: CI passes PARALLEL_TEST_RECORDS=<folder> and
-            // PARALLEL_TEST_REPORT=<file>, which the workers get as CUCUMBER_REPORT_PATH, to xcodebuild. So does
-            // PARALLEL_FIXTURE_WITHOUT_SETTING=YES, which leaves out Cucumber.parallelTesting (#389).
+            // The records folder, the report's file and the parallel testing unit reach every kind of test runner
+            // through the scheme, filled from build settings: CI passes PARALLEL_TEST_RECORDS=<folder>,
+            // PARALLEL_TEST_REPORT=<file>, which the workers get as CUCUMBER_REPORT_PATH, and
+            // CUCUMBER_PARALLEL_TESTING_UNIT=<unit> to xcodebuild. So does PARALLEL_FIXTURE_WITHOUT_SETTING=YES,
+            // which leaves out Cucumber.parallelTesting (#389).
             testAction: .targets(
                 [.testableTarget(target: .target(target), parallelization: .enabled)],
                 arguments: .arguments(environmentVariables: [
                     "PARALLEL_TEST_RECORDS": "$(PARALLEL_TEST_RECORDS)",
                     "CUCUMBER_REPORT_PATH": "$(PARALLEL_TEST_REPORT)",
+                    "CUCUMBER_PARALLEL_TESTING_UNIT": "$(CUCUMBER_PARALLEL_TESTING_UNIT)",
                     "PARALLEL_FIXTURE_WITHOUT_SETTING": "$(PARALLEL_FIXTURE_WITHOUT_SETTING)"
                 ]),
                 configuration: .debug,

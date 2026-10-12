@@ -16,6 +16,7 @@ class FeatureFlagsTests: XCTestCase {
         "CUCUMBER_ONE_TEST_PER_SCENARIO",
         "CUCUMBER_GENERATE_REGEX_LITERALS",
         "CUCUMBER_PARALLEL_TESTING",
+        "CUCUMBER_PARALLEL_TESTING_UNIT",
         "CUCUMBER_REPORT_PATH"
     ]
 
@@ -24,6 +25,7 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.oneTestPerScenario = nil
         Cucumber.generateRegexLiterals = nil
         Cucumber.parallelTesting = nil
+        Cucumber.parallelTestingUnit = nil
         Cucumber.reportPath = nil
         variables.forEach { Cucumber.shared.environment[$0] = nil }
     }
@@ -114,5 +116,35 @@ class FeatureFlagsTests: XCTestCase {
         ["NO", "no", "False", "0"].forEach { XCTAssertEqual(FeatureFlags.bool($0), false, $0) }
         ["", "maybe", "2"].forEach { XCTAssertNil(FeatureFlags.bool($0), $0) }
         XCTAssertNil(FeatureFlags.bool(nil))
+    }
+
+    func testTheParallelTestingUnitIsAScenarioByDefault() {
+        XCTAssertEqual(FeatureFlags.parallelTestingUnit, .scenario)
+    }
+
+    func testTheParallelTestingUnitEnvironmentVariableOverridesTheDefault() {
+        Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING_UNIT"] = "feature"
+
+        XCTAssertEqual(FeatureFlags.parallelTestingUnit, .feature)
+    }
+
+    func testTheParallelTestingUnitStaticVariableOverridesTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING_UNIT"] = "feature"
+        Cucumber.parallelTestingUnit = .scenario
+
+        XCTAssertEqual(FeatureFlags.parallelTestingUnit, .scenario)
+    }
+
+    func testAnUnknownParallelTestingUnitLeavesTheDefault() {
+        Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING_UNIT"] = "step"
+
+        XCTAssertEqual(FeatureFlags.parallelTestingUnit, .scenario)
+    }
+
+    func testParallelTestingUnitsInAnyCase() {
+        ["feature", "FEATURE", "Feature", " feature\t"].forEach { XCTAssertEqual(FeatureFlags.parallelTestingUnit($0), .feature, $0) }
+        ["scenario", "Scenario", " SCENARIO "].forEach { XCTAssertEqual(FeatureFlags.parallelTestingUnit($0), .scenario, $0) }
+        ["", "features", "step", "YES"].forEach { XCTAssertNil(FeatureFlags.parallelTestingUnit($0), $0) }
+        XCTAssertNil(FeatureFlags.parallelTestingUnit(nil))
     }
 }

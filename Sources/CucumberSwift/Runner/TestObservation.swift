@@ -11,6 +11,8 @@ import XCTest
 
 extension Cucumber: XCTestObservation {
     public func testBundleDidFinish(_ testBundle: Bundle) {
+        // First, so that the report has each feature's result.
+        finishStartedFeatures()
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
         let name = Cucumber.shared.reportName.appending(String(testBundle.bundleURL.lastPathComponent.prefix { $0 != "." })).appending(".json")
         if  let documentDirectory = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false),

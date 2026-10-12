@@ -12,6 +12,17 @@
 //  bundle, and answers `defaultTestSuite` with its steps. XCTest then lists it like any
 //  other class and hands it to one worker, which runs the scenario's steps in order.
 //
+//  With `Cucumber.parallelTestingUnit = .feature` (#387), each feature's class is made instead, holding
+//  the steps of all its scenarios, so that one worker runs the whole feature. Xcode runs a class's tests
+//  sorted by name, and a result bundle names a test by its class and method, so the method names start
+//  with the scenario's position and title (`Scenario.methodNamePrefix`).
+//
+//  Feature hooks (#387): with the classes made, the scenarios run in whatever worker and order Xcode
+//  chooses, so `AfterFeature` no longer runs after the feature file's last step. It runs in the teardown
+//  of a feature class's last test, or else in `testBundleDidFinish`, once per worker for each feature that
+//  worker started (`Cucumber.finishStartedFeatures`). XCTest calls that once in every worker, after its
+//  last test, and drops any failure recorded there, so an async hook's error is printed instead.
+//
 //  Where the classes are made, and when (#386)
 //
 //  - `makeScenarioClasses()` is the one place that makes them. `prepare()` decides whether to, and
@@ -85,9 +96,26 @@ enum ParallelTesting {
     nonisolated private static let bundles = Locked([ObjectIdentifier: Bundle]())
     nonisolated private static let bundleForClassReplaced = Locked(false)
 
+    /// With ``ParallelTestingUnit/feature``, the last step of each feature's class, whose test's teardown
+    /// finishes the feature.
+    nonisolated private static let featureLastSteps = Locked(Set<ObjectIdentifier>())
+
+    /// Whether a feature ends after its scenarios in this worker rather than after the last step in its
+    /// feature file: whether the scenario or feature classes were made, so that the scenarios run in
+    /// whatever order and worker Xcode chooses.
+    nonisolated static var defersFeatureEnds: Bool {
+        scenarioClassesMade
+    }
+
+    /// Whether the step is the last test of its feature's class, made with ``ParallelTestingUnit/feature``.
+    nonisolated static func isLastStepOfFeatureClass(_ step: Step) -> Bool {
+        featureLastSteps.withLock { $0.contains(ObjectIdentifier(step)) }
+    }
+
     #if DEBUG
     nonisolated static func reset() {
         classesMade.withLock { $0 = false }
+        featureLastSteps.withLock { $0.removeAll() }
     }
     #endif
 
@@ -119,9 +147,20 @@ enum ParallelTesting {
     /// hand the scenario to a worker of its own. The suite is the class's, named after the class, which is
     /// unique, not after the scenario: two scenarios with the same name would otherwise have suites with the
     /// same name, and when two workers run those at once, xcodebuild crashes as it records the results.
+    ///
+    /// With ``ParallelTestingUnit/feature`` it makes each feature's class instead, whose suite is the steps
+    /// of all of the feature's scenarios, so that XCTest hands the whole feature to one worker.
     static func makeScenarioClasses() {
         let testBundle = (Cucumber.shared as? StepImplementation)?.bundle
-        for scenarioSuite in CucumberTest.scenarioSuites() {
+        let suites: [XCTestSuite]
+        if FeatureFlags.parallelTestingUnit == .feature {
+            let featureSuites = CucumberTest.featureSuites()
+            featureLastSteps.withLock { $0 = Set(featureSuites.map { ObjectIdentifier($0.lastStep) }) }
+            suites = featureSuites.map(\.suite)
+        } else {
+            suites = CucumberTest.scenarioSuites()
+        }
+        for scenarioSuite in suites {
             guard let testClass = scenarioSuite.tests.first.map({ type(of: $0) }) else { continue }
             if let testBundle = testBundle {
                 bundles.withLock { $0[ObjectIdentifier(testClass)] = testBundle }
@@ -154,5 +193,47 @@ enum ParallelTesting {
             bundles.withLock { $0[ObjectIdentifier(testClass)] } ?? original(bundleClass, selector, testClass)
         }
         method_setImplementation(method, imp_implementationWithBlock(replacement))
+    }
+}
+
+extension CucumberTest {
+    /// With ``ParallelTestingUnit/feature``: a suite for each feature with a scenario that will run, holding
+    /// the tests of the class made for the feature, one for each step of each such scenario, in the feature
+    /// file's order, and the feature's last step among them. Xcode then hands the feature to one worker.
+    ///
+    /// Xcode runs a class's tests sorted by name, and a result bundle names a test by its class and method,
+    /// so each method's name starts with its scenario's zero-padded position and the scenario's title,
+    /// then the step's position: `2 › Pay by card › 3 › Then the cart holds 1 items`, or
+    /// `Scenario02_PayByCard_Step002_ThenTheCartHolds1Items` without readable test names.
+    static func featureSuites() -> [(suite: XCTestSuite, lastStep: Step)] {
+        var suites = [(suite: XCTestSuite, lastStep: Step)]()
+        var names = Set<String>()
+        for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
+            let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
+            guard let lastStep = scenarios.last(where: { !$0.steps.isEmpty })?.steps.last else { continue }
+            let base = generatedTestName(feature.title)
+            var name = base
+            var count = 1
+            while names.contains(name) {
+                count += 1
+                name = "\(base) \(count)"
+            }
+            names.insert(name)
+            guard let testCase = TestCaseGenerator.makeClass(className: name, superclass: StepTestCase.superclass) else { continue }
+            objc_registerClassPair(testCase)
+            let suite = XCTestSuite(name: name)
+            var tests = [XCTestCase]()
+            for scenario in scenarios {
+                let position = feature.scenarios.firstIndex { $0 === scenario } ?? 0
+                let prefix = Scenario.methodNamePrefix(for: scenario.title,
+                                                       at: position,
+                                                       of: feature.scenarios.count,
+                                                       readable: FeatureFlags.isReadableTestNames)
+                addStepTests(to: testCase, for: scenario, methodNamePrefix: prefix, tests: &tests)
+            }
+            tests.forEach { suite.addTest($0) }
+            suites.append((suite, lastStep))
+        }
+        return suites
     }
 }

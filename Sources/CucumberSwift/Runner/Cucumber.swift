@@ -94,6 +94,8 @@ import XCTest
     }
 
     var hookedFeatures       = [Feature]()
+    /// In a parallel run, the started features whose `AfterFeature` hooks have run.
+    var finishedFeatures     = [Feature]()
     var hookedScenarios      = [Scenario]()
     var failedScenarios      = [Scenario]()
     lazy var reporters: [CucumberTestObserver] = {
@@ -175,6 +177,7 @@ import XCTest
         if let feature = step.scenario?.feature,
            !hookedFeatures.contains(where: { $0 === feature }) {
             hookedFeatures.append(feature)
+            feature.startDate = Date()
             beforeFeatureHooks.forEach { $0.hook(feature) }
             reporters.forEach { $0.didStart(feature: feature, at: Date()) }
         }
@@ -199,17 +202,46 @@ import XCTest
                                                                    unit: .seconds))
             }
         }
-        if let feature = step.scenario?.feature,
-           let lastStep = feature.scenarios.last(where: { !$0.steps.isEmpty })?.steps.last,
-           lastStep === step {
-            Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
-            let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
-            reporters.forEach { $0.didFinish(feature: feature,
-                                             result: result,
-                                             duration: Measurement(value: Date().timeIntervalSince(feature.startDate),
-                                                                   unit: .seconds))
+        guard let feature = step.scenario?.feature else { return }
+        // In a parallel run the feature file's last step can run first, or in another worker. A feature then
+        // ends in the teardown of its class's last test, with whole features, or else once this worker has
+        // run all of its tests (`finishStartedFeatures`).
+        if ParallelTesting.defersFeatureEnds {
+            if ParallelTesting.isLastStepOfFeatureClass(step) {
+                finish(feature)
             }
+        } else if let lastStep = feature.scenarios.last(where: { !$0.steps.isEmpty })?.steps.last,
+                  lastStep === step {
+            finish(feature)
         }
+    }
+
+    /// Runs the feature's `AfterFeature` hooks and tells the reporters it finished. In a parallel run, only
+    /// for a feature this worker started, and once.
+    func finish(_ feature: Feature) {
+        if ParallelTesting.defersFeatureEnds {
+            guard hookedFeatures.contains(where: { $0 === feature }),
+                  !finishedFeatures.contains(where: { $0 === feature }) else { return }
+            finishedFeatures.append(feature)
+        }
+        Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
+        let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
+        reporters.forEach { $0.didFinish(feature: feature,
+                                         result: result,
+                                         duration: Measurement(value: Date().timeIntervalSince(feature.startDate),
+                                                               unit: .seconds))
+        }
+    }
+
+    /// In a parallel run, finishes each feature this worker started and hasn't finished, in the order it
+    /// started them, once it has run all of its tests. No test is running then, so XCTest records no
+    /// failure: an async hook's thrown error is printed instead (`AsyncStepRunner.isOutsideTest`).
+    func finishStartedFeatures() {
+        guard ParallelTesting.defersFeatureEnds else { return }
+        currentStep = nil
+        AsyncStepRunner.isOutsideTest = true
+        defer { AsyncStepRunner.isOutsideTest = false }
+        hookedFeatures.forEach(finish)
     }
 
     func parseIntoFeatures(_ string: String, uri: String = "") {

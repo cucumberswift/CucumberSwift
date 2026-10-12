@@ -94,6 +94,7 @@
 		88F314E8090C164E5B972A74 /* Scenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A5C50E6EFEF58ED875D57 /* Scenario.swift */; };
 		8AB2A0AAEC88B8B0D25E3F13 /* Cucumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA91D7A5477B4504A32B958 /* Cucumber.swift */; };
 		8B05AF836A0F51BD44AE1B49 /* DocstringTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD544C032479A582CD2F0DF /* DocstringTests.swift */; };
+		8BC9768CA891E50D213628B9 /* ParallelFeatureHooksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */; };
 		8CC4AB864C03448C8DF8FDE7 /* GherkinDSL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42462EC668D5385FB0E44F22 /* GherkinDSL.swift */; };
 		8D78CBAB8507DA2D59A861BD /* GeneratedBareSlashStepDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA17FB3C914F0338057D582D /* GeneratedBareSlashStepDefinitions.swift */; };
 		8F0376227B4B758D624A1E27 /* AttachTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37572CD5D0DF08071F268FBC /* AttachTests.swift */; };
@@ -319,6 +320,7 @@
 		9829016F161840A41E6B2099 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9857C6432AEBB50998D56A05 /* MightEqualOperator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MightEqualOperator.swift; sourceTree = "<group>"; };
 		98C7AC01561165E18CBD85F6 /* TagTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagTests.swift; sourceTree = "<group>"; };
+		9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelFeatureHooksTests.swift; sourceTree = "<group>"; };
 		9B330B9C8309E062DC5F80CC /* HookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookTests.swift; sourceTree = "<group>"; };
 		9BB5321E29869AEB96319604 /* StepImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepImplementation.swift; sourceTree = "<group>"; };
 		9CDEF4E3330B2BB484871533 /* CucumberSwift.xctestplan */ = {isa = PBXFileReference; path = CucumberSwift.xctestplan; sourceTree = "<group>"; };
@@ -748,6 +750,7 @@
 				D37DEF3781869D0B2555E6AF /* FeatureFlagsTests.swift */,
 				9B330B9C8309E062DC5F80CC /* HookTests.swift */,
 				086CE04A08240D7473E13F9E /* LockedTests.swift */,
+				9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */,
 				5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */,
 				9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
@@ -1088,6 +1091,7 @@
 				2D72D4088AAD305BC6038BD7 /* FeatureFlagsTests.swift in Sources */,
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
 				AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */,
+				8BC9768CA891E50D213628B9 /* ParallelFeatureHooksTests.swift in Sources */,
 				ED73A523FA6CAFF7A6AF6898 /* ParallelTestingTests.swift in Sources */,
 				82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,

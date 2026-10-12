@@ -1,21 +1,37 @@
 #!/bin/bash
 # Runs one of the parallel testing fixtures in Tests/ParallelFixtures with Xcode's parallel testing on,
 # and fails unless every scenario ran exactly once, in as many workers as the fixtures' plain XCTest
-# classes, up to two. Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
+# classes, up to two, and each feature's hooks ran as often, where and when they should (#387).
+# Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [WORKERS=3] [EXPECTED_SCENARIOS=10] [WITHOUT_SETTING=YES] .github/scripts/parallel-fixture.sh
+#   [UNIT=scenario|feature|both] [WORKERS=3] [EXPECTED_SCENARIOS=10] [WITHOUT_SETTING=YES] \
+#   .github/scripts/parallel-fixture.sh
 #
 # With WITHOUT_SETTING=YES the fixture leaves out `Cucumber.parallelTesting`, and the run must fail with
-# CucumberSwift's message naming it (#389) instead of running the scenarios wrongly.
+# CucumberSwift's message naming it (#389) instead of running the scenarios wrongly. It is one run, whatever
+# UNIT is.
+#
+# UNIT is what Xcode hands to a worker, passed to the tests as CUCUMBER_PARALLEL_TESTING_UNIT: each
+# scenario (the default), each whole feature, or both, one after the other, with a records folder and
+# a report each.
 #
 # Each worker also merges its results into one Cucumber JSON report, which must hold every scenario once.
 #
-# Each run of a scenario writes a record, named after the scenario, its worker's process and a UUID, so
-# that two runs never share one. xcodebuild's log can't show this, because it interleaves its own output
-# with the workers' and cuts test lines short.
+# Each run of a scenario and each feature hook writes a record, named after its worker's process, its
+# position among that process's records, what it records, and a UUID, so that two runs never share one.
+# .github/scripts/parallel_records.py checks them. xcodebuild's log can't show this, because it
+# interleaves its own output with the workers' and cuts test lines short.
 set -u
 WORKERS=${WORKERS:-3}
+UNIT=${UNIT:-scenario}
+case "$UNIT" in
+  scenario|feature) units=("$UNIT") ;;
+  both) units=(scenario feature) ;;
+  *) echo "::error::UNIT must be scenario, feature or both, not '$UNIT'." >&2; exit 1 ;;
+esac
+# Without the setting there is no unit to hand out, so it is one run.
+[[ "${WITHOUT_SETTING:-}" = "YES" ]] && units=(scenario)
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
 EXPECTED_FEATURES=${EXPECTED_FEATURES:-2}
@@ -51,12 +67,7 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
     destination="platform=$PLATFORM,id=$udid" ;;
 esac
 scheme="Parallel${KIND}Tests${suffix}"
-# A run without the setting has a folder of its own, so that it holds only that run's records.
-records="$temp/parallel-test-records${WITHOUT_SETTING:+-without-setting}"
-report="$temp/parallel-test-report/report.json"
-mkdir -p "$records" "$(dirname "$report")"
-rm -f "$report" "$report.lock" "$report.run"
-echo "Running $scheme on $destination with $WORKERS workers"
+echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
 # a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
@@ -94,96 +105,93 @@ runner_records() {
   runner_folders parallel-test-records
   return 0
 }
-for name in parallel-test-records parallel-test-report; do
-  runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
-done
 
-# A second run in the same job, without the setting, would otherwise find the first run's result bundle.
-rm -rf "$temp/parallel-test.xcresult"
-.github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
-  -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
-  PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > parallel-test.log 2>&1
-status=$?
-runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
-# It writes the report there too, and has only one worker, so there is nothing to merge it with.
-[[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
+# Runs the tests once, handing out each $1 (scenario or feature), and checks the records.
+run_unit() {
+  # A run without the setting has files of its own, so that it holds only that run's records.
+  local suffix="${WITHOUT_SETTING:+-without-setting}"
+  local unit=$1 records="$temp/parallel-test-records-$1$suffix" log="parallel-test-$1$suffix.log" result="$temp/parallel-test-$1$suffix.xcresult"
+  local report="$temp/parallel-test-report-$1$suffix/report.json"
+  local status
+  echo "::group::Each $unit"
+  rm -rf "$records" "$result" "$(dirname "$report")"
+  mkdir -p "$records" "$(dirname "$report")"
+  for name in parallel-test-records parallel-test-report; do
+    runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+  done
 
-echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
-grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
-grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
-# Each failing test and why, from the result bundle: the log names a failing test, not always why. The
-# whole list goes to a file that the run without the setting checks; only the first 30 are shown.
-# An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
-failures="$temp/parallel-test-failures.txt"
-: > "$failures"
-summary=""
-if [[ ! -e "$temp/parallel-test.xcresult" ]]; then
-  echo "No test results summary: xcodebuild left no result bundle (exit status $status). See parallel-test.log."
-elif ! summary=$(xcrun xcresulttool get test-results summary --path "$temp/parallel-test.xcresult" 2>/dev/null) || [[ -z "$summary" ]]; then
-  echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See parallel-test.log."
-else
-  echo "$summary" | python3 -c '
+  .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+    -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$result" \
+    PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
+    PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
+  status=$?
+  runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+  # It writes the report there too, and has only one worker, so there is nothing to merge it with.
+  [[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
+
+  echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" "$log") passed, $(grep -cE "^Test [Cc]ase .* failed" "$log") failed"
+  grep -E 'error: ' "$log" | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
+  grep -oE 'Could not record [^"]*' "$log" | sort -u | head -5
+  grep -E '^CucumberSwift: the hook at ' "$log" | sort -u | head -5
+  # Each failing test and why, from the result bundle: the log names a failing test, not always why. The
+  # whole list goes to a file that the run without the setting checks; only the first 30 are shown.
+  # An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
+  local failures="$temp/parallel-test-failures-$unit$suffix.txt"
+  : > "$failures"
+  local summary=""
+  if [[ ! -e "$result" ]]; then
+    echo "No test results summary: xcodebuild left no result bundle (exit status $status). See $log."
+  elif ! summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) || [[ -z "$summary" ]]; then
+    echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See $log."
+  else
+    echo "$summary" | python3 -c '
 import json, sys
 for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' > "$failures" || true
-  head -30 "$failures"
-fi
-# A fixture app that crashed leaves a report: show what it died of.
-for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
-  echo "Crash report $(basename "$report"):"
-  grep -E '"(exception|termination|asi)"' "$report" | head -5
-done
-grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
-
-# The run must fail, every failure in the result bundle must be CucumberSwift's message, which names the
-# setting, at least one must be, and no scenario may have run: the message alone doesn't show that the
-# scenarios were held back, nor that nothing else failed.
-if [[ "${WITHOUT_SETTING:-}" = "YES" ]]; then
-  message="parallel testing is off"
-  matching=$(grep '^Failed:' "$failures" | grep -c "$message" || true)
-  others=$(grep '^Failed:' "$failures" | grep -vc "$message" || true)
-  ran=$(ls "$records" | wc -l | tr -d ' ')
-  if [[ "$status" -ne 0 && "$matching" -ge 1 && "$others" -eq 0 && "$ran" -eq 0 ]]; then
-    echo "The run without Cucumber.parallelTesting failed only with CucumberSwift's message ($matching failures), and ran no scenario"
-    exit 0
+    head -30 "$failures"
   fi
-  echo "The end of the log:"; tail -40 parallel-test.log | cut -c1-400
-  echo "::error::The run without Cucumber.parallelTesting must fail only with CucumberSwift's message and run no scenario: xcodebuild exit status $status, $matching failures with the message, $others with another, $ran scenario records." >&2
-  exit 1
-fi
+  # A fixture app that crashed leaves a report: show what it died of.
+  for crash in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
+    echo "Crash report $(basename "$crash"):"
+    grep -E '"(exception|termination|asi)"' "$crash" | head -5
+  done
+  grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' "$log" | head -30
 
-total=$(ls "$records" | wc -l | tr -d ' ')
-if [[ "$total" -eq 0 ]]; then
-  echo "No records. Containers with a records folder:"
-  ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
-fi
-# Each record is <scenario>.<worker's process>.<UUID>.
-scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
-workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
-echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
-# The workers Xcode gave the plain XCTest classes, named in each result line.
-control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" parallel-test.log | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
-[[ "$control" -gt 0 ]] || control=1
-echo "Plain XCTest classes ran in $control workers"
-min_workers=$(( control < 2 ? control : 2 ))
-ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /' >&2
-if [[ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]]; then
-  echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh." >&2
-  status=1
-fi
-if [[ "$total" -ne "$scenarios" ]]; then
-  echo "::error::Some scenarios ran more than once." >&2
-  status=1
-fi
-if [[ "$workers" -lt "$min_workers" ]]; then
-  echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
-  status=1
-fi
+  # The run must fail, every failure in the result bundle must be CucumberSwift's message, which names the
+  # setting, at least one must be, and no scenario may have run: the message alone doesn't show that the
+  # scenarios were held back, nor that nothing else failed.
+  if [[ "${WITHOUT_SETTING:-}" = "YES" ]]; then
+    local message="parallel testing is off" matching others ran
+    matching=$(grep '^Failed:' "$failures" | grep -c "$message" || true)
+    others=$(grep '^Failed:' "$failures" | grep -vc "$message" || true)
+    ran=$(ls "$records" | wc -l | tr -d ' ')
+    echo "::endgroup::"
+    if [[ "$status" -ne 0 && "$matching" -ge 1 && "$others" -eq 0 && "$ran" -eq 0 ]]; then
+      echo "The run without Cucumber.parallelTesting failed only with CucumberSwift's message ($matching failures), and ran no scenario"
+      return 0
+    fi
+    echo "The end of the log:"; tail -40 "$log" | cut -c1-400
+    echo "::error::The run without Cucumber.parallelTesting must fail only with CucumberSwift's message and run no scenario: xcodebuild exit status $status, $matching failures with the message, $others with another, $ran scenario records." >&2
+    return 1
+  fi
 
-# The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
-# in feature-file order.
-report_check=$(REPORT="$report" RECORDS="$records" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
+  if [[ -z "$(ls "$records")" ]]; then
+    echo "No records. Containers with a records folder:"
+    ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
+  fi
+  # The workers Xcode gave the plain XCTest classes, named in each result line.
+  local control
+  control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
+  [[ "$control" -gt 0 ]] || control=1
+  echo "Plain XCTest classes ran in $control workers"
+  python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
+    --min-workers $(( control < 2 ? control : 2 )) || status=1
+
+  # The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
+  # in feature-file order, and each feature once, whichever unit Xcode handed out.
+  local report_check report_status
+  report_check=$(REPORT="$report" RECORDS="$records" EXPECTED="$EXPECTED_SCENARIOS" EXPECTED_FEATURES="$EXPECTED_FEATURES" python3 -c '
 import json, os, sys
 try:
     features = json.load(open(os.environ["REPORT"]))
@@ -209,14 +217,17 @@ for feature in features:
         if not scenario.get("steps"):
             problems.append("%s has no steps" % scenario["name"])
 problems += ["%s ran %d times in the report" % (key[2], n) for key, n in seen.items() if n > 1]
-# Every scenario that recorded a run is in the report, under its own feature. A record is named
-# <feature> line <line> <scenario>, as ParallelFixtureSupport writes it, then <process>.<UUID>.
-import re
+# Every scenario that recorded a run is in the report, under its own feature. A scenario record is named
+# <process>.<sequence>.scenario.<feature>.<line and title>.<UUID>, as ParallelFixtureSupport writes it.
 def label(name):
     return "".join(c if c.isalnum() else "-" for c in name)
 in_report = set(label("%s line %d %s" % (feature.get("name"), scenario["line"], scenario["name"]))
                 for feature in features for scenario in feature.get("elements", []))
-recorded = set(re.sub(r"\.[0-9]+\.[0-9A-F-]+$", "", name) for name in os.listdir(os.environ["RECORDS"]))
+recorded = set()
+for name in os.listdir(os.environ["RECORDS"]):
+    parts = name.split(".")
+    if len(parts) == 6 and parts[2] == "scenario":
+        recorded.add("%s-%s" % (parts[3], parts[4]))
 problems += ["%s ran but is not in the report, or is under another feature" % name for name in sorted(recorded - in_report)]
 problems += ["%s is in the report but never ran" % name for name in sorted(in_report - recorded)]
 if len(seen) != int(os.environ["EXPECTED"]):
@@ -227,10 +238,19 @@ print("Report: %d scenarios in %d features" % (len(seen), len(features)))
 print("\n".join(problems))
 sys.exit(1 if problems else 0)
 ')
-report_status=$?
-echo "$report_check"
-if [[ "$report_status" -ne 0 ]]; then
-  echo "::error::The Cucumber JSON report does not hold every scenario exactly once." >&2
-  status=1
-fi
+  report_status=$?
+  echo "$report_check"
+  if [[ "$report_status" -ne 0 ]]; then
+    echo "::error::The Cucumber JSON report does not hold every scenario exactly once." >&2
+    status=1
+  fi
+  echo "::endgroup::"
+  [[ "$status" -eq 0 ]] || echo "::error::The run handing out each $unit failed." >&2
+  return "$status"
+}
+
+status=0
+for unit in "${units[@]}"; do
+  run_unit "$unit" || status=1
+done
 exit $status

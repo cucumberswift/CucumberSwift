@@ -40,6 +40,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest | — |
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest | iOS 16, macOS 13 or tvOS 16 to run the regex literals it generates |
 | <doc:Running-Scenarios-In-Parallel> (experimental) | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING` | Off | XCTest | Per platform: see the article |
+| <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out> (experimental) | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest | Parallel testing on, and a test per step |
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest | — |
 | <doc:Generating-Reports#Choose-where-the-report-is-written> | `Cucumber.reportPath` | `CUCUMBER_REPORT_PATH` | `_cucumberReport.json` in the documents folder | XCTest | — |
 | <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | — | All scenarios | XCTest | — |
@@ -56,6 +57,8 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 ### Settings that work differently
 
 **Verbose output has three switches, and any one of them turns it on.** `Cucumber.verboseOutput` is a `Bool`, not an optional, so it has no way to say "off" that could win over the others: the static variable doesn't beat the environment variable here, and `false` means only that this switch is off. `StepImplementation.verbose` is the second switch. `CUCUMBER_VERBOSE` is the third, and it takes only `1` or `true`, in any case: `YES` and `NO` do nothing. See <doc:Verbose-Output>.
+
+**`Cucumber.parallelTestingUnit` takes `.scenario` or `.feature`, not on or off.** Its environment variable, `CUCUMBER_PARALLEL_TESTING_UNIT`, takes `scenario` or `feature`, in any case, with spaces or tabs around the value ignored. Any other value is ignored, as if the variable weren't set. The static variable wins when it is set, then the environment variable, then `.scenario`. See <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out>.
 
 **`StepImplementation` properties have no environment variable.** You set them by returning a value from your `StepImplementation`, next to `bundle` and `setupSteps()`. Each one is optional: CucumberSwift uses its default when you don't declare it.
 

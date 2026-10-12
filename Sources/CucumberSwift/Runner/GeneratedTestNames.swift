@@ -46,6 +46,21 @@ extension CucumberTest {
     }
 }
 
+extension Scenario {
+    /// With ``ParallelTestingUnit/feature``, what the name of each of a scenario's step tests starts with:
+    /// the scenario's zero-padded position among its feature's `count` scenarios, counting from 1, and its
+    /// title, so that the feature's tests sort into the feature file's order and two scenarios with the same
+    /// title stay apart: `02 › Pay by card › `, or `Scenario02_PayByCard_`.
+    static func methodNamePrefix(for title: String, at index: Int, of count: Int, readable: Bool) -> String {
+        guard readable else {
+            let position = String(format: "%0*d", max(2, String(count).count), index + 1)
+            return "Scenario\(position)_" + CucumberTest.generatedTestName(title, readable: false) + "_"
+        }
+        let position = String(format: "%0*d", String(count).count, index + 1)
+        return "\(position) \u{203A} " + CucumberTest.generatedTestName(title, readable: true) + " \u{203A} "
+    }
+}
+
 extension Step {
     /// The name of the test for the step at `index` of a scenario's `count` steps. XCTest may order a
     /// class's tests by name, so the name starts with the step's zero-padded position to keep that
