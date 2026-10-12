@@ -586,6 +586,15 @@ jobs:
           KIND: Hostless
           UNIT: both
         run: .github/scripts/parallel-fixture.sh
+      # One log for each unit, parallel-test-scenario.log and parallel-test-feature.log. Only on a failure.
+      - name: Upload the xcodebuild logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: parallel-test-log-macOS-hostless-smoke
+          path: parallel-test-*.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   parallel_tests:
     name: Parallel tests (${{ matrix.platform }}, ${{ matrix.kind }}${{ matrix.xcode == '16' && ', Xcode 16' || '' }})
@@ -642,7 +651,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: parallel-test-log-${{ matrix.platform }}-${{ matrix.kind }}-xcode${{ matrix.xcode }}
-          path: parallel-test.log
+          path: parallel-test-*.log
           if-no-files-found: ignore
           retention-days: 3
 
