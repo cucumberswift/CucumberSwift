@@ -6,8 +6,11 @@
 //  steps ran once each, in order. CI checks the rest across workers (.github/scripts/parallel_records.py):
 //  every scenario ran exactly once, more than one worker ran them, and each feature's hooks ran as often,
 //  where and when they should (#387). For that, each run of a scenario and each feature hook writes a
-//  record to the folder in the environment variable `PARALLEL_TEST_RECORDS`, when it is set.
+//  record to the folder in the environment variable `PARALLEL_TEST_RECORDS`, when it is set. Every worker
+//  also writes the Cucumber JSON report to the file in `CUCUMBER_REPORT_PATH`, which CI checks holds every
+//  scenario once (#385).
 //
+
 import Foundation
 import XCTest
 import CucumberSwift
@@ -20,6 +23,7 @@ enum ParallelFixtureSupport {
     /// and record each feature hook. CI chooses the unit with `CUCUMBER_PARALLEL_TESTING_UNIT`.
     static func setUp() {
         Cucumber.parallelTesting = true
+        useReportInSandboxIfNeeded()
 
         BeforeFeature { feature in
             record("before", feature: feature)
@@ -40,6 +44,19 @@ enum ParallelFixtureSupport {
         AfterScenario { scenario in
             XCTAssertEqual(stepsRun, Array(scenario.steps.indices), "The steps of '\(scenario.title)' did not each run once, in order")
             record("scenario", feature: scenario.feature, scenario: scenario)
+        }
+    }
+
+    /// The UI test runner on macOS and Mac Catalyst is sandboxed and may not write to `CUCUMBER_REPORT_PATH`.
+    /// It then writes the report to `parallel-test-report/report.json` in its own temporary folder, where CI
+    /// collects it too. Everywhere else the environment variable is the setting.
+    private static func useReportInSandboxIfNeeded() {
+        guard let path = ProcessInfo.processInfo.environment["CUCUMBER_REPORT_PATH"], !path.isEmpty else { return }
+        let folder = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        if (try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)) == nil
+            || !FileManager.default.isWritableFile(atPath: folder) {
+            Cucumber.reportPath = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("parallel-test-report/report.json").path
         }
     }
 

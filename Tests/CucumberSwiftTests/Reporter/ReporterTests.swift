@@ -187,6 +187,37 @@ class ReporterTests: XCTestCase {
         XCTAssertEqual(steps.map { $0.toJSON()["keyword"] as? String }, ["Given", "And", "But", "Dado", "Y"])
     }
 
+    func testScenariosOfInterleavedFeaturesAreReportedUnderTheirOwnFeature() throws {
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        let first = Feature("First") {
+            Scenario("A1") { Given(I: print("")) }
+            Scenario("A2") { Given(I: print("")) }
+        }
+        let second = Feature("Second") {
+            Scenario("B1") { Given(I: print("")) }
+        }
+        reporter.testSuiteStarted(at: Date())
+        // A parallel worker runs a scenario of each feature in turn, so the feature that started last
+        // isn't always the feature of the scenario that starts next.
+        reporter.didStart(feature: first, at: Date())
+        reporter.didStart(scenario: first.scenarios[0], at: Date())
+        reporter.didStart(feature: second, at: Date())
+        reporter.didStart(scenario: second.scenarios[0], at: Date())
+        reporter.didStart(scenario: first.scenarios[1], at: Date())
+        reporter.didStart(step: first.scenarios[1].steps[0], at: Date())
+        reporter.didFinish(step: first.scenarios[1].steps[0], result: .passed, duration: Measurement(value: 1, unit: .nanoseconds))
+
+        let actual = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(reporter.features)) as? [[AnyHashable: Any]])
+        func names(of feature: String) -> [String]? {
+            let elements = actual.first { $0["name"] as? String == feature }?["elements"] as? [[AnyHashable: Any]]
+            return elements?.compactMap { $0["name"] as? String }
+        }
+        XCTAssertEqual(names(of: "First"), ["A1", "A2"])
+        XCTAssertEqual(names(of: "Second"), ["B1"])
+        let steps = (actual.first?["elements"] as? [[AnyHashable: Any]])?.last?["steps"] as? [[AnyHashable: Any]]
+        XCTAssertEqual((steps?.first?["result"] as? [AnyHashable: Any])?["status"] as? String, "passed")
+    }
+
     func testReporterJsonConformsToCucumberJsonSchema() throws {
         let path = URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
