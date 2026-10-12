@@ -14,12 +14,12 @@ It is experimental. Before you rely on it, read what works and what doesn't, and
 
 | Feature | Status | Works? | Notes |
 |---|---|---|---|
-| Each scenario runs once, in a worker of its own (`.scenario`) | Experimental | Yes | Checked in CI on every platform and kind of target below. |
+| Each scenario runs once, assigned to one worker (`.scenario`) | Experimental | Yes | Checked in CI on every platform and kind of target below. |
 | Each feature runs whole in one worker (`.feature`) | Experimental | Yes | Checked in CI. See <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out>. |
 | `BeforeFeature` and `AfterFeature` | Experimental | Yes, in each worker that runs the feature | When they run depends on the unit: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>. |
 | Scenario and step hooks | Supported | Yes | They run as they do in a serial run. |
 | State your step definitions share between scenarios | Not shared | Per worker | Each worker is a process of its own, so a variable that counts scenarios counts only that worker's. |
-| The JSON report | Supported | Yes, one report for every worker | The workers write one report between them, with every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report. |
+| The JSON report | Supported | Yes, one shared report | Every worker writes to the same report, which holds every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report. |
 | One test per scenario (``Cucumber/oneTestPerScenario``) | Not supported | No | Every scenario is then a test of one class, which Xcode hands to one worker. Keep a test per step, the default. |
 | Physical devices | Not tried | Unknown | Only simulators, macOS and Mac Catalyst have been tried. |
 | A scenario that didn't run | Not reported | No | From inside a worker, CucumberSwift can't tell a scenario your test plan, `-skip-testing` or a rerun of failed tests left out on purpose from one that went missing. |
