@@ -585,12 +585,15 @@ jobs:
       # feature (Cucumber.parallelTestingUnit), which only changes the classes CucumberSwift
       # makes, so one platform checks it (#387). The first run has a test per step and the
       # second one test per scenario (#388), so that both ways of making a feature's class run.
+      # Then each runs once more with Xcode's parallel testing off, to check that a serial
+      # run keeps the order of the feature files (#388).
       - name: Run the parallel fixture
         env:
           PLATFORM: macOS
           KIND: Hostless
           UNIT: both
           LAYOUT: alternate
+          SERIAL: yes
         run: .github/scripts/parallel-fixture.sh
 
   parallel_tests:

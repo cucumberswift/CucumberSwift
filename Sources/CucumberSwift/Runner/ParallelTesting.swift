@@ -206,20 +206,12 @@ extension CucumberTest {
     /// `Scenario02_PayByCard_Step002_ThenTheCartHolds1Items` without readable test names.
     static func featureSuites() -> [(suite: XCTestSuite, lastStep: Step)] {
         var suites = [(suite: XCTestSuite, lastStep: Step)]()
-        var names = Set<String>()
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
             guard let lastStep = scenarios.last(where: { !$0.steps.isEmpty })?.steps.last else { continue }
             // Prefixed with the feature's position, so that a serial run, which XCTest orders by name, runs
-            // the features in the feature files' order (#388).
-            let base = featureOrderPrefix(of: feature) + generatedTestName(feature.title)
-            var name = base
-            var count = 1
-            while names.contains(name) {
-                count += 1
-                name = "\(base) \(count)"
-            }
-            names.insert(name)
+            // the features in the feature files' order, and two features with the same title stay apart (#388).
+            let name = featureOrderPrefix(of: feature) + generatedTestName(feature.title)
             guard let testCase = TestCaseGenerator.makeClass(className: name, superclass: StepTestCase.superclass) else { continue }
             objc_registerClassPair(testCase)
             let suite = XCTestSuite(name: name)

@@ -5,7 +5,7 @@
 # Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [UNIT=scenario|feature|both] [LAYOUT=step|scenario|alternate] [WORKERS=3] [EXPECTED_SCENARIOS=10] \
+#   [UNIT=scenario|feature|both] [LAYOUT=step|scenario|alternate] [SERIAL=yes] [WORKERS=3] [EXPECTED_SCENARIOS=10] \
 #   .github/scripts/parallel-fixture.sh
 #
 # UNIT is what Xcode hands to a worker, passed to the tests as CUCUMBER_PARALLEL_TESTING_UNIT: each
@@ -17,8 +17,8 @@
 # LAYOUT is a test per step (the default) or one test per scenario (#388), passed to the tests as
 # CUCUMBER_ONE_TEST_PER_SCENARIO. With UNIT=both, `alternate` runs the scenario unit with a test per step
 # and the feature unit with one test per scenario, so one job runs both layouts and both units in a way
-# that makes each way of making a class run. When one worker runs every scenario, the scenarios must have
-# run in the order of the feature files.
+# that makes each way of making a class run. With SERIAL=yes, each unit also runs once with Xcode's parallel
+# testing off, and the scenarios must run in the order of the feature files.
 #
 # Each run of a scenario and each feature hook writes a record, named after its worker's process, its
 # position among that process's records, what it records, and a UUID, so that two runs never share one.
@@ -110,16 +110,21 @@ runner_records() {
   return 0
 }
 
-# Runs the tests once, handing out each $1 (scenario or feature), and checks the records.
+# Runs the tests once, handing out each $1 (scenario or feature), and checks the records. With $2 = serial,
+# parallel testing is off in Xcode (CucumberSwift's setting stays on), and the scenarios must run in the
+# order of the feature files: that is what XCTest's order by class name gives (#388). Under Xcode's parallel
+# testing a worker gets its classes in an order of Xcode's own, so the order is only checked in a serial run.
 run_unit() {
-  local unit=$1 records="$temp/parallel-test-records-$1" log="parallel-test-$1.log" result="$temp/parallel-test-$1.xcresult"
-  local report="$temp/parallel-test-report-$1/report.json"
-  local status layout=${LAYOUT:-step} one_test_per_scenario
+  local unit=$1 mode=${2:-parallel} name_suffix="$1${2:+-$2}"
+  local records="$temp/parallel-test-records-$name_suffix" log="parallel-test-$name_suffix.log" result="$temp/parallel-test-$name_suffix.xcresult"
+  local report="$temp/parallel-test-report-$name_suffix/report.json"
+  local status layout=${LAYOUT:-step} one_test_per_scenario parallel_flags=(-parallel-testing-worker-count "$WORKERS")
+  [[ "$mode" = serial ]] && parallel_flags=(-parallel-testing-enabled NO)
   if [[ "$layout" = alternate ]]; then
     [[ "$unit" = scenario ]] && layout=step || layout=scenario
   fi
   [[ "$layout" = scenario ]] && one_test_per_scenario=YES || one_test_per_scenario=NO
-  echo "::group::Each $unit, with a test per $layout"
+  echo "::group::Each $unit, with a test per $layout, $mode"
   rm -rf "$records" "$result" "$(dirname "$report")"
   mkdir -p "$records" "$(dirname "$report")"
   for name in parallel-test-records parallel-test-report; do
@@ -127,7 +132,7 @@ run_unit() {
   done
 
   .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
-    -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$result" \
+    "${parallel_flags[@]}" -resultBundlePath "$result" \
     PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
     CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" > "$log" 2>&1
   status=$?
@@ -169,8 +174,13 @@ for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
   control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
-  python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
-    --min-workers $(( control < 2 ? control : 2 )) --features Tests/ParallelFixtures/Features || status=1
+  if [[ "$mode" = serial ]]; then
+    python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
+      --check-order || status=1
+  else
+    python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
+      --min-workers $(( control < 2 ? control : 2 )) || status=1
+  fi
 
   # The Cucumber JSON report the workers wrote between them: every scenario exactly once, under its feature,
   # in feature-file order, and each feature once, whichever unit Xcode handed out.
@@ -229,7 +239,7 @@ sys.exit(1 if problems else 0)
     status=1
   fi
   echo "::endgroup::"
-  [[ "$status" -eq 0 ]] || echo "::error::The run handing out each $unit, with a test per $layout, failed." >&2
+  [[ "$status" -eq 0 ]] || echo "::error::The $mode run handing out each $unit, with a test per $layout, failed." >&2
   return "$status"
 }
 
@@ -237,4 +247,10 @@ status=0
 for unit in "${units[@]}"; do
   run_unit "$unit" || status=1
 done
+# One run for each unit with parallel testing off in Xcode, to check the order of a serial run (#388).
+if [[ "${SERIAL:-no}" = yes ]]; then
+  for unit in "${units[@]}"; do
+    run_unit "$unit" serial || status=1
+  done
+fi
 exit $status

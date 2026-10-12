@@ -19,11 +19,12 @@ It fails unless:
 - with the feature unit, each feature's scenarios all ran in one worker, which ran each of its hooks
   once, and no other worker ran them.
 
-- with --features, and every scenario run by one worker, the scenarios ran in the order of the
-  feature files: the features sorted by path, then each feature's scenarios by line (#388).
+- with --check-order, and every scenario run by one worker, the scenarios ran in the order of the
+  feature files: the features sorted by path, then each feature's scenarios by line (#388). Only for
+  a run with Xcode's parallel testing off: with it on, a worker gets its classes in Xcode's order.
 
   python3 .github/scripts/parallel_records.py <folder> --unit scenario|feature \\
-      --expected-scenarios 10 [--min-workers 2] [--features <folder of .feature files>]
+      --expected-scenarios 10 [--min-workers 2] [--check-order]
 
 Only the standard library is used.
 """
@@ -96,6 +97,11 @@ def worker_errors(feature: str, worker: str, worker_records: List[Record], unit:
         errors.append(f"With whole features, worker {worker} ran the scenarios of '{feature}' at lines "
                       f"{', '.join(map(str, lines_run))}, not in the feature file's order.")
     return errors
+
+
+# The fixtures' feature files, whose order --check-order compares the records with.
+FEATURES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir,
+                               "Tests", "ParallelFixtures", "Features")
 
 
 def record_part(text: str) -> str:
@@ -185,10 +191,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--unit", choices=("scenario", "feature"), required=True)
     parser.add_argument("--expected-scenarios", type=int, required=True)
     parser.add_argument("--min-workers", type=int, default=1)
-    parser.add_argument("--features", help="the folder of the feature files, to check the order of the scenarios")
+    parser.add_argument("--check-order", action="store_true",
+                        help="check that scenarios run by one worker ran in the order of the fixtures' feature files")
     args = parser.parse_args(argv)
     names = sorted(os.listdir(args.folder)) if os.path.isdir(args.folder) else []
-    feature_order = feature_titles(args.features) if args.features else None
+    feature_order = feature_titles(FEATURES_FOLDER) if args.check_order else None
     lines, errors = check(names, args.unit, args.expected_scenarios, args.min_workers, feature_order)
     for line in lines:
         print(line)

@@ -101,11 +101,10 @@ extension CucumberTest {
             let className = run.prefix + generatedTestName(feature.title) + delimiter + generatedTestName(scenario.title)
             guard let testClass = TestCaseGenerator.makeClass(className: className, superclass: base) else { return nil }
             objc_registerClassPair(testClass)
-            guard let selector = addScenarioMethod(named: generatedTestName(scenario.title), running: scenario, to: testClass) else {
-                return nil
-            }
             let suite = XCTestSuite(name: className)
-            suite.addTest(testClass.init(selector: selector))
+            if let selector = addScenarioMethod(named: generatedTestName(scenario.title), running: scenario, to: testClass) {
+                suite.addTest(testClass.init(selector: selector))
+            }
             return suite
         }
     }
@@ -118,17 +117,19 @@ extension CucumberTest {
     static func featureTestSuites() -> [(suite: XCTestSuite, lastStep: Step)] {
         guard let base = scenarioTestClass else { return [] }
         var suites = [(suite: XCTestSuite, lastStep: Step)]()
-        var names = Set<String>()
         for feature in Cucumber.shared.features.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
             let scenarios = feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true)
             guard let lastStep = scenarios.last(where: { !$0.steps.isEmpty })?.steps.last else { continue }
-            let name = uniqueName(featureOrderPrefix(of: feature) + generatedTestName(feature.title), in: &names)
+            // The feature's position in the name keeps two features with the same title apart.
+            let name = featureOrderPrefix(of: feature) + generatedTestName(feature.title)
             guard let testClass = TestCaseGenerator.makeClass(className: name, superclass: base) else { continue }
             objc_registerClassPair(testClass)
             let suite = XCTestSuite(name: name)
             for scenario in scenarios {
                 let position = feature.scenarios.firstIndex { $0 === scenario } ?? 0
-                let method = Scenario.methodName(for: scenario.title, at: position, of: feature.scenarios.count,
+                let method = Scenario.methodName(for: scenario.title,
+                                                 at: position,
+                                                 of: feature.scenarios.count,
                                                  readable: FeatureFlags.isReadableTestNames)
                 if let selector = addScenarioMethod(named: method, running: scenario, to: testClass) {
                     suite.addTest(testClass.init(selector: selector))
@@ -137,18 +138,6 @@ extension CucumberTest {
             suites.append((suite, lastStep))
         }
         return suites
-    }
-
-    /// `base`, or `base 2`, `base 3` … when an earlier name in `names` is the same.
-    private static func uniqueName(_ base: String, in names: inout Set<String>) -> String {
-        var name = base
-        var count = 1
-        while names.contains(name) {
-            count += 1
-            name = "\(base) \(count)"
-        }
-        names.insert(name)
-        return name
     }
 
     @discardableResult
