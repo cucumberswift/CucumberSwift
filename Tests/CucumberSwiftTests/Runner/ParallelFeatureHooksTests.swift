@@ -15,16 +15,16 @@ import XCTest
 private final class FeatureHookLog: CucumberTestObserver {
     var events = [String]()
 
-    func testSuiteStarted(at: Date) { /* Not recorded. */ }
-    func testSuiteFinished(at: Date) { /* Not recorded. */ }
-    func didStart(feature: Feature, at date: Date) { /* Not recorded: BeforeFeature is. */ }
-    func didStart(scenario: Scenario, at date: Date) { /* Not recorded. */ }
-    func didStart(step: Step, at date: Date) { /* Not recorded. */ }
-    func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+    func testSuiteStarted(at _: Date) { /* Not recorded. */ }
+    func testSuiteFinished(at _: Date) { /* Not recorded. */ }
+    func didStart(feature _: Feature, at _: Date) { /* Not recorded: BeforeFeature is. */ }
+    func didStart(scenario _: Scenario, at _: Date) { /* Not recorded. */ }
+    func didStart(step _: Step, at _: Date) { /* Not recorded. */ }
+    func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
         events.append("finished \(feature.title)")
     }
-    func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) { /* Not recorded. */ }
-    func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) { /* Not recorded. */ }
+    func didFinish(scenario _: Scenario, result _: Reporter.Result, duration _: Measurement<UnitDuration>) { /* Not recorded. */ }
+    func didFinish(step _: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) { /* Not recorded. */ }
 }
 
 class ParallelFeatureHooksTests: XCTestCase {
