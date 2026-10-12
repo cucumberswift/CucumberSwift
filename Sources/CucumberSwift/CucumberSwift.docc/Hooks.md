@@ -57,6 +57,9 @@ BeforeScenario { scenario in
 
 An async hook's closure runs on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
 
+### Feature hooks in a parallel run
+With <doc:Running-Scenarios-In-Parallel>, each worker runs `BeforeFeature` and `AfterFeature` for the features it runs, and when `AfterFeature` runs depends on what Xcode hands out: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
+
 ### Attachments
 Hooks and steps are not `XCTestCase` methods, so there is no `add(_:)` to attach a screenshot, a log or a file with. Call `Attach(_:)` instead. It works in any hook and in any step, and takes any `XCTAttachment`.
 
