@@ -79,8 +79,8 @@ env:
   # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (521 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 610
+  # run today (527 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 616
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs
@@ -645,6 +645,15 @@ jobs:
           # the rest with a test per step, and Xcode 16.4 the reverse.
           LAYOUT: ${{ (matrix.kind == 'hosted') == (matrix.xcode == '26') && 'scenario' || 'step' }}
         run: .github/scripts/parallel-fixture.sh
+      # The log shows why xcodebuild aborted when the job's own output doesn't. Only on a failure.
+      - name: Upload the xcodebuild log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: parallel-test-log-${{ matrix.platform }}-${{ matrix.kind }}-xcode${{ matrix.xcode }}
+          path: parallel-test.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
   # SwiftPM links all of a package's test targets into one test bundle, and each

@@ -140,15 +140,23 @@ run_unit() {
   grep -oE 'Could not record [^"]*' "$log" | sort -u | head -5
   grep -E '^CucumberSwift: the hook at ' "$log" | sort -u | head -5
   # Each failing test and why, from the result bundle: the log names a failing test, not always why.
-  xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null | python3 -c '
+  # An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
+  local summary=""
+  if [[ ! -e "$result" ]]; then
+    echo "No test results summary: xcodebuild left no result bundle (exit status $status). See $log."
+  elif ! summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) || [[ -z "$summary" ]]; then
+    echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See $log."
+  else
+    echo "$summary" | python3 -c '
 import json, sys
 for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' || true
+  fi
   # A fixture app that crashed leaves a report: show what it died of.
-  for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
-    echo "Crash report $(basename "$report"):"
-    grep -E '"(exception|termination|asi)"' "$report" | head -5
+  for crash in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
+    echo "Crash report $(basename "$crash"):"
+    grep -E '"(exception|termination|asi)"' "$crash" | head -5
   done
   grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' "$log" | head -30
 
