@@ -7,6 +7,13 @@
 
 import Foundation
 
+/// A scenario that will run, with what goes before the name of its class (see `scenarioOrderPrefix`).
+struct ScenarioToRun {
+    let feature: Feature
+    let scenario: Scenario
+    let prefix: String
+}
+
 extension CucumberTest {
     private static let defaultDelimiter = "|"
     /// With readable test names, a scenario's test reads `Checkout › Pay with a gift card`.
@@ -31,6 +38,46 @@ extension CucumberTest {
             case ".": return "\u{2024}"
             default: return character
         }
+    }
+
+    /// What goes before the name of a scenario's class with parallel testing, so that XCTest, which orders
+    /// the classes it lists by name, runs them in the order of the feature files: the feature's position
+    /// among all the features, then the scenario's position in its feature, each from 1 and zero-padded to
+    /// at least two digits, or to the width of the count when that is wider. `F01 S02 › ` reads well in the
+    /// test navigator, and `F01_S02_` is the camel-case form. A `.` would not sort, and Xcode shows only
+    /// what follows one, so the prefix has none.
+    static func scenarioOrderPrefix(feature: Int, of featureCount: Int, scenario: Int, of scenarioCount: Int, readable: Bool) -> String {
+        let featurePosition = String(format: "%0*d", max(2, String(featureCount).count), feature)
+        let scenarioPosition = String(format: "%0*d", max(2, String(scenarioCount).count), scenario)
+        return readable ? "F\(featurePosition) S\(scenarioPosition)\(readableDelimiter)"
+                        : "F\(featurePosition)_S\(scenarioPosition)_"
+    }
+
+    /// The prefix of each scenario that will run, in the order `scenarioSuites()` lists them. The positions
+    /// count every feature and scenario in the files, before `CUCUMBER_TAGS` or `shouldRunWith` leave any
+    /// out, so a scenario keeps its name whichever of them run. Empty without parallel testing: a serial
+    /// run builds its suite in the order of the feature files already.
+    static func scenariosToRun() -> [ScenarioToRun] {
+        let allFeatures = Cucumber.shared.features
+        var scenarios = [ScenarioToRun]()
+        for feature in allFeatures.taggedElements(with: Cucumber.shared.environment, askImplementor: false) {
+            for scenario in feature.scenarios.taggedElements(with: Cucumber.shared.environment, askImplementor: true) {
+                var prefix = ""
+                if FeatureFlags.isParallelTesting,
+                   let featureIndex = allFeatures.firstIndex(where: { $0 === feature }),
+                   let scenarioIndex = feature.scenarios.firstIndex(where: { $0 === scenario }) {
+                    let readable = FeatureFlags.isReadableTestNames
+                    let (featurePosition, scenarioPosition) = (featureIndex + 1, scenarioIndex + 1)
+                    prefix = scenarioOrderPrefix(feature: featurePosition,
+                                                 of: allFeatures.count,
+                                                 scenario: scenarioPosition,
+                                                 of: feature.scenarios.count,
+                                                 readable: readable)
+                }
+                scenarios.append(ScenarioToRun(feature: feature, scenario: scenario, prefix: prefix))
+            }
+        }
+        return scenarios
     }
 
     static func readFeatureScenarioDelimiter() -> String {

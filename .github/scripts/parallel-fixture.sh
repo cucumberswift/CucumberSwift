@@ -4,13 +4,22 @@
 # classes, up to two. Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
+#   [LAYOUT=step|scenario] [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
+#
+# LAYOUT is a test per step (the default) or one test per scenario. Each is a class for each scenario, so
+# both must run in parallel, and both must run the scenarios in the order of the feature files when one
+# worker runs them all.
 #
 # Each run of a scenario writes a record, named after the scenario, its worker's process and a UUID, so
 # that two runs never share one. xcodebuild's log can't show this, because it interleaves its own output
 # with the workers' and cuts test lines short.
 set -u
 WORKERS=${WORKERS:-3}
+case "${LAYOUT:-step}" in
+  step) one_test_per_scenario=NO ;;
+  scenario) one_test_per_scenario=YES ;;
+  *) echo "::error::LAYOUT is '$LAYOUT', which is not step or scenario." >&2; exit 1 ;;
+esac
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
 temp=${RUNNER_TEMP:-$(mktemp -d)}
@@ -47,7 +56,7 @@ esac
 scheme="Parallel${KIND}Tests${suffix}"
 records="$temp/parallel-test-records"
 mkdir -p "$records"
-echo "Running $scheme on $destination with $WORKERS workers"
+echo "Running $scheme on $destination with $WORKERS workers, with a test per ${LAYOUT:-step}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
 # a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
@@ -84,7 +93,7 @@ runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
 
 .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
   -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
-  PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
+  PARALLEL_TEST_RECORDS="$records" CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" > parallel-test.log 2>&1
 status=$?
 runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
 
@@ -130,5 +139,29 @@ fi
 if [[ "$workers" -lt "$min_workers" ]]; then
   echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
   status=1
+fi
+# Where one worker ran every scenario, as on a target hosted in an app on a Simulator or Mac Catalyst, and
+# the UI tests on a Mac, the order of the records' times must be the order of the feature files: the
+# feature files' paths, then the scenarios' lines.
+if [[ "$workers" -eq 1 && "$total" -eq "$scenarios" && "$scenarios" -gt 1 ]]; then
+  RECORDS="$records" python3 - <<'PY' || status=1
+import os, sys
+folder = os.environ["RECORDS"]
+rows = []
+for name in os.listdir(folder):
+    with open(os.path.join(folder, name), encoding="utf-8") as handle:
+        time, path, line = handle.read().split("\n")[:3]
+    rows.append((float(time), path, int(line), name.rsplit(".", 2)[0]))
+ran = [row[3] for row in sorted(rows)]
+expected = [row[3] for row in sorted(rows, key=lambda row: (row[1], row[2]))]
+if ran != expected:
+    print("::error::The scenarios ran in one worker, but not in the order of the feature files.", file=sys.stderr)
+    print("Ran:     " + ", ".join(ran), file=sys.stderr)
+    print("Expected: " + ", ".join(expected), file=sys.stderr)
+    sys.exit(1)
+print("The scenarios ran in the order of the feature files")
+PY
+else
+  echo "Not checking the order: the scenarios ran in $workers workers"
 fi
 exit $status

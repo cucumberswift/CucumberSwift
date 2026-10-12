@@ -6,7 +6,9 @@
 //  steps ran once each, in order. CI checks the rest across workers: every scenario ran exactly once, and
 //  more than one worker ran them. For that, each run of a scenario writes a record, named after the
 //  scenario, the worker's process and a UUID, to the folder in the environment variable
-//  `PARALLEL_TEST_RECORDS`, when it is set.
+//  `PARALLEL_TEST_RECORDS`, when it is set. The file holds the time it was written, the feature file's path
+//  and the scenario's line, so that CI can check that scenarios which ran in one worker ran in the order of
+//  the feature files (#388).
 //
 
 import Foundation
@@ -33,8 +35,9 @@ enum ParallelFixtureSupport {
         }
     }
 
-    /// Writes an empty file named after the scenario, by its feature and its line, this worker's process,
-    /// and a UUID, so that a second run of the scenario in the same worker writes a second record.
+    /// Writes a file named after the scenario, by its feature and its line, this worker's process, and a
+    /// UUID, so that a second run of the scenario in the same worker writes a second record. It holds
+    /// `<time> <feature file's path> <line>`, each on its own line.
     ///
     /// The UI test runner on macOS and Mac Catalyst is sandboxed and may not write to that folder. It then
     /// writes the record to `parallel-test-records` in its own temporary folder, where CI collects it too.
@@ -45,11 +48,12 @@ enum ParallelFixtureSupport {
             .map { $0.isLetter || $0.isNumber ? $0 : "-" }
         let file = "\(String(name)).\(ProcessInfo.processInfo.processIdentifier).\(UUID().uuidString)"
         let sandboxFolder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("parallel-test-records").path
+        let contents = "\(Date().timeIntervalSince1970)\n\(scenario.location.uri?.path ?? "")\n\(scenario.location.line)\n"
         var errors = [String]()
         for candidate in [folder, sandboxFolder] {
             do {
                 try FileManager.default.createDirectory(atPath: candidate, withIntermediateDirectories: true)
-                try Data().write(to: URL(fileURLWithPath: candidate, isDirectory: true).appendingPathComponent(file))
+                try Data(contents.utf8).write(to: URL(fileURLWithPath: candidate, isDirectory: true).appendingPathComponent(file))
                 return
             } catch {
                 errors.append("\(candidate): \(error.localizedDescription)")

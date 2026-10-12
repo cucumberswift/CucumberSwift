@@ -88,9 +88,31 @@ extension CucumberTest {
         }
     }
 
+    /// With parallel testing, a suite for each scenario that will run, as `scenarioSuites()` makes for a
+    /// test per step: a class of its own, a subclass of `CucumberScenarioTest` so that a failure is still
+    /// recorded at the step's line, with one test, named after the scenario. Xcode can then hand each
+    /// scenario to a worker. The class's name is `scenarioSuites()`'s, so that XCTest lists the classes in
+    /// the order of the feature files.
+    static func scenarioTestSuites() -> [XCTestSuite] {
+        guard let base = scenarioTestClass else { return [] }
+        let delimiter = readFeatureScenarioDelimiter()
+        return scenariosToRun().compactMap { run in
+            let (feature, scenario) = (run.feature, run.scenario)
+            let className = run.prefix + generatedTestName(feature.title) + delimiter + generatedTestName(scenario.title)
+            guard let testClass = TestCaseGenerator.makeClass(className: className, superclass: base) else { return nil }
+            objc_registerClassPair(testClass)
+            guard let selector = addScenarioMethod(named: generatedTestName(scenario.title), running: scenario, to: testClass) else {
+                return nil
+            }
+            let suite = XCTestSuite(name: className)
+            suite.addTest(testClass.init(selector: selector))
+            return suite
+        }
+    }
+
     @discardableResult
-    static func addScenarioMethod(named name: String, running scenario: Scenario) -> Selector? {
-        guard let testClass = scenarioTestClass else { return nil }
+    static func addScenarioMethod(named name: String, running scenario: Scenario, to scenarioClass: XCTestCase.Type? = nil) -> Selector? {
+        guard let testClass = scenarioClass ?? scenarioTestClass else { return nil }
         let selector = sel_registerName(name + errorSuffix)
         let body: @convention(block) (XCTestCase, AutoreleasingUnsafeMutablePointer<NSError?>?) -> Bool = { test, error in
             guard let skip = run(scenario, on: test) else { return true }

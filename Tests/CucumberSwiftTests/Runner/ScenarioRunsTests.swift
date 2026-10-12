@@ -160,12 +160,13 @@ class ScenarioRunsTests: XCTestCase {
         XCTAssertFalse(ParallelTesting.classesMadeTooLate)
     }
 
-    func testClassesAreNotTooLateWithOneTestPerScenario() {
+    // With one test per scenario each scenario has a class of its own too (#388), so they can be too late.
+    func testClassesAreTooLateWithOneTestPerScenarioWhenTheyWereNotMade() {
         _ = parseFeature()
         Cucumber.parallelTesting = true
         Cucumber.oneTestPerScenario = true
 
-        XCTAssertFalse(ParallelTesting.classesMadeTooLate)
+        XCTAssertTrue(ParallelTesting.classesMadeTooLate)
     }
 
     @MainActor

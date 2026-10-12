@@ -80,7 +80,7 @@ env:
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
   # run today (462 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 551
+  MIN_TESTS: 558
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs
@@ -553,6 +553,10 @@ jobs:
   # states what it has been tried with, not the oldest supported Xcode (#325): 16.4 is
   # the oldest Xcode the image has Simulator runtimes for, and the pinned Tuist can't
   # generate the fixtures' project with Xcode 16.0.
+  #
+  # Each combination runs one layout, a test per step or one test per scenario (#388), so
+  # that every platform and kind has run both across the two Xcode versions, with the same
+  # number of jobs: see LAYOUT in the parallel_tests job.
   parallel_smoke:
     name: Parallel tests (macOS, hostless)
     needs: changes
@@ -581,6 +585,7 @@ jobs:
         env:
           PLATFORM: macOS
           KIND: Hostless
+          LAYOUT: step
         run: .github/scripts/parallel-fixture.sh
 
   parallel_tests:
@@ -631,6 +636,9 @@ jobs:
           PLATFORM: ${{ matrix.platform == 'iOS' && 'iOS Simulator' || matrix.platform == 'tvOS' && 'tvOS Simulator' || matrix.platform == 'Catalyst' && 'Mac Catalyst' || 'macOS' }}
           KIND: ${{ matrix.kind == 'hostless' && 'Hostless' || matrix.kind == 'hosted' && 'Hosted' || 'UI' }}
           WORKERS: ${{ (matrix.platform == 'iOS' || matrix.platform == 'tvOS') && 2 || matrix.kind == 'UI' && 1 || 3 }}
+          # Both layouts run, with no extra job: Xcode 26 runs the hosted tests with one test per scenario and
+          # the rest with a test per step, and Xcode 16.4 the reverse.
+          LAYOUT: ${{ (matrix.kind == 'hosted') == (matrix.xcode == '26') && 'scenario' || 'step' }}
         run: .github/scripts/parallel-fixture.sh
 
   # `swift test`, as CONTRIBUTING.md gives it (and `mise run test-swiftpm` runs).
