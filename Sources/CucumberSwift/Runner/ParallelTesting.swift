@@ -47,6 +47,14 @@
 //  scenario. A scenario that did not run is not reported, because a scenario skipped on purpose looks
 //  the same from inside a process.
 //
+//  Without the setting
+//
+//  A parallel run without `Cucumber.parallelTesting` is wrong, and can pass (#389). It can't be fixed by
+//  turning the mode on, as XCTest only says a process is a parallel worker once the bundle has loaded. So
+//  CucumberTest's suite is one failing test that names the setting, in place of the scenarios, and in a
+//  worker never handed CucumberTest the first test to start fails: see `ParallelWorkerObserver` in
+//  TestObservation.swift.
+//
 
 import Foundation
 import XCTest

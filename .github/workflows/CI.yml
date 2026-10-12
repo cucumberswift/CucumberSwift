@@ -582,6 +582,14 @@ jobs:
           PLATFORM: macOS
           KIND: Hostless
         run: .github/scripts/parallel-fixture.sh
+      # Xcode's parallel testing without Cucumber.parallelTesting must fail with CucumberSwift's
+      # message (#389), not run the scenarios wrongly. The same fixture, so no new build.
+      - name: Run the parallel fixture without the setting
+        env:
+          PLATFORM: macOS
+          KIND: Hostless
+          WITHOUT_SETTING: 'YES'
+        run: .github/scripts/parallel-fixture.sh
 
   parallel_tests:
     name: Parallel tests (${{ matrix.platform }}, ${{ matrix.kind }}${{ matrix.xcode == '16' && ', Xcode 16' || '' }})
@@ -631,6 +639,16 @@ jobs:
           PLATFORM: ${{ matrix.platform == 'iOS' && 'iOS Simulator' || matrix.platform == 'tvOS' && 'tvOS Simulator' || matrix.platform == 'Catalyst' && 'Mac Catalyst' || 'macOS' }}
           KIND: ${{ matrix.kind == 'hostless' && 'Hostless' || matrix.kind == 'hosted' && 'Hosted' || 'UI' }}
           WORKERS: ${{ (matrix.platform == 'iOS' || matrix.platform == 'tvOS') && 2 || matrix.kind == 'UI' && 1 || 3 }}
+        run: .github/scripts/parallel-fixture.sh
+      # Without Cucumber.parallelTesting, the run must fail with CucumberSwift's message (#389). Hostless
+      # only, which is the same code path as the other kinds, for the price of one run.
+      - name: Run the parallel fixture without the setting
+        if: matrix.kind == 'hostless'
+        env:
+          PLATFORM: ${{ matrix.platform == 'iOS' && 'iOS Simulator' || matrix.platform == 'tvOS' && 'tvOS Simulator' || matrix.platform == 'Catalyst' && 'Mac Catalyst' || 'macOS' }}
+          KIND: Hostless
+          WORKERS: ${{ (matrix.platform == 'iOS' || matrix.platform == 'tvOS') && 2 || 3 }}
+          WITHOUT_SETTING: 'YES'
         run: .github/scripts/parallel-fixture.sh
       # The log shows why xcodebuild aborted when the job's own output doesn't. Only on a failure.
       - name: Upload the xcodebuild log

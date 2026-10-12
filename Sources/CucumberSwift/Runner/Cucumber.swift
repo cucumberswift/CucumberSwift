@@ -34,6 +34,7 @@ import XCTest
     var features = [Feature]()
     var currentStep: Step?
     let runningTestCaseObserver = RunningTestCaseObserver()
+    let parallelWorkerObserver = ParallelWorkerObserver()
     /// The test XCTest is running, so a failure can be recorded on it with a location of our choosing.
     var runningTestCase: XCTestCase? { runningTestCaseObserver.testCase }
     var reportName: String = "CucumberTestResultsFor"
@@ -113,6 +114,7 @@ import XCTest
         super.init()
         XCTestObservationCenter.shared.addTestObserver(self)
         XCTestObservationCenter.shared.addTestObserver(runningTestCaseObserver)
+        XCTestObservationCenter.shared.addTestObserver(parallelWorkerObserver)
     }
 
     init(withString string: String) {
