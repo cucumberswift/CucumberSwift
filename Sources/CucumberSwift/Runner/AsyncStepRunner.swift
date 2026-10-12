@@ -52,6 +52,10 @@ enum AsyncStepRunner {
 
     private static let pollInterval: TimeInterval = 0.05
 
+    /// Whether a hook runs with no test running, as `AfterFeature` does at the end of a parallel worker.
+    /// XCTest drops a failure recorded then, so a thrown error is printed instead.
+    static var isOutsideTest = false
+
     private static var isInsideTask: Bool {
         withUnsafeCurrentTask { $0 != nil }
     }
@@ -62,11 +66,29 @@ enum AsyncStepRunner {
     }
 
     /// Turns an async hook into the synchronous closure the hook storage holds. A thrown error fails the
-    /// test at the hook.
+    /// test at the hook, or with no test running, is printed with the hook's file and line.
     static func blockingHook<T>(_ hook: @escaping @MainActor (T) async throws -> Void,
                                 file: StaticString,
                                 line: UInt) -> (T) -> Void {
-        { value in runFailingOnError({ try await hook(value) }, file: file, line: line) }
+        { value in
+            guard isOutsideTest else {
+                runFailingOnError({ try await hook(value) }, file: file, line: line)
+                return
+            }
+            do {
+                try run { try await hook(value) }
+            } catch {
+                print(outsideTestErrorMessage(error, for: value, file: file, line: line))
+            }
+        }
+    }
+
+    /// What is printed when a hook throws with no test running, such as an `AfterFeature` hook at the end of
+    /// a parallel worker.
+    static func outsideTestErrorMessage<T>(_ error: Error, for value: T, file: StaticString, line: UInt) -> String {
+        let subject = (value as? Feature).map { " for the feature '\($0.title)'" } ?? ""
+        return "CucumberSwift: the hook at \(file):\(line) threw\(subject) after this worker's last test, "
+            + "so it can't fail a test: \(error.localizedDescription)"
     }
 
     /// Like `run`, but a thrown error fails the test at `file` and `line` instead of propagating.

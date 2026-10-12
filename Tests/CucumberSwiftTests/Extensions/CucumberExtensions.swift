@@ -25,6 +25,7 @@ extension Cucumber {
         afterStepHooks.removeAll()
         environment["CUCUMBER_TAGS"] = nil
         hookedFeatures.removeAll()
+        finishedFeatures.removeAll()
         hookedScenarios.removeAll()
         ScenarioRuns.reset()
     }

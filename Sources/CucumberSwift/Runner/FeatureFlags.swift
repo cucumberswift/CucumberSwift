@@ -5,6 +5,15 @@
 
 import Foundation
 
+/// What Xcode's parallel testing hands to a worker, with ``Cucumber/parallelTesting`` on. See
+/// ``Cucumber/parallelTestingUnit``.
+public enum ParallelTestingUnit: String, Sendable {
+    /// Each scenario is a test class of its own, which Xcode hands to any worker. The default.
+    case scenario
+    /// Each feature is a test class of its own, and all of its scenarios run in one worker.
+    case feature
+}
+
 /// Reads CucumberSwift's feature flags. Each flag is a static variable on `Cucumber` and an environment
 /// variable: the static variable wins, then the environment variable, then the flag's default.
 enum FeatureFlags {
@@ -49,7 +58,20 @@ enum FeatureFlags {
         value(Cucumber.parallelTesting, environmentVariable: "CUCUMBER_PARALLEL_TESTING", default: false)
     }
 
+    /// What Xcode's parallel testing hands to a worker: a scenario, the default, or a whole feature.
+    static var parallelTestingUnit: ParallelTestingUnit {
+        Cucumber.parallelTestingUnit
+            ?? parallelTestingUnit(Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING_UNIT"])
+            ?? .scenario
+    }
+
     static let storage = Storage()
+    static let parallelTestingUnitStorage = Locked<ParallelTestingUnit?>(nil)
+
+    /// `scenario` or `feature`, in any case. Any other value is not a setting.
+    static func parallelTestingUnit(_ value: String?) -> ParallelTestingUnit? {
+        value.flatMap { ParallelTestingUnit(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) }
+    }
 
     static func value(_ staticValue: Bool?, environmentVariable name: String, default defaultValue: Bool) -> Bool {
         staticValue ?? bool(Cucumber.shared.environment[name]) ?? defaultValue
@@ -109,9 +131,21 @@ extension Cucumber {
     ///
     /// It applies to a test per step, the default, not to ``oneTestPerScenario``. Each worker is a process
     /// of its own, so state your step definitions share, a feature's hooks and the JSON report are per
-    /// worker: see <doc:Running-Scenarios-In-Parallel> before you turn it on.
+    /// worker: see <doc:Running-Scenarios-In-Parallel> before you turn it on. ``parallelTestingUnit``
+    /// says whether Xcode hands out each scenario or each whole feature.
     public static var parallelTesting: Bool? {
         get { FeatureFlags.storage["parallelTesting"] }
         set { FeatureFlags.storage["parallelTesting"] = newValue }
+    }
+
+    /// What Xcode's parallel testing hands to a worker when ``parallelTesting`` is on: each scenario, the
+    /// default, or each whole feature, whose scenarios then all run in one worker, in the feature file's
+    /// order, so that `BeforeFeature` and `AfterFeature` each run once. Set this to
+    /// ``ParallelTestingUnit/feature``, or the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to
+    /// `feature`, to hand out whole features. This variable, when set, wins over the environment variable.
+    /// Set it in your `StepImplementation`'s `setupSteps()`. See <doc:Running-Scenarios-In-Parallel>.
+    public static var parallelTestingUnit: ParallelTestingUnit? {
+        get { FeatureFlags.parallelTestingUnitStorage.snapshot }
+        set { FeatureFlags.parallelTestingUnitStorage.withLock { $0 = newValue } }
     }
 }

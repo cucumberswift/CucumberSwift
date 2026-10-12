@@ -160,16 +160,20 @@ open class CucumberTest: XCTestCase {
     private static func createTestCaseFor(className: String, scenario: Scenario, tests: inout [XCTestCase]) {
         let testCase = TestCaseGenerator.makeClass(className: className.appending(generatedTestName(scenario.title)),
                                                    superclass: StepTestCase.superclass)
-        if let testCase = testCase {
-            objc_registerClassPair(testCase)
-        }
+        guard let testCase = testCase else { return }
+        objc_registerClassPair(testCase)
+        addStepTests(to: testCase, for: scenario, tests: &tests)
+    }
+
+    /// Adds a test for each of the scenario's steps to the class, each named with `methodNamePrefix` first.
+    static func addStepTests(to testCase: XCTestCase.Type, for scenario: Scenario, methodNamePrefix: String = "", tests: inout [XCTestCase]) {
         scenario
             .steps
             .enumerated()
             .lazy
             .compactMap { index, step -> (step: Step, XCTestCase.Type, Selector)? in // swiftlint:disable:this large_tuple
-                if let testCase = testCase,
-                   let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: step.method(at: index, of: scenario.steps.count)) {
+                let method = step.method(at: index, of: scenario.steps.count, methodNamePrefix: methodNamePrefix)
+                if let methodSelector = TestCaseGenerator.addTestMethod(testCase: testCase, method: method) {
                     return (step, testCase, methodSelector)
                 }
                 return nil
@@ -359,11 +363,11 @@ private final class MissingStepDefinitionReporter: CucumberTest {
 }
 
 extension Step {
-    func method(at index: Int, of count: Int) -> TestCaseMethod? {
+    func method(at index: Int, of count: Int, methodNamePrefix: String = "") -> TestCaseMethod? {
         let readable = FeatureFlags.isReadableTestNames
         // Readable names show the keyword as written; camel-case names keep the ones tests already have.
         let text = "\(readable ? writtenKeyword : keywordText) \(match)"
-        return TestCaseMethod(withName: Self.methodName(for: text, at: index, of: count, readable: readable)) {
+        return TestCaseMethod(withName: methodNamePrefix + Self.methodName(for: text, at: index, of: count, readable: readable)) {
             // Counted before the guard below, which skips the steps of a scenario that already failed, so
             // that a second start of such a scenario is still seen.
             if let scenario = self.scenario, scenario.steps.first === self {

@@ -1,16 +1,27 @@
 #!/bin/bash
 # Runs one of the parallel testing fixtures in Tests/ParallelFixtures with Xcode's parallel testing on,
 # and fails unless every scenario ran exactly once, in as many workers as the fixtures' plain XCTest
-# classes, up to two. Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
+# classes, up to two, and each feature's hooks ran as often, where and when they should (#387).
+# Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
-#   [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
+#   [UNIT=scenario|feature|both] [WORKERS=3] [EXPECTED_SCENARIOS=10] .github/scripts/parallel-fixture.sh
 #
-# Each run of a scenario writes a record, named after the scenario, its worker's process and a UUID, so
-# that two runs never share one. xcodebuild's log can't show this, because it interleaves its own output
-# with the workers' and cuts test lines short.
+# UNIT is what Xcode hands to a worker, passed to the tests as CUCUMBER_PARALLEL_TESTING_UNIT: each
+# scenario (the default), each whole feature, or both, one after the other, with a records folder each.
+#
+# Each run of a scenario and each feature hook writes a record, named after its worker's process, its
+# position among that process's records, what it records, and a UUID, so that two runs never share one.
+# .github/scripts/parallel_records.py checks them. xcodebuild's log can't show this, because it
+# interleaves its own output with the workers' and cuts test lines short.
 set -u
 WORKERS=${WORKERS:-3}
+UNIT=${UNIT:-scenario}
+case "$UNIT" in
+  scenario|feature) units=("$UNIT") ;;
+  both) units=(scenario feature) ;;
+  *) echo "::error::UNIT must be scenario, feature or both, not '$UNIT'." >&2; exit 1 ;;
+esac
 # The scenarios in Tests/ParallelFixtures/Features.
 EXPECTED_SCENARIOS=${EXPECTED_SCENARIOS:-10}
 temp=${RUNNER_TEMP:-$(mktemp -d)}
@@ -45,9 +56,7 @@ print(next((d["udid"] for r in runtimes for d in devices[r] if d["name"].startsw
     destination="platform=$PLATFORM,id=$udid" ;;
 esac
 scheme="Parallel${KIND}Tests${suffix}"
-records="$temp/parallel-test-records"
-mkdir -p "$records"
-echo "Running $scheme on $destination with $WORKERS workers"
+echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
 # a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
@@ -80,55 +89,57 @@ runner_records() {
   ls -d "$HOME"/Library/Containers/org.cucumberswift.Parallel*/Data/tmp/parallel-test-records 2>/dev/null
   return 0
 }
-runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
 
-.github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
-  -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$temp/parallel-test.xcresult" \
-  PARALLEL_TEST_RECORDS="$records" > parallel-test.log 2>&1
-status=$?
-runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+# Runs the tests once, handing out each $1 (scenario or feature), and checks the records.
+run_unit() {
+  local unit=$1 records="$temp/parallel-test-records-$1" log="parallel-test-$1.log" result="$temp/parallel-test-$1.xcresult"
+  local status
+  echo "::group::Each $unit"
+  rm -rf "$records" "$result"
+  mkdir -p "$records"
+  runner_records | while IFS= read -r folder; do rm -rf "$folder"; done
 
-echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" parallel-test.log) passed, $(grep -cE "^Test [Cc]ase .* failed" parallel-test.log) failed"
-grep -E 'error: ' parallel-test.log | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
-grep -oE 'Could not record [^"]*' parallel-test.log | sort -u | head -5
-# Each failing test and why, from the result bundle: the log names a failing test, not always why.
-xcrun xcresulttool get test-results summary --path "$temp/parallel-test.xcresult" 2>/dev/null | python3 -c '
+  .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+    -parallel-testing-worker-count "$WORKERS" -resultBundlePath "$result" \
+    PARALLEL_TEST_RECORDS="$records" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" > "$log" 2>&1
+  status=$?
+  runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+
+  echo "Tests: $(grep -cE "^Test [Cc]ase .* passed" "$log") passed, $(grep -cE "^Test [Cc]ase .* failed" "$log") failed"
+  grep -E 'error: ' "$log" | sed -E 's|^.*/Features/||; s|^.*/Tests/||' | sort | uniq -c | sort -rn | head -40
+  grep -oE 'Could not record [^"]*' "$log" | sort -u | head -5
+  grep -E '^CucumberSwift: the hook at ' "$log" | sort -u | head -5
+  # Each failing test and why, from the result bundle: the log names a failing test, not always why.
+  xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null | python3 -c '
 import json, sys
 for failure in json.load(sys.stdin).get("testFailures", [])[:30]:
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' || true
-# A fixture app that crashed leaves a report: show what it died of.
-for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
-  echo "Crash report $(basename "$report"):"
-  grep -E '"(exception|termination|asi)"' "$report" | head -5
-done
-grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' parallel-test.log | head -30
+  # A fixture app that crashed leaves a report: show what it died of.
+  for report in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
+    echo "Crash report $(basename "$report"):"
+    grep -E '"(exception|termination|asi)"' "$report" | head -5
+  done
+  grep -E -A4 'xcodebuild: error|encountered an error|\*\* (BUILD|TEST) FAILED' "$log" | head -30
 
-total=$(ls "$records" | wc -l | tr -d ' ')
-if [[ "$total" -eq 0 ]]; then
-  echo "No records. Containers with a records folder:"
-  ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
-fi
-# Each record is <scenario>.<worker's process>.<UUID>.
-scenarios=$(ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort -u | wc -l | tr -d ' ')
-workers=$(ls "$records" | sed -E 's/^.*\.([0-9]+)\.[0-9A-F-]+$/\1/' | sort -u | wc -l | tr -d ' ')
-echo "Scenario records: $total for $scenarios scenarios, from $workers workers ($EXPECTED_SCENARIOS scenarios expected)"
-# The workers Xcode gave the plain XCTest classes, named in each result line.
-control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" parallel-test.log | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
-[[ "$control" -gt 0 ]] || control=1
-echo "Plain XCTest classes ran in $control workers"
-min_workers=$(( control < 2 ? control : 2 ))
-ls "$records" | sed -E 's/\.[0-9]+\.[0-9A-F-]+$//' | sort | uniq -d | sed 's/^/::error::Ran more than once: /' >&2
-if [[ "$scenarios" -ne "$EXPECTED_SCENARIOS" ]]; then
-  echo "::error::$scenarios of $EXPECTED_SCENARIOS scenarios ran. If you changed the fixtures' features, update EXPECTED_SCENARIOS in .github/scripts/parallel-fixture.sh." >&2
-  status=1
-fi
-if [[ "$total" -ne "$scenarios" ]]; then
-  echo "::error::Some scenarios ran more than once." >&2
-  status=1
-fi
-if [[ "$workers" -lt "$min_workers" ]]; then
-  echo "::error::The scenarios ran in $workers workers, and plain XCTest classes in $control, so they did not run in parallel." >&2
-  status=1
-fi
+  if [[ -z "$(ls "$records")" ]]; then
+    echo "No records. Containers with a records folder:"
+    ls -d "$HOME"/Library/Containers/*/Data/tmp/parallel-test-records 2>/dev/null || echo "none"
+  fi
+  # The workers Xcode gave the plain XCTest classes, named in each result line.
+  local control
+  control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
+  [[ "$control" -gt 0 ]] || control=1
+  echo "Plain XCTest classes ran in $control workers"
+  python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
+    --min-workers $(( control < 2 ? control : 2 )) || status=1
+  echo "::endgroup::"
+  [[ "$status" -eq 0 ]] || echo "::error::The run handing out each $unit failed." >&2
+  return "$status"
+}
+
+status=0
+for unit in "${units[@]}"; do
+  run_unit "$unit" || status=1
+done
 exit $status
