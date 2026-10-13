@@ -110,6 +110,8 @@ gh workflow run CI.yml --ref <branch> -f parallel_platforms=macOS,Catalyst -f pa
 
 The macOS hostless combination with Xcode 26 runs first only when the inputs include it. An unknown platform or kind fails the run's `Changed files` job, which names it, and no parallel tests run. Other runs share CI's macOS runners, so check that no other manual run is in progress first (`gh run list --workflow CI.yml --event workflow_dispatch`).
 
+The "What works" table in "Running Scenarios in Parallel" (`Sources/CucumberSwift/CucumberSwift.docc/Running-Scenarios-In-Parallel.md`) says what works with parallel testing on, by platform, from what `main` does and what CI checks. A pull request that changes how parallel testing behaves, or what CI checks of it, updates its own cells in the same pull request. A cell says **Not checked** when nothing checks it.
+
 Generate the fixtures' project with `mise run generate-fixtures` before you open or run it, and again after changing `Tests/ParallelFixtures/Project.swift` or adding a file there. Unlike `CucumberSwift.xcodeproj` it is not committed: Tuist names the local package's folder after your checkout's folder, so the project differs from clone to clone. CI generates it the same way.
 
 ### With Swift Package Manager
