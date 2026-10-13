@@ -14,33 +14,35 @@ It is experimental. Before you rely on it, read what works and what doesn't in t
 
 What works today and what doesn't, from what we have run with Xcode 16.4 and Xcode 26. **Yes** means it works there, and CI checks it. **No** means it doesn't work there, today. **Not checked** means we have no result, so don't read it as working or as not working.
 
-| Feature | iOS Simulator | tvOS Simulator | macOS | Mac Catalyst |
+| Feature | iOS\* | tvOS\* | mac&#x2060;OS | Mac&nbsp;Catalyst |
 |---|---|---|---|---|
 | Unit tests without a host app run in parallel | Yes | Yes | Yes | Yes |
 | Unit tests hosted in an app run in parallel | No | No | Yes | No |
 | UI tests run in parallel | Yes | Yes | No | No |
 | Each scenario runs once, assigned to one worker (`.scenario`) | Yes | Yes | Yes | Yes |
-| Each feature runs whole in one worker (`.feature`) | Not checked | Not checked | Yes | Not checked |
+| Each feature runs whole in one worker (`.feature`) | Not&nbsp;checked | Not&nbsp;checked | Yes | Not&nbsp;checked |
 | One test per scenario (``Cucumber/oneTestPerScenario``) | Yes | Yes | Yes | Yes |
-| A serial run keeps the order of the feature files | Not checked | Not checked | Yes | Not checked |
+| A serial run keeps the order of the feature files | Not&nbsp;checked | Not&nbsp;checked | Yes | Not&nbsp;checked |
 | `BeforeFeature` and `AfterFeature` run in each worker that runs the feature | Yes | Yes | Yes | Yes |
 | Scenario and step hooks run as they do in a serial run | Yes | Yes | Yes | Yes |
-| One shared JSON report holds every scenario once | Yes, with `reportPath` | Yes, with `reportPath` | Yes | Yes |
+| One shared JSON report holds every scenario once (on a Simulator, set `reportPath`) | Yes | Yes | Yes | Yes |
 | A scenario that starts twice in one worker fails at its line | Yes | Yes | Yes | Yes |
 | Classes made too late for XCTest to list them fail the run | Yes | Yes | Yes | Yes |
 | A parallel run with `Cucumber.parallelTesting` off fails with a message that names the setting | Yes | Yes | Yes | Yes |
 | State your step definitions share is shared between workers | No | No | No | No |
 | A scenario that didn't run is reported | No | No | No | No |
 
+\* iOS and tvOS were run on Simulators.
+
 - **No** for a row about running in parallel means the scenarios still run correctly, in one worker. On the Simulators and Mac Catalyst, Xcode runs the tests of a target hosted in an app in one worker, plain XCTest tests too. That is how Xcode runs them, which we measured and found no Apple documentation for, not something CucumberSwift decides. UI tests on macOS and Mac Catalyst have only been tried with one worker, so we don't know whether they would run in parallel.
 - **Order:** a serial run is one with Xcode's parallel testing off. With it on, Xcode gives each worker its classes in an order of its own, so the scenarios of a worker don't run in the order of the feature files. CucumberSwift's classes are named so that XCTest's order by name is the order of the files: see <doc:Running-Scenarios-In-Parallel#Test-names>.
 - **A parallel run with `Cucumber.parallelTesting` off:** the first test of each worker fails with a message that names the setting. It relies on Xcode's private API, which a new Xcode can change: the run then behaves as it did before, without the message. It doesn't notice a unit test target hosted in an app on Mac Catalyst either, where Xcode runs the tests in one worker. And with one test per scenario nothing fails: that mode is not affected.
 - **Feature hooks:** when they run depends on what Xcode hands out: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
-- **The JSON report:** every worker writes to the same report, which holds every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>. A device runs one worker, and writes its own report.
+- **The JSON report:** every worker writes to the same report, which holds every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>.
 - **State:** each worker is a process of its own, so a variable that counts scenarios counts only that worker's.
 - **A scenario that didn't run:** from inside a worker, CucumberSwift can't tell a scenario your test plan, `-skip-testing` or a rerun of failed tests left out on purpose from one that went missing.
 
-Physical devices (a connected iPhone, iPad or Apple TV) haven't been tried, because CI has none. Xcode may be able to run your tests there, but we make no claim about it.
+Physical devices (a connected iPhone, iPad or Apple TV) haven't been tried, because CI has none. A device is expected to run one worker and write its own report, but we make no claim about it.
 
 Xcode hands out whole test classes, one at a time to each worker (Apple's WWDC20 session [Get your test results faster](https://developer.apple.com/videos/play/wwdc2020/10221/) says "Xcode build will distribute tests to each run destination by class"), so each class has to exist before XCTest lists the classes. CucumberSwift makes them when the test bundle loads, which was before XCTest listed any class in every kind of target tried.
 

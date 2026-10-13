@@ -40,7 +40,7 @@ With <doc:Running-Scenarios-In-Parallel> on, each worker is a process of its own
 - **Put the report where every worker reaches it.** On macOS and Mac Catalyst the default is already one file. On an iOS or tvOS Simulator, each clone has a documents folder of its own, so without `reportPath` there is one report in each clone, and the script above copies one of them. Set `reportPath` to a path on the Mac, as above, and the workers share one file.
 - **A new run replaces the old report.** The first worker of a run empties the report the last run left, when nothing is writing it and it hasn't been written for a minute. Delete the report before a run that starts within a minute of another's.
 - **The report's folder must be writable, and its lock files too.** The workers also create `<report>.lock` and `<report>.run` beside the report. They are empty, and safe to delete between runs.
-- **A device runs one worker**, and writes its own file as before.
+- **A physical device hasn't been tried.** It is expected to run one worker and write its own file, as before.
 - **A serial run** writes the same report as ever.
 
 ## Verbose Output
