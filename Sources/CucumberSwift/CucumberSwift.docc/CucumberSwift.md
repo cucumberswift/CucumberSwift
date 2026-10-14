@@ -20,17 +20,17 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 
 ### Discussions
 - <doc:Tutorial-Table-of-Contents>
+- <doc:Running-Tests-In-Xcode>
 - <doc:Supported-Platforms>
 - <doc:Settings>
-- <doc:Running-Tests-In-Xcode>
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Tests-With-Bazel>
 - <doc:Running-Feature-Files-With-Swift-Testing>
 - <doc:Running-Scenarios-In-Parallel>
 - <doc:Matching-Steps>
-- <doc:Generating-Reports>
-- <doc:Verbose-Output>
 - <doc:Checking-Feature-Files>
 - <doc:Checking-Step-Definitions>
+- <doc:Generating-Reports>
+- <doc:Verbose-Output>
 - <doc:Hooks>
 - <doc:CucumberSwift+UIUTest>
