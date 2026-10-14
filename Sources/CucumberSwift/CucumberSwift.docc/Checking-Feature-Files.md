@@ -32,11 +32,21 @@ Add the plugin to the test target that has the feature files:
 2. Open **Build Phases**, and expand **Run Build Tool Plug-ins**.
 3. Click **+** and choose **CucumberSwiftLint**.
 
+![The Build Phases tab of a test target, with Run Build Tool Plug-ins expanded and listing CucumberSwiftLint (CucumberSwift).](BuildToolPlugins-BuildPhases.png)
+
 The plugin checks the `.feature` files in the target, including those in a folder reference such as `Features`.
+
+In a project that Tuist generates, add `.package(product: "CucumberSwiftLint", type: .plugin)` to the test target's `dependencies`, and Tuist adds it to **Run Build Tool Plug-ins**.
 
 ### Trust the plugin
 
-The first time Xcode builds a target that uses a package plugin, it asks you to trust it. Choose **Trust & Enable**. On a CI machine, where nobody can answer, pass `-skipPackagePluginValidation` to `xcodebuild`. `swift build` and `swift test` don't ask.
+The first time Xcode builds a target that uses a package plugin, the build stops with an error saying the plugin must be enabled before it can be used. Xcode doesn't open a dialog by itself: click the error in the Issue navigator, and choose **Trust & Enable**. Then build again.
+
+![Xcode's dialog: Plugin "CucumberSwiftLintPlugin" from package "CucumberSwift" must be enabled before it can be used. Enable it now? With Trust & Enable and Cancel buttons.](BuildToolPlugins-Trust.png)
+
+The Issue navigator may also keep a warning that the macro "CucumberSwiftMacrosPlugin" must be enabled, even when your project doesn't use the macros, because they come in the same package. It's only a warning, and the build still succeeds. To clear it, click it and choose **Trust & Enable**. Xcode asks once for each project.
+
+On a CI machine, where nobody can answer, pass `-skipPackagePluginValidation` to `xcodebuild`. `swift build` and `swift test` don't ask.
 
 ### Keep it on in CI
 
