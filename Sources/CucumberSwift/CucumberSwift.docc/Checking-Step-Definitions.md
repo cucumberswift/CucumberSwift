@@ -31,9 +31,10 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 
 ## Requirements
 
-| | In a Swift package | In an Xcode project, or one Tuist generates |
+| | In a Swift package | In an Xcode project |
 |---|---|---|
 | Xcode | 16.3 (Swift 6.1) or later | 26.4 or later |
+| swift-syntax | 600.0.0 up to, but not including, 605.0.0 | 600.0.0 up to, but not including, 605.0.0 |
 | Where the tests run | iOS 13, macOS 10.15 and tvOS 13 or later | iOS 13, macOS 10.15 and tvOS 13 or later |
 | Where step definitions with a regex literal run | iOS 16, macOS 13 and tvOS 16 or later | iOS 16, macOS 13 and tvOS 16 or later |
 
@@ -41,6 +42,7 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 - **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
 - **In an Xcode project**, you need Xcode 26.4, the first to turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as described in <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>, or run your tests from a Swift package, as described in <doc:Running-Tests-With-Swift-Package-Manager>.
 - **Convert to Gherkin Macros** (see <doc:Checking-Step-Definitions#Convert-existing-step-definitions>) is tested the same way in a Swift package: CI runs the command with exactly Xcode 16.3. In an Xcode project it needs the trait on, so Xcode 26.4, as the macros do, but CI doesn't run the command there.
+- **swift-syntax 600 to 604.** SwiftPM picks one swift-syntax version for your whole package, so the macros accept any version in that range: your package can also use another macro package, as long as the two ranges overlap. CI tests the macros with the oldest, 600.0.0, every night, and with the version CucumberSwift's own `Package.resolved` pins on every change. Versions before 600 don't build.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
 - **Regex literals need iOS 16, macOS 13 or tvOS 16**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Checking-Step-Definitions#Regex-literals>.
 - **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.

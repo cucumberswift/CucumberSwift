@@ -690,7 +690,8 @@ jobs:
   # consumer test target declares its own `extension Cucumber: StepImplementation`,
   # so each consumer test folder is a package of its own and runs separately.
   # A required check. On a run with no code that changes a DocC catalog, it only
-  # compiles the documentation's Swift examples, the last step.
+  # compiles the documentation's Swift examples. Nightly and manual runs also test
+  # the macros against the oldest swift-syntax they accept, the last step.
   swiftpm_tests:
     name: SwiftPM tests
     needs: changes
@@ -766,6 +767,21 @@ jobs:
         run: |
           swift --version
           python3 .github/scripts/docs_examples.py
+      # The steps above build the swift-syntax version Package.resolved pins. This one checks the lower
+      # bound of the range Package@swift-6.1.swift accepts (#414): it requires exactly that version, then
+      # builds the Macros trait and runs the macro and converter tests. It changes the manifest and
+      # Package.resolved in this checkout, so it stays the last step.
+      - name: Test the macros with the oldest swift-syntax they accept
+        if: needs.changes.outputs.no_code != 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: |
+          floor=$(sed -nE 's|.*swift-syntax\.git", "([0-9.]+)"\.\.<.*|\1|p' Package@swift-6.1.swift)
+          if [ -z "$floor" ]; then
+            echo "::error file=Package@swift-6.1.swift::Can't find the range of swift-syntax versions"
+            exit 1
+          fi
+          sed -i '' -E "s|(swift-syntax\.git\", )\"$floor\"\.\.<\"[0-9.]+\"|\1exact: \"$floor\"|" Package@swift-6.1.swift
+          grep -F "swift-syntax.git\", exact: \"$floor\"" Package@swift-6.1.swift
+          swift test --enable-all-traits --filter 'CucumberSwiftMacrosTests|CucumberSwiftMacroConverterTests'
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
   # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
