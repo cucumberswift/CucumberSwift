@@ -449,6 +449,26 @@ class AsyncStepTests: XCTestCase {
         XCTAssert(error is StepError)
     }
 
+    func testAFailureRecordedWhileTheBodyRunsCancelsIt() {
+        var failed = false
+        var sawCancellation = false
+        let started = Date()
+        let outcome = AsyncStepRunner.wait(timeout: 30, cancelOnFailure: true, hasFailed: { failed }, body: {
+            await Task.yield()
+            failed = true
+            do {
+                try await Task.sleep(nanoseconds: 20_000_000_000)
+            } catch {
+                sawCancellation = error is CancellationError
+                throw error
+            }
+        })
+
+        XCTAssert(sawCancellation)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 5)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
+    }
+
     func testAFailureDoesNotCancelTheBodyWhenTestingContinuesAfterFailure() {
         var completed = false
         let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: false, hasFailed: { true }, body: {
