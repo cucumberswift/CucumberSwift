@@ -158,6 +158,16 @@ CI resolves and builds the Swift package setup above, swift-syntax included, fro
 
 The **Convert to Gherkin Macros** command rewrites step definitions written as ``Given`` and the like as macros, wherever a macro expands to the same step definition. <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> says how to run it, what it converts and what it leaves.
 
+You can convert everything at once, or a target, a folder or a single file, and report first with `--dry-run`:
+
+```
+swift package convert-to-gherkin-macros --dry-run
+swift package convert-to-gherkin-macros --path Tests/MyAppTests/Checkout
+swift package convert-to-gherkin-macros --path Tests/MyAppTests/CartSteps.swift
+```
+
+In a large project, convert gradually, one folder at a time, so each change is small enough to review and you can run your tests after each one. <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything> has every scope, and what Xcode can and can't do.
+
 ## Write a step definition
 
 Each macro takes the pattern, a string literal or a regex literal (see <doc:Checking-Step-Definitions#Regex-literals>), and a closure. The closure takes one argument for each parameter of a Cucumber expression, or each capture group of a regular expression, in the order they appear. Give each argument its type:
