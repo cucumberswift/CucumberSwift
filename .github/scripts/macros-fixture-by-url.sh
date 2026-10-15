@@ -26,7 +26,7 @@ url_dependency=".package(url: \"file://$repo\", from: \"$version\", traits: [\"M
 
 # The range of swift-syntax versions the macros accept, as the article shows it.
 range=$(sed -nE 's|.*swift-syntax\.git", ("[0-9.]+"\.\.<"[0-9.]+")\).*|\1|p' Package@swift-6.1.swift)
-if [ -z "$range" ]; then
+if [[ -z "$range" ]]; then
   echo "::error file=Package@swift-6.1.swift::Can't find the range of swift-syntax versions" >&2
   exit 1
 fi
@@ -39,7 +39,8 @@ git -C "$repo" tag "$version" "$(git rev-parse HEAD)"
 
 # Replaces <old> with <new> in the manifest, and fails if <old> isn't there exactly once.
 replace_in_manifest() {
-  python3 - "$manifest" "$1" "$2" <<'EOF'
+  local old=$1 new=$2
+  python3 - "$manifest" "$old" "$new" <<'EOF'
 import pathlib
 import sys
 
