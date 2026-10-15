@@ -12,12 +12,7 @@ let package = Package(
     dependencies: [
         // Keep `name:`. Without it, SwiftPM names a path dependency after its folder, which is not
         // "CucumberSwift" in a worktree or a renamed clone.
-        .package(name: "CucumberSwift", path: "../..", traits: ["Macros"]),
-        // As the article shows: before Swift 6.4, SwiftPM needs it to resolve the Macros trait when CucumberSwift
-        // comes from a URL, as it does in CI's Fixture tests. No target uses it. A version, not the article's
-        // range: this package has no committed Package.resolved, and SonarCloud asks for a locked version.
-        // Keep it within the range CucumberSwift accepts.
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "604.0.0")
+        .package(name: "CucumberSwift", path: "../..", traits: ["Macros"])
     ],
     targets: [
         .testTarget(
