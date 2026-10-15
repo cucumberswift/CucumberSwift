@@ -65,8 +65,8 @@ enum AsyncStepRunner {
     /// How often a failure is looked for while the body runs.
     private static let failureCheckInterval: TimeInterval = 0.05
 
-    /// How long each wait for a cancelled body to finish lasts, before the next.
-    private static let cancelledBodyWait: TimeInterval = 60
+    /// How long the run loop turns at a time while a cancelled body finishes.
+    private static let cancelledBodyPollInterval: TimeInterval = 0.05
 
     /// Whether a hook runs with no test running, as `AfterFeature` does at the end of a parallel worker.
     /// XCTest drops a failure recorded then, so a thrown error is printed instead.
@@ -182,11 +182,15 @@ enum AsyncStepRunner {
 
         if !state.done {
             task.cancel()
+            // The body is still waited for, but not with an `XCTWaiter`: one that timed out would interrupt
+            // an XCUI wait the cancelled body is making, however long that wait lasts. Turning the run loop
+            // lets the body go on, and nothing around it can time out. The timer keeps the run loop from
+            // returning at once when nothing else is scheduled.
+            let keepTurning = Timer(timeInterval: cancelledBodyPollInterval, repeats: true) { _ in }
+            RunLoop.current.add(keepTurning, forMode: .default)
+            defer { keepTurning.invalidate() }
             while !state.done {
-                // An expectation can be waited on only once, so each wait gets its own.
-                let cancelled = XCTestExpectation(description: "cancelled async step finished")
-                state.waitEnded = cancelled
-                _ = XCTWaiter().wait(for: [cancelled], timeout: cancelledBodyWait)
+                RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: cancelledBodyPollInterval))
             }
         }
 

@@ -558,6 +558,23 @@ class AsyncStepTests: XCTestCase {
         }
     }
 
+    /// After the timeout the body is cancelled and still waited for. A wait it makes then, which XCUI does
+    /// for as long as the app takes, must not be cut short by anything the runner waits on.
+    func testAWaitMadeByACancelledBodyIsNotInterrupted() {
+        var result: XCTWaiter.Result?
+        let outcome = AsyncStepRunner.wait(timeout: 0.1, cancelOnFailure: true, hasFailed: { false }, body: {
+            do {
+                try await Task.sleep(nanoseconds: 10_000_000_000)
+            } catch {
+                result = waitInsideTheBody(for: 0.6)
+                throw error
+            }
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
+        guard case .timedOut = outcome else { return XCTFail("Expected .timedOut, got \(outcome)") }
+    }
+
     func testRunThrowsATimeoutErrorAfterTheConfiguredTimeout() {
         Cucumber.overrideAsyncStepTimeout = 0.2
         XCTAssertEqual(AsyncStepRunner.timeout, 0.2)
