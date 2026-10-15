@@ -242,7 +242,7 @@ To read the step itself, for example its data table or doc string, add a last ar
 }
 ```
 
-A closure can be `async` and `throws`, and can have a capture list, exactly as with ``Given``. Async steps run as they do without the macros: see <doc:Matching-Steps#Async-steps>.
+A closure can be `async` and `throws`, and can have a capture list, exactly as with ``Given``. Async steps run as they do without the macros, and from 6.6.0 they can call XCUI in a UI test target: see <doc:Matching-Steps#Async-steps>, whose **UI tests** item says how they behave.
 
 <!-- swift-example: steps -->
 ```swift
