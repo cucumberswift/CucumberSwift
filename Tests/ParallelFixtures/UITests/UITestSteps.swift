@@ -134,19 +134,19 @@ extension Cucumber: StepImplementation {
                 UITestApp.empty()
             }
         }
-        When("I add {int} items") { match, _ in
+        // Async steps that query and tap elements (#424). They run on the main actor, and each suspends
+        // before and between its XCUI calls, as a step that awaits other work would.
+        When("I add {int} items") { match, _ async throws in
             let count = try match.first(\.int)
-            MainActor.assumeIsolated {
-                for _ in 0..<count {
-                    UITestApp.add()
-                }
+            for _ in 0..<count {
+                await Task.yield()
+                UITestApp.add()
             }
         }
-        Then("the cart holds {int} items") { match, _ in
+        Then("the cart holds {int} items") { match, _ async throws in
             let count = try match.first(\.int)
-            MainActor.assumeIsolated {
-                UITestApp.waitForItems(count, "The cart does not hold \(count) items")
-            }
+            await Task.yield()
+            UITestApp.waitForItems(count, "The cart does not hold \(count) items")
         }
         // Long enough that Xcode hands the scenarios to more than one worker.
         Then("the scenario takes a moment") { _, _ in
