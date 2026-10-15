@@ -42,7 +42,7 @@ struct ConvertToGherkinMacrosPlugin: CommandPlugin {
         let targets = names.isEmpty && !chosen.isEmpty
             ? context.package.targets.filter { target in
                 guard let module = target as? SourceModuleTarget else { return false }
-                return chosenURLs.contains { overlap($0, module.directoryURL) }
+                return overlaps(chosenURLs, [module.directoryURL])
             }
             : converted
         let missing = targets.compactMap { target -> String? in
@@ -79,7 +79,7 @@ extension ConvertToGherkinMacrosPlugin: XcodeCommandPlugin {
         let converted = context.xcodeProject.targets.filter { names.isEmpty && chosen.isEmpty || names.contains($0.displayName) }
         let targets = names.isEmpty && !chosen.isEmpty
             ? context.xcodeProject.targets.filter { target in
-                target.inputFiles.contains { file in chosenURLs.contains { overlap($0, file.url) } }
+                overlaps(chosenURLs, target.inputFiles.map(\.url))
             }
             : converted
         let missing = targets.compactMap { target -> String? in
@@ -110,6 +110,11 @@ private func missingMacrosProduct(forDependencies products: [String]) -> String?
 /// `path` as the tool reads it: relative to the package or project folder, with `..` and links resolved.
 private func resolve(_ path: String, in root: URL) -> URL {
     URL(fileURLWithPath: path, relativeTo: root).standardizedFileURL.resolvingSymlinksInPath()
+}
+
+/// Whether any chosen location overlaps any of a target's locations: see `overlap`.
+private func overlaps(_ chosen: [URL], _ locations: [URL]) -> Bool {
+    chosen.contains { path in locations.contains { overlap(path, $0) } }
 }
 
 /// Whether one location is, or is inside, the other: a chosen folder holds a target's files, and a chosen file
