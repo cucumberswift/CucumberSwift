@@ -79,8 +79,6 @@ MACROS_GUIDE = "Using-Step-Definition-Macros.md"
 
 # Every block marked as a fragment: (article, reason), as the marker gives the reason.
 FRAGMENTS = [
-    ("Checking-Step-Definitions.md",
-     "a Tuist Project.swift, which needs Tuist; Fixtures/SwiftTestingAndXCTestMacrosTuist builds one"),
     (MACROS_GUIDE,
      "a Tuist Project.swift, which needs Tuist; Fixtures/StepDefinitionMacrosTuist builds one"),
     (MACROS_GUIDE,

@@ -57,11 +57,11 @@ let package = Package(
 
 The plugin finds every `.feature` file in the target's folder. `CucumberSwiftTestingMacros` has the step definition macros, and imports `CucumberSwiftTesting`, the runner, too.
 
-The macros need the trait, which downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above: see <doc:Checking-Step-Definitions#Declare-swift-syntax-before-Swift-64>. To write step definitions without them, leave the trait off and depend on `CucumberSwiftTesting` instead; see <doc:#Without-the-macros>.
+The macros need the trait, which downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above: see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>. To write step definitions without them, leave the trait off and depend on `CucumberSwiftTesting` instead; see <doc:#Without-the-macros>.
 
 ## Set up an Xcode project
 
-1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, add the swift-syntax package to the project as <doc:Checking-Step-Definitions#Declare-swift-syntax-before-Swift-64> describes, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, add a local package that only turns the trait on, as <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264> describes, and add `CucumberSwiftTestingMacros` from CucumberSwift as above; or add `CucumberSwiftTesting` and write step definitions without the macros.
+1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, add the swift-syntax package to the project as <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64> describes, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, add a local package that only turns the trait on, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, and add `CucumberSwiftTestingMacros` from CucumberSwift as above; or add `CucumberSwiftTesting` and write step definitions without the macros.
 2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` and `CucumberSwiftLint` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugins the first time they run; on a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild` instead.
 3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin only sees files that belong to the target.
 
@@ -90,7 +90,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 <doc:Using-Step-Definition-Macros> describes the macros in full, with the argument each parameter gives, and <doc:Checking-Step-Definitions> the mistakes the compiler reports and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which are only in `CucumberSwiftMacros`, not in `CucumberSwiftTestingMacros`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. It can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Checking-Step-Definitions#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. It can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
 `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
 
