@@ -98,6 +98,30 @@ lint:
     - linters: [swiftlint-pinned]
       level: high
 
+  ignore:
+    # The Swift files .swiftlint.yml excludes. With --force-exclude, SwiftLint excludes a file named on
+    # its command line too, and exits 1 with "No lintable files found" when none of the files it was
+    # given are lintable, so a commit whose only Swift files are these would fail the hook. Keep this
+    # list the same as .swiftlint.yml's `excluded`: a file listed there but not here fails the hook the
+    # same way when it is the only Swift file in a commit.
+    - linters: [swiftlint-pinned]
+      paths:
+        - Package.swift
+        - Tests/*/Package.swift
+        - Fixtures/*/Package.swift
+        - Fixtures/*/*/Package.swift
+        - Fixtures/*/Project.swift
+        - Fixtures/*/Tuist.swift
+        - Tests/ParallelFixtures/Project.swift
+        - Plugins/CucumberSwiftTestingPlugin/ExpandFolders.swift
+        - Sources/CucumberSwift/CucumberSwift.docc/**
+        - Sources/CucumberSwift/Generated/**
+        - Sources/CucumberSwiftLintTool/LocalizedStepDefinitionNames.swift
+        - Sources/CucumberSwiftMacroConverterTool/LocalizedStepDefinitionNames.swift
+        - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
+        - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
+        - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
+
 actions:
   # Built in and on by default: they log in, upgrade the CLI or suggest sharing. Only
   # trunk-cache-prune, which tidies Trunk's local cache, stays on.
