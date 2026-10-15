@@ -79,6 +79,12 @@ OUTPUT = pathlib.Path(".build/documentation-examples")
 FRAGMENTS = [
     ("Checking-Step-Definitions.md",
      "a Tuist Project.swift, which needs Tuist; Fixtures/SwiftTestingAndXCTestMacrosTuist builds one"),
+    ("Using-Step-Definition-Macros.md",
+     "a Tuist Project.swift, which needs Tuist; Fixtures/StepDefinitionMacrosTuist builds one"),
+    ("Using-Step-Definition-Macros.md",
+     "a Tuist Project.swift, which needs Tuist; Fixtures/SwiftTestingAndXCTestMacrosTuist builds one"),
+    ("Using-Step-Definition-Macros.md",
+     "a Tuist Project.swift, which needs Tuist; it shows a package moved out of Tuist/Package.swift"),
     ("CucumberSwift+UIUTest.md",
      "needs the UIUTest package and your app, and UIKit, which a macOS build doesn't have"),
     ("Hooks.md",
