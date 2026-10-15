@@ -108,6 +108,10 @@ extension Cucumber: StepImplementation {
         return Bundle(for: TestDiscovery.self)
     }
 
+    // Longer than the longest step: "I add 5 items" waits up to 30 seconds for the app to count each item. With
+    // the default 60 seconds, an app that doesn't respond fails as a timeout rather than as what it didn't show.
+    public var asyncStepTimeout: TimeInterval { 300 }
+
     public func setupSteps() {
         ParallelFixtureSupport.setUp()
 

@@ -504,6 +504,40 @@ class AsyncStepTests: XCTestCase {
         guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
     }
 
+    /// Bodies that finish, throw, fail or run long in every order against the timeout and the failure
+    /// check: the wait must always end promptly, with the body finished, never at its own 30 s timeout
+    /// because a fulfilment was lost.
+    func testTheWaitEndsPromptlyWhateverOrderTheBodyFinishesFailsAndTimesOut() {
+        var seed: UInt64 = 424
+        func next(_ range: Int) -> Int {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Int((seed >> 33) % UInt64(range))
+        }
+        for round in 0..<150 {
+            var bodyFinished = false
+            let bodyMilliseconds = next(40)
+            let failsAfterChecks = next(4) == 0 ? -1 : next(6)
+            var checks = 0
+            let started = Date()
+            let outcome = AsyncStepRunner.wait(
+                timeout: next(3) == 0 ? 0.02 : 30,
+                cancelOnFailure: next(2) == 0,
+                hasFailed: {
+                    checks += 1
+                    return failsAfterChecks >= 0 && checks > failsAfterChecks
+                },
+                body: {
+                    defer { bodyFinished = true }
+                    if next(2) == 0 { await Task.yield() }
+                    try await Task.sleep(nanoseconds: UInt64(bodyMilliseconds) * 1_000_000)
+                    if bodyMilliseconds % 7 == 0 { throw StepError() }
+                })
+
+            XCTAssert(bodyFinished, "round \(round): the wait returned while the body was still running: \(outcome)")
+            XCTAssertLessThan(Date().timeIntervalSince(started), 5, "round \(round): the wait did not end promptly")
+        }
+    }
+
     func testRunThrowsATimeoutErrorAfterTheConfiguredTimeout() {
         Cucumber.overrideAsyncStepTimeout = 0.2
         XCTAssertEqual(AsyncStepRunner.timeout, 0.2)
