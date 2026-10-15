@@ -89,6 +89,8 @@ FRAGMENTS = [
      "needs the UIUTest package and your app, and UIKit, which a macOS build doesn't have"),
     ("Hooks.md",
      "uses UIKit, which a macOS build doesn't have"),
+    ("Matching-Steps.md",
+     "taps with XCUIElement.tap(), which a macOS build doesn't have"),
 ]
 
 KINDS = ("file", "steps", "members", "manifest", "package-target", "target-arguments", "fragment")
