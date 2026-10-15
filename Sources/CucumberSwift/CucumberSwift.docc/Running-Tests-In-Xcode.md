@@ -24,16 +24,19 @@ Xcode turns parallel testing on for new test targets, and by default CucumberSwi
 
 ### Choose the plugins
 
-CucumberSwift comes with four Swift package plugins. The two commands are on the project's menu as soon as the package is added. The two build tool plugins run on a target only once you add them to it, because Xcode doesn't let a package apply a plugin to your targets.
+CucumberSwift comes with four Swift package plugins of two kinds: two run by themselves, and you run the other two.
 
-| Plugin | What it does | What you do | Needs |
-|---|---|---|---|
-| `CucumberSwiftLint` | Checks feature files and step definitions while you build | Add it to each test target with feature files (recommended) | Xcode 16.0 |
-| **Fix Feature Files** | Fixes misspelt keywords in feature files | Nothing: it's on the project's menu | Xcode 16.0 |
-| **Convert to Gherkin Macros** | Rewrites step definitions as step definition macros | Nothing: it's on the project's menu | Xcode 16.3 and the `Macros` trait |
-| `CucumberSwiftTestingPlugin` | Generates Swift Testing tests from feature files | Add it to a target that runs feature files with Swift Testing | Xcode 16.3 |
+- **Build tool plugins run by themselves.** `CucumberSwiftLint` and `CucumberSwiftTestingPlugin` run on every build of a target you add them to. You add each one to a target yourself, because Xcode doesn't let a package apply a plugin to your targets.
+- **Command plugins run only when you choose them.** Fix Feature Files and Convert to Gherkin Macros are commands on the project's menu as soon as the package is added, and they never run on a build.
 
-Xcode 16.0 to 16.2 read a manifest without the last two, so they don't appear there.
+| Plugin | Kind: when it runs | What it does | What you do | Needs |
+|---|---|---|---|---|
+| `CucumberSwiftLint` | Build tool plugin: on every build of a target you add it to | Checks feature files and step definitions | Add it to each test target with feature files (recommended) | Xcode 16.0 |
+| `CucumberSwiftTestingPlugin` | Build tool plugin: on every build of a target you add it to | Generates Swift Testing tests from feature files | Add it to a target that runs feature files with Swift Testing | Xcode 16.3 |
+| Command: Fix Feature Files | Command plugin: only when you choose it | Fixes misspelt keywords in feature files | Choose it on the project's menu when you want it | Xcode 16.0 |
+| Command: Convert to Gherkin Macros | Command plugin: only when you choose it | Rewrites step definitions as step definition macros | Choose it on the project's menu when you want it | Xcode 16.3 and the `Macros` trait |
+
+Xcode 16.0 to 16.2 read a manifest without `CucumberSwiftTestingPlugin` and Convert to Gherkin Macros, so they don't appear there.
 
 <doc:Checking-Feature-Files> explains how to add `CucumberSwiftLint` to a test target, what it checks, and how to fix what it finds with **Fix Feature Files**.
 
@@ -56,6 +59,8 @@ A command plugin asks instead for permission to change files in your project eac
 ### Highlight feature files
 
 Xcode shows `.feature` files as plain text. CucumberSwift comes with a Gherkin grammar for Xcode that colors keywords, tags, comments, strings, doc strings, `<placeholders>`, table separators and numbers. Only English keywords are colored. It also comes with code snippets for a feature, a scenario and a scenario outline. You install both with a script you run once. They are not part of the library, and the script changes nothing in Xcode itself: it copies files into your home folder.
+
+![A feature file in Xcode with Gherkin highlighting: the tags, comment, and keywords such as Feature, Background, Scenario Outline, Given, When, Then and Examples are colored, as are the <placeholders>, the string, the table separators and the numbers.](HighlightFeatureFiles.png)
 
 It relies on how Xcode loads grammars and plug-ins, which Apple doesn't document, so a future version of Xcode could stop highlighting your feature files. Your tests are not affected either way.
 
