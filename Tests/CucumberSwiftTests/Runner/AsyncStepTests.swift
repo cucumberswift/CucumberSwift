@@ -33,6 +33,15 @@ private func startAStepSynchronously() -> Result<Void, Error> {
     Result { try AsyncStepRunner.run(stepThatNeverRuns) }
 }
 
+/// What XCUI does inside an async step: a synchronous wait of its own, which XCTest interrupts when a
+/// wait around it times out first (#424).
+@MainActor
+private func waitInsideTheBody(for duration: TimeInterval) -> XCTWaiter.Result {
+    let fulfilled = XCTestExpectation(description: "fulfilled from another queue")
+    DispatchQueue.global().asyncAfter(deadline: .now() + duration) { fulfilled.fulfill() }
+    return XCTWaiter().wait(for: [fulfilled], timeout: 5)
+}
+
 class AsyncStepTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -462,6 +471,37 @@ class AsyncStepTests: XCTestCase {
         XCTAssert(finished)
         XCTAssertLessThan(Date().timeIntervalSince(start), 5)
         guard case .timedOut = outcome else { return XCTFail("Expected .timedOut, got \(outcome)") }
+    }
+
+    /// The body first awaits other work, as a step does before it taps, and resumes from a timer.
+    func testAWaitInsideAnAsyncBodyIsNotInterrupted() {
+        var result: XCTWaiter.Result?
+        let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: false, hasFailed: { false }, body: {
+            try await Task.sleep(nanoseconds: 120_000_000)
+            result = waitInsideTheBody(for: 0.3)
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
+    }
+
+    func testAFailureLetsAWaitInsideTheBodyFinishBeforeCancellingIt() {
+        var result: XCTWaiter.Result?
+        var cancelledAfterTheWait = false
+        let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: true, hasFailed: { true }, body: {
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            result = waitInsideTheBody(for: 0.3)
+            do {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+            } catch {
+                cancelledAfterTheWait = error is CancellationError
+                throw error
+            }
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
+        XCTAssert(cancelledAfterTheWait)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
     }
 
     func testRunThrowsATimeoutErrorAfterTheConfiguredTimeout() {

@@ -13,6 +13,11 @@ import XCTest
 /// Steps never run in parallel: the body starts on the main actor and the test method blocks until it
 /// has finished, so the next step cannot start before this one ends. `XCTWaiter` keeps the main run
 /// loop turning while it blocks, so main-actor work inside the body goes ahead.
+///
+/// The body runs inside that one wait, which ends only when the body does, when it runs past the
+/// timeout, or when a failure cancels it. XCTest interrupts a wait nested inside another only when the
+/// outer one times out, so the waits XCUI makes inside the body, such as an element query or a tap,
+/// finish as they would in a synchronous step (#424).
 enum AsyncStepRunner {
     typealias Body = @MainActor () async throws -> Void
 
@@ -35,12 +40,19 @@ enum AsyncStepRunner {
         }
     }
 
-    /// Only touched on the main thread: by the task, which runs on the main actor, and by `wait`, which
-    /// runs there too and lets the body in only while `XCTWaiter` turns the run loop.
+    /// Only touched on the main thread: by the task, which runs on the main actor, by the failure check,
+    /// a timer on the main run loop, and by `wait`, which runs there too and lets the body in only while
+    /// `XCTWaiter` turns the run loop.
     private final class State {
         var error: Error?
         var done = false
-        var poll: XCTestExpectation?
+        /// What the current wait waits for. Fulfilled once, by whichever ends that wait first.
+        var waitEnded: XCTestExpectation?
+
+        func endWait() {
+            waitEnded?.fulfill()
+            waitEnded = nil
+        }
     }
 
     /// How long an async step or hook may take when `StepImplementation` does not set `asyncStepTimeout`.
@@ -50,7 +62,11 @@ enum AsyncStepRunner {
         (Cucumber.shared as? StepImplementation)?.asyncStepTimeout ?? defaultTimeout
     }
 
-    private static let pollInterval: TimeInterval = 0.05
+    /// How often a failure is looked for while the body runs.
+    private static let failureCheckInterval: TimeInterval = 0.05
+
+    /// How long each wait for a cancelled body to finish lasts, before the next.
+    private static let cancelledBodyWait: TimeInterval = 60
 
     /// Whether a hook runs with no test running, as `AfterFeature` does at the end of a parallel worker.
     /// XCTest drops a failure recorded then, so a thrown error is printed instead.
@@ -125,13 +141,15 @@ enum AsyncStepRunner {
     /// for after that: a body that ignores cancellation holds up the run rather than overlap the next step.
     static func wait(timeout: TimeInterval,
                      cancelOnFailure: Bool,
-                     hasFailed: () -> Bool,
+                     hasFailed: @escaping () -> Bool,
                      body: @escaping Body) -> Outcome {
         let state = State()
+        let finished = XCTestExpectation(description: "async step finished")
+        state.waitEnded = finished
         let task = Task { @MainActor in
             defer {
                 state.done = true
-                state.poll?.fulfill()
+                state.endWait()
             }
             do {
                 try await body()
@@ -140,21 +158,35 @@ enum AsyncStepRunner {
             }
         }
 
-        let deadline = Date().addingTimeInterval(timeout)
-        var timedOut = false
+        // One wait for the whole body, rather than a loop of short ones: a short wait that times out
+        // would interrupt any wait the body makes, such as XCUI's (#424). A failure ends it early instead,
+        // from a timer that the run loop fires while the body runs, so the body can be cancelled.
         var cancelledOnFailure = false
-        while !state.done {
-            // An expectation can be waited on only once, so each short wait gets its own.
-            let poll = XCTestExpectation(description: "async step finished")
-            state.poll = poll
-            _ = XCTWaiter().wait(for: [poll], timeout: pollInterval)
-            guard !state.done, !task.isCancelled else { continue }
-            if Date() >= deadline {
-                timedOut = true
-                task.cancel()
-            } else if cancelOnFailure && hasFailed() {
+        let failureCheck = Timer(timeInterval: failureCheckInterval, repeats: true) { timer in
+            guard !state.done, hasFailed() else { return }
+            timer.invalidate()
+            cancelledOnFailure = true
+            state.endWait()
+        }
+        if cancelOnFailure {
+            RunLoop.main.add(failureCheck, forMode: .common)
+            // A failure recorded before the wait began cancels the body at once, not at the first check.
+            if hasFailed() {
+                failureCheck.invalidate()
                 cancelledOnFailure = true
-                task.cancel()
+                state.endWait()
+            }
+        }
+        let timedOut = XCTWaiter().wait(for: [finished], timeout: timeout) == .timedOut && !state.done
+        failureCheck.invalidate()
+
+        if !state.done {
+            task.cancel()
+            while !state.done {
+                // An expectation can be waited on only once, so each wait gets its own.
+                let cancelled = XCTestExpectation(description: "cancelled async step finished")
+                state.waitEnded = cancelled
+                _ = XCTWaiter().wait(for: [cancelled], timeout: cancelledBodyWait)
             }
         }
 
