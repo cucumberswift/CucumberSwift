@@ -27,7 +27,7 @@ git clone --quiet --bare . "$repo"
 git -C "$repo" tag "$version" "$(git rev-parse HEAD)"
 
 if ! grep -qF "$path_dependency" "$manifest"; then
-  echo "::error file=$manifest::Can't find the CucumberSwift dependency to replace: $path_dependency"
+  echo "::error file=$manifest::Can't find the CucumberSwift dependency to replace: $path_dependency" >&2
   exit 1
 fi
 sed -i '' "s|$(printf '%s' "$path_dependency" | sed 's/[][\.*^$|]/\\&/g')|$url_dependency|" "$manifest"
