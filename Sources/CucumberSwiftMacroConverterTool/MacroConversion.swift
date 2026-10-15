@@ -6,7 +6,9 @@
 #if Macros
 import Foundation
 
-/// Converts the Swift files in the folders and files it is given, and reports what it did.
+/// Converts the Swift files in the folders and files it is given, and reports what it did. `--path` is the
+/// files and folders the user chose, inside the project at `--root`: with folders and files given as well (a
+/// target's), only the chosen ones that belong to them are converted.
 public enum MacroConversion {
     /// What a run did, file by file.
     private struct Tally {
@@ -32,18 +34,107 @@ public enum MacroConversion {
             return 0
         }
         let options = ConversionOptions(arguments)
+        // An option with no value would otherwise widen the run: say so, and change nothing.
+        guard options.problems.isEmpty else {
+            options.problems.forEach(output)
+            return 1
+        }
         // A project that isn't set up for the macros: change nothing, and say how to set it up.
         if !options.missingMacrosProducts.isEmpty {
             output(SetupAdvice.missingProductsMessage(options.missingMacrosProducts, root: options.root))
             return Self.setupStatus
         }
         var tally = Tally()
-        let files = swiftFiles(in: options.paths, tally: &tally, output: output, fileManager: fileManager)
+        // Each `--path` is checked before any file changes, so a typo can't leave a half-converted project.
+        guard let chosen = resolve(chosenPaths: options.chosenPaths, root: options.root, output: output, fileManager: fileManager) else {
+            return 1
+        }
+        let given = swiftFiles(in: options.paths, tally: &tally, output: output, fileManager: fileManager)
+        let files: [String]
+        if chosen.isEmpty {
+            files = given
+        } else if options.paths.isEmpty {
+            // A chosen folder with no Swift files has nothing to convert: that is a mistake, not a success.
+            guard let within = swiftFilesOfEach(chosen, choices: options.chosenPaths, output: output, fileManager: fileManager) else {
+                return 1
+            }
+            files = within
+        } else {
+            // Targets and paths together: the files under the paths that belong to the targets.
+            guard let within = filesUnder(chosen, among: given, choices: options.chosenPaths, output: output) else { return 1 }
+            files = within
+        }
         for file in files {
             convert(file: file, dryRun: options.dryRun, tally: &tally, output: output)
         }
         output(summary(of: tally, fileCount: files.count, dryRun: options.dryRun))
         return tally.failed ? 1 : 0
+    }
+
+    /// The Swift files in each of `paths`, once each, or `nil` after saying which path has none.
+    private static func swiftFilesOfEach(_ paths: [String],
+                                         choices: [String],
+                                         output: (String) -> Void,
+                                         fileManager: FileManager) -> [String]? {
+        var found = [String]()
+        var valid = true
+        for (index, path) in paths.enumerated() {
+            var isDirectory: ObjCBool = false
+            _ = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+            let inside = isDirectory.boolValue ? swiftFiles(in: path, fileManager: fileManager) : [path]
+            if inside.isEmpty {
+                output("\(choices[index]): has no Swift files")
+                valid = false
+            }
+            found += inside
+        }
+        return valid ? Array(Set(found)).sorted() : nil
+    }
+
+    /// The `files` that are one of `paths` or under one, or `nil` after saying which path has none of them: it
+    /// names nothing in the targets chosen, and the run changes nothing.
+    private static func filesUnder(_ paths: [String],
+                                   among files: [String],
+                                   choices: [String],
+                                   output: (String) -> Void) -> [String]? {
+        func resolved(_ file: String) -> String { URL(fileURLWithPath: file).resolvingSymlinksInPath().path }
+        let known = files.map { (file: $0, resolved: resolved($0)) }
+        var valid = true
+        for (index, path) in paths.enumerated()
+        where !known.contains(where: { $0.resolved == path || $0.resolved.hasPrefix(path + "/") }) {
+            output("\(choices[index]): has no Swift files in the targets chosen")
+            valid = false
+        }
+        guard valid else { return nil }
+        return known.filter { entry in paths.contains { entry.resolved == $0 || entry.resolved.hasPrefix($0 + "/") } }.map(\.file)
+    }
+
+    /// The absolute paths of what `--path` named, or `nil` after saying which of them is wrong: a path that
+    /// isn't there, isn't a folder or a Swift file, or is outside `root`, the package or project.
+    private static func resolve(chosenPaths: [String],
+                                root: String?,
+                                output: (String) -> Void,
+                                fileManager: FileManager) -> [String]? {
+        let base = URL(fileURLWithPath: root ?? fileManager.currentDirectoryPath).resolvingSymlinksInPath()
+        var resolved = [String]()
+        var valid = true
+        for path in chosenPaths {
+            let url = URL(fileURLWithPath: path, relativeTo: base).standardizedFileURL.resolvingSymlinksInPath()
+            var isDirectory: ObjCBool = false
+            if root != nil, url.path != base.path, !url.path.hasPrefix(base.path + "/") {
+                output("\(path): is outside the package or project at \(base.path)")
+                valid = false
+            } else if !fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+                output("\(path): no such file or folder")
+                valid = false
+            } else if !isDirectory.boolValue, url.pathExtension != "swift" {
+                output("\(path): is not a Swift file or a folder")
+                valid = false
+            } else {
+                resolved.append(url.path)
+            }
+        }
+        return valid ? resolved : nil
     }
 
     /// The Swift files in the files and folders given, once each, in order. A path that isn't there fails the run.
