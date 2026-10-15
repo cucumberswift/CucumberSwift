@@ -62,7 +62,7 @@ A closure without `await` is an ordinary synchronous step definition, exactly as
 Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
 
 - **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. By default a failed assertion doesn't stop its step, and CucumberSwift doesn't cancel the step's task. With `continueTestingAfterFailure` turned off, which you do by returning `false` from your `StepImplementation` (see <doc:Settings#Continue-after-a-failed-assertion>), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
-- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. To change this, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
+- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. The timeout applies only to async steps and async hooks: a synchronous step or hook has none. To change it, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
 
   ```swift
   extension Cucumber: StepImplementation {
@@ -72,6 +72,18 @@ Steps still run one at a time, in the order the feature file declares them. The 
   ```
 
   Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
+- **UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous one can. Its closure runs on the main actor, as `XCUIApplication` needs:
+
+  <!-- swift-example: fragment: taps with XCUIElement.tap(), which a macOS build doesn't have -->
+  ```swift
+  When("I add an item") { _, _ in
+      try await cart.prepare()
+      app.buttons["add"].tap()
+      XCTAssert(app.staticTexts["Items: 1"].waitForExistence(timeout: 10))
+  }
+  ```
+
+  XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
 - **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
 - **Running another step.** From inside an async step, use `await ExecuteFirstStep(matching:)`. The synchronous `ExecuteFirstStep(matching:)` works from synchronous steps, including when the step it runs is async.
 

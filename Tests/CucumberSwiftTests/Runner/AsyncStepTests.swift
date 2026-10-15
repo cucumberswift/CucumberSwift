@@ -33,6 +33,15 @@ private func startAStepSynchronously() -> Result<Void, Error> {
     Result { try AsyncStepRunner.run(stepThatNeverRuns) }
 }
 
+/// What XCUI does inside an async step: a synchronous wait of its own, which XCTest interrupts when a
+/// wait around it times out first (#424).
+@MainActor
+private func waitInsideTheBody(for duration: TimeInterval) -> XCTWaiter.Result {
+    let fulfilled = XCTestExpectation(description: "fulfilled from another queue")
+    DispatchQueue.global().asyncAfter(deadline: .now() + duration) { fulfilled.fulfill() }
+    return XCTWaiter().wait(for: [fulfilled], timeout: 5)
+}
+
 class AsyncStepTests: XCTestCase {
     override func setUpWithError() throws {
         Cucumber.shared.reset()
@@ -440,6 +449,26 @@ class AsyncStepTests: XCTestCase {
         XCTAssert(error is StepError)
     }
 
+    func testAFailureRecordedWhileTheBodyRunsCancelsIt() {
+        var failed = false
+        var sawCancellation = false
+        let started = Date()
+        let outcome = AsyncStepRunner.wait(timeout: 30, cancelOnFailure: true, hasFailed: { failed }, body: {
+            await Task.yield()
+            failed = true
+            do {
+                try await Task.sleep(nanoseconds: 20_000_000_000)
+            } catch {
+                sawCancellation = error is CancellationError
+                throw error
+            }
+        })
+
+        XCTAssert(sawCancellation)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 5)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
+    }
+
     func testAFailureDoesNotCancelTheBodyWhenTestingContinuesAfterFailure() {
         var completed = false
         let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: false, hasFailed: { true }, body: {
@@ -461,6 +490,88 @@ class AsyncStepTests: XCTestCase {
 
         XCTAssert(finished)
         XCTAssertLessThan(Date().timeIntervalSince(start), 5)
+        guard case .timedOut = outcome else { return XCTFail("Expected .timedOut, got \(outcome)") }
+    }
+
+    /// The body first awaits other work, as a step does before it taps, and resumes from a timer.
+    func testAWaitInsideAnAsyncBodyIsNotInterrupted() {
+        var result: XCTWaiter.Result?
+        let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: false, hasFailed: { false }, body: {
+            try await Task.sleep(nanoseconds: 120_000_000)
+            result = waitInsideTheBody(for: 0.3)
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
+    }
+
+    func testAFailureLetsAWaitInsideTheBodyFinishBeforeCancellingIt() {
+        var result: XCTWaiter.Result?
+        var cancelledAfterTheWait = false
+        let outcome = AsyncStepRunner.wait(timeout: 5, cancelOnFailure: true, hasFailed: { true }, body: {
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            result = waitInsideTheBody(for: 0.3)
+            do {
+                try await Task.sleep(nanoseconds: 5_000_000_000)
+            } catch {
+                cancelledAfterTheWait = error is CancellationError
+                throw error
+            }
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
+        XCTAssert(cancelledAfterTheWait)
+        guard case .finished = outcome else { return XCTFail("Expected .finished, got \(outcome)") }
+    }
+
+    /// Bodies that finish, throw, fail or run long in every order against the timeout and the failure
+    /// check: the wait must always end promptly, with the body finished, never at its own 30 s timeout
+    /// because a fulfilment was lost.
+    func testTheWaitEndsPromptlyWhateverOrderTheBodyFinishesFailsAndTimesOut() {
+        var seed: UInt64 = 424
+        func next(_ range: Int) -> Int {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Int((seed >> 33) % UInt64(range))
+        }
+        for round in 0..<150 {
+            var bodyFinished = false
+            let bodyMilliseconds = next(40)
+            let failsAfterChecks = next(4) == 0 ? -1 : next(6)
+            var checks = 0
+            let started = Date()
+            let outcome = AsyncStepRunner.wait(
+                timeout: next(3) == 0 ? 0.02 : 30,
+                cancelOnFailure: next(2) == 0,
+                hasFailed: {
+                    checks += 1
+                    return failsAfterChecks >= 0 && checks > failsAfterChecks
+                },
+                body: {
+                    defer { bodyFinished = true }
+                    if next(2) == 0 { await Task.yield() }
+                    try await Task.sleep(nanoseconds: UInt64(bodyMilliseconds) * 1_000_000)
+                    if bodyMilliseconds % 7 == 0 { throw StepError() }
+                })
+
+            XCTAssert(bodyFinished, "round \(round): the wait returned while the body was still running: \(outcome)")
+            XCTAssertLessThan(Date().timeIntervalSince(started), 5, "round \(round): the wait did not end promptly")
+        }
+    }
+
+    /// After the timeout the body is cancelled and still waited for. A wait it makes then, which XCUI does
+    /// for as long as the app takes, must not be cut short by anything the runner waits on.
+    func testAWaitMadeByACancelledBodyIsNotInterrupted() {
+        var result: XCTWaiter.Result?
+        let outcome = AsyncStepRunner.wait(timeout: 0.1, cancelOnFailure: true, hasFailed: { false }, body: {
+            do {
+                try await Task.sleep(nanoseconds: 10_000_000_000)
+            } catch {
+                result = waitInsideTheBody(for: 0.6)
+                throw error
+            }
+        })
+
+        XCTAssertEqual(result?.rawValue, XCTWaiter.Result.completed.rawValue)
         guard case .timedOut = outcome else { return XCTFail("Expected .timedOut, got \(outcome)") }
     }
 
