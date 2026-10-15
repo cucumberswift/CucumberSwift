@@ -135,4 +135,184 @@ final class MacroConversionTests: XCTestCase {
         XCTAssertTrue(run.output.hasSuffix("Would convert 2 step definitions in 1 of 2 Swift files. Left 0 unchanged.\n"), run.output)
     }
 }
+
+/// `--path`: one file, one folder or everything, alone or with the files of the targets.
+extension MacroConversionTests {
+    /// Three files in two folders, as a project's targets would hold them.
+    private struct Project {
+        let a: URL
+        let b: URL
+        let nested: URL
+    }
+
+    private func writeProject() throws -> Project {
+        Project(a: try write(convertible, to: "Sources/A/A.swift"),
+                b: try write(convertible, to: "Sources/B/B.swift"),
+                nested: try write(convertible, to: "Sources/B/More/Nested.swift"))
+    }
+
+    func testPathConvertsOnlyThatFile() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        let run = try ConverterTool.run(["--root", folder.path, "--path", "Sources/A/A.swift"])
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(try read(a), converted)
+        XCTAssertEqual(try read(b), convertible)
+        XCTAssertEqual(try read(nested), convertible)
+        XCTAssertTrue(run.output.hasSuffix("Converted 1 step definition in 1 of 1 Swift file. Left 0 unchanged.\n"), run.output)
+    }
+
+    func testPathConvertsOnlyTheFilesUnderThatFolder() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        let run = try ConverterTool.run(["--root", folder.path, "--path", "Sources/B"])
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(try read(a), convertible)
+        XCTAssertEqual(try read(b), converted)
+        XCTAssertEqual(try read(nested), converted)
+        XCTAssertTrue(run.output.hasSuffix("Converted 2 step definitions in 2 of 2 Swift files. Left 0 unchanged.\n"), run.output)
+    }
+
+    func testPathIsRepeatableAndTakesAbsolutePaths() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        let run = try ConverterTool.run(["--root", folder.path, "--path", a.path, "--path", "Sources/B/More"])
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(try read(a), converted)
+        XCTAssertEqual(try read(b), convertible)
+        XCTAssertEqual(try read(nested), converted)
+    }
+
+    func testWithoutPathItConvertsEveryFileItIsGiven() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        let run = try ConverterTool.run(["--root", folder.path, folder.path])
+        XCTAssertEqual(run.status, 0, run.output)
+        for url in [a, b, nested] {
+            XCTAssertEqual(try read(url), converted)
+        }
+        XCTAssertTrue(run.output.hasSuffix("Converted 3 step definitions in 3 of 3 Swift files. Left 0 unchanged.\n"), run.output)
+    }
+
+    func testDryRunWithPathReportsTheSameScopeAndChangesNothing() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        let dry = try ConverterTool.run(["--dry-run", "--root", folder.path, "--path", "Sources/B"])
+        XCTAssertEqual(dry.status, 0, dry.output)
+        for url in [a, b, nested] {
+            XCTAssertEqual(try read(url), convertible)
+        }
+        XCTAssertTrue(dry.output.hasSuffix("Would convert 2 step definitions in 2 of 2 Swift files. Left 0 unchanged.\n"), dry.output)
+        XCTAssertFalse(dry.output.contains("A.swift"), dry.output)
+        let real = try ConverterTool.run(["--root", folder.path, "--path", "Sources/B"])
+        XCTAssertEqual(real.output.replacingOccurrences(of: "Converted", with: "Would convert"), dry.output)
+    }
+
+    func testAPathOutsideTheProjectIsAnErrorThatNamesItAndChangesNothing() throws {
+        let project = try writeProject()
+        let a = project.a
+        let outside = FileManager.default.temporaryDirectory.appendingPathComponent("Outside-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        let elsewhere = outside.appendingPathComponent("Elsewhere.swift")
+        try convertible.write(to: elsewhere, atomically: true, encoding: .utf8)
+        let run = try ConverterTool.run([
+            "--root", folder.path, "--path", "Sources/A/A.swift",
+            "--path", elsewhere.path, "--path", "../Escaped"
+        ])
+        XCTAssertEqual(run.status, 1)
+        XCTAssertTrue(run.output.contains("\(elsewhere.path): is outside the package or project"), run.output)
+        XCTAssertTrue(run.output.contains("../Escaped: is outside the package or project"), run.output)
+        XCTAssertFalse(run.output.contains("Converted"), run.output)
+        XCTAssertEqual(try read(a), convertible)
+        XCTAssertEqual(try read(elsewhere), convertible)
+    }
+
+    func testAFolderNextToTheProjectWithTheSameNamePrefixIsOutside() throws {
+        let sibling = URL(fileURLWithPath: folder.path + "-Other")
+        try FileManager.default.createDirectory(at: sibling, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: sibling) }
+        let run = try ConverterTool.run(["--root", folder.path, "--path", sibling.path])
+        XCTAssertEqual(run.status, 1)
+        XCTAssertTrue(run.output.contains("\(sibling.path): is outside the package or project"), run.output)
+    }
+
+    func testAPathThatIsNotThereOrNotSwiftIsAnErrorThatNamesIt() throws {
+        let project = try writeProject()
+        let a = project.a
+        _ = try write("# Notes\n", to: "README.md")
+        let run = try ConverterTool.run([
+            "--root", folder.path, "--path", "Sources/Missing", "--path", "README.md",
+            "--path", "Sources/A/A.swift"
+        ])
+        XCTAssertEqual(run.status, 1)
+        XCTAssertTrue(run.output.contains("Sources/Missing: no such file or folder"), run.output)
+        XCTAssertTrue(run.output.contains("README.md: is not a Swift file or a folder"), run.output)
+        XCTAssertEqual(try read(a), convertible, "a bad path must stop the run before any file changes")
+    }
+
+    func testPathWithTargetsConvertsOnlyTheChosenFilesThatBelongToThem() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let nested = project.nested
+        // The way Xcode runs it: a target chosen in the dialog, and --path from its Arguments.
+        let run = try ConverterTool.run([
+            "--root", folder.path, "--path", "Sources", "--path", "Sources/B/More",
+            folder.appendingPathComponent("Sources/B").path
+        ])
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(try read(a), convertible, "A isn't in the target given, so a path that holds it doesn't convert it")
+        XCTAssertEqual(try read(b), converted)
+        XCTAssertEqual(try read(nested), converted)
+        XCTAssertTrue(run.output.hasSuffix("Converted 2 step definitions in 2 of 2 Swift files. Left 0 unchanged.\n"), run.output)
+    }
+
+    func testPathWithTargetsConvertsOneFileOfTheTarget() throws {
+        let project = try writeProject()
+        let b = project.b
+        let nested = project.nested
+        let run = try ConverterTool.run([
+            "--root", folder.path, "--path", "Sources/B/B.swift",
+            folder.appendingPathComponent("Sources/B").path
+        ])
+        XCTAssertEqual(run.status, 0, run.output)
+        XCTAssertEqual(try read(b), converted)
+        XCTAssertEqual(try read(nested), convertible)
+    }
+
+    func testAPathOutsideTheTargetsChosenIsAnErrorThatNamesItAndChangesNothing() throws {
+        let project = try writeProject()
+        let a = project.a
+        let b = project.b
+        let run = try ConverterTool.run([
+            "--root", folder.path, "--path", "Sources/B/B.swift", "--path", "Sources/A",
+            folder.appendingPathComponent("Sources/B").path
+        ])
+        XCTAssertEqual(run.status, 1)
+        XCTAssertTrue(run.output.contains("Sources/A: has no Swift files in the targets chosen"), run.output)
+        XCTAssertFalse(run.output.contains("Sources/B/B.swift: has no"), run.output)
+        XCTAssertEqual(try read(a), convertible)
+        XCTAssertEqual(try read(b), convertible, "the run must stop before it changes a file")
+    }
+
+    func testDryRunWithTargetsAndPathReportsTheSameScope() throws {
+        _ = try writeProject()
+        let arguments = ["--root", folder.path, "--path", "Sources/B/More", folder.appendingPathComponent("Sources/B").path]
+        let dry = try ConverterTool.run(["--dry-run"] + arguments)
+        let real = try ConverterTool.run(arguments)
+        XCTAssertTrue(dry.output.hasSuffix("Would convert 1 step definition in 1 of 1 Swift file. Left 0 unchanged.\n"), dry.output)
+        XCTAssertEqual(real.output.replacingOccurrences(of: "Converted", with: "Would convert"), dry.output)
+    }
+}
 #endif

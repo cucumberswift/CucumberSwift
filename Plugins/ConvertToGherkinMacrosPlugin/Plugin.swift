@@ -22,15 +22,29 @@ private final class Output: @unchecked Sendable {
 
 /// Rewrites the step definitions that a step definition macro can replace exactly, marks the ones it leaves
 /// with a `#warning`, and lists them all with the reason. `--dry-run` reports without changing a file.
+/// `--target` and `--path` (each repeatable) limit it: `--path` alone to those files and folders, `--target`
+/// alone to those targets, both to the files under the paths that belong to the targets (Xcode always passes
+/// the targets chosen in its dialog, so its Arguments field can only narrow them); with neither, every target.
 @main
 struct ConvertToGherkinMacrosPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) async throws {
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
+        let chosen = extractor.extractOption(named: "path")
         let dryRun = extractor.extractFlag(named: "dry-run") > 0
         let unknown = names.filter { name in !context.package.targets.contains { $0.name == name } }
         guard unknown.isEmpty else { throw ConvertError.unknownTargets(unknown) }
-        let targets = context.package.targets.filter { names.isEmpty || names.contains($0.name) }
+        let root = context.package.directoryURL
+        let chosenURLs = chosen.map { resolve($0, in: root) }
+        // The targets named, or every target when there is neither option: converted whole, or narrowed by `--path`.
+        let converted = context.package.targets.filter { names.isEmpty && chosen.isEmpty || names.contains($0.name) }
+        // With `--path` alone, the targets that own a chosen file or folder, which need the macros too.
+        let targets = names.isEmpty && !chosen.isEmpty
+            ? context.package.targets.filter { target in
+                guard let module = target as? SourceModuleTarget else { return false }
+                return chosenURLs.contains { overlap($0, module.directoryURL) }
+            }
+            : converted
         let missing = targets.compactMap { target -> String? in
             let products = target.dependencies.compactMap { dependency -> String? in
                 if case .product(let product) = dependency { return product.name }
@@ -39,8 +53,9 @@ struct ConvertToGherkinMacrosPlugin: CommandPlugin {
             return missingMacrosProduct(forDependencies: products).map { "\(target.name)=\($0)" }
         }
         try convert(tool: context.tool(named: "CucumberSwiftMacroConverterTool").url,
-                    root: context.package.directoryURL,
-                    paths: targets.compactMap { ($0 as? SourceModuleTarget)?.directoryURL },
+                    root: root,
+                    paths: converted.compactMap { ($0 as? SourceModuleTarget)?.directoryURL },
+                    chosen: chosen,
                     missing: missing,
                     dryRun: dryRun)
     }
@@ -50,14 +65,23 @@ struct ConvertToGherkinMacrosPlugin: CommandPlugin {
 import XcodeProjectPlugin
 
 extension ConvertToGherkinMacrosPlugin: XcodeCommandPlugin {
-    // Xcode passes `--target` for each target chosen when the command is run.
+    // Xcode passes `--target` for each target chosen in its dialog, and what is typed in its Arguments list, so
+    // `--path` there narrows the chosen targets.
     func performCommand(context: XcodePluginContext, arguments: [String]) throws {
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
+        let chosen = extractor.extractOption(named: "path")
         let dryRun = extractor.extractFlag(named: "dry-run") > 0
         let unknown = names.filter { name in !context.xcodeProject.targets.contains { $0.displayName == name } }
         guard unknown.isEmpty else { throw ConvertError.unknownTargets(unknown) }
-        let targets = context.xcodeProject.targets.filter { names.isEmpty || names.contains($0.displayName) }
+        let root = context.xcodeProject.directoryURL
+        let chosenURLs = chosen.map { resolve($0, in: root) }
+        let converted = context.xcodeProject.targets.filter { names.isEmpty && chosen.isEmpty || names.contains($0.displayName) }
+        let targets = names.isEmpty && !chosen.isEmpty
+            ? context.xcodeProject.targets.filter { target in
+                target.inputFiles.contains { file in chosenURLs.contains { overlap($0, file.url) } }
+            }
+            : converted
         let missing = targets.compactMap { target -> String? in
             let products = target.dependencies.compactMap { dependency -> String? in
                 if case .product(let product) = dependency { return product.name }
@@ -66,8 +90,9 @@ extension ConvertToGherkinMacrosPlugin: XcodeCommandPlugin {
             return missingMacrosProduct(forDependencies: products).map { "\(target.displayName)=\($0)" }
         }
         try convert(tool: context.tool(named: "CucumberSwiftMacroConverterTool").url,
-                    root: context.xcodeProject.directoryURL,
-                    paths: targets.flatMap { $0.inputFiles.map(\.url) },
+                    root: root,
+                    paths: converted.flatMap { $0.inputFiles.map(\.url) },
+                    chosen: chosen,
                     missing: missing,
                     dryRun: dryRun)
     }
@@ -82,9 +107,23 @@ private func missingMacrosProduct(forDependencies products: [String]) -> String?
     return nil
 }
 
-/// Swift files and folders, as the tool takes them: it finds the Swift files in each folder. The tool says
-/// first, and changes nothing, when the project isn't set up for the macros: its message is then the error.
-private func convert(tool: URL, root: URL, paths: [URL], missing: [String], dryRun: Bool) throws {
+/// `path` as the tool reads it: relative to the package or project folder, with `..` and links resolved.
+private func resolve(_ path: String, in root: URL) -> URL {
+    URL(fileURLWithPath: path, relativeTo: root).standardizedFileURL.resolvingSymlinksInPath()
+}
+
+/// Whether one location is, or is inside, the other: a chosen folder holds a target's files, and a chosen file
+/// is inside its target's folder.
+private func overlap(_ first: URL, _ second: URL) -> Bool {
+    let first = first.resolvingSymlinksInPath().path
+    let second = second.resolvingSymlinksInPath().path
+    return first == second || first.hasPrefix(second + "/") || second.hasPrefix(first + "/")
+}
+
+/// Swift files and folders, as the tool takes them: it finds the Swift files in each folder, and checks each
+/// `--path` is inside `root`, naming the ones that aren't. The tool says first, and changes nothing, when the
+/// project isn't set up for the macros: its message is then the error.
+private func convert(tool: URL, root: URL, paths: [URL], chosen: [String], missing: [String], dryRun: Bool) throws {
     let files = Set(paths.map(\.path)).sorted().filter { path in
         var isDirectory: ObjCBool = false
         return path.hasSuffix(".swift")
@@ -92,7 +131,8 @@ private func convert(tool: URL, root: URL, paths: [URL], missing: [String], dryR
     }
     let process = Process()
     process.executableURL = tool
-    process.arguments = ["--root", root.path] + missing.flatMap { ["--missing-macros", $0] } + (dryRun ? ["--dry-run"] : []) + files
+    process.arguments = ["--root", root.path] + missing.flatMap { ["--missing-macros", $0] }
+        + chosen.flatMap { ["--path", $0] } + (dryRun ? ["--dry-run"] : []) + files
     let standardOutput = Pipe()
     let standardError = Pipe()
     process.standardOutput = standardOutput

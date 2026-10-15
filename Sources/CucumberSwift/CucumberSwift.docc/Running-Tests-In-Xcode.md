@@ -101,7 +101,7 @@ In Xcode, right-click the project or package in the Project navigator, and choos
 
 ![The Project navigator's shortcut menu for a project, with Convert to Gherkin Macros and Fix Feature Files in its CucumberSwift section.](ConvertToGherkinMacros-Menu.png)
 
-Choose the targets whose Swift files to convert, and click **Run**:
+Choose the targets whose Swift files to convert, and click **Run**. To convert only a file or a folder of a target, add an argument first: see <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything>.
 
 ![The Convert to Gherkin Macros dialog, listing the project and its test target, with Cancel and Run buttons.](ConvertToGherkinMacros-Dialog.png)
 
@@ -115,7 +115,38 @@ The command rewrites each step definition it can. Each closure takes the pattern
 
 The first time you build the converted code, enable the macros, as in <doc:Running-Tests-In-Xcode#Trust-the-plugins>.
 
-In Terminal, run `swift package convert-to-gherkin-macros` in the package's folder. Without `--target`, it converts the Swift files in the folders of every target of the package. Add `--target MyAppTests` to convert one target's, and `--dry-run` to report what it would do without changing a file. The command needs permission to change files in your project or package: Xcode asks before it runs, and `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`. It first checks that your project is set up for the macros.
+### Convert a file, a folder or everything
+
+The command converts every target by default, and the diff for a large project can be too big to review at once. Two options, each of which you can repeat, narrow it to what you can review:
+
+| To convert | In Terminal, in the package's folder |
+|---|---|
+| Every target | `swift package convert-to-gherkin-macros` |
+| One target | `swift package convert-to-gherkin-macros --target MyAppTests` |
+| One file | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/CartSteps.swift` |
+| One folder | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Checkout` |
+| Several | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Cart --path Tests/MyAppTests/Checkout` |
+| A folder of one target | `swift package convert-to-gherkin-macros --target MyAppTests --path Tests/MyAppTests/Checkout` |
+
+A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside it: a path that is outside it, isn't there, or isn't a Swift file or a folder stops the command, names the path and changes nothing. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets, and a path with no files in those targets stops it, naming the path.
+
+Add `--dry-run` to any of these to report what it would do without changing a file: it reports the same files it would change. The command needs permission to change files in your project or package: Xcode asks before it runs, and `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`, which a script needs even for `--dry-run`. It first checks that your project is set up for the macros.
+
+In a project with many step definitions, convert it gradually: one folder or feature at a time, with `--dry-run` first, and commit each conversion on its own, after you build and run your tests. Each diff is then small enough to review, and a step definition that needs converting by hand doesn't hold up the rest.
+
+#### From Xcode
+
+Xcode passes the command the targets you choose in its dialog, and what you add under **Arguments**. It doesn't pass the files or folders selected in the Project navigator, so a selected file or folder can't be converted by choosing it. Without arguments, Xcode converts every Swift file of each target you choose.
+
+To narrow a conversion in Xcode, select the project or package, or the target that holds the file or folder, open **Arguments** in the dialog, click **+**, and type `--path` followed by a path relative to the project folder, such as `--path Tests/MyAppTests/Checkout`. Keep the argument's checkbox ticked, and add `--dry-run` the same way to report only. Untick the argument to convert every file of the targets again.
+
+This dialog converts one file, `Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift`, and only reports what it would do:
+
+![The Convert to Gherkin Macros dialog for a package and its test target, with the Arguments list open and one ticked argument: --path Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift --dry-run.](ConvertToGherkinMacros-Arguments.png)
+
+Xcode shows the command's report, the line for each step definition and the total, in the Report navigator (**⌘9**), under the plug-in command's entry.
+
+What Xcode can't do is convert a file that isn't in a target you chose: `--path` narrows the targets chosen, and a path with no files in them stops the command. For that, or to run the command in a script, use Terminal.
 
 It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself, or as a regex literal. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
 
