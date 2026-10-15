@@ -186,7 +186,9 @@ enum AsyncStepRunner {
             // an XCUI wait the cancelled body is making, however long that wait lasts. Turning the run loop
             // lets the body go on, and nothing around it can time out. The timer keeps the run loop from
             // returning at once when nothing else is scheduled.
-            let keepTurning = Timer(timeInterval: cancelledBodyPollInterval, repeats: true) { _ in }
+            let keepTurning = Timer(timeInterval: cancelledBodyPollInterval, repeats: true) { _ in
+                // Empty on purpose: the timer only gives the run loop a source, so that it waits.
+            }
             RunLoop.current.add(keepTurning, forMode: .default)
             defer { keepTurning.invalidate() }
             while !state.done {
