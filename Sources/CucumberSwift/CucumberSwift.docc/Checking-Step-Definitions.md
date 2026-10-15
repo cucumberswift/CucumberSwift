@@ -51,7 +51,7 @@ Each macro expands to the step definition you would otherwise write by hand, so 
 
 The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros` (see <doc:Checking-Step-Definitions#Requirements>). They need the swift-syntax package, which SwiftPM downloads only when the trait is on. With Swift 6.2, a package that does not turn the trait on doesn't download swift-syntax. Swift 6.1 may still record a pin for it in `Package.resolved`, because the dependency is declared, but it doesn't build it.
 
-In your `Package.swift`, turn the trait on and depend on the product:
+In your `Package.swift`, turn the trait on, declare swift-syntax as well, and depend on the product:
 
 ```swift
 // swift-tools-version:6.1
@@ -60,7 +60,9 @@ import PackageDescription
 let package = Package(
     name: "MyAppTests",
     dependencies: [
-        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0", traits: ["Macros"])
+        .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.4.0", traits: ["Macros"]),
+        // Before Swift 6.4, SwiftPM needs this to resolve the Macros trait. No target uses it.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"605.0.0")
     ],
     targets: [
         .testTarget(
@@ -72,9 +74,9 @@ let package = Package(
 )
 ```
 
-Then `import CucumberSwiftMacros` where you write step definitions. It imports CucumberSwift and CucumberSwiftExpressions as well.
+Then `import CucumberSwiftMacros` where you write step definitions. It imports CucumberSwift and CucumberSwiftExpressions as well. You can remove the swift-syntax dependency once you use Swift 6.4 or later: see <doc:Checking-Step-Definitions#Declare-swift-syntax-before-Swift-64>.
 
-In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, then add `CucumberSwiftMacros` to your test target. This needs Xcode 26.4 or later: see <doc:Checking-Step-Definitions#Requirements>. With an earlier Xcode, turn the trait on from a local package instead: see <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>.
+In an Xcode project, turn on the `Macros` trait in the CucumberSwift package dependency's settings, add the swift-syntax package to the project as well (see <doc:Checking-Step-Definitions#Declare-swift-syntax-before-Swift-64>), then add `CucumberSwiftMacros` to your test target. This needs Xcode 26.4 or later: see <doc:Checking-Step-Definitions#Requirements>. With an earlier Xcode, turn the trait on from a local package instead: see <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>.
 
 In a project that Tuist generates, turn the trait on where the project lists its packages, and depend on the product:
 
@@ -83,7 +85,9 @@ In a project that Tuist generates, turn the trait on where the project lists its
 let project = Project(
     name: "MyApp",
     packages: [
-        .package(url: "https://github.com/cucumberswift/CucumberSwift", from: "6.4.0", traits: ["Macros"])
+        .package(url: "https://github.com/cucumberswift/CucumberSwift", from: "6.4.0", traits: ["Macros"]),
+        // Before Swift 6.4, SwiftPM needs this to resolve the Macros trait. No target uses it.
+        .package(url: "https://github.com/swiftlang/swift-syntax", "600.0.0"..<"605.0.0")
     ],
     targets: [
         .target(
@@ -128,11 +132,27 @@ let package = Package(
 
 Its target needs one source file, which can be empty, such as `Sources/MacrosTrait/MacrosTrait.swift`.
 
-Add the folder to your project as a local package: in Xcode, **File > Add Package Dependencies… > Add Local…**, without adding its product to any target; in Tuist, `.package(path: "MacrosTrait")` in `Project.packages`. Then add CucumberSwift to the project as usual, without the trait, add `CucumberSwiftMacros` to your test target, and `import CucumberSwiftMacros`, exactly as with Xcode 26.4. When you move to Xcode 26.4 or later, remove `MacrosTrait` and turn the trait on in the project instead; your step definitions don't change.
+Add the folder to your project as a local package: in Xcode, **File > Add Package Dependencies… > Add Local…**, without adding its product to any target; in Tuist, `.package(path: "MacrosTrait")` in `Project.packages`. Then add CucumberSwift to the project as usual, without the trait, and the swift-syntax package, to the project rather than to `MacrosTrait` (see <doc:Checking-Step-Definitions#Declare-swift-syntax-before-Swift-64>). Add `CucumberSwiftMacros` to your test target, and `import CucumberSwiftMacros`, exactly as with Xcode 26.4. When you move to Xcode 26.4 or later, remove `MacrosTrait` and turn the trait on in the project instead; your step definitions don't change.
 
 The same package turns the trait on for the Swift Testing runner's `CucumberSwiftTestingMacros`; see <doc:Running-Feature-Files-With-Swift-Testing>.
 
 The first time you build a macro, Xcode asks you to trust and enable it. A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead, but only when swift.org publishes one for both your toolchain and the swift-syntax version your package resolves, and not in every build even then. Swift 6.1 always compiles it.
+
+### Declare swift-syntax before Swift 6.4
+
+Before Swift 6.4, SwiftPM leaves swift-syntax out when it resolves CucumberSwift from its URL with the `Macros` trait on, so resolving fails:
+
+```
+error: exhausted attempts to resolve the dependencies graph, with the following dependencies unresolved:
+* 'swift-syntax' from https://github.com/swiftlang/swift-syntax.git
+```
+
+That's a SwiftPM bug, fixed in Swift 6.4 ([swift-package-manager#10409](https://github.com/swiftlang/swift-package-manager/pull/10409)). Until you use Swift 6.4 or later, declare swift-syntax yourself, next to CucumberSwift, with a range that overlaps the one CucumberSwift accepts (see <doc:Checking-Step-Definitions#Requirements>). Nothing needs to use it: declaring it is enough for SwiftPM to resolve it.
+
+- **In a Swift package**, add it to the `dependencies` of the `Package.swift` that turns the trait on, as in <doc:Checking-Step-Definitions#Add-the-macros-to-your-package>.
+- **In an Xcode project**, add it to the project's packages, without adding any of its products to a target: in Xcode, **File > Add Package Dependencies…**; in Tuist, in `Project.packages`. That holds whether the project turns the trait on itself, with Xcode 26.4 or later, or through `MacrosTrait` (see <doc:Checking-Step-Definitions#Use-the-macros-in-an-Xcode-project-before-Xcode-264>). Declaring it in `MacrosTrait` doesn't help.
+
+CI resolves and builds the Swift package setup above, swift-syntax included, from a git URL of the commit it tests.
 
 ## Convert existing step definitions
 

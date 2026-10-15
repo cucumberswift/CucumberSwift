@@ -818,6 +818,11 @@ jobs:
         run: |
           mise --version
           mise install
+      # The fixtures depend on CucumberSwift by path. This makes the step definition macros package
+      # fixture depend on it by URL instead, as a project does: a git repository of this commit. So the
+      # next step checks that the Macros trait resolves and builds from a URL, as the docs show (#418).
+      - name: Use the macros package fixture with CucumberSwift from a URL
+        run: .github/scripts/macros-fixture-by-url.sh "$RUNNER_TEMP"
       - name: Build and test the fixtures
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
