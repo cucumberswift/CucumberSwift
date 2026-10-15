@@ -12,7 +12,10 @@ let package = Package(
     dependencies: [
         // Keep `name:`. Without it, SwiftPM names a path dependency after its folder, which is not
         // "CucumberSwift" in a worktree or a renamed clone.
-        .package(name: "CucumberSwift", path: "../..", traits: ["Macros"])
+        .package(name: "CucumberSwift", path: "../..", traits: ["Macros"]),
+        // As the article shows: before Swift 6.4, SwiftPM needs it to resolve the Macros trait when CucumberSwift
+        // comes from a URL, as it does in CI's Fixture tests. No target uses it. Keep the range CucumberSwift's.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"605.0.0")
     ],
     targets: [
         .testTarget(
