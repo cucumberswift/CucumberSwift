@@ -14,6 +14,8 @@ struct ConversionOptions {
     var paths = [String]()
     /// What `--path` named, as typed: relative to `root`, and checked to be inside it.
     var chosenPaths = [String]()
+    /// What is wrong with the command line, so the run stops before it changes a file.
+    var problems = [String]()
 
     init(_ arguments: [String]) {
         var remaining = arguments.makeIterator()
@@ -24,7 +26,11 @@ struct ConversionOptions {
                 case "--root":
                     root = remaining.next()
                 case "--path":
-                    if let value = remaining.next() { chosenPaths.append(value) }
+                    if let value = remaining.next(), !value.hasPrefix("--") {
+                        chosenPaths.append(value)
+                    } else {
+                        problems.append("--path needs the file or folder to convert")
+                    }
                 case "--missing-macros":
                     if let value = remaining.next(), let separator = value.firstIndex(of: "=") {
                         missingMacrosProducts.append((String(value[..<separator]), String(value[value.index(after: separator)...])))

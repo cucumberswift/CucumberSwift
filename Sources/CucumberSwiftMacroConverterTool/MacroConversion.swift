@@ -34,6 +34,11 @@ public enum MacroConversion {
             return 0
         }
         let options = ConversionOptions(arguments)
+        // An option with no value would otherwise widen the run: say so, and change nothing.
+        guard options.problems.isEmpty else {
+            options.problems.forEach(output)
+            return 1
+        }
         // A project that isn't set up for the macros: change nothing, and say how to set it up.
         if !options.missingMacrosProducts.isEmpty {
             output(SetupAdvice.missingProductsMessage(options.missingMacrosProducts, root: options.root))
@@ -49,7 +54,11 @@ public enum MacroConversion {
         if chosen.isEmpty {
             files = given
         } else if options.paths.isEmpty {
-            files = swiftFiles(in: chosen, tally: &tally, output: output, fileManager: fileManager)
+            // A chosen folder with no Swift files has nothing to convert: that is a mistake, not a success.
+            guard let within = swiftFilesOfEach(chosen, choices: options.chosenPaths, output: output, fileManager: fileManager) else {
+                return 1
+            }
+            files = within
         } else {
             // Targets and paths together: the files under the paths that belong to the targets.
             guard let within = filesUnder(chosen, among: given, choices: options.chosenPaths, output: output) else { return 1 }
@@ -60,6 +69,26 @@ public enum MacroConversion {
         }
         output(summary(of: tally, fileCount: files.count, dryRun: options.dryRun))
         return tally.failed ? 1 : 0
+    }
+
+    /// The Swift files in each of `paths`, once each, or `nil` after saying which path has none.
+    private static func swiftFilesOfEach(_ paths: [String],
+                                         choices: [String],
+                                         output: (String) -> Void,
+                                         fileManager: FileManager) -> [String]? {
+        var found = [String]()
+        var valid = true
+        for (index, path) in paths.enumerated() {
+            var isDirectory: ObjCBool = false
+            _ = fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+            let inside = isDirectory.boolValue ? swiftFiles(in: path, fileManager: fileManager) : [path]
+            if inside.isEmpty {
+                output("\(choices[index]): has no Swift files")
+                valid = false
+            }
+            found += inside
+        }
+        return valid ? Array(Set(found)).sorted() : nil
     }
 
     /// The `files` that are one of `paths` or under one, or `nil` after saying which path has none of them: it

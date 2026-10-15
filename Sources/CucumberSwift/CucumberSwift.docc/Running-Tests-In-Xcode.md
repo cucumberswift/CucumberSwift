@@ -128,7 +128,7 @@ The command converts every target by default, and the diff for a large project c
 | Several | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Cart --path Tests/MyAppTests/Checkout` |
 | A folder of one target | `swift package convert-to-gherkin-macros --target MyAppTests --path Tests/MyAppTests/Checkout` |
 
-A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside it: a path that is outside it, isn't there, or isn't a Swift file or a folder stops the command, names the path and changes nothing. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets, and a path with no files in those targets stops it, naming the path.
+A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside it: a path that is outside it, isn't there, or isn't a Swift file or a folder stops the command, names the path and changes nothing. A folder with no Swift files in it, and `--path` or `--target` with no value after it, stop the command the same way. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets, and a path with no files in those targets stops it, naming the path.
 
 Add `--dry-run` to any of these to report what it would do without changing a file: it reports the same files it would change. The command needs permission to change files in your project or package: Xcode asks before it runs, and `swift package` asks in Terminal, or you can pass `--allow-writing-to-package-directory`, which a script needs even for `--dry-run`. It first checks that your project is set up for the macros.
 

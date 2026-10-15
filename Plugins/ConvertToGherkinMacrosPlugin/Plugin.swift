@@ -5,12 +5,14 @@ private enum ConvertError: Error, CustomStringConvertible {
     case unknownTargets([String])
     case notSetUp(String)
     case failed(Int32)
+    case missingValue(String)
 
     var description: String {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .notSetUp(let message): return message
             case .failed(let status): return "CucumberSwiftMacroConverterTool exited with status \(status)"
+            case .missingValue(let option): return "\(option) needs a value: \(option == "--path" ? "the file or folder to convert" : "the name of a target")"
         }
     }
 }
@@ -28,6 +30,7 @@ private final class Output: @unchecked Sendable {
 @main
 struct ConvertToGherkinMacrosPlugin: CommandPlugin {
     func performCommand(context: PluginContext, arguments: [String]) async throws {
+        try requireValues(in: arguments)
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
         let chosen = extractor.extractOption(named: "path")
@@ -68,6 +71,7 @@ extension ConvertToGherkinMacrosPlugin: XcodeCommandPlugin {
     // Xcode passes `--target` for each target chosen in its dialog, and what is typed in its Arguments list, so
     // `--path` there narrows the chosen targets.
     func performCommand(context: XcodePluginContext, arguments: [String]) throws {
+        try requireValues(in: arguments)
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
         let chosen = extractor.extractOption(named: "path")
@@ -105,6 +109,17 @@ private func missingMacrosProduct(forDependencies products: [String]) -> String?
     if products.contains("CucumberSwift"), !products.contains("CucumberSwiftMacros") { return "CucumberSwiftMacros" }
     if products.contains("CucumberSwiftTesting"), !products.contains("CucumberSwiftTestingMacros") { return "CucumberSwiftTestingMacros" }
     return nil
+}
+
+/// Throws when `--target` or `--path` has no value, as at the end of the arguments or before another option:
+/// the argument extractor drops it without a word, and the command would then convert more than was asked.
+private func requireValues(in arguments: [String]) throws {
+    for option in ["--target", "--path"] {
+        for (index, argument) in arguments.enumerated() where argument == option {
+            let value = arguments.indices.contains(index + 1) ? arguments[index + 1] : nil
+            if value == nil || value?.hasPrefix("--") == true { throw ConvertError.missingValue(option) }
+        }
+    }
 }
 
 /// `path` as the tool reads it: relative to the package or project folder, with `..` and links resolved.

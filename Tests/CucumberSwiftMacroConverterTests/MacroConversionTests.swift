@@ -314,5 +314,35 @@ extension MacroConversionTests {
         XCTAssertTrue(dry.output.hasSuffix("Would convert 1 step definition in 1 of 1 Swift file. Left 0 unchanged.\n"), dry.output)
         XCTAssertEqual(real.output.replacingOccurrences(of: "Converted", with: "Would convert"), dry.output)
     }
+
+    func testAnOptionWithNoValueIsAnErrorAndChangesNothing() throws {
+        let project = try writeProject()
+        let withNoValue = [
+            ["--root", folder.path, folder.path, "--path"],
+            ["--root", folder.path, "--path", "--dry-run", folder.path]
+        ]
+        for arguments in withNoValue {
+            let run = try ConverterTool.run(arguments)
+            XCTAssertEqual(run.status, 1, run.output)
+            XCTAssertTrue(run.output.contains("--path needs the file or folder to convert"), run.output)
+            XCTAssertFalse(run.output.contains("Converted"), run.output)
+        }
+        for url in [project.a, project.b, project.nested] {
+            XCTAssertEqual(try read(url), convertible)
+        }
+    }
+
+    func testAChosenFolderWithNoSwiftFilesIsAnErrorThatNamesIt() throws {
+        let project = try writeProject()
+        _ = try write("# Notes\n", to: "Docs/README.md")
+        // Its only Swift files are in a dependency folder, which the command skips.
+        _ = try write(convertible, to: "Vendor/Pods/Steps.swift")
+        let run = try ConverterTool.run(["--root", folder.path, "--path", "Sources/A", "--path", "Docs", "--path", "Vendor"])
+        XCTAssertEqual(run.status, 1, run.output)
+        XCTAssertTrue(run.output.contains("Docs: has no Swift files"), run.output)
+        XCTAssertTrue(run.output.contains("Vendor: has no Swift files"), run.output)
+        XCTAssertFalse(run.output.contains("Sources/A: has no"), run.output)
+        XCTAssertEqual(try read(project.a), convertible, "the run must stop before it changes a file")
+    }
 }
 #endif
