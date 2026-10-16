@@ -62,7 +62,7 @@ extension Cucumber {
             }
             let first = await group.next() ?? false
             // Asked before the body is cancelled, which makes it finish too.
-            if first, await finished.value {
+            if first, finished.value {
                 group.cancelAll()
                 return false
             }
@@ -80,8 +80,22 @@ extension Cucumber {
     }
 }
 
-/// Whether a step's or a hook's body has returned. Only touched on the main actor.
-@MainActor
-private final class FinishedFlag {
-    var value = false
+/// Whether a step's or a hook's body has returned. Not tied to an actor, so reading it needs no `await`
+/// whichever actor the compiler runs the timeout's task group on.
+private final class FinishedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isFinished = false
+
+    var value: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return isFinished
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            isFinished = newValue
+        }
+    }
 }
