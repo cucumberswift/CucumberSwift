@@ -39,8 +39,9 @@ final class IssueRecord: @unchecked Sendable {
 }
 
 /// Where in a feature file the runner is: the step that is running, or the scenario while its hooks run.
-final class RunningLocation: @unchecked Sendable {
-    struct Running {
+/// It is a task-local value, so scenarios that run at the same time each see their own.
+enum RunningLocation {
+    struct Running: Sendable {
         let location: SourceLocation
         /// The step as it runs, such as "Then the basket has 3 cukes", or nil while a scenario hook runs.
         let step: String?
@@ -48,23 +49,8 @@ final class RunningLocation: @unchecked Sendable {
         var record: IssueRecord?
     }
 
-    static let shared = RunningLocation()
-
-    private let lock = NSLock()
-    private var location: Running?
-
-    var current: Running? {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return location
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            location = newValue
-        }
-    }
+    /// The running step or hook of the current task, and of the tasks it creates, but not detached ones.
+    @TaskLocal static var current: Running?
 }
 
 #if compiler(>=6.2)
@@ -75,7 +61,7 @@ extension Trait where Self == IssueHandlingTrait {
     /// CucumberSwiftTestingPlugin generates have it.
     public static var reportedInFeatureFiles: Self {
         .compactMapIssues { issue in
-            guard let running = RunningLocation.shared.current,
+            guard let running = RunningLocation.current,
                   let recorded = issue.sourceLocation,
                   !recorded.fileName.hasSuffix(".feature") else { return issue }
             running.record?.add(issue.description)

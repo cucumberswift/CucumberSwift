@@ -11,6 +11,11 @@
 import Foundation
 import Testing
 
+/// Leaves the generated suite unserialized, so that Swift Testing runs its scenarios at the same time.
+public struct CucumberParallelScenariosTrait: SuiteTrait, TestTrait {
+    public var isRecursive: Bool { true }
+}
+
 /// Tells the runner that the test suite has started and finished, around all of its features.
 public struct CucumberSuiteTrait: SuiteTrait, TestScoping {
     public var isRecursive: Bool { false }
@@ -73,4 +78,18 @@ extension Trait where Self == CucumberFeatureTrait {
     public static func cucumberFeature(file: String, title: String, line: Int) -> Self {
         Self(file: file, title: title, line: line)
     }
+}
+
+/// The trait that the generated suite has: serialized, so that scenarios run one at a time in the order of
+/// the feature files, unless scenarios run in parallel, which `CUCUMBER_PARALLEL_TESTING` says, and
+/// failing that `compiled`, whether the test target defines that compilation condition. Swift Testing
+/// asks when it discovers the tests.
+public func cucumberScenarioOrder(compiled: Bool) -> any SuiteTrait {
+    scenarioOrder(compiled: compiled, environment: ProcessInfo.processInfo.environment)
+}
+
+func scenarioOrder(compiled: Bool, environment: [String: String]) -> any SuiteTrait {
+    let parallel = CucumberSettings.runsInParallel(compiled: compiled, environment: environment)
+    CucumberSettings.isSuiteSerialized = !parallel
+    return parallel ? CucumberParallelScenariosTrait() : ParallelizationTrait.serialized
 }
