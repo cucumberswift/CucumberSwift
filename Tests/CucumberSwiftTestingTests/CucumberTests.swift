@@ -21,6 +21,8 @@ final class CucumberTests {
         cucumber.afterScenarioHooks = []
         cucumber.beforeStepHooks = []
         cucumber.afterStepHooks = []
+        cucumber.beforeFeatureHooks = []
+        cucumber.afterFeatureHooks = []
         // No reporters, so that these tests write no report; the reporting tests add their own.
         cucumber.reporters = []
         cucumber.environment = [:]

@@ -18,6 +18,10 @@ enum World {
     static var list = [String]()
     static var prices = [String: Int]()
     static var scenarios = [String]()
+    /// How many times each feature's hooks have run, by the feature's title, and its scenarios.
+    static var featureStarts = [String: Int]()
+    static var featureEnds = [String: Int]()
+    static var featureScenarios = [String: Int]()
 }
 
 // A consumer in another package writes `@retroactive`, because both Cucumber and StepImplementation
@@ -30,10 +34,24 @@ extension Cucumber: @retroactive StepImplementation {
             World.list = []
             World.prices = [:]
             World.scenarios.append(scenario.title)
+            World.featureScenarios[scenario.feature?.title ?? "", default: 0] += 1
+        }
+        BeforeFeature { feature in
+            World.featureStarts[feature.title, default: 0] += 1
+        }
+        // Runs once after the feature's last scenario, so that it sees all of them.
+        AfterFeature { feature in
+            World.featureEnds[feature.title, default: 0] += 1
+            #expect(World.featureStarts[feature.title] == 1)
+            #expect(World.featureEnds[feature.title] == 1)
+            if feature.title == "Feature hooks and attachments" {
+                #expect(World.featureScenarios[feature.title] == 3)
+            }
         }
         macroSteps()
         dslSteps()
         localizedSteps()
+        hookSteps()
     }
 
     /// The step definition macros: typed closure parameters, checked against the expression when the
@@ -130,6 +148,22 @@ extension Cucumber: @retroactive StepImplementation {
             let count = try match.first(\.int)
             #expect(step.keyword.contains(.then))
             #expect(World.cukes == count)
+        }
+    }
+
+    /// Feature hooks run once around a feature's scenarios, and `Attach` records an attachment.
+    private func hookSteps() {
+        Given("the feature's before hook has run once") { _, step in
+            #expect(World.featureStarts[step.scenario?.feature?.title ?? ""] == 1)
+        }
+        And("the feature's after hook has not run") { _, step in
+            #expect(World.featureEnds[step.scenario?.feature?.title ?? ""] == nil)
+        }
+        Then("I attach a note") { _, _ in
+            // Attach needs Swift 6.2, the first with attachments in Swift Testing.
+            #if compiler(>=6.2)
+            Attach("a note", named: "note.txt")
+            #endif
         }
     }
 }

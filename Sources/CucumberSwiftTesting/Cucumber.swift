@@ -23,6 +23,9 @@ public final class Cucumber {
         var startDate: Date?
         var isFailed = false
         var isFinished = false
+        /// Starts the feature: tells the observers and runs `BeforeFeature`. Every scenario of the feature waits
+        /// for it, so the hooks run once. Its value is why a hook threw, or `nil`.
+        var starting: Task<String?, Never>?
         init(_ feature: Feature) { self.feature = feature }
     }
 
@@ -33,6 +36,8 @@ public final class Cucumber {
     var afterScenarioHooks = [Hook<Scenario>]()
     var beforeStepHooks = [Hook<Step>]()
     var afterStepHooks = [Hook<Step>]()
+    var beforeFeatureHooks = [Hook<Feature>]()
+    var afterFeatureHooks = [Hook<Feature>]()
     private var isSetUp = false
     private var hasReportedMissingImplementation = false
     /// The process's environment, for the settings that have an environment variable. Tests replace it.
@@ -108,9 +113,19 @@ public final class Cucumber {
         loadStepDefinitions()
         reportMissingImplementationIfNeeded(at: Self.sourceLocation(file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         let featureRun = startFeature(of: gherkinScenario)
+        let featureFailure = await featureRun.starting?.value
         let scenario = Scenario(gherkinScenario, feature: featureRun.feature)
         let startDate = Date()
         reporters.forEach { $0.didStart(scenario: scenario, at: startDate) }
+        if let featureFailure {
+            // The feature's `BeforeFeature` hook threw, which it reported once: the scenario fails without running.
+            Issue.record(Comment(rawValue: "BeforeFeature hook failed: \(featureFailure)"),
+                         sourceLocation: Self.sourceLocation(file, scenario.location))
+            featureRun.isFailed = true
+            let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
+            reporters.forEach { $0.didFinish(scenario: scenario, result: .failed, duration: duration) }
+            return
+        }
         let record = IssueRecord()
         var isFailed = false
         if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) == nil {
@@ -159,21 +174,23 @@ public final class Cucumber {
 
     /// Finishes the features that are still open, and the test suite. `CucumberSuiteTrait` calls it after
     /// the last test.
-    func endSuite() {
+    func endSuite() async {
         guard isSuiteStarted else { return }
         isSuiteStarted = false
-        featureRuns.values
+        let open = featureRuns.values
             .filter { $0.startDate != nil && !$0.isFinished }
             .sorted { ($0.startDate ?? .distantPast) < ($1.startDate ?? .distantPast) }
-            .forEach(finish)
+        for run in open {
+            await finish(run)
+        }
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
     }
 
     /// Finishes a feature, once all of its scenarios have run. `CucumberFeatureTrait` calls it after the
     /// feature's last test.
-    func endFeature(file: String, title: String, line: Int) {
+    func endFeature(file: String, title: String, line: Int) async {
         guard let run = featureRuns[Self.key(file: file, title: title, line: line)], run.startDate != nil else { return }
-        finish(run)
+        await finish(run)
     }
 
     /// The feature a scenario belongs to, started on its first scenario.
@@ -184,18 +201,29 @@ public final class Cucumber {
         guard run.startDate == nil else { return run }
         // Scenarios run without the generated tests' traits have nothing to say where a feature ends: it
         // ends where the next one starts.
-        if let open = openFeature, open !== run { finish(open) }
+        let open = openFeature
         openFeature = run
         let startDate = Date()
         run.startDate = startDate
-        reporters.forEach { $0.didStart(feature: run.feature, at: startDate) }
+        // The hooks get the feature, not the first scenario, and set the running location themselves.
+        run.starting = Task { @MainActor [self] in
+            if let open, open !== run { await finish(open) }
+            reporters.forEach { $0.didStart(feature: run.feature, at: startDate) }
+            return await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: IssueRecord())
+        }
         return run
     }
 
-    private func finish(_ run: FeatureRun) {
+    private func finish(_ run: FeatureRun) async {
         guard !run.isFinished, let startDate = run.startDate else { return }
         run.isFinished = true
         if openFeature === run { openFeature = nil }
+        // The after hooks run even when a before hook threw, once the before hooks are over.
+        _ = await run.starting?.value
+        let record = IssueRecord()
+        let afterFailure = await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record)
+        RunningLocation.shared.current = nil
+        if afterFailure != nil || !record.messages.isEmpty { run.isFailed = true }
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(feature: run.feature, result: run.isFailed ? .failed : .passed, duration: duration) }
     }

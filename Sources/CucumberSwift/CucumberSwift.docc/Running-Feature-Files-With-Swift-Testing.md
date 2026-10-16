@@ -92,7 +92,53 @@ extension Cucumber: @retroactive StepImplementation {
 
 A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. It can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
-`BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+`BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+
+### Feature hooks
+
+`BeforeFeature` runs once, before the first scenario of a feature, and `AfterFeature` once, after its last. Each takes the `Feature`:
+
+```swift
+import CucumberSwiftTesting
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        BeforeFeature { feature in
+            // Once for "\(feature.title)", before its first scenario.
+            Basket.shared.add(10)
+        }
+        AfterFeature { _ in
+            Basket.shared.empty()
+        }
+    }
+}
+```
+
+They run once for each feature, around all of its scenarios, even when Swift Testing runs the feature's scenarios at the same time: the scenarios wait for `BeforeFeature` to finish. The tests that CucumberSwiftTestingPlugin generates mark where each feature ends. They need Swift 6.1, the runner's minimum.
+
+A `BeforeFeature` hook that throws fails the feature's scenarios on their lines, without running them, and the feature's `AfterFeature` hooks still run. A feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, runs neither. An `AfterFeature` hook that throws fails on the line of the `Feature` keyword, and stops the `AfterFeature` hooks after it.
+
+### Attachments
+
+`Attach` adds an attachment, such as a log or a file, to the test that is running. Call it from any hook or step. It takes any value Swift Testing can attach, such as a `String`, `Data` or an `Encodable`, and a `name`, or an `Attachment` you made yourself:
+
+```swift
+import CucumberSwiftTesting
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        Then("I save the basket") { _, _ in
+            #if compiler(>=6.2)
+            Attach("\(Basket.shared.count) cukes", named: "basket.txt")
+            #endif
+        }
+    }
+}
+```
+
+Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. `Attach` needs Swift 6.2, the first with attachments in Swift Testing. With Swift 6.1 it's unavailable: calling it is a compile error, so no attachment is lost without your noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does. It takes Swift Testing's attachments, not an `XCTAttachment`.
 
 ### Without the macros
 
@@ -146,7 +192,7 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 
 In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run.
 
-A hook that throws stops the hooks after it of the same kind: when an `AfterScenario` or `AfterStep` hook throws, the ones after it don't run.
+A hook that throws stops the hooks after it of the same kind: when an `AfterScenario`, `AfterStep` or `AfterFeature` hook throws, the ones after it don't run.
 
 A step that never finishes holds up the run: the runner has no timeout for an async step, as CucumberSwift's `asyncStepTimeout` gives.
 
@@ -204,7 +250,7 @@ extension Cucumber: @retroactive CucumberTestObservable {
 The `Feature`, `Scenario` and `Step` an observer receives are this runner's own, the ones step definitions and hooks see; `Reporter.Result` is the same type. The runner calls observers on the main actor, in the order things happen:
 
 - the test suite starts before the first scenario, and finishes after the last,
-- a feature starts with its first scenario that runs, and finishes after its last: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
+- a feature starts with its first scenario that runs, after its `BeforeFeature` hooks, and finishes after its last and its `AfterFeature` hooks: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
 - a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step or a hook failed, and
 - a step starts before its `BeforeStep` hooks, and finishes after its `AfterStep` hooks.
 
@@ -233,7 +279,7 @@ One scheme can test both targets. To move a unit test target:
 These parts of CucumberSwift have no counterpart in this runner:
 
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
-- `BeforeFeature` and `AfterFeature`, `ExecuteFirstStep` and `Attach`,
+- `ExecuteFirstStep`,
 - the `StepImplementation` properties: `shouldRunWith(scenario:tags:)`, `continueTestingAfterFailure`, `reverseOrderForAfterHooks`, `asyncStepTimeout` and `regexLiteralStyle`,
 - the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH` and `CUCUMBER_VERBOSE`, with `Cucumber.reportPath` and `Cucumber.verboseOutput`, as <doc:Settings> describes,
 - `Cucumber.expectation(description:)` and `wait(for:timeout:)`,

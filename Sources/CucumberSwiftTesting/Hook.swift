@@ -7,6 +7,20 @@
 
 import Foundation
 
+/// Runs once before a feature's first scenario, with the feature. A thrown error fails the feature's scenarios
+/// without running them.
+@MainActor
+public func BeforeFeature(priority: UInt? = nil, closure: @escaping @MainActor (Feature) async throws -> Void) {
+    Cucumber.shared.beforeFeatureHooks.append(Hook(priority: priority, body: closure))
+}
+
+/// Runs once after a feature's last scenario, whether or not they passed, with the feature. A thrown error
+/// fails at the feature's line.
+@MainActor
+public func AfterFeature(priority: UInt? = nil, closure: @escaping @MainActor (Feature) async throws -> Void) {
+    Cucumber.shared.afterFeatureHooks.append(Hook(priority: priority, body: closure))
+}
+
 /// Runs before each scenario.
 @MainActor
 public func BeforeScenario(priority: UInt? = nil, closure: @escaping @MainActor (Scenario) async throws -> Void) {
