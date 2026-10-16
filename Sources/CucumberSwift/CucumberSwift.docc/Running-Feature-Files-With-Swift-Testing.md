@@ -117,11 +117,11 @@ extension Cucumber: @retroactive StepImplementation {
 
 They run once for each feature, around all of its scenarios, even when Swift Testing runs the feature's scenarios at the same time: the scenarios wait for `BeforeFeature` to finish. The tests that CucumberSwiftTestingPlugin generates mark where each feature ends. They need Swift 6.1, the runner's minimum.
 
-A `BeforeFeature` hook that throws fails the feature's scenarios on their lines, without running them, and the feature's `AfterFeature` hooks still run. A feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, runs neither. An `AfterFeature` hook that throws fails on the line of the `Feature` keyword, and stops the `AfterFeature` hooks after it.
+As with CucumberSwift, `BeforeFeature` hooks run before the observers hear that the feature started, and `AfterFeature` hooks before they hear that it finished. A feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, runs neither. A feature hook that throws fails at the line where you wrote it, and the feature's scenarios still run.
 
 ### Attachments
 
-`Attach` adds an attachment, such as a log or a file, to the test that is running. Call it from any hook or step. It takes any value Swift Testing can attach, such as a `String`, `Data` or an `Encodable`, and a `name`, or an `Attachment` you made yourself:
+`Attach` adds an attachment, such as a log or a file, to the test that is running. Call it from any hook or step, as with CucumberSwift. It takes a Swift Testing `Attachment`, where CucumberSwift takes an `XCTAttachment`:
 
 ```swift
 import CucumberSwiftTesting
@@ -131,14 +131,14 @@ extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
         Then("I save the basket") { _, _ in
             #if compiler(>=6.2)
-            Attach("\(Basket.shared.count) cukes", named: "basket.txt")
+            Attach(Attachment("\(Basket.shared.count) cukes", named: "basket.txt"))
             #endif
         }
     }
 }
 ```
 
-Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. `Attach` needs Swift 6.2, the first with attachments in Swift Testing. With Swift 6.1 it's unavailable: calling it is a compile error, so no attachment is lost without your noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does. It takes Swift Testing's attachments, not an `XCTAttachment`.
+Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. The JSON report doesn't have attachments, as with CucumberSwift. `Attach` needs Swift 6.2, the first with attachments in Swift Testing. With Swift 6.1 it's unavailable: calling it is a compile error, so no attachment is lost without your noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does. 
 
 ### Without the macros
 
@@ -188,11 +188,11 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 
 - A step that no step definition matches fails on its line in the feature file, and the message includes a step definition to paste into `setupSteps()`.
 - A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
-- A step definition, or a step hook, that throws fails on the step's line in the feature file. A scenario hook that throws fails on the scenario's line.
+- A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
 
 In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run.
 
-A hook that throws stops the hooks after it of the same kind: when an `AfterScenario`, `AfterStep` or `AfterFeature` hook throws, the ones after it don't run.
+A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A feature is `failed` in the report when one of its steps is, not when a hook is.
 
 A step that never finishes holds up the run: the runner has no timeout for an async step, as CucumberSwift's `asyncStepTimeout` gives.
 
