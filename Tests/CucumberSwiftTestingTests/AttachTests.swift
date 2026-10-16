@@ -9,7 +9,7 @@ extension CucumberTests {
         Given("a log") { _, _ in
             attach(Attachment("the log", named: "log.txt")) { attachment, location in
                 let text = (try? attachment.withUnsafeBytes { String(decoding: $0, as: UTF8.self) }) ?? ""
-                recorded.append((attachment.preferredName, text, location.line))
+                recorded.append((attachment.preferredName, text, location?.line))
             }
         }
 
@@ -19,11 +19,11 @@ extension CucumberTests {
         #expect(recorded.map(\.line) == [3])
     }
 
-    @Test func attachOutsideAStepKeepsWhereItWasCalled() {
+    @Test func attachOutsideAStepHasNoLocationInTheFeatureFile() {
         RunningLocation.shared.current = nil
-        var line: Int?
-        attach(Attachment("x", named: "x.txt")) { _, location in line = location.line }
-        #expect(line == #line - 1)
+        var location: SourceLocation?? = .none
+        attach(Attachment("x", named: "x.txt")) { _, recordedAt in location = .some(recordedAt) }
+        #expect(location == .some(nil))
     }
 }
 #endif

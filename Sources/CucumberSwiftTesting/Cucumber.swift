@@ -23,9 +23,9 @@ public final class Cucumber {
         var startDate: Date?
         var isFailed = false
         var isFinished = false
-        /// Starts the feature: tells the observers and runs `BeforeFeature`. Every scenario of the feature waits
-        /// for it, so the hooks run once. Its value is why a hook threw, or `nil`.
-        var starting: Task<String?, Never>?
+        /// Starts the feature: runs `BeforeFeature`, then tells the observers. Every scenario of the feature
+        /// waits for it, so the hooks run once.
+        var starting: Task<Void, Never>?
         init(_ feature: Feature) { self.feature = feature }
     }
 
@@ -113,43 +113,29 @@ public final class Cucumber {
         loadStepDefinitions()
         reportMissingImplementationIfNeeded(at: Self.sourceLocation(file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         let featureRun = startFeature(of: gherkinScenario)
-        let featureFailure = await featureRun.starting?.value
+        await featureRun.starting?.value
         let scenario = Scenario(gherkinScenario, feature: featureRun.feature)
         let startDate = Date()
         reporters.forEach { $0.didStart(scenario: scenario, at: startDate) }
-        if let featureFailure {
-            // The feature's `BeforeFeature` hook threw, which it reported once: the scenario fails without running.
-            Issue.record(Comment(rawValue: "BeforeFeature hook failed: \(featureFailure)"),
-                         sourceLocation: Self.sourceLocation(file, scenario.location))
-            featureRun.isFailed = true
-            let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
-            reporters.forEach { $0.didFinish(scenario: scenario, result: .failed, duration: duration) }
-            return
-        }
         let record = IssueRecord()
-        var isFailed = false
+        // As with CucumberSwift, a scenario and its feature fail when a step does, not when a hook does.
+        var isStepFailed = false
         if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) == nil {
             for step in scenario.steps {
                 let outcome = await run(step, in: file)
                 if case .passed = outcome.result {
                     // Nothing to record.
                 } else {
-                    isFailed = true
+                    isStepFailed = true
                 }
                 if !outcome.canContinue { break }
             }
-        } else {
-            isFailed = true
         }
-        if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) != nil {
-            isFailed = true
-        }
+        _ = await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record)
         RunningLocation.shared.current = nil
-        // A failed `#expect` in a hook, which Swift Testing 6.2's issue handling reports to the record.
-        isFailed = isFailed || !record.messages.isEmpty
-        if isFailed { featureRun.isFailed = true }
+        if isStepFailed { featureRun.isFailed = true }
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
-        reporters.forEach { $0.didFinish(scenario: scenario, result: isFailed ? .failed : .passed, duration: duration) }
+        reporters.forEach { $0.didFinish(scenario: scenario, result: isStepFailed ? .failed : .passed, duration: duration) }
     }
 
     // MARK: Suite and feature events
@@ -208,8 +194,9 @@ public final class Cucumber {
         // The hooks get the feature, not the first scenario, and set the running location themselves.
         run.starting = Task { @MainActor [self] in
             if let open, open !== run { await finish(open) }
-            reporters.forEach { $0.didStart(feature: run.feature, at: startDate) }
-            return await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: IssueRecord())
+            // As with CucumberSwift, the hooks run before the observers hear the feature started.
+            _ = await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: IssueRecord())
+            reporters.forEach { $0.didStart(feature: run.feature, at: Date()) }
         }
         return run
     }
@@ -220,10 +207,8 @@ public final class Cucumber {
         if openFeature === run { openFeature = nil }
         // The after hooks run even when a before hook threw, once the before hooks are over.
         _ = await run.starting?.value
-        let record = IssueRecord()
-        let afterFailure = await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record)
+        _ = await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: IssueRecord())
         RunningLocation.shared.current = nil
-        if afterFailure != nil || !record.messages.isEmpty { run.isFailed = true }
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(feature: run.feature, result: run.isFailed ? .failed : .passed, duration: duration) }
     }
@@ -291,7 +276,8 @@ public final class Cucumber {
         return finish(failure.map { .failed($0) } ?? .passed, canContinue: failure == nil)
     }
 
-    /// Runs each hook in order. Returns why one threw, or `nil` when none did.
+    /// Runs each hook in order, as CucumberSwift does: one that throws doesn't stop the ones after it.
+    /// Returns why the first that threw did, or `nil` when none did.
     private func runHooks<Argument>(
         _ hooks: [Hook<Argument>],
         with argument: Argument,
@@ -300,15 +286,16 @@ public final class Cucumber {
         step: String? = nil,
         record: IssueRecord
     ) async -> String? {
+        var failure: String?
         for hook in hooks.inPriorityOrder() {
             RunningLocation.shared.current = .init(location: Self.sourceLocation(file, location), step: step, record: record)
             do {
                 try await hook.body(argument)
             } catch {
-                Issue.record(error, sourceLocation: Self.sourceLocation(file, location))
-                return Self.describe(error)
+                Issue.record(error, sourceLocation: hook.sourceLocation)
+                failure = failure ?? Self.describe(error)
             }
         }
-        return nil
+        return failure
     }
 }

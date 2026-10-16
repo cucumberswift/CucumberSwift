@@ -100,11 +100,11 @@ extension CucumberTests {
         #expect(ran == ["before F", "after F", "before G", "after G"])
     }
 
-    @Test func aThrowingBeforeFeatureHookFailsTheFeaturesScenariosWithoutRunningThemAndTheAfterHooksStillRun() async throws {
+    @Test func aThrowingBeforeFeatureHookFailsOnceAtItsLineAndTheScenariosStillRun() async throws {
         struct Failure: Error {}
         Given("a step") { [self] _, _ in ran.append("step") }
+        let hookLine = #line + 1
         BeforeFeature { _ in throw Failure() }
-        BeforeFeature { [self] _ in ran.append("second before feature") }
         AfterFeature { [self] _ in ran.append("after feature") }
 
         try await withKnownIssue {
@@ -113,14 +113,27 @@ extension CucumberTests {
                 await Cucumber.shared.run(self.scenario("B", line: 4, steps: [self.step(.given, "a step", line: 5)]))
             }
         } matching: { issue in
-            issue.sourceLocation?.fileID == "Features/F.feature" && [1, 2, 4].contains(issue.sourceLocation?.line)
+            issue.sourceLocation?.line == hookLine
         }
-        #expect(ran == ["after feature"])
+        #expect(ran == ["step", "step", "after feature"])
     }
 
-    @Test func aThrowingAfterFeatureHookFailsAtTheFeature() async throws {
+    @Test func theBeforeFeatureHooksRunBeforeTheObserversHearTheFeatureStarted() async throws {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a step") { _, _ in }
+        BeforeFeature { _ in observer.log.append("before feature hook") }
+
+        try await runFeature {
+            await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+        }
+        #expect(observer.log.prefix(2) == ["before feature hook", "feature started F"])
+    }
+
+    @Test func aThrowingAfterFeatureHookFailsAtItsLine() async throws {
         struct Failure: Error {}
         Given("a step") { _, _ in }
+        let hookLine = #line + 1
         AfterFeature { _ in throw Failure() }
 
         try await withKnownIssue {
@@ -128,8 +141,40 @@ extension CucumberTests {
                 await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
             }
         } matching: { issue in
-            issue.sourceLocation?.fileID == "Features/F.feature" && issue.sourceLocation?.line == 1
+            issue.sourceLocation?.line == hookLine
         }
+    }
+
+    @Test func aHookThatThrowsDoesNotStopTheHooksAfterIt() async throws {
+        struct Failure: Error {}
+        Given("a step") { _, _ in }
+        AfterFeature { _ in throw Failure() }
+        AfterFeature { [self] _ in ran.append("second after feature") }
+        AfterScenario { _ in throw Failure() }
+        AfterScenario { [self] _ in ran.append("second after scenario") }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        }
+        #expect(ran == ["second after scenario", "second after feature"])
+    }
+
+    @Test func aScenarioAndItsFeatureFailWhenAStepDoesAndNotWhenAHookDoes() async throws {
+        struct Failure: Error {}
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a step") { _, _ in }
+        AfterScenario { _ in throw Failure() }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        }
+        #expect(observer.log.contains("scenario passed A"))
+        #expect(observer.log.contains("feature passed F"))
     }
 
     @Test func theAfterFeatureHooksRunBeforeTheObserversHearTheFeatureFinished() async throws {

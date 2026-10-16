@@ -162,7 +162,7 @@ extension Cucumber: @retroactive StepImplementation {
         Then("I attach a note") { _, _ in
             // Attach needs Swift 6.2, the first with attachments in Swift Testing.
             #if compiler(>=6.2)
-            Attach("a note", named: "note.txt")
+            Attach(Attachment("a note", named: "note.txt"))
             #endif
         }
     }

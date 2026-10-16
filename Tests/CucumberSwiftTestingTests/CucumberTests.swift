@@ -108,6 +108,7 @@ final class CucumberTests {
 
     @Test func aThrowingBeforeStepHookSkipsTheStepButNotItsAfterStepHooks() async {
         struct Failure: Error {}
+        let hookLine = #line + 1
         BeforeStep { [self] step in
             ran.append("before \(step.match)")
             throw Failure()
@@ -119,7 +120,7 @@ final class CucumberTests {
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a step", line: 3), step(.then, "a result", line: 4)]))
         } matching: { issue in
-            issue.sourceLocation?.line == 3 && issue.error is Failure
+            issue.sourceLocation?.line == hookLine && issue.error is Failure
         }
         #expect(ran == ["before a step", "after a step"])
     }
