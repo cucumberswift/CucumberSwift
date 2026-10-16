@@ -68,6 +68,19 @@ enum UITestApp {
     }
     #endif
 
+    /// Waits up to 30 seconds for a button to exist and be hittable before it is pressed: on a busy runner, a tap
+    /// that has to resolve the button itself can time out while evaluating the UI query, and XCUITest records
+    /// that as a failure that can't be caught and retried (#375). Not on tvOS, where buttons are pressed by focus.
+    static func waitForButton(_ button: XCUIElement) {
+        #if !os(tvOS)
+        guard button.waitForExistence(timeout: 30) else { return }
+        let deadline = Date().addingTimeInterval(30)
+        while !button.isHittable && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        #endif
+    }
+
     /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and
     /// back up to Add, where the app put it when it started.
     static func empty() {
@@ -76,8 +89,10 @@ enum UITestApp {
         waitForFocus(on: app.buttons["empty"])
         XCUIRemote.shared.press(.select)
         #elseif os(macOS)
+        waitForButton(app.buttons["empty"])
         app.buttons["empty"].click()
         #else
+        waitForButton(app.buttons["empty"])
         app.buttons["empty"].tap()
         #endif
         expected = 0
@@ -92,8 +107,10 @@ enum UITestApp {
         #if os(tvOS)
         XCUIRemote.shared.press(.select)
         #elseif os(macOS)
+        waitForButton(app.buttons["add"])
         app.buttons["add"].click()
         #else
+        waitForButton(app.buttons["add"])
         app.buttons["add"].tap()
         #endif
     }

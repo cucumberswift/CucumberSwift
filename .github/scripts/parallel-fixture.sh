@@ -142,8 +142,9 @@ run_unit() {
   done
 
   # A Simulator clone whose test runner fails to launch leaves one worker running every scenario, which is the
-  # environment failing, not CucumberSwift (#375). It is reported by name and the run is repeated once, with
-  # its folders emptied, before it counts as a failure. A failure of any other kind is never repeated.
+  # environment failing, not CucumberSwift (#375). When the run failed with that message, it is reported by
+  # name and repeated once, with its folders emptied, before it counts as a failure. A failure without the
+  # message is never repeated.
   local attempt
   for attempt in 1 2; do
     .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
@@ -152,7 +153,11 @@ run_unit() {
       CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
       PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
     status=$?
-    if [[ "$attempt" -eq 1 && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log"; then
+    # The message also appears at teardown of a run that passed (Xcode 16.4), so it counts only for a run that
+    # failed: xcodebuild's status, or the records, which the probe reads from a copy of the runner's folder.
+    if [[ "$attempt" -eq 1 && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log" \
+      && { [[ "$status" -ne 0 ]] || ! { runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+           python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" > /dev/null 2>&1; }; }; then
       echo "::warning::A simulator clone's test runner failed to launch (environment failure, not a test failure); running the $unit tests once more."
       grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
       cp "$log" "${log%.log}-attempt-1.log"
@@ -190,6 +195,12 @@ for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' > "$failures" || true
     head -30 "$failures"
+    # XCUITest itself timing out on a busy Simulator is the environment failing, not a test, and is said so (#375).
+    # Not repeated: another run of the unit could outlast the job.
+    if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
+      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
+      echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure."
+    fi
   fi
   # A fixture app that crashed leaves a report: show what it died of.
   for crash in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
