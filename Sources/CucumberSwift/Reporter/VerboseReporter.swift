@@ -12,67 +12,45 @@ import Foundation
 /// CucumberSwift installs it when the `CUCUMBER_VERBOSE` environment variable is `1` or `true`, or
 /// when your `StepImplementation` returns `true` from `verbose`.
 final class VerboseReporter: CucumberTestObserver {
-    static let environmentKey = "CUCUMBER_VERBOSE"
+    static let environmentKey = VerboseOutput.environmentKey
 
-    private let isEnabled: () -> Bool
-    private let output: (String) -> Void
+    private let output: VerboseOutput
 
     /// - Parameter isEnabled: Asked before every line, because the setting can change after the
     ///   reporter exists: `setupSteps()` runs after CucumberSwift has built its reporters.
     init(isEnabled: @escaping () -> Bool = { true }, write: @escaping (String) -> Void = { print($0); fflush(stdout) }) {
-        self.isEnabled = isEnabled
-        self.output = write
+        output = VerboseOutput(isEnabled: isEnabled, write: write)
     }
 
     /// Whether the environment asks for verbose output.
     static func isEnabled(in environment: [String: String]) -> Bool {
-        guard let value = environment[environmentKey]?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
-        return value == "1" || value == "true"
+        VerboseOutput.isEnabled(in: environment)
     }
 
-    private func write(_ line: String) {
-        if isEnabled() { output(line) }
-    }
-
-    func testSuiteStarted(at _: Date) { write("[CucumberSwift] Test suite started") }
-    func testSuiteFinished(at _: Date) { write("[CucumberSwift] Test suite finished") }
+    func testSuiteStarted(at _: Date) { output.suiteStarted() }
+    func testSuiteFinished(at _: Date) { output.suiteFinished() }
 
     func didStart(feature: Feature, at _: Date) {
-        write("[CucumberSwift] Feature: \(feature.title)")
+        output.featureStarted(title: feature.title)
     }
 
     func didStart(scenario: Scenario, at _: Date) {
-        write("[CucumberSwift]   Scenario: \(scenario.title)")
+        output.scenarioStarted(title: scenario.title)
     }
 
     func didStart(step: Step, at _: Date) {
-        write("[CucumberSwift]     \(step.writtenKeyword) \(step.match)")
+        output.stepStarted(keyword: step.writtenKeyword, match: step.match)
     }
 
     func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        write("[CucumberSwift] Feature \"\(feature.title)\" \(describe(result)) \(format(duration))")
+        output.featureFinished(title: feature.title, result: result, duration: duration)
     }
 
     func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        write("[CucumberSwift]   Scenario \"\(scenario.title)\" \(describe(result)) \(format(duration))")
+        output.scenarioFinished(title: scenario.title, result: result, duration: duration)
     }
 
     func didFinish(step _: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        write("[CucumberSwift]       -> \(describe(result)) \(format(duration))")
-    }
-
-    private func describe(_ result: Reporter.Result) -> String {
-        switch result {
-            case .passed: return "passed"
-            case .failed(let message): return message.map { "failed: \($0)" } ?? "failed"
-            case .skipped: return "skipped"
-            case .pending: return "pending"
-            case .undefined: return "undefined"
-            case .ambiguous: return "ambiguous"
-        }
-    }
-
-    private func format(_ duration: Measurement<UnitDuration>) -> String {
-        "(\(String(format: "%.3f", duration.converted(to: .seconds).value))s)"
+        output.stepFinished(result: result, duration: duration)
     }
 }

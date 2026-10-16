@@ -8,14 +8,27 @@ import Foundation
 /// A feature, as hooks and step definitions see it.
 public final class Feature {
     public let title: String
+    /// The text under the feature's title, if there is any.
+    public let desc: String
     public let tags: [String]
     /// The feature file's path on the Mac that built the tests.
     public let uri: String
+    public let location: Location
 
-    init(title: String, tags: [String], uri: String) {
+    init(title: String, desc: String = "", tags: [String], uri: String, location: Location = Location(line: 1, column: 1)) {
         self.title = title
+        self.desc = desc
         self.tags = tags
         self.uri = uri
+        self.location = location
+    }
+
+    convenience init(_ scenario: GherkinScenario) {
+        self.init(title: scenario.featureTitle,
+                  desc: scenario.featureDescription,
+                  tags: scenario.featureTags,
+                  uri: scenario.file,
+                  location: Location(line: scenario.featureLine, column: 1))
     }
 }
 
@@ -29,10 +42,12 @@ public final class Scenario {
     public let feature: Feature?
     public let location: Location
 
-    init(_ scenario: GherkinScenario) {
+    /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
+    ///   that observers see one object for a feature.
+    init(_ scenario: GherkinScenario, feature: Feature? = nil) {
         title = scenario.title
         tags = scenario.tags
-        feature = Feature(title: scenario.featureTitle, tags: scenario.featureTags, uri: scenario.file)
+        self.feature = feature ?? Feature(scenario)
         location = Location(line: scenario.line, column: scenario.column)
         steps = scenario.steps.map { Step($0, in: self) }
     }

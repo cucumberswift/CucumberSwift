@@ -15,6 +15,13 @@ final class CucumberTests {
         cucumber.afterScenarioHooks = []
         cucumber.beforeStepHooks = []
         cucumber.afterStepHooks = []
+        // No reporters, so that these tests write no report; the reporting tests add their own.
+        cucumber.reporters = []
+        cucumber.environment = [:]
+        cucumber.resetObservation()
+        Cucumber.reportPath = nil
+        Cucumber.verboseOutput = false
+        ImplementationSettings.verbose = false
     }
 
     func step(_ keyword: Step.Keyword, _ text: String, line: Int) -> GherkinStep {
@@ -164,7 +171,15 @@ final class CucumberTests {
     }
 }
 
+/// What the test target's `StepImplementation` says, so that tests can turn its properties on.
+@MainActor
+enum ImplementationSettings {
+    static var verbose = false
+}
+
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
     public func setupSteps() {}
+
+    public var verbose: Bool { ImplementationSettings.verbose }
 }

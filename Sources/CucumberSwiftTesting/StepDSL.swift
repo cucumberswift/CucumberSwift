@@ -13,6 +13,14 @@ import Foundation
 @MainActor
 public protocol StepImplementation {
     func setupSteps()
+    /// Whether the runner prints each feature, scenario and step, with its result and duration, as it
+    /// runs. Defaults to `false`. Setting the `CUCUMBER_VERBOSE` environment variable to `1` or `true`
+    /// turns it on without a code change.
+    var verbose: Bool { get }
+}
+
+extension StepImplementation {
+    public var verbose: Bool { false }
 }
 
 public final class GivenStep: StepDSL { override static var keyword: Step.Keyword { .given } }
