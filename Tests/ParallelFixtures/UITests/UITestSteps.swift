@@ -34,10 +34,11 @@ enum UITestApp {
     /// queries the element afresh and compares its label and value, rather than a predicate expectation,
     /// which reported a count it was not comparing (#375). When the app doesn't show the count, the failure
     /// says what it showed last.
-    static func waitForItems(_ count: Int, _ failure: String) {
+    @discardableResult
+    static func waitForItems(_ count: Int, _ failure: String, timeout: TimeInterval = 30, reportFailure: Bool = true) -> Bool {
         let outcome = ItemCountWait.wait(
             for: count,
-            timeout: 30,
+            timeout: timeout,
             interval: 0.25,
             read: {
                 let element = itemCount()
@@ -47,12 +48,14 @@ enum UITestApp {
             now: { Date() },
             sleep: { Thread.sleep(forTimeInterval: $0) }
         )
-        guard case .timedOut(let lastSeen) = outcome else { return }
+        guard case .timedOut(let lastSeen) = outcome else { return true }
+        guard reportFailure else { return false }
         guard let lastSeen else {
             XCTFail("\(failure): the app shows no item count. App state: \(app.state.rawValue). What it shows: \(app.debugDescription.prefix(1_500))")
-            return
+            return false
         }
         XCTFail("\(failure): expected '\(ItemCountWait.text(for: count))', the app last showed label '\(lastSeen.label)', value '\(lastSeen.value)'")
+        return false
     }
 
     #if os(tvOS)
@@ -65,6 +68,19 @@ enum UITestApp {
     }
     #endif
 
+    /// Waits up to 30 seconds for a button to exist and be hittable before it is pressed: on a busy runner, a tap
+    /// that has to resolve the button itself can time out while evaluating the UI query, and XCUITest records
+    /// that as a failure that can't be caught and retried (#375). Not on tvOS, where buttons are pressed by focus.
+    static func waitForButton(_ button: XCUIElement) {
+        #if !os(tvOS)
+        guard button.waitForExistence(timeout: 30) else { return }
+        let deadline = Date().addingTimeInterval(30)
+        while !button.isHittable && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        #endif
+    }
+
     /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and
     /// back up to Add, where the app put it when it started.
     static func empty() {
@@ -73,8 +89,10 @@ enum UITestApp {
         waitForFocus(on: app.buttons["empty"])
         XCUIRemote.shared.press(.select)
         #elseif os(macOS)
+        waitForButton(app.buttons["empty"])
         app.buttons["empty"].click()
         #else
+        waitForButton(app.buttons["empty"])
         app.buttons["empty"].tap()
         #endif
         expected = 0
@@ -85,16 +103,29 @@ enum UITestApp {
         #endif
     }
 
-    /// Adds an item, and waits until the app counts it, so that the next tap starts from a known count.
-    static func add() {
+    private static func pressAdd() {
         #if os(tvOS)
         XCUIRemote.shared.press(.select)
         #elseif os(macOS)
+        waitForButton(app.buttons["add"])
         app.buttons["add"].click()
         #else
+        waitForButton(app.buttons["add"])
         app.buttons["add"].tap()
         #endif
+    }
+
+    /// Adds an item, and waits until the app counts it, so that the next tap starts from a known count. A tap
+    /// the app drops, which a busy simulator does at times, is pressed once more after 10 seconds, but only
+    /// while the app still shows the count from before it: a late tap that landed shows the new count, and
+    /// pressing again would add a second item.
+    static func add() {
+        pressAdd()
         expected += 1
+        if waitForItems(expected, "", timeout: 10, reportFailure: false) { return }
+        if waitForItems(expected - 1, "", timeout: 1, reportFailure: false) {
+            pressAdd()
+        }
         waitForItems(expected, "The app did not count an added item")
     }
 }

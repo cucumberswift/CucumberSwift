@@ -80,19 +80,19 @@ scheme="Parallel${KIND}Tests${suffix}"
 echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}, with a test per ${LAYOUT:-step}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
-# a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
-# then times out. So boot the simulator once, wait until it has finished, and shut it down for Xcode
-# to clone. A simulator that never finishes booting would keep bootstatus waiting, so after 5 minutes
-# the tests start anyway.
+# a lot of one-off work (it took 291 seconds in one run), and each clone would repeat it while its tests wait
+# to launch the app, which then times out. So boot the simulator once, wait until it has finished, and shut
+# it down for Xcode to clone. A simulator that never finishes booting would keep bootstatus waiting, so
+# after 8 minutes the tests start anyway.
 if [[ -n "${udid:-}" ]]; then
   start=$(date +%s)
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b > /dev/null &
   waiting=$!
-  while kill -0 "$waiting" 2>/dev/null && (( $(date +%s) - start < 300 )); do sleep 2; done
+  while kill -0 "$waiting" 2>/dev/null && (( $(date +%s) - start < 480 )); do sleep 2; done
   if kill -0 "$waiting" 2>/dev/null; then
     kill "$waiting"
-    echo "::warning::The simulator hadn't finished booting after 5 minutes; running the tests anyway."
+    echo "::warning::The simulator hadn't finished booting after 8 minutes; running the tests anyway."
   elif wait "$waiting"; then
     echo "Booted the simulator once first, in $(( $(date +%s) - start )) seconds"
   else
@@ -113,6 +113,13 @@ runner_folders() {
 }
 runner_records() {
   runner_folders parallel-test-records
+  return 0
+}
+
+# How many processes wrote a scenario record into folder $1: the Simulator clones that ran scenarios.
+scenario_workers() {
+  local folder=$1
+  ls "$folder" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' '
   return 0
 }
 
@@ -141,12 +148,41 @@ run_unit() {
     runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
   done
 
-  .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
-    "${parallel_flags[@]}" -resultBundlePath "$result" \
-    PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
-    CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
-    PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
-  status=$?
+  # A Simulator clone whose test runner fails to launch leaves one worker running every scenario, which is the
+  # environment failing, not CucumberSwift or the fixture (#375). The message alone doesn't show it: Xcode 16.4
+  # prints it at teardown of a run that passed, and a real failure can come with it. So the run is repeated once
+  # only with all of this evidence together: the message, a run that failed (xcodebuild's status, or its
+  # records), and fewer clones with scenario records than workers, which shows a clone never ran its share. The
+  # repeat is reported, the first attempt's log is kept beside the second's (parallel-test-*-attempt-1.log, which
+  # the job uploads on a failure), and a failure that comes back fails the job. A failure without all three is
+  # never repeated.
+  local attempt failed clones
+  for attempt in 1 2; do
+    .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+      "${parallel_flags[@]}" -resultBundlePath "$result" \
+      PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
+      CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
+      PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
+    status=$?
+    if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log"; then
+      runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+      failed=no
+      if [[ "$status" -ne 0 ]] || ! python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" > /dev/null 2>&1; then failed=yes; fi
+      clones=$(scenario_workers "$records")
+      if [[ "$failed" = yes && "$clones" -lt "$WORKERS" ]]; then
+        echo "::warning::A simulator clone's test runner failed to launch: only $clones of $WORKERS clones ran scenarios. Running the $unit tests once more."
+        grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
+        cp "$log" "${log%.log}-attempt-1.log"
+        rm -rf "$records" "$result" "$(dirname "$report")"
+        mkdir -p "$records" "$(dirname "$report")"
+        for name in parallel-test-records parallel-test-report; do
+          runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+        done
+        continue
+      fi
+    fi
+    break
+  done
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
   [[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
@@ -172,6 +208,12 @@ for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' > "$failures" || true
     head -30 "$failures"
+    # XCUITest itself timing out on a busy Simulator is the environment failing, not a test, and is said so (#375).
+    # Not repeated: another run of the unit could outlast the job.
+    if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
+      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
+      echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
+    fi
   fi
   # A fixture app that crashed leaves a report: show what it died of.
   for crash in $(ls -t "$HOME"/Library/Logs/DiagnosticReports/ParallelFixtureApp* 2>/dev/null | head -3); do
@@ -207,6 +249,15 @@ for failure in json.load(sys.stdin).get("testFailures", []):
   control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
+  # Xcode may give every scenario to one Simulator clone, such as when another clone's runner is slow to start.
+  # The run still passes, but it then says nothing about the parallel case, so it is said (#375).
+  if [[ "$mode" != serial && -n "${udid:-}" ]]; then
+    local ran_in
+    ran_in=$(scenario_workers "$records")
+    if [[ "$ran_in" -lt "$WORKERS" ]]; then
+      echo "::warning::Only $ran_in of $WORKERS Simulator clones ran scenarios in the $unit run: a pass here does not show the parallel case."
+    fi
+  fi
   if [[ "$mode" = serial ]]; then
     python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
       --check-order || status=1
