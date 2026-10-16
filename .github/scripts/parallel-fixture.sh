@@ -116,6 +116,11 @@ runner_records() {
   return 0
 }
 
+# How many processes wrote a scenario record into folder $1: the Simulator clones that ran scenarios.
+scenario_workers() {
+  ls "$1" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' '
+}
+
 # Runs the tests once, handing out each $1 (scenario or feature), and checks the records. With $2 = serial,
 # parallel testing is off in Xcode (CucumberSwift's setting stays on), and the scenarios must run in the
 # order of the feature files: that is what XCTest's order by class name gives (#388). Under Xcode's parallel
@@ -142,10 +147,14 @@ run_unit() {
   done
 
   # A Simulator clone whose test runner fails to launch leaves one worker running every scenario, which is the
-  # environment failing, not CucumberSwift (#375). When the run failed with that message, it is reported by
-  # name and repeated once, with its folders emptied, before it counts as a failure. A failure without the
-  # message is never repeated.
-  local attempt
+  # environment failing, not CucumberSwift or the fixture (#375). The message alone doesn't show it: Xcode 16.4
+  # prints it at teardown of a run that passed, and a real failure can come with it. So the run is repeated once
+  # only with all of this evidence together: the message, a run that failed (xcodebuild's status, or its
+  # records), and fewer clones with scenario records than workers, which shows a clone never ran its share. The
+  # repeat is reported, the first attempt's log is kept beside the second's (parallel-test-*-attempt-1.log, which
+  # the job uploads on a failure), and a failure that comes back fails the job. A failure without all three is
+  # never repeated.
+  local attempt failed clones
   for attempt in 1 2; do
     .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
       "${parallel_flags[@]}" -resultBundlePath "$result" \
@@ -153,20 +162,22 @@ run_unit() {
       CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
       PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
     status=$?
-    # The message also appears at teardown of a run that passed (Xcode 16.4), so it counts only for a run that
-    # failed: xcodebuild's status, or the records, which the probe reads from a copy of the runner's folder.
-    if [[ "$attempt" -eq 1 && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log" \
-      && { [[ "$status" -ne 0 ]] || ! { runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
-           python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" > /dev/null 2>&1; }; }; then
-      echo "::warning::A simulator clone's test runner failed to launch (environment failure, not a test failure); running the $unit tests once more."
-      grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
-      cp "$log" "${log%.log}-attempt-1.log"
-      rm -rf "$records" "$result" "$(dirname "$report")"
-      mkdir -p "$records" "$(dirname "$report")"
-      for name in parallel-test-records parallel-test-report; do
-        runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
-      done
-      continue
+    if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log"; then
+      runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
+      failed=no
+      if [[ "$status" -ne 0 ]] || ! python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" > /dev/null 2>&1; then failed=yes; fi
+      clones=$(scenario_workers "$records")
+      if [[ "$failed" = yes && "$clones" -lt "$WORKERS" ]]; then
+        echo "::warning::A simulator clone's test runner failed to launch: only $clones of $WORKERS clones ran scenarios. Running the $unit tests once more."
+        grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
+        cp "$log" "${log%.log}-attempt-1.log"
+        rm -rf "$records" "$result" "$(dirname "$report")"
+        mkdir -p "$records" "$(dirname "$report")"
+        for name in parallel-test-records parallel-test-report; do
+          runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+        done
+        continue
+      fi
     fi
     break
   done
@@ -240,7 +251,7 @@ for failure in json.load(sys.stdin).get("testFailures", []):
   # The run still passes, but it then says nothing about the parallel case, so it is said (#375).
   if [[ "$mode" != serial && -n "${udid:-}" ]]; then
     local ran_in
-    ran_in=$(ls "$records" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' ')
+    ran_in=$(scenario_workers "$records")
     if [[ "$ran_in" -lt "$WORKERS" ]]; then
       echo "::warning::Only $ran_in of $WORKERS Simulator clones ran scenarios in the $unit run: a pass here does not show the parallel case."
     fi
