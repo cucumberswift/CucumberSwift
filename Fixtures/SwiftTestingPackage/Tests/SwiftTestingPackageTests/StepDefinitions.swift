@@ -27,8 +27,8 @@ extension Cucumber: @retroactive StepImplementation {
     // The StepImplementation options, which have defaults: a consumer sets the ones it wants.
     public var asyncStepTimeout: TimeInterval { 30 }
     public var reverseOrderForAfterHooks: Bool { true }
-    // Xcode shows this scenario as skipped: its step has no step definition, and would fail if it ran.
-    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+    // Xcode shows the scenario this leaves out as skipped: its step would fail if it ran.
+    public func shouldRunWith(scenario _: Scenario?, tags: [String]) -> Bool {
         !tags.contains("left-out-in-code")
     }
 

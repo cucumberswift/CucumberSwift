@@ -9,6 +9,14 @@ import Foundation
 import Testing
 
 extension StepDSL {
+    /// The whole match and then each capture group that took part in it, or `nil` if the text doesn't match.
+    private static func groups(of expression: NSRegularExpression?, in text: String) -> [String]? {
+        guard let expression, let result = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
+        return (0..<result.numberOfRanges).compactMap { index in
+            Range(result.range(at: index), in: text).map { String(text[$0]) }
+        }
+    }
+
     /// A step definition with a regular expression in a string, whose closure takes the whole match and
     /// then each capture group, as CucumberSwift's does. The expression matches anywhere in a step's text,
     /// without regard to case, unless you anchor it. A pattern that doesn't compile fails at this line.
@@ -27,12 +35,10 @@ extension StepDSL {
                          sourceLocation: SourceLocation(fileID: "\(file)", filePath: "\(file)", line: line, column: 1))
             expression = nil
         }
-        self.init(matching: { text in
-            guard let expression, let result = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
-            let groups = (0..<result.numberOfRanges).compactMap { index in
-                Range(result.range(at: index), in: text).map { String(text[$0]) }
-            }
+        let match: @MainActor (String) -> (@MainActor (Step) async throws -> Void)? = { text in
+            guard let groups = Self.groups(of: expression, in: text) else { return nil }
             return { step in try await callback(groups, step) }
-        }, line: line, file: file)
+        }
+        self.init(matching: match, line: line, file: file)
     }
 }

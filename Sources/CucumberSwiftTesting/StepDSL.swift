@@ -16,12 +16,6 @@ public protocol StepImplementation {
     /// runs. Defaults to `false`. Setting the `CUCUMBER_VERBOSE` environment variable to `1` or `true`
     /// turns it on without a code change.
     var verbose: Bool { get }
-    func setupSteps()
-    /// Whether a scenario runs, asked once for each scenario or example, as it is about to run. Defaults
-    /// to `true`. `CUCUMBER_TAGS` takes over when it is set, and the runner then doesn't ask. A scenario that
-    /// this leaves out is reported as skipped, and an example of a Scenario Outline is not run as a test
-    /// case. It is asked after `setupSteps()`.
-    func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool
     /// What happens after an assertion fails in a step: whether an `async` step's task goes on running
     /// (`true`, the default) or is cancelled at the first failure. A synchronous step can't be stopped
     /// part way, because Swift Testing's `#expect` doesn't throw. Either way, once a step has failed
@@ -36,6 +30,12 @@ public protocol StepImplementation {
     /// ``Cucumber/generateRegexLiterals`` asks for regex literals rather than Cucumber Expressions. The
     /// default, ``RegexLiteralStyle/extendedDelimiter``, compiles in any test target.
     var regexLiteralStyle: RegexLiteralStyle { get }
+    func setupSteps()
+    /// Whether a scenario runs, asked once for each scenario or example, as it is about to run. Defaults
+    /// to `true`. `CUCUMBER_TAGS` takes over when it is set, and the runner then doesn't ask. A scenario that
+    /// this leaves out is reported as skipped, and an example of a Scenario Outline is not run as a test
+    /// case. It is asked after `setupSteps()`.
+    func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool
 }
 
 public final class GivenStep: StepDSL { override static var keyword: Step.Keyword { .given } }
@@ -100,9 +100,9 @@ public class StepDSL {
 
 extension StepImplementation {
     public var verbose: Bool { false }
-    public func shouldRunWith(scenario _: Scenario?, tags _: [String]) -> Bool { true }
     public var continueTestingAfterFailure: Bool { true }
     public var reverseOrderForAfterHooks: Bool { false }
     public var asyncStepTimeout: TimeInterval { 60 }
     public var regexLiteralStyle: RegexLiteralStyle { .extendedDelimiter }
+    public func shouldRunWith(scenario _: Scenario?, tags _: [String]) -> Bool { true }
 }

@@ -196,11 +196,11 @@ final class CucumberTests {
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
     public var verbose: Bool { ImplementationSettings.verbose }
-    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool { ImplementationSettings.shouldRunWith(scenario, tags) }
     public var continueTestingAfterFailure: Bool { ImplementationSettings.continueTestingAfterFailure }
     public var reverseOrderForAfterHooks: Bool { ImplementationSettings.reverseOrderForAfterHooks }
     public var asyncStepTimeout: TimeInterval { ImplementationSettings.asyncStepTimeout }
     public var regexLiteralStyle: RegexLiteralStyle { ImplementationSettings.regexLiteralStyle }
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool { ImplementationSettings.shouldRunWith(scenario, tags) }
 
     public func setupSteps() {}
 }

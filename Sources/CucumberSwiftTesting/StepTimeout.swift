@@ -17,6 +17,26 @@ struct StepTimeoutError: LocalizedError {
     }
 }
 
+/// Whether a step's or a hook's body has returned. Not tied to an actor, so reading it needs no `await`
+/// whichever actor the compiler runs the timeout's task group on.
+private final class FinishedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isFinished = false
+
+    var value: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return isFinished
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            isFinished = newValue
+        }
+    }
+}
+
 extension Cucumber {
     // Not named like the protocol's requirements: a conformance in a module that sees these would take them
     // as its witnesses, and answer with itself.
@@ -76,26 +96,6 @@ extension Cucumber {
             try await task.value
         } catch is CancellationError where cancelsOnIssue && !(record?.messages.isEmpty ?? true) {
             // The issue that cancelled the body is already recorded, so the cancellation is not news.
-        }
-    }
-}
-
-/// Whether a step's or a hook's body has returned. Not tied to an actor, so reading it needs no `await`
-/// whichever actor the compiler runs the timeout's task group on.
-private final class FinishedFlag: @unchecked Sendable {
-    private let lock = NSLock()
-    private var isFinished = false
-
-    var value: Bool {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return isFinished
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            isFinished = newValue
         }
     }
 }

@@ -138,8 +138,17 @@ extension CucumberTests {
     @Test func examplesToRunLeavesOutTheExamplesShouldRunWithLeavesOut() {
         ImplementationSettings.shouldRunWith = { _, tags in !tags.contains("left-out") }
         func example(_ line: Int, tags: [String]) -> GherkinExample {
-            GherkinExample(GherkinScenario(featureTitle: "F", featureTags: [], title: "S", tags: tags, file: "/Features/Test.feature",
-                                           line: line, column: 7, steps: []))
+            var scenario = scenario([])
+            scenario = GherkinScenario(
+                featureTitle: scenario.featureTitle,
+                featureTags: [],
+                title: "S",
+                tags: tags,
+                file: scenario.file,
+                line: line,
+                column: 7,
+                steps: [])
+            return GherkinExample(scenario)
         }
         let kept = Cucumber.shared.examplesToRun([example(5, tags: []), example(6, tags: ["left-out"]), example(7, tags: ["x"])])
         #expect(kept.map(\.scenario.line) == [5, 7])
@@ -290,8 +299,15 @@ extension CucumberTests {
     // MARK: Suggested step definitions
 
     func undefinedStep() -> GherkinStep {
-        GherkinStep(keyword: .given, keywordName: "Given", text: "I see 3 messages", line: 3, column: 5,
-                    suggestion: "EXPRESSION", regexLiteralSuggestion: "REGEX", bareSlashRegexLiteralSuggestion: "BARE")
+        GherkinStep(
+            keyword: .given,
+            keywordName: "Given",
+            text: "I see 3 messages",
+            line: 3,
+            column: 5,
+            suggestion: "EXPRESSION",
+            regexLiteralSuggestion: "REGEX",
+            bareSlashRegexLiteralSuggestion: "BARE")
     }
 
     /// The suggestion in the message of the issue an undefined step records.

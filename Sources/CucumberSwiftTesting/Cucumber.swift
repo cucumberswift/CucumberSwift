@@ -93,6 +93,10 @@ public final class Cucumber {
         return observers.compactMap { $0 }
     }
 
+    private static func key(of scenario: GherkinScenario) -> String {
+        "\(scenario.file):\(scenario.line):\(scenario.column)"
+    }
+
     func register(
         keyword: Step.Keyword,
         file: StaticString,
@@ -142,10 +146,6 @@ public final class Cucumber {
     /// is not a test case at all, as with CucumberSwift, which doesn't generate it.
     public func examplesToRun(_ examples: [GherkinExample]) -> [GherkinExample] {
         examples.filter { shouldRun($0.scenario) }
-    }
-
-    private static func key(of scenario: GherkinScenario) -> String {
-        "\(scenario.file):\(scenario.line):\(scenario.column)"
     }
 
     private func perform(_ gherkinScenario: GherkinScenario) async {
