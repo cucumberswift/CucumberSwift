@@ -48,23 +48,24 @@ extension CucumberTests {
         let observer = RecordingObserver()
         Cucumber.shared.reporters = [observer]
         Given("a thing") { _, _ in await Task.yield() }
+        let first = scenario([step(.given, "a thing", line: 3), step(.given, "a thing", line: 4)])
         let other = GherkinScenario(
             featureTitle: "G",
             featureTags: [],
             title: "T",
             tags: [],
-            file: "/Features/Other.feature",
+            file: first.file.replacingOccurrences(of: "Test", with: "Other"),
             line: 2,
             column: 3,
             steps: [])
 
         Cucumber.shared.beginSuite()
-        async let first: Void = Cucumber.shared.run(scenario([step(.given, "a thing", line: 3), step(.given, "a thing", line: 4)]))
-        async let second: Void = Cucumber.shared.run(other)
-        _ = await (first, second)
+        async let firstRun: Void = Cucumber.shared.run(first)
+        async let secondRun: Void = Cucumber.shared.run(other)
+        _ = await (firstRun, secondRun)
         #expect(!observer.log.contains("feature passed F"))
-        Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
-        Cucumber.shared.endFeature(file: "/Features/Other.feature", title: "G", line: 1)
+        Cucumber.shared.endFeature(file: first.file, title: "F", line: 1)
+        Cucumber.shared.endFeature(file: other.file, title: "G", line: 1)
         Cucumber.shared.endSuite()
 
         #expect(observer.log.suffix(3) == ["feature passed F", "feature passed G", "suite finished"])
