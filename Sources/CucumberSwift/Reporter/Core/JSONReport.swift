@@ -181,7 +181,8 @@ final class CucumberJSONRecorder {
             save(atBoundary: true)
             return
         }
-        defer { save() }
+        // Clears a stale report before the run, whichever kind of run it is.
+        defer { save(atBoundary: true) }
         features.removeAll()
         currentFeature = nil
         currentScenario = nil
@@ -253,11 +254,12 @@ final class CucumberJSONRecorder {
     ///
     /// A parallel run merges only where a scenario or a feature finishes, and where the worker's suite
     /// starts and finishes: a merge reads, parses and rewrites the whole report, and a merge for every step
-    /// of every worker would grow with the report. A scenario that never finishes, because its worker was
-    /// killed, isn't in the report; every scenario that finished is.
+    /// of every worker would grow with the report. A run that orders the report by file does the same, for the
+    /// same reason: it sorts and rewrites the whole report each time. A scenario that never finishes, because
+    /// its worker was killed, isn't in the report; every scenario that finished is.
     private func save(atBoundary: Bool = false) {
         let isParallel = isParallel()
-        if isParallel && !atBoundary { return }
+        if (isParallel || ordersByFile) && !atBoundary { return }
         guard let data = try? encoder.encode(features),
               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
         let url = reportURL()

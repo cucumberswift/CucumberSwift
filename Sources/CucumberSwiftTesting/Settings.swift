@@ -15,14 +15,31 @@ enum CucumberSettings {
         private var storedReportPath: String?
         private var storedVerboseOutput = false
 
+        // `lock()` and `unlock()` rather than `withLock`, which needs macOS 13, iOS 16 and tvOS 16.
         var reportPath: String? {
-            get { lock.withLock { storedReportPath } }
-            set { lock.withLock { storedReportPath = newValue } }
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedReportPath
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedReportPath = newValue
+            }
         }
 
         var verboseOutput: Bool {
-            get { lock.withLock { storedVerboseOutput } }
-            set { lock.withLock { storedVerboseOutput = newValue } }
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedVerboseOutput
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedVerboseOutput = newValue
+            }
         }
     }
 

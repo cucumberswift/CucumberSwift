@@ -42,7 +42,6 @@ extension Cucumber: CucumberTestObservable {
 }
 
 extension CucumberTests {
-    /// A folder for one test's report, removed afterwards by the caller.
     func reportURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("CucumberSwiftTestingReports-\(UUID().uuidString)")
@@ -59,8 +58,6 @@ extension CucumberTests {
         let text = try #require(String(data: data, encoding: .utf8))
         return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
     }
-
-    // MARK: Observers
 
     @Test func observersSeeTheSuiteTheFeatureTheScenarioAndEachStepInOrder() async {
         let observer = RecordingObserver()
@@ -145,8 +142,6 @@ extension CucumberTests {
         #expect(observer.log == ["feature started F", "scenario started S", "scenario passed S"])
     }
 
-    // MARK: Verbose output
-
     @Test func verboseOutputPrintsEachFeatureScenarioAndStepWithItsResult() async {
         var lines = [String]()
         // swiftlint:disable:next trailing_closure
@@ -207,8 +202,6 @@ extension CucumberTests {
         #expect(lines == ["[CucumberSwift] Test suite started"])
     }
 
-    // MARK: Report path
-
     @Test func theReportPathIsTheStaticVariableThenTheEnvironmentVariable() {
         let key = "CUCUMBER_REPORT_PATH"
         #expect(CucumberSettings.reportPath(environment: [:]) == nil)
@@ -219,8 +212,6 @@ extension CucumberTests {
         #expect(CucumberSettings.reportPath(environment: [key: "/tmp/env.json"]) == "/tmp/static.json")
         #expect(CucumberSettings.reportPath(environment: [:]) == "/tmp/static.json")
     }
-
-    // MARK: The report
 
     /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them.
     func parityScenarios() -> [GherkinScenario] {
@@ -288,6 +279,32 @@ extension CucumberTests {
         let schema = try #require(JSONSerialization.jsonObject(with: schemaData) as? [String: Any])
         let result = try JSONSchema.validate(JSONSerialization.jsonObject(with: written), schema: schema)
         #expect(result.errors?.count ?? 0 == 0, "\(String(describing: result.errors))")
+    }
+
+    /// The report is sorted and rewritten whole each time, so it is written where a scenario finishes, not for
+    /// every step.
+    @Test func theReportIsWrittenWhereAScenarioFinishesNotForEveryStep() async throws {
+        let url = reportURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        Cucumber.reportPath = url.path
+        Cucumber.shared.reporters = [try #require(CucumberJSONReporter())]
+        var namesInTheReportDuringTheSecondScenario = [String]()
+        Given("a basket") { _, _ in }
+        When("I pay by card") { _, _ in }
+        When("I pay {int}") { [self] _, _ in
+            let features = try readReport(url)
+            namesInTheReportDuringTheSecondScenario = (features.first?["elements"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+        }
+        Then("the order is paid") { _, _ in }
+
+        let scenarios = parityScenarios()
+        await Cucumber.shared.run(scenarios[0])
+        await Cucumber.shared.run(scenarios[1])
+
+        // The first scenario had finished, so it was in the report; the second was still running, so it wasn't.
+        #expect(namesInTheReportDuringTheSecondScenario == ["Pay by card"])
+        let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
+        #expect(elements.compactMap { $0["name"] as? String } == ["Pay by card", "Pay 5 (example 1)"])
     }
 
     @Test func scenariosThatRunAtTheSameTimeAreEachInTheReportOnce() async throws {
