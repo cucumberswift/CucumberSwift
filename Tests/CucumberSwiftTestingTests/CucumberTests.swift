@@ -2,6 +2,12 @@
 import Foundation
 import Testing
 
+/// What the test target's `StepImplementation` says, so that tests can turn its properties on.
+@MainActor
+enum ImplementationSettings {
+    static var verbose = false
+}
+
 /// The runner, one scenario at a time, with step definitions each test registers itself.
 @MainActor
 @Suite(.serialized)
@@ -171,15 +177,9 @@ final class CucumberTests {
     }
 }
 
-/// What the test target's `StepImplementation` says, so that tests can turn its properties on.
-@MainActor
-enum ImplementationSettings {
-    static var verbose = false
-}
-
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
-    public func setupSteps() {}
-
     public var verbose: Bool { ImplementationSettings.verbose }
+
+    public func setupSteps() {}
 }

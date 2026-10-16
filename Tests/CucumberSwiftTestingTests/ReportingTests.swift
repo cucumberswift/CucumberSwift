@@ -3,10 +3,23 @@ import Foundation
 import JSONSchema
 import Testing
 
+struct Broken: Error, CustomStringConvertible { var description: String { "the card was declined" } }
+
+/// What the test target's `CucumberTestObservable` conformance hands the runner.
+@MainActor
+enum ObserverRegistry {
+    static var observers = [CucumberTestObserver]()
+}
+
 /// Records what the runner tells an observer, one line for each event.
 @MainActor
 final class RecordingObserver: CucumberTestObserver {
     var log = [String]()
+
+    private static func describe(_ result: Reporter.Result) -> String {
+        if case .failed(let message) = result { return message.map { "failed: \($0)" } ?? "failed" }
+        return "\(result)"
+    }
 
     func testSuiteStarted(at _: Date) { log.append("suite started") }
     func testSuiteFinished(at _: Date) { log.append("suite finished") }
@@ -22,19 +35,6 @@ final class RecordingObserver: CucumberTestObserver {
     func didFinish(step _: Step, result: Reporter.Result, duration _: Measurement<UnitDuration>) {
         log.append("step \(Self.describe(result))")
     }
-
-    private static func describe(_ result: Reporter.Result) -> String {
-        if case .failed(let message) = result { return message.map { "failed: \($0)" } ?? "failed" }
-        return "\(result)"
-    }
-}
-
-struct Broken: Error, CustomStringConvertible { var description: String { "the card was declined" } }
-
-/// What the test target's `CucumberTestObservable` conformance hands the runner.
-@MainActor
-enum ObserverRegistry {
-    static var observers = [CucumberTestObserver]()
 }
 
 extension Cucumber: CucumberTestObservable {
@@ -92,8 +92,15 @@ extension CucumberTests {
     @Test func aFeatureThatNothingSaysIsOverEndsWhenTheNextOneStarts() async {
         let observer = RecordingObserver()
         Cucumber.shared.reporters = [observer]
-        let other = GherkinScenario(featureTitle: "G", featureTags: [], title: "T", tags: [], file: "/Features/Other.feature",
-                                    line: 2, column: 3, steps: [])
+        let other = GherkinScenario(
+            featureTitle: "G",
+            featureTags: [],
+            title: "T",
+            tags: [],
+            file: "/Features/Other.feature",
+            line: 2,
+            column: 3,
+            steps: [])
 
         await Cucumber.shared.run(scenario([]))
         await Cucumber.shared.run(other)
@@ -106,11 +113,11 @@ extension CucumberTests {
 
     @Test func aFeatureIsOneObjectForAllOfItsScenarios() async {
         final class Features: CucumberTestObserver {
-            var features = [ObjectIdentifier]()
+            var seen = [ObjectIdentifier]()
             func testSuiteStarted(at _: Date) {}
             func testSuiteFinished(at _: Date) {}
             func didStart(feature _: Feature, at _: Date) {}
-            func didStart(scenario: Scenario, at _: Date) { scenario.feature.map { features.append(ObjectIdentifier($0)) } }
+            func didStart(scenario: Scenario, at _: Date) { scenario.feature.map { seen.append(ObjectIdentifier($0)) } }
             func didStart(step _: Step, at _: Date) {}
             func didFinish(feature _: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {}
             func didFinish(scenario _: Scenario, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {}
@@ -122,8 +129,8 @@ extension CucumberTests {
         await Cucumber.shared.run(scenario([]))
         await Cucumber.shared.run(scenario([]))
 
-        #expect(observer.features.count == 2)
-        #expect(Set(observer.features).count == 1)
+        #expect(observer.seen.count == 2)
+        #expect(Set(observer.seen).count == 1)
     }
 
     @Test func observersFromTheCucumberTestObservableConformanceAreInstalled() async {

@@ -21,6 +21,14 @@ public class CucumberJSONReporter: CucumberTestObserver {
     var features: [Feature] { recorder.features }
     private let recorder: CucumberJSONRecorder
 
+    private static func makeRecorder(explicit: URL?, default defaultURL: URL) -> CucumberJSONRecorder {
+        CucumberJSONRecorder(reportURL: {
+            if let explicit { return explicit }
+            if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
+            return defaultURL
+        }, isParallel: { FeatureFlags.isParallelTesting })
+    }
+
     public init?() {
         guard let defaultURL = CucumberJSONReport.defaultURL else { return nil }
         explicitReportURL = nil
@@ -32,14 +40,6 @@ public class CucumberJSONReporter: CucumberTestObserver {
         explicitReportURL = reportPath
         defaultReportURL = reportPath
         recorder = Self.makeRecorder(explicit: reportPath, default: reportPath)
-    }
-
-    private static func makeRecorder(explicit: URL?, default defaultURL: URL) -> CucumberJSONRecorder {
-        CucumberJSONRecorder(reportURL: {
-            if let explicit { return explicit }
-            if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
-            return defaultURL
-        }, isParallel: { FeatureFlags.isParallelTesting })
     }
 
     public func testSuiteStarted(at: Date) {

@@ -16,15 +16,15 @@ final class VerboseReporter: CucumberTestObserver {
 
     private let output: VerboseOutput
 
+    /// Whether the environment asks for verbose output.
+    static func isEnabled(in environment: [String: String]) -> Bool {
+        VerboseOutput.isEnabled(in: environment)
+    }
+
     /// - Parameter isEnabled: Asked before every line, because the setting can change after the
     ///   reporter exists: `setupSteps()` runs after CucumberSwift has built its reporters.
     init(isEnabled: @escaping () -> Bool = { true }, write: @escaping (String) -> Void = { print($0); fflush(stdout) }) {
         output = VerboseOutput(isEnabled: isEnabled, write: write)
-    }
-
-    /// Whether the environment asks for verbose output.
-    static func isEnabled(in environment: [String: String]) -> Bool {
-        VerboseOutput.isEnabled(in: environment)
     }
 
     func testSuiteStarted(at _: Date) { output.suiteStarted() }

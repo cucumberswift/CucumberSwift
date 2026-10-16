@@ -27,19 +27,6 @@ public final class CucumberJSONReporter: CucumberTestObserver {
     }
     private let recorder: CucumberJSONRecorder
 
-    public init?() {
-        guard let defaultURL = CucumberJSONReport.defaultURL else { return nil }
-        explicitReportURL = nil
-        defaultReportURL = defaultURL
-        recorder = Self.makeRecorder(explicit: nil, default: defaultURL)
-    }
-
-    public init(reportPath: URL) {
-        explicitReportURL = reportPath
-        defaultReportURL = reportPath
-        recorder = Self.makeRecorder(explicit: reportPath, default: reportPath)
-    }
-
     private static func makeRecorder(explicit: URL?, default defaultURL: URL) -> CucumberJSONRecorder {
         CucumberJSONRecorder(reportURL: {
             if let explicit { return explicit }
@@ -47,43 +34,6 @@ public final class CucumberJSONReporter: CucumberTestObserver {
             return defaultURL
             // Swift Testing doesn't promise the order of the tests in a suite.
         }, ordersByFile: true)
-    }
-
-    public func testSuiteStarted(at: Date) {
-        recorder.suiteStarted()
-    }
-
-    public func testSuiteFinished(at: Date) {
-        recorder.suiteFinished()
-    }
-
-    public func didStart(feature: Feature, at date: Date) {
-        recorder.featureStarted(ObjectIdentifier(feature)) { Self.entry(for: feature) }
-    }
-
-    public func didStart(scenario: Scenario, at date: Date) {
-        let owner = scenario.feature.map { feature in (key: ObjectIdentifier(feature), make: { Self.entry(for: feature) }) }
-        recorder.scenarioStarted(ObjectIdentifier(scenario), feature: owner) {
-            CucumberJSONReport.Scenario(title: scenario.title, line: Self.line(scenario.location), tags: scenario.tags)
-        }
-    }
-
-    public func didStart(step: Step, at date: Date) {
-        recorder.stepStarted(ObjectIdentifier(step), scenario: step.scenario.map { ObjectIdentifier($0) }) {
-            CucumberJSONReport.Step(name: step.match, keyword: step.keywordName, line: Self.line(step.location))
-        }
-    }
-
-    public func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        recorder.featureFinished()
-    }
-
-    public func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        recorder.scenarioFinished()
-    }
-
-    public func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        recorder.stepFinished(ObjectIdentifier(step), result: result, duration: duration)
     }
 
     private static func entry(for feature: Feature) -> CucumberJSONReport.Feature {
@@ -101,5 +51,55 @@ public final class CucumberJSONReporter: CucumberTestObserver {
 
     private static func line(_ location: Location) -> UInt {
         UInt(max(location.line, 0))
+    }
+
+    public init?() {
+        guard let defaultURL = CucumberJSONReport.defaultURL else { return nil }
+        explicitReportURL = nil
+        defaultReportURL = defaultURL
+        recorder = Self.makeRecorder(explicit: nil, default: defaultURL)
+    }
+
+    public init(reportPath: URL) {
+        explicitReportURL = reportPath
+        defaultReportURL = reportPath
+        recorder = Self.makeRecorder(explicit: reportPath, default: reportPath)
+    }
+
+    public func testSuiteStarted(at _: Date) {
+        recorder.suiteStarted()
+    }
+
+    public func testSuiteFinished(at _: Date) {
+        recorder.suiteFinished()
+    }
+
+    public func didStart(feature: Feature, at _: Date) {
+        recorder.featureStarted(ObjectIdentifier(feature)) { Self.entry(for: feature) }
+    }
+
+    public func didStart(scenario: Scenario, at _: Date) {
+        let owner = scenario.feature.map { feature in (key: ObjectIdentifier(feature), make: { Self.entry(for: feature) }) }
+        recorder.scenarioStarted(ObjectIdentifier(scenario), feature: owner) {
+            CucumberJSONReport.Scenario(title: scenario.title, line: Self.line(scenario.location), tags: scenario.tags)
+        }
+    }
+
+    public func didStart(step: Step, at _: Date) {
+        recorder.stepStarted(ObjectIdentifier(step), scenario: step.scenario.map { ObjectIdentifier($0) }) {
+            CucumberJSONReport.Step(name: step.match, keyword: step.keywordName, line: Self.line(step.location))
+        }
+    }
+
+    public func didFinish(feature _: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
+        recorder.featureFinished()
+    }
+
+    public func didFinish(scenario _: Scenario, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
+        recorder.scenarioFinished()
+    }
+
+    public func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+        recorder.stepFinished(ObjectIdentifier(step), result: result, duration: duration)
     }
 }

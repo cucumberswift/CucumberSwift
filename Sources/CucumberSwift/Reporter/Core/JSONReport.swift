@@ -11,17 +11,6 @@
 import Foundation
 
 enum CucumberJSONReport {
-    /// The report's default place: `_cucumberReport.json` in the documents folder. `nil` where there is
-    /// no documents folder.
-    static var defaultURL: URL? {
-        let name = "_cucumberReport".appending(".json")
-        guard let documentDirectory = try? FileManager.default.url(for: .documentDirectory,
-                                                                   in: .userDomainMask,
-                                                                   appropriateFor: nil,
-                                                                   create: false) else { return nil }
-        return documentDirectory.appendingPathComponent(name)
-    }
-
     struct Tag: Encodable {
         let line: UInt
         let name: String
@@ -126,6 +115,17 @@ enum CucumberJSONReport {
             try container.encode(line, forKey: .line)
             try container.encode(arguments, forKey: .arguments)
         }
+    }
+
+    /// The report's default place: `_cucumberReport.json` in the documents folder. `nil` where there is
+    /// no documents folder.
+    static var defaultURL: URL? {
+        let name = "_cucumberReport".appending(".json")
+        guard let documentDirectory = try? FileManager.default.url(for: .documentDirectory,
+                                                                   in: .userDomainMask,
+                                                                   appropriateFor: nil,
+                                                                   create: false) else { return nil }
+        return documentDirectory.appendingPathComponent(name)
     }
 }
 

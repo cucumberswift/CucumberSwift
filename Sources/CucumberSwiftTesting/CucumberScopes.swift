@@ -22,7 +22,7 @@ public struct CucumberSuiteTrait: SuiteTrait, TestScoping {
         testCase == nil && test.isSuite ? self : nil
     }
 
-    public func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+    public func provideScope(for _: Test, testCase _: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
         await Cucumber.shared.beginSuite()
         do {
             try await function()
@@ -52,7 +52,7 @@ public struct CucumberFeatureTrait: SuiteTrait, TestScoping {
         testCase == nil && test.isSuite ? self : nil
     }
 
-    public func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+    public func provideScope(for _: Test, testCase _: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
         do {
             try await function()
         } catch {

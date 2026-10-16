@@ -17,6 +17,15 @@ public final class Cucumber {
         let body: @MainActor (String) -> (@MainActor (Step) async throws -> Void)?
     }
 
+    /// A feature the runner has seen a scenario of, and where it is.
+    private final class FeatureRun {
+        let feature: Feature
+        var startDate: Date?
+        var isFailed = false
+        var isFinished = false
+        init(_ feature: Feature) { self.feature = feature }
+    }
+
     public static let shared = Cucumber()
 
     var definitions = [Definition]()
@@ -29,15 +38,6 @@ public final class Cucumber {
     /// The process's environment, for the settings that have an environment variable. Tests replace it.
     var environment = ProcessInfo.processInfo.environment
 
-    /// A feature the runner has seen a scenario of, and where it is.
-    private final class FeatureRun {
-        let feature: Feature
-        var startDate: Date?
-        var isFailed = false
-        var isFinished = false
-        init(_ feature: Feature) { self.feature = feature }
-    }
-
     private var featureRuns = [String: FeatureRun]()
     /// The feature that started last and hasn't finished, for runs that don't say where a feature ends.
     private var openFeature: FeatureRun?
@@ -46,21 +46,10 @@ public final class Cucumber {
     /// The runner's own observers, then the ones from ``CucumberTestObservable``. Built on first use.
     lazy var reporters: [CucumberTestObserver] = makeReporters()
 
-    func makeReporters() -> [CucumberTestObserver] {
-        // The verbose reporter is always installed, because the reporters are built before `setupSteps()`
-        // can set `Cucumber.verboseOutput`: it asks on every line whether it should print.
-        // swiftlint:disable:next trailing_closure
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
-        observers += (self as Any as? CucumberTestObservable)?.observers ?? []
-        return observers.compactMap { $0 }
-    }
-
     /// Whether to print each feature, scenario and step as it runs.
     var isVerbose: Bool {
         Cucumber.verboseOutput || VerboseOutput.isEnabled(in: environment) || ((self as Any as? StepImplementation)?.verbose ?? false)
     }
-
-    private init() {}
 
     /// CucumberSwift's message for a step that no step definition matches.
     static func missingStepDefinitionMessage(suggestion: String) -> String {
@@ -79,6 +68,25 @@ public final class Cucumber {
         return SourceLocation(fileID: "Features/\(name)", filePath: file, line: max(location.line, 1), column: max(location.column, 1))
     }
 
+    private static func key(file: String, title: String, line: Int) -> String {
+        "\(file):\(line):\(title)"
+    }
+
+    private static func describe(_ error: any Error) -> String {
+        (error as? any LocalizedError)?.errorDescription ?? String(describing: error)
+    }
+
+    private init() {}
+
+    func makeReporters() -> [CucumberTestObserver] {
+        // The verbose reporter is always installed, because the reporters are built before `setupSteps()`
+        // can set `Cucumber.verboseOutput`: it asks on every line whether it should print.
+        // swiftlint:disable:next trailing_closure
+        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
+        observers += (self as Any as? CucumberTestObservable)?.observers ?? []
+        return observers.compactMap { $0 }
+    }
+
     func register(
         keyword: Step.Keyword,
         file: StaticString,
@@ -91,7 +99,7 @@ public final class Cucumber {
     /// Runs a scenario's steps in order, between its hooks. A step that no step definition matches, that
     /// more than one matches, or whose step definition throws, fails at its line in the feature file, and
     /// the scenario's later steps don't run. A failed `#expect` fails where it is written, and the
-    /// scenario goes on, as a failed XCTest assertion does with CucumberSwift.
+    /// scenario goes on, as Swift Testing does; `try #require` stops it.
     ///
     /// Tells the observers what happens: the feature when its first scenario starts, then the scenario
     /// and each of its steps as they start and finish.
@@ -108,7 +116,11 @@ public final class Cucumber {
         if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) == nil {
             for step in scenario.steps {
                 let outcome = await run(step, in: file)
-                if case .passed = outcome.result {} else { isFailed = true }
+                if case .passed = outcome.result {
+                    // Nothing to record.
+                } else {
+                    isFailed = true
+                }
                 if !outcome.canContinue { break }
             }
         } else {
@@ -162,10 +174,6 @@ public final class Cucumber {
     func endFeature(file: String, title: String, line: Int) {
         guard let run = featureRuns[Self.key(file: file, title: title, line: line)], run.startDate != nil else { return }
         finish(run)
-    }
-
-    private static func key(file: String, title: String, line: Int) -> String {
-        "\(file):\(line):\(title)"
     }
 
     /// The feature a scenario belongs to, started on its first scenario.
@@ -253,10 +261,6 @@ public final class Cucumber {
             return finish(.failed(record.messages.joined(separator: "\n")), canContinue: afterFailure == nil)
         }
         return finish(failure.map { .failed($0) } ?? .passed, canContinue: failure == nil)
-    }
-
-    private static func describe(_ error: any Error) -> String {
-        (error as? any LocalizedError)?.errorDescription ?? String(describing: error)
     }
 
     /// Runs each hook in order. Returns why one threw, or `nil` when none did.

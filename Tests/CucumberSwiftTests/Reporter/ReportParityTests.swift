@@ -44,6 +44,13 @@ final class ReportParityTests: XCTestCase {
 
     private var folder: URL!
 
+    /// The report with each duration replaced by 0, as text with its keys in order: durations differ
+    /// from one run to the next.
+    static func withoutDurations(_ data: Data) throws -> String {
+        let text = try XCTUnwrap(String(data: data, encoding: .utf8))
+        return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
+    }
+
     override func setUpWithError() throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("ReportParityTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -77,12 +84,5 @@ final class ReportParityTests: XCTestCase {
         let schema = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: directory().appendingPathComponent("Schema.json"))) as? [String: Any])
         let result = try JSONSchema.validate(JSONSerialization.jsonObject(with: written), schema: schema)
         XCTAssertEqual(result.errors?.count ?? 0, 0, "\(String(describing: result.errors))")
-    }
-
-    /// The report with each duration replaced by 0, as text with its keys in order: durations differ
-    /// from one run to the next.
-    static func withoutDurations(_ data: Data) throws -> String {
-        let text = try XCTUnwrap(String(data: data, encoding: .utf8))
-        return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
     }
 }

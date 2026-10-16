@@ -7,6 +7,17 @@
 
 import Foundation
 
+/// Adds your own observers to the runner's, as in CucumberSwift:
+///
+/// ```swift
+/// extension Cucumber: CucumberTestObservable {
+///     public var observers: [CucumberTestObserver] { [MyTestObserver()] }
+/// }
+/// ```
+@MainActor public protocol CucumberTestObservable {
+    var observers: [CucumberTestObserver] { get }
+}
+
 /// Is told what the runner saw: each feature, scenario and step as it starts and finishes, with its
 /// result and duration. Add observers with ``CucumberTestObservable``.
 ///
@@ -23,15 +34,4 @@ import Foundation
     func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>)
     func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>)
     func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>)
-}
-
-/// Adds your own observers to the runner's, as in CucumberSwift:
-///
-/// ```swift
-/// extension Cucumber: CucumberTestObservable {
-///     public var observers: [CucumberTestObserver] { [MyTestObserver()] }
-/// }
-/// ```
-@MainActor public protocol CucumberTestObservable {
-    var observers: [CucumberTestObserver] { get }
 }

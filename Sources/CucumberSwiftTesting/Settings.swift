@@ -12,17 +12,17 @@ import Foundation
 enum CucumberSettings {
     private final class Storage: @unchecked Sendable {
         private let lock = NSLock()
-        private var _reportPath: String?
-        private var _verboseOutput = false
+        private var storedReportPath: String?
+        private var storedVerboseOutput = false
 
         var reportPath: String? {
-            get { lock.withLock { _reportPath } }
-            set { lock.withLock { _reportPath = newValue } }
+            get { lock.withLock { storedReportPath } }
+            set { lock.withLock { storedReportPath = newValue } }
         }
 
         var verboseOutput: Bool {
-            get { lock.withLock { _verboseOutput } }
-            set { lock.withLock { _verboseOutput = newValue } }
+            get { lock.withLock { storedVerboseOutput } }
+            set { lock.withLock { storedVerboseOutput = newValue } }
         }
     }
 
@@ -41,6 +41,8 @@ enum CucumberSettings {
         set { storage.verboseOutput = newValue }
     }
 
+    static var reportPath: String? { reportPath() }
+
     /// Where the JSON report is written: the static variable, then `CUCUMBER_REPORT_PATH`. Nil when neither
     /// is set, or is empty, so the report goes to its default place.
     static func reportPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
@@ -48,8 +50,6 @@ enum CucumberSettings {
         let trimmed = path?.trimmingCharacters(in: .whitespaces)
         return trimmed?.isEmpty == false ? trimmed : nil
     }
-
-    static var reportPath: String? { reportPath() }
 }
 
 extension Cucumber {
@@ -59,7 +59,7 @@ extension Cucumber {
     /// runner creates the folder. This variable, when set, wins over the environment variable. Set it in
     /// your `StepImplementation`'s `setupSteps()`. A reporter made with
     /// ``CucumberJSONReporter/init(reportPath:)`` keeps the path it was given.
-    public nonisolated static var reportPath: String? {
+    nonisolated public static var reportPath: String? {
         get { CucumberSettings.staticReportPath }
         set { CucumberSettings.staticReportPath = newValue }
     }
@@ -67,7 +67,7 @@ extension Cucumber {
     /// Whether the runner prints each feature, scenario and step, with its result and duration, as it
     /// runs. Off by default. The `CUCUMBER_VERBOSE` environment variable (`1` or `true`) and
     /// ``StepImplementation/verbose`` turn it on too.
-    public nonisolated static var verboseOutput: Bool {
+    nonisolated public static var verboseOutput: Bool {
         get { CucumberSettings.staticVerboseOutput }
         set { CucumberSettings.staticVerboseOutput = newValue }
     }
