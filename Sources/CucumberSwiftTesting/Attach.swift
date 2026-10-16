@@ -32,5 +32,7 @@ func attach<Value: Attachable & Sendable>(
 #else
 /// Unavailable before Swift 6.2, which added attachments to Swift Testing.
 @available(*, unavailable, message: "Attach needs Swift 6.2 or later, which added attachments to Swift Testing.")
-public func Attach<Value>(_ attachment: Value) {}
+public func Attach<Value>(_: Value) {
+    // Never called: the function is unavailable.
+}
 #endif

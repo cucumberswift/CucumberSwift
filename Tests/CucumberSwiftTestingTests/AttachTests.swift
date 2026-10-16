@@ -4,12 +4,16 @@ import Testing
 
 #if compiler(>=6.2)
 extension CucumberTests {
+    static func text(of attachment: Attachment<String>) -> String {
+        let text = try? attachment.withUnsafeBytes { String(bytes: $0, encoding: .utf8) }
+        return text.flatMap { $0 } ?? ""
+    }
+
     @Test func attachRecordsTheValueWithItsNameAtTheRunningStepsLineInTheFeatureFile() async {
         var recorded = [(name: String, text: String, line: Int?)]()
         Given("a log") { _, _ in
             attach(Attachment("the log", named: "log.txt")) { attachment, location in
-                let text = (try? attachment.withUnsafeBytes { String(decoding: $0, as: UTF8.self) }) ?? ""
-                recorded.append((attachment.preferredName, text, location?.line))
+                recorded.append((attachment.preferredName, Self.text(of: attachment), location?.line))
             }
         }
 

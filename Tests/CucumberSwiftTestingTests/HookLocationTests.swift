@@ -55,12 +55,12 @@ extension CucumberTests {
     }
 
     @Test func aHookCanNameWhereItIsWritten() async throws {
-        BeforeScenario(file: "/Sources/Hooks.swift", line: 12) { _ in throw HookFailure() }
+        BeforeScenario(file: "Hooks.swift", line: 12) { _ in throw HookFailure() }
         Given("a step") { _, _ in }
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a step", line: 3)]))
         } matching: { issue in
-            issue.sourceLocation?.line == 12 && issue.sourceLocation?._filePath == "/Sources/Hooks.swift"
+            issue.sourceLocation?.line == 12 && issue.sourceLocation?._filePath == "Hooks.swift"
         }
     }
 }
