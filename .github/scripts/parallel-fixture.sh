@@ -118,7 +118,9 @@ runner_records() {
 
 # How many processes wrote a scenario record into folder $1: the Simulator clones that ran scenarios.
 scenario_workers() {
-  ls "$1" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' '
+  local folder=$1
+  ls "$folder" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' '
+  return 0
 }
 
 # Runs the tests once, handing out each $1 (scenario or feature), and checks the records. With $2 = serial,
