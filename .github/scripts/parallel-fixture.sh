@@ -236,6 +236,15 @@ for failure in json.load(sys.stdin).get("testFailures", []):
   control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
+  # Xcode may give every scenario to one Simulator clone, such as when another clone's runner is slow to start.
+  # The run still passes, but it then says nothing about the parallel case, so it is said (#375).
+  if [[ "$mode" != serial && -n "${udid:-}" ]]; then
+    local ran_in
+    ran_in=$(ls "$records" | awk -F. '$3 == "scenario" { print $1 }' | sort -u | wc -l | tr -d ' ')
+    if [[ "$ran_in" -lt "$WORKERS" ]]; then
+      echo "::warning::Only $ran_in of $WORKERS Simulator clones ran scenarios in the $unit run: a pass here does not show the parallel case."
+    fi
+  fi
   if [[ "$mode" = serial ]]; then
     python3 .github/scripts/parallel_records.py "$records" --unit "$unit" --expected-scenarios "$EXPECTED_SCENARIOS" \
       --check-order || status=1
