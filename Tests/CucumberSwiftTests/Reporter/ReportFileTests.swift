@@ -134,6 +134,22 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(ReportFile(url: url).read().first.flatMap { ($0["elements"] as? [Any])?.count }, count)
     }
 
+    /// Swift Testing runs scenarios of one process side by side: they share the process's one `ReportFile`
+    /// for the report (`ReportFile.at`), not a file object each as separate workers do (#420).
+    func testWritersInOneProcessSharingTheReportFileLoseNothingAndWriteEachScenarioOnce() {
+        let count = 24
+        let file = ReportFile.at(url)
+        DispatchQueue.concurrentPerform(iterations: count * 2) { index in
+            // Each scenario is written twice, as a scenario is when it starts and when it finishes.
+            let scenarioIndex = index % count
+            ReportFile.at(url).merge([feature([scenario("S\(scenarioIndex)", line: scenarioIndex + 1)])])
+        }
+        XCTAssertTrue(file === ReportFile.at(url))
+        XCTAssertEqual(file.merges, count * 2)
+        let names = names(file.read()).first ?? []
+        XCTAssertEqual(names, (0..<count).map { "S\($0)" })
+    }
+
     func testTheFirstWorkerOfANewRunEmptiesAStaleReport() throws {
         ReportFile(url: url).merge([feature([scenario("Old", line: 3)])])
         let old = Date(timeIntervalSinceNow: -3_600)

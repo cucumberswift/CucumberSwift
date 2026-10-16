@@ -1,0 +1,178 @@
+[
+  {
+    "description" : "Collect payment for the basket.\n",
+    "elements" : [
+      {
+        "description" : "",
+        "id" : "pay-by-card",
+        "keyword" : "Scenario",
+        "line" : 8,
+        "name" : "Pay by card",
+        "steps" : [
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Given",
+            "line" : 6,
+            "name" : "a basket",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "When",
+            "line" : 10,
+            "name" : "I pay by card",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Then",
+            "line" : 11,
+            "name" : "the order is paid",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          }
+        ],
+        "tags" : [
+          {
+            "line" : 1,
+            "name" : "shop"
+          },
+          {
+            "line" : 1,
+            "name" : "fast"
+          }
+        ],
+        "type" : "scenario"
+      },
+      {
+        "description" : "",
+        "id" : "pay-5-(example-1)",
+        "keyword" : "Scenario",
+        "line" : 19,
+        "name" : "Pay 5 (example 1)",
+        "steps" : [
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Given",
+            "line" : 6,
+            "name" : "a basket",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "When",
+            "line" : 14,
+            "name" : "I pay 5",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Then",
+            "line" : 15,
+            "name" : "the order is paid",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          }
+        ],
+        "tags" : [
+          {
+            "line" : 1,
+            "name" : "shop"
+          }
+        ],
+        "type" : "scenario"
+      },
+      {
+        "description" : "",
+        "id" : "pay-10-(example-2)",
+        "keyword" : "Scenario",
+        "line" : 20,
+        "name" : "Pay 10 (example 2)",
+        "steps" : [
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Given",
+            "line" : 6,
+            "name" : "a basket",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "When",
+            "line" : 14,
+            "name" : "I pay 10",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Then",
+            "line" : 15,
+            "name" : "the order is paid",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          }
+        ],
+        "tags" : [
+          {
+            "line" : 1,
+            "name" : "shop"
+          }
+        ],
+        "type" : "scenario"
+      }
+    ],
+    "id" : "checkout",
+    "keyword" : "Feature",
+    "line" : 1,
+    "name" : "Checkout",
+    "tags" : [
+      {
+        "line" : 1,
+        "name" : "shop"
+      }
+    ],
+    "uri" : "file:\/\/\/Features\/Checkout.feature"
+  }
+]

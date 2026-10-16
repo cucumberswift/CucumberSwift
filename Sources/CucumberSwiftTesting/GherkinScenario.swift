@@ -67,6 +67,10 @@ public struct GherkinExample: Sendable, CustomTestStringConvertible, CustomTestA
 public struct GherkinScenario: Sendable {
     public let featureTitle: String
     public let featureTags: [String]
+    /// The text under the feature's title, for the report.
+    public let featureDescription: String
+    /// The line of the feature's `Feature:` keyword, for the report.
+    public let featureLine: Int
     public let title: String
     /// The feature's tags, then the scenario's, and an outline's Examples blocks'.
     public let tags: [String]
@@ -80,6 +84,8 @@ public struct GherkinScenario: Sendable {
     public init(
         featureTitle: String,
         featureTags: [String],
+        featureDescription: String = "",
+        featureLine: Int = 1,
         title: String,
         tags: [String],
         file: String,
@@ -89,6 +95,8 @@ public struct GherkinScenario: Sendable {
     ) {
         self.featureTitle = featureTitle
         self.featureTags = featureTags
+        self.featureDescription = featureDescription
+        self.featureLine = featureLine
         self.title = title
         self.tags = tags
         self.file = file

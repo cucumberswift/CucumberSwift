@@ -53,7 +53,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.2"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
-        // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
+        // Test-only: used by CucumberSwiftTests and CucumberSwiftTestingTests, not by the libraries.
         .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0"),
         // Only resolved when the Macros trait is on. 600 is the oldest version the macros build with: they
         // read TypeEffectSpecifiersSyntax.throwsClause, which 600 added. The nightly CI run builds and tests
@@ -174,7 +174,11 @@ let package = Package(
             dependencies: ["CucumberSwiftTestingGenerator"]),
         .testTarget(
             name: "CucumberSwiftTestingTests",
-            dependencies: ["CucumberSwiftTesting"]),
+            // JSONSchema, to check the report against Cucumber's schema, as CucumberSwiftTests does.
+            dependencies: [
+                "CucumberSwiftTesting",
+                .product(name: "JSONSchema", package: "JSONSchema.swift")
+            ]),
         .testTarget(
             name: "CucumberSwiftMacrosTests",
             dependencies: [

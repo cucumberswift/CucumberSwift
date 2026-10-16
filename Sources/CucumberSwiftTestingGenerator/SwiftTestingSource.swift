@@ -61,7 +61,7 @@ enum SwiftTestingSource {
         import Testing
 
         @MainActor
-        @Suite("Features", .serialized, .reportedInFeatureFiles)
+        @Suite("Features", .serialized, .reportedInFeatureFiles, .observedByCucumber)
         struct CucumberFeatures {
             @Test("Feature files are valid Gherkin")
             func gherkin() { cucumberGherkinProblems() }
@@ -97,7 +97,7 @@ enum SwiftTestingSource {
         }
         return """
             @MainActor
-            @Suite\(displayName(feature.title))
+            @Suite\(displayName(feature.title, adding: featureTrait(feature, path: path)))
             struct \(name) {
         \(tests.joined(separator: "\n\n"))
             }
@@ -144,6 +144,8 @@ enum SwiftTestingSource {
         return pad + "CucumberSwiftTesting.GherkinScenario(\n"
             + pad + "    featureTitle: \(literal(feature.title)),\n"
             + pad + "    featureTags: \(array(feature.tags)),\n"
+            + pad + "    featureDescription: \(literal(feature.description)),\n"
+            + pad + "    featureLine: \(feature.line),\n"
             + pad + "    title: \(literal(parts.title)),\n"
             + pad + "    tags: \(array(parts.tags)),\n"
             + pad + "    file: \(literal(path)),\n"
@@ -178,9 +180,14 @@ enum SwiftTestingSource {
             + ")"
     }
 
-    /// `(“title”)` for a suite with a title, nothing for one without.
-    private static func displayName(_ title: String) -> String {
-        title.isEmpty ? "" : "(\(literal(title)))"
+    /// The trait that tells the runner where the feature ends.
+    private static func featureTrait(_ feature: FeatureFile.Feature, path: String) -> String {
+        ".cucumberFeature(file: \(literal(path)), title: \(literal(feature.title)), line: \(feature.line))"
+    }
+
+    /// `("title", trait)` for a suite with a title, `(trait)` for one without.
+    private static func displayName(_ title: String, adding trait: String) -> String {
+        "(" + (title.isEmpty ? "" : literal(title) + ", ") + trait + ")"
     }
 
     /// `name`, or `fallback` when it is empty or reserved, with a number added if it is already used.

@@ -18,13 +18,13 @@ final class SwiftTestingSourceTests: XCTestCase {
     import Testing
 
     @MainActor
-    @Suite("Features", .serialized, .reportedInFeatureFiles)
+    @Suite("Features", .serialized, .reportedInFeatureFiles, .observedByCucumber)
     struct CucumberFeatures {
         @Test("Feature files are valid Gherkin")
         func gherkin() { cucumberGherkinProblems() }
 
         @MainActor
-        @Suite("Eat fruit")
+        @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1))
         struct EatFruit {
             @Test("Eat an apple", .enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(cucumberScenario1.tags)))
             func EatAnApple() async { await CucumberSwiftTesting.Cucumber.shared.run(cucumberScenario1) }
@@ -39,6 +39,8 @@ final class SwiftTestingSourceTests: XCTestCase {
     private let cucumberScenario1 = CucumberSwiftTesting.GherkinScenario(
         featureTitle: "Eat fruit",
         featureTags: ["fruit"],
+        featureDescription: "",
+        featureLine: 1,
         title: "Eat an apple",
         tags: ["fruit"],
         file: "/Features/Test.feature",

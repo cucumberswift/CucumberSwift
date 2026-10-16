@@ -8,16 +8,9 @@
 
 import Foundation
 
+/// What a feature, scenario or step finished with. CucumberSwift and CucumberSwiftTesting compile this
+/// file both, so a custom observer reads the same results from either runner.
 public enum Reporter {
-    static var reportURL: URL? {
-        if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
-        let name = "_cucumberReport".appending(".json")
-        if  let documentDirectory = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
-            return documentDirectory.appendingPathComponent(name)
-        }
-        return nil
-    }
-
     public enum Result: Sendable {
         case passed
         case failed(String? = nil)

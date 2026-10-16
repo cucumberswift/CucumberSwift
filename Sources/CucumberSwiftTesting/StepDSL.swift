@@ -12,6 +12,10 @@ import Foundation
 /// There is no `bundle`: the build tool plugin reads the feature files when the tests build.
 @MainActor
 public protocol StepImplementation {
+    /// Whether the runner prints each feature, scenario and step, with its result and duration, as it
+    /// runs. Defaults to `false`. Setting the `CUCUMBER_VERBOSE` environment variable to `1` or `true`
+    /// turns it on without a code change.
+    var verbose: Bool { get }
     func setupSteps()
 }
 
@@ -65,4 +69,8 @@ public class StepDSL {
             return { step in try await callback(match, step) }
         }
     }
+}
+
+extension StepImplementation {
+    public var verbose: Bool { false }
 }

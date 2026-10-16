@@ -26,7 +26,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.2"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
-        // Test-only: used by CucumberSwiftTests, not by the CucumberSwift library.
+        // Test-only: used by CucumberSwiftTests and CucumberSwiftTestingTests, not by the libraries.
         .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0")
     ],
     targets: [

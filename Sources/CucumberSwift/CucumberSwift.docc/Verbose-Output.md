@@ -67,6 +67,10 @@ CucumberSwift prints to standard output, with each line starting with `[Cucumber
 
 Xcode's Test navigator lists CucumberSwift's scenarios only after the first run, because they're created while the tests run. To run one scenario on its own, see <doc:Running-Tests-In-Xcode#Run-one-scenario>.
 
+### With Swift Testing
+
+The Swift Testing runner prints the same lines, and has the same three switches: see <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Its output goes to the test log between Swift Testing's own lines.
+
 ### What it doesn't change
 
 Verbose output only adds lines to the log. It doesn't change which scenarios run, their results, or the JSON report. To choose scenarios, use tags, as <doc:Running-Tests-With-Swift-Package-Manager> describes. To receive the same events in your own code, write a custom reporter: see <doc:Generating-Reports>.

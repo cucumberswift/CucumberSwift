@@ -17,12 +17,35 @@ public struct FeatureFileIssuesTrait: SuiteTrait, TestTrait {
 }
 #endif
 
+/// What issues were recorded while a step, or a scenario's hooks, ran. Swift Testing records an issue,
+/// such as a failed `#expect`, without telling the code that is running, so the runner learns of it from
+/// the issue handling trait, which reports it here. Before Swift 6.2 it has no way to, and the record
+/// stays empty: a step that only fails an `#expect` is then reported as passed.
+final class IssueRecord: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded = [String]()
+
+    var messages: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+
+    func add(_ message: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.append(message)
+    }
+}
+
 /// Where in a feature file the runner is: the step that is running, or the scenario while its hooks run.
 final class RunningLocation: @unchecked Sendable {
     struct Running {
         let location: SourceLocation
         /// The step as it runs, such as "Then the basket has 3 cukes", or nil while a scenario hook runs.
         let step: String?
+        /// Where the issues recorded now are noted, for the report.
+        var record: IssueRecord?
     }
 
     static let shared = RunningLocation()
@@ -55,6 +78,7 @@ extension Trait where Self == IssueHandlingTrait {
             guard let running = RunningLocation.shared.current,
                   let recorded = issue.sourceLocation,
                   !recorded.fileName.hasSuffix(".feature") else { return issue }
+            running.record?.add(issue.description)
             var issue = issue
             if let step = running.step {
                 issue.comments.append(Comment(rawValue: step))
