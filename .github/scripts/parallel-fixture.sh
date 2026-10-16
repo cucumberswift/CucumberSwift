@@ -80,19 +80,19 @@ scheme="Parallel${KIND}Tests${suffix}"
 echo "Running $scheme on $destination with $WORKERS workers, handing out each: ${units[*]}, with a test per ${LAYOUT:-step}"
 
 # Xcode runs each worker on a clone of the simulator. A simulator's first boot on a fresh runner does
-# a lot of one-off work, and each clone would repeat it while its tests wait to launch the app, which
-# then times out. So boot the simulator once, wait until it has finished, and shut it down for Xcode
-# to clone. A simulator that never finishes booting would keep bootstatus waiting, so after 5 minutes
-# the tests start anyway.
+# a lot of one-off work (it took 291 seconds in one run), and each clone would repeat it while its tests wait
+# to launch the app, which then times out. So boot the simulator once, wait until it has finished, and shut
+# it down for Xcode to clone. A simulator that never finishes booting would keep bootstatus waiting, so
+# after 8 minutes the tests start anyway.
 if [[ -n "${udid:-}" ]]; then
   start=$(date +%s)
   xcrun simctl boot "$udid" 2>/dev/null || true
   xcrun simctl bootstatus "$udid" -b > /dev/null &
   waiting=$!
-  while kill -0 "$waiting" 2>/dev/null && (( $(date +%s) - start < 300 )); do sleep 2; done
+  while kill -0 "$waiting" 2>/dev/null && (( $(date +%s) - start < 480 )); do sleep 2; done
   if kill -0 "$waiting" 2>/dev/null; then
     kill "$waiting"
-    echo "::warning::The simulator hadn't finished booting after 5 minutes; running the tests anyway."
+    echo "::warning::The simulator hadn't finished booting after 8 minutes; running the tests anyway."
   elif wait "$waiting"; then
     echo "Booted the simulator once first, in $(( $(date +%s) - start )) seconds"
   else
@@ -141,12 +141,30 @@ run_unit() {
     runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
   done
 
-  .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
-    "${parallel_flags[@]}" -resultBundlePath "$result" \
-    PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
-    CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
-    PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
-  status=$?
+  # A Simulator clone whose test runner fails to launch leaves one worker running every scenario, which is the
+  # environment failing, not CucumberSwift (#375). It is reported by name and the run is repeated once, with
+  # its folders emptied, before it counts as a failure. A failure of any other kind is never repeated.
+  local attempt
+  for attempt in 1 2; do
+    .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
+      "${parallel_flags[@]}" -resultBundlePath "$result" \
+      PARALLEL_TEST_RECORDS="$records" PARALLEL_TEST_REPORT="$report" CUCUMBER_PARALLEL_TESTING_UNIT="$unit" \
+      CUCUMBER_ONE_TEST_PER_SCENARIO="$one_test_per_scenario" \
+      PARALLEL_FIXTURE_WITHOUT_SETTING="${WITHOUT_SETTING:-}" > "$log" 2>&1
+    status=$?
+    if [[ "$attempt" -eq 1 && -n "${udid:-}" ]] && grep -qE "Failed to launch app with identifier: .*\.xctrunner|NSMachErrorDomain Code=-308" "$log"; then
+      echo "::warning::A simulator clone's test runner failed to launch (environment failure, not a test failure); running the $unit tests once more."
+      grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
+      cp "$log" "${log%.log}-attempt-1.log"
+      rm -rf "$records" "$result" "$(dirname "$report")"
+      mkdir -p "$records" "$(dirname "$report")"
+      for name in parallel-test-records parallel-test-report; do
+        runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+      done
+      continue
+    fi
+    break
+  done
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
   [[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
