@@ -33,7 +33,7 @@ public final class Cucumber {
     var afterScenarioHooks = [Hook<Scenario>]()
     var beforeStepHooks = [Hook<Step>]()
     var afterStepHooks = [Hook<Step>]()
-    private var isSetUp = false
+    var isSetUp = false
     private var hasReportedMissingImplementation = false
     /// The process's environment, for the settings that have an environment variable. Tests replace it.
     var environment = ProcessInfo.processInfo.environment
@@ -204,23 +204,29 @@ public final class Cucumber {
     }
 
     /// Calls `setupSteps()` once, before the first scenario or the suite starts.
-    private func loadStepDefinitions() {
+    func loadStepDefinitions() {
         guard !isSetUp else { return }
         isSetUp = true
         (self as Any as? StepImplementation)?.setupSteps()
     }
 
-    /// `Cucumber.parallelTesting` set in `setupSteps()` can't turn parallel scenarios on: Swift Testing
-    /// decided when it discovered the tests. Says so once, rather than running serially without a word.
+    /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
+    /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
+    /// in time, the scenarios run one at a time and this says so once, without failing the run.
     private func reportParallelTestingSetTooLate(at location: SourceLocation) {
         guard !hasReportedParallelTestingTooLate, CucumberSettings.staticParallelTesting == true,
               CucumberSettings.isSuiteSerialized else { return }
         hasReportedParallelTestingTooLate = true
-        Issue.record("""
-            Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decides that before \
-            setupSteps() runs. Set the environment variable CUCUMBER_PARALLEL_TESTING to YES in your scheme, or on the \
+        let message = """
+            Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decided that before \
+            setupSteps() ran. Set the environment variable CUCUMBER_PARALLEL_TESTING to YES in your scheme, or on the \
             command line, or define CUCUMBER_PARALLEL_TESTING as a compilation condition in the test target.
-            """, sourceLocation: location)
+            """
+        #if compiler(>=6.3)
+        Issue.record(Comment(rawValue: message), severity: .warning, sourceLocation: location)
+        #else
+        FileHandle.standardError.write(Data((message + "\n").utf8))
+        #endif
     }
 
     /// Without step definitions, fails at the first scenario in its feature file.

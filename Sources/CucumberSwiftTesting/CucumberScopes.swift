@@ -89,6 +89,12 @@ public func cucumberScenarioOrder(compiled: Bool) -> any SuiteTrait {
 }
 
 func scenarioOrder(compiled: Bool, environment: [String: String]) -> any SuiteTrait {
+    // `Cucumber.parallelTesting` is set in `setupSteps()`, so run it now, as the runner would for the first
+    // scenario. It needs the main actor, which the tests are discovered on, except in a host that
+    // discovers them elsewhere: then the static variable is too late, and the first scenario says so.
+    if pthread_main_np() == 1 {
+        MainActor.assumeIsolated { Cucumber.shared.loadStepDefinitions() }
+    }
     let parallel = CucumberSettings.runsInParallel(compiled: compiled, environment: environment)
     CucumberSettings.isSuiteSerialized = !parallel
     return parallel ? CucumberParallelScenariosTrait() : ParallelizationTrait.serialized

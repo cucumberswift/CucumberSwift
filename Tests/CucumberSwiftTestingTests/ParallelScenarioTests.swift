@@ -79,7 +79,8 @@ extension CucumberTests {
         #expect(CucumberSettings.bool(nil) == nil)
     }
 
-    @Test func scenariosRunInParallelOnlyWhenTheEnvironmentVariableThenTheCompilationConditionSaySo() {
+    @Test func scenariosRunInParallelAsCucumberSwiftReadsAFeatureFlagThenTheCompilationCondition() {
+        defer { Cucumber.parallelTesting = nil }
         let key = "CUCUMBER_PARALLEL_TESTING"
         #expect(!CucumberSettings.runsInParallel(compiled: false, environment: [:]))
         #expect(CucumberSettings.runsInParallel(compiled: true, environment: [:]))
@@ -88,6 +89,11 @@ extension CucumberTests {
         // A value that isn't a setting is ignored, as it is for CucumberSwift.
         #expect(!CucumberSettings.runsInParallel(compiled: false, environment: [key: "maybe"]))
         #expect(CucumberSettings.runsInParallel(compiled: true, environment: [key: "maybe"]))
+        // The static variable wins over the environment variable, which wins over the compilation condition.
+        Cucumber.parallelTesting = true
+        #expect(CucumberSettings.runsInParallel(compiled: false, environment: [key: "NO"]))
+        Cucumber.parallelTesting = false
+        #expect(!CucumberSettings.runsInParallel(compiled: true, environment: [key: "YES"]))
     }
 
     @Test func theGeneratedSuiteIsSerializedUnlessScenariosRunInParallel() {
@@ -98,7 +104,18 @@ extension CucumberTests {
         #expect(!CucumberSettings.isSuiteSerialized)
     }
 
-    @Test func parallelTestingSetInSetupStepsIsReportedOnceBecauseItIsTooLate() async {
+    @Test func parallelTestingSetInSetupStepsCountsBecauseTheStepsAreLoadedWhenTheTestsAreDiscovered() {
+        defer {
+            Cucumber.parallelTesting = nil
+            ImplementationSettings.parallelTesting = nil
+            CucumberSettings.isSuiteSerialized = false
+        }
+        Cucumber.shared.isSetUp = false
+        ImplementationSettings.parallelTesting = true
+        #expect(scenarioOrder(compiled: false, environment: [:]) is CucumberParallelScenariosTrait)
+    }
+
+    @Test func parallelTestingThatCameTooLateIsSaidOnceWithoutFailingTheRun() async {
         defer {
             Cucumber.parallelTesting = nil
             CucumberSettings.isSuiteSerialized = false
@@ -110,23 +127,20 @@ extension CucumberTests {
         await Cucumber.shared.run(scenario([]))
         Cucumber.parallelTesting = false
         await Cucumber.shared.run(scenario([]))
+        #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
 
+        // It isn't an issue that fails the test, only a note, and only once.
         Cucumber.parallelTesting = true
-        await withKnownIssue {
-            await Cucumber.shared.run(scenario([]))
-        } matching: { issue in
-            issue.sourceLocation?.fileID == "Features/Test.feature"
-                && issue.comments.contains { $0.rawValue.contains("Set the environment variable CUCUMBER_PARALLEL_TESTING to YES") }
-        }
-        // Once per run, not for every scenario.
         await Cucumber.shared.run(scenario([]))
+        #expect(Cucumber.shared.hasReportedParallelTestingTooLate)
     }
 
-    @Test func parallelTestingSetInSetupStepsIsFineWhenTheSuiteIsNotSerialized() async {
+    @Test func parallelTestingIsNotTooLateWhenTheSuiteIsNotSerialized() async {
         defer { Cucumber.parallelTesting = nil }
         Cucumber.shared.hasReportedParallelTestingTooLate = false
         CucumberSettings.isSuiteSerialized = false
         Cucumber.parallelTesting = true
         await Cucumber.shared.run(scenario([]))
+        #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
     }
 }

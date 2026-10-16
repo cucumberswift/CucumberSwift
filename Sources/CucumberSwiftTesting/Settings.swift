@@ -120,12 +120,11 @@ enum CucumberSettings {
         }
     }
 
-    /// Whether scenarios run at the same time. Swift Testing decides when it discovers the tests, before
-    /// `setupSteps()` runs, so only what exists by then counts: the environment variable
-    /// `CUCUMBER_PARALLEL_TESTING`, then the compilation condition of the same name, which the generated
-    /// code passes as `compiled`. Off by default.
+    /// Whether scenarios run at the same time, read as CucumberSwift reads a feature flag: the static
+    /// variable, then the environment variable `CUCUMBER_PARALLEL_TESTING`, then, the one addition, the
+    /// compilation condition of the same name, which the generated code passes as `compiled`. Off by default.
     static func runsInParallel(compiled: Bool, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+        staticParallelTesting ?? bool(environment[parallelTestingEnvironmentKey]) ?? compiled
     }
 }
 
@@ -142,11 +141,12 @@ extension Cucumber {
     }
 
     /// Whether scenarios run at the same time. Off by default: one scenario at a time, in the order of the
-    /// feature files. Set the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES` (`TRUE` or `1`
-    /// work too, in any case), in your scheme or on the command line, or define the compilation condition
-    /// `CUCUMBER_PARALLEL_TESTING` in the test target. Swift Testing decides this when it discovers the
-    /// tests, before `setupSteps()` runs, so setting this variable there is too late: the runner then
-    /// fails the first scenario with a message that says so, and the run stays serial.
+    /// feature files. Set this to `true` in your `StepImplementation`'s `setupSteps()`, or set the
+    /// environment variable `CUCUMBER_PARALLEL_TESTING` to `YES` (`TRUE` or `1` work too, in any case), or
+    /// define a compilation condition of that name in the test target. This variable, when set, wins over
+    /// the environment variable, which wins over the compilation condition. Swift Testing decides when it
+    /// discovers the tests, so the runner runs `setupSteps()` then; if it can't, a note says that the
+    /// scenarios run one at a time.
     nonisolated public static var parallelTesting: Bool? {
         get { CucumberSettings.staticParallelTesting }
         set { CucumberSettings.staticParallelTesting = newValue }

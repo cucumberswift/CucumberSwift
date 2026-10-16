@@ -6,6 +6,8 @@ import Testing
 @MainActor
 enum ImplementationSettings {
     static var verbose = false
+    /// What `setupSteps()` sets `Cucumber.parallelTesting` to, if anything.
+    static var parallelTesting: Bool?
 }
 
 /// The runner, one scenario at a time, with step definitions each test registers itself.
@@ -247,5 +249,7 @@ final class OverlapRecord: @unchecked Sendable {
 extension Cucumber: StepImplementation {
     public var verbose: Bool { ImplementationSettings.verbose }
 
-    public func setupSteps() {}
+    public func setupSteps() {
+        if let parallelTesting = ImplementationSettings.parallelTesting { Cucumber.parallelTesting = parallelTesting }
+    }
 }
