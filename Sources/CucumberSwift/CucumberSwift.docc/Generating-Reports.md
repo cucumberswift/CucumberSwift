@@ -43,6 +43,9 @@ With <doc:Running-Scenarios-In-Parallel> on, each worker is a process of its own
 - **A physical device hasn't been tried.** It is expected to run one worker and write its own file, as before.
 - **A serial run** writes the same report as ever.
 
+### With Swift Testing
+The Swift Testing runner writes the same report, to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters: see <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in one process, which writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+
 ## Verbose Output
 To print each feature, scenario and step to the test log as it runs, see <doc:Verbose-Output>.
 
