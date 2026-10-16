@@ -231,7 +231,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-The macros work the same with both runners, apart from the localized macros, which only `CucumberSwiftMacros` has (see <doc:Using-Step-Definition-Macros#Keywords-in-other-languages>). <doc:Running-Feature-Files-With-Swift-Testing> describes the Swift Testing runner.
+The macros work the same with both runners, localized macros included (see <doc:Using-Step-Definition-Macros#Keywords-in-other-languages>). <doc:Running-Feature-Files-With-Swift-Testing> describes the Swift Testing runner.
 
 ### Cucumber expressions
 
@@ -308,7 +308,7 @@ The compiler checks the argument's type against the parameter's output. The para
 
 `#Given`, `#When`, `#Then`, `#And` and `#But` fit steps with those keywords, and `#MatchAll` fits every step, exactly as ``Given``, ``When``, ``Then``, ``And``, ``But`` and ``MatchAll`` do. A step written with `*`, or with a keyword in another language, matches as it does without macros. See <doc:Matching-Steps#When-more-than-one-step-definition-matches-a-step>.
 
-Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on. They are only in `CucumberSwiftMacros`: the Swift Testing runner's `CucumberSwiftTestingMacros` doesn't have them.
+Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on. `CucumberSwiftMacros` and the Swift Testing runner's `CucumberSwiftTestingMacros` both have them.
 
 <!-- swift-example: steps -->
 ```swift

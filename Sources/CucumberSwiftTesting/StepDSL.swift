@@ -17,6 +17,25 @@ public protocol StepImplementation {
     /// turns it on without a code change.
     var verbose: Bool { get }
     func setupSteps()
+    /// Whether a scenario runs, asked once for each scenario or example, as it is about to run. Defaults
+    /// to `true`. `CUCUMBER_TAGS` takes over when it is set, and the runner then doesn't ask. A scenario that
+    /// this leaves out is reported as skipped, and an example of a Scenario Outline is not run as a test
+    /// case. It is asked after `setupSteps()`.
+    func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool
+    /// What happens after an assertion fails in a step: whether an `async` step's task goes on running
+    /// (`true`, the default) or is cancelled at the first failure. A synchronous step can't be stopped
+    /// part way, because Swift Testing's `#expect` doesn't throw. Either way, once a step has failed
+    /// the rest of its scenario's steps don't run.
+    var continueTestingAfterFailure: Bool { get }
+    /// Whether the `AfterScenario` and `AfterStep` hooks run in the reverse of the order that
+    /// `BeforeScenario` and `BeforeStep` hooks do. Defaults to `false`.
+    var reverseOrderForAfterHooks: Bool { get }
+    /// How many seconds a step or a hook may run before it fails. Defaults to 60.
+    var asyncStepTimeout: TimeInterval { get }
+    /// How the step definitions the runner suggests for undefined steps write their regex literals, when
+    /// ``Cucumber/generateRegexLiterals`` asks for regex literals rather than Cucumber Expressions. The
+    /// default, ``RegexLiteralStyle/extendedDelimiter``, compiles in any test target.
+    var regexLiteralStyle: RegexLiteralStyle { get }
 }
 
 public final class GivenStep: StepDSL { override static var keyword: Step.Keyword { .given } }
@@ -41,6 +60,14 @@ public typealias MatchAll = MatchAllStep
 public class StepDSL {
     /// The keyword a step needs for this step definition to match it. Empty for `MatchAll`.
     class var keyword: Step.Keyword { [] }
+
+    /// Registers a step definition that decides for itself whether a step's text matches. The initializers
+    /// that take an expression, a regex literal or a regular expression string all end here.
+    init(matching match: @escaping @MainActor (String) -> (@MainActor (Step) async throws -> Void)?,
+         line: Int,
+         file: StaticString) {
+        Cucumber.shared.register(keyword: Self.keyword, file: file, line: line, body: match)
+    }
 
     /// A step definition with a Cucumber Expression, or with a regular expression if the string starts
     /// with `^` or ends with `$`. A closure runs on the main actor, and the next step starts only once
@@ -73,4 +100,9 @@ public class StepDSL {
 
 extension StepImplementation {
     public var verbose: Bool { false }
+    public func shouldRunWith(scenario _: Scenario?, tags _: [String]) -> Bool { true }
+    public var continueTestingAfterFailure: Bool { true }
+    public var reverseOrderForAfterHooks: Bool { false }
+    public var asyncStepTimeout: TimeInterval { 60 }
+    public var regexLiteralStyle: RegexLiteralStyle { .extendedDelimiter }
 }

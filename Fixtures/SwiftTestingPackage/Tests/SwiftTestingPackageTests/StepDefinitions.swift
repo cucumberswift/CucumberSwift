@@ -8,6 +8,7 @@
 //
 
 import CucumberSwiftTestingMacros
+import Foundation
 import Testing
 
 /// State the steps of one scenario share, reset before each scenario.
@@ -23,13 +24,25 @@ enum World {
 // A consumer in another package writes `@retroactive`, because both Cucumber and StepImplementation
 // come from CucumberSwiftTesting.
 extension Cucumber: @retroactive StepImplementation {
+    // The StepImplementation options, which have defaults: a consumer sets the ones it wants.
+    public var asyncStepTimeout: TimeInterval { 30 }
+    public var reverseOrderForAfterHooks: Bool { true }
+    // Xcode shows this scenario as skipped: its step has no step definition, and would fail if it ran.
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+        !tags.contains("left-out-in-code")
+    }
+
     public func setupSteps() {
         BeforeScenario { scenario in
+            World.scenarios.append(scenario.title)
+            // Runs the step definition below, as CucumberSwift's ExecuteFirstStep does.
+            await ExecuteFirstStep(matching: "the world is reset")
+        }
+        #Given("the world is reset") {
             World.fruit = nil
             World.cukes = 0
             World.list = []
             World.prices = [:]
-            World.scenarios.append(scenario.title)
         }
         macroSteps()
         dslSteps()
@@ -95,6 +108,10 @@ extension Cucumber: @retroactive StepImplementation {
 
     /// CucumberSwift's plain DSL, which the macros expand to.
     private func dslSteps() {
+        // Only runs if shouldRunWith fails to leave out its scenario.
+        Given("a step that fails if the scenario runs") { _, _ in
+            Issue.record("shouldRunWith should have left this scenario out")
+        }
         But("I still have {int} cukes") { match, _ in
             let count = try match.first(\.int)
             #expect(World.cukes == count)
@@ -114,20 +131,20 @@ extension Cucumber: @retroactive StepImplementation {
         }
     }
 
-    /// A localized feature file: its steps match by their text, whatever the keyword's language.
+    /// A localized feature file, and the localized step definition macros, such as `#ES_Dado`: a macro
+    /// for each of its keywords, checked as the English ones are. The plain `Given` and the rest match
+    /// these steps too, by their text.
     private func localizedSteps() {
-        Given("tengo {int} pepinos") { match, _ in
-            World.cukes = try match.first(\.int)
+        #ES_Dado("tengo {int} pepinos") { (count: Int) in
+            World.cukes = count
         }
-        When("como {int} pepinos") { match, _ in
-            World.cukes -= try match.first(\.int)
+        #ES_Cuando("como {int} pepinos") { (count: Int) in
+            World.cukes -= count
         }
-        Then("quedan {int} pepinos") { match, _ in
-            let count = try match.first(\.int)
+        #ES_Entonces("quedan {int} pepinos") { (count: Int) in
             #expect(World.cukes == count)
         }
-        And("me quedan {int} pepinos") { match, step in
-            let count = try match.first(\.int)
+        #ES_Y("me quedan {int} pepinos") { (count: Int, step: Step) in
             #expect(step.keyword.contains(.then))
             #expect(World.cukes == count)
         }

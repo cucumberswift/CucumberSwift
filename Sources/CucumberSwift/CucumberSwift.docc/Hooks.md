@@ -107,7 +107,7 @@ In Xcode, open the **Report navigator**, choose the test run, expand the scenari
 If you never specify anything hooks will just execute in whatever order they appear in the code. However if you need specific control you can add a `priority` to hooks. The lower the priority, the earlier it executes. So a priority 1 executes before a priority 2.
 
 Other cucumber engines might have different behaviour for hooks order. For example cucumber-jvm reverses order for `@After` hooks. I.e. the earlier the priority the later `@After` hook is executed. Also `@After` hooks are executed in reverse order of registering.
-Option `reverseOrderForAfterHooks` can be overriden for `StepImplementation` and set to true to make similar behaviour.
+Option `reverseOrderForAfterHooks` can be overriden for `StepImplementation` and set to true to make similar behaviour. It works the same with the Swift Testing runner, for `AfterScenario` and `AfterStep` hooks.
 
 NOTE: If you do *not* specify an order hooks with no priority will execute *after* hooks with a priority
 

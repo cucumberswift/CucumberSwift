@@ -51,6 +51,8 @@ public final class Step {
     public private(set) weak var scenario: Scenario?
     let keywordName: String
     let suggestion: String
+    let regexLiteralSuggestion: String?
+    let bareSlashRegexLiteralSuggestion: String?
 
     /// The scenario's tags.
     public var tags: [String] { scenario?.tags ?? [] }
@@ -63,6 +65,8 @@ public final class Step {
         location = Location(line: step.line, column: step.column)
         keywordName = step.keywordName
         suggestion = step.suggestion
+        regexLiteralSuggestion = step.regexLiteralSuggestion
+        bareSlashRegexLiteralSuggestion = step.bareSlashRegexLiteralSuggestion
         self.scenario = scenario
     }
 }

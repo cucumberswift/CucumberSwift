@@ -6,14 +6,13 @@
 #if Macros
 import SwiftSyntax
 
-/// The runner a file imports, which decides the macros' module and whether localized macros exist.
+/// The runner a file imports, which decides the macros' module.
 struct Runner {
     struct Found {
         /// `CucumberSwift` or `CucumberSwiftTesting`.
         let module: String
         let macrosModule: String
         let importsMacros: Bool
-        var hasLocalizedMacros: Bool { module == "CucumberSwift" }
     }
 
     let found: Found?
