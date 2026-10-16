@@ -199,7 +199,7 @@ for failure in json.load(sys.stdin).get("testFailures", []):
     # Not repeated: another run of the unit could outlast the job.
     if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
       | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
-      echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure."
+      echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
     fi
   fi
   # A fixture app that crashed leaves a report: show what it died of.
