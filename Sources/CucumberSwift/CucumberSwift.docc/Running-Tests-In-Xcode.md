@@ -96,7 +96,7 @@ CucumberSwift/Tools/Xcode/gherkin-highlighting.sh status
 
 This section shows you how to rewrite your existing step definitions as step definition macros, with the **Convert to Gherkin Macros** command.
 
-A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and marks and lists each one it leaves, with the reason. It needs the `Macros` trait on for CucumberSwift: see <doc:Checking-Step-Definitions#Add-the-macros-to-your-package>.
+A project that already has step definitions written as ``Given`` and the like can have them rewritten as macros. The **Convert to Gherkin Macros** command changes only the step definitions it can convert exactly, and marks and lists each one it leaves, with the reason. It needs the `Macros` trait on for CucumberSwift: see <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project>.
 
 Here are step definitions written without macros:
 
@@ -162,13 +162,13 @@ The command checks your project's setup first, and changes nothing until the pro
 - **The `Macros` trait must be on for CucumberSwift.** The command reads and writes Swift code with swift-syntax, which only comes with the trait, so with the trait off it can't run. It stops, and its message is the first thing you see: the exact change for the kind of project it finds, whether a Swift package (the trait on the dependency, with `swift-tools-version` 6.1 or later), a Tuist project (`Project.swift`), or an Xcode project (the package's trait setting with Xcode 26.4 or later, or the local `MacrosTrait` package before it). When it can't tell which, it lists them all.
 - **Each target it converts must depend on the macros product.** A target that depends on `CucumberSwift` but not on `CucumberSwiftMacros`, or on `CucumberSwiftTesting` but not on `CucumberSwiftTestingMacros`, stops the command, which names the target and says what to add. The converted step definitions couldn't compile without it.
 
-It never edits `Package.swift`, `Project.swift` or the Xcode project: turning the trait on and adding the product are your changes, once, as in <doc:Checking-Step-Definitions#Add-the-macros-to-your-package>. When it stops for either reason, it exits with an error, so a script can tell.
+It never edits `Package.swift`, `Project.swift` or the Xcode project: turning the trait on and adding the product are your changes, once, as in <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>, <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> or <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project>. When it stops for either reason, it exits with an error, so a script can tell.
 
 In each file it converts, it imports the macros module for you: `CucumberSwiftMacros` after the file's import of `CucumberSwift`, or `CucumberSwiftTestingMacros` after its import of `CucumberSwiftTesting`. It keeps the import of the runner, which the macros module re-exports, and adds nothing to a file that imports the macros module already.
 
 ### Converting regex literals
 
-A step definition with a regex literal, `#/…/#` or `/…/`, keeps it: the macros take it as it is (see <doc:Checking-Step-Definitions#Regex-literals>), so the step matches exactly the steps it matched before. Its closure reads each capture group in its first statements, in any order, by number or by a named group's name, as `let count = match.1`, `let city: Substring = match.output.2` or `let city = match.city`, and those statements become the closure's arguments. Each argument gets the capture's type in the regex's `Output`, `Substring`, or `Substring?` for a group that may not take part in the match, and a group the closure doesn't read becomes an argument named `_`:
+A step definition with a regex literal, `#/…/#` or `/…/`, keeps it: the macros take it as it is (see <doc:Using-Step-Definition-Macros#Regex-literals>), so the step matches exactly the steps it matched before. Its closure reads each capture group in its first statements, in any order, by number or by a named group's name, as `let count = match.1`, `let city: Substring = match.output.2` or `let city = match.city`, and those statements become the closure's arguments. Each argument gets the capture's type in the regex's `Output`, `Substring`, or `Substring?` for a group that may not take part in the match, and a group the closure doesn't read becomes an argument named `_`:
 
 <!-- swift-example: steps -->
 ```swift

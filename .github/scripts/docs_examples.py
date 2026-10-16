@@ -75,10 +75,16 @@ STUB_MODULES = {
 }
 OUTPUT = pathlib.Path(".build/documentation-examples")
 
+MACROS_GUIDE = "Using-Step-Definition-Macros.md"
+
 # Every block marked as a fragment: (article, reason), as the marker gives the reason.
 FRAGMENTS = [
-    ("Checking-Step-Definitions.md",
+    (MACROS_GUIDE,
+     "a Tuist Project.swift, which needs Tuist; Fixtures/StepDefinitionMacrosTuist builds one"),
+    (MACROS_GUIDE,
      "a Tuist Project.swift, which needs Tuist; Fixtures/SwiftTestingAndXCTestMacrosTuist builds one"),
+    (MACROS_GUIDE,
+     "a Tuist Project.swift, which needs Tuist; it shows a package moved out of Tuist/Package.swift"),
     ("CucumberSwift+UIUTest.md",
      "needs the UIUTest package and your app, and UIKit, which a macOS build doesn't have"),
     ("Hooks.md",

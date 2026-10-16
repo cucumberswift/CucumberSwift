@@ -29,6 +29,7 @@ Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t
 - <doc:Running-Scenarios-In-Parallel>
 - <doc:Matching-Steps>
 - <doc:Checking-Feature-Files>
+- <doc:Using-Step-Definition-Macros>
 - <doc:Checking-Step-Definitions>
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>
