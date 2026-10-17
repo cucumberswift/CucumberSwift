@@ -113,7 +113,8 @@ extension CucumberTests {
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a step", line: 3), step(.given, "a step", line: 4)]))
         }
-        #expect(ran.count <= 1)
+        // A BeforeStep failure skips the step; an AfterStep failure runs it once.
+        #expect(ran == (kind == "AfterStep" ? ["step"] : []))
     }
 
     @Test(arguments: ["BeforeScenario", "AfterScenario", "BeforeFeature", "AfterFeature"])
@@ -134,7 +135,8 @@ extension CucumberTests {
             }
         }
         #expect(observer.log.contains("feature failed F"))
-        #expect(observer.log.contains("scenario failed A") || kind.hasSuffix("Feature"))
+        #expect(observer.log.contains("scenario failed A") == (kind != "AfterFeature"))
+        #expect(observer.log.contains("scenario passed A") == (kind == "AfterFeature"))
         // BeforeScenario and BeforeFeature fail the first step; AfterScenario and AfterFeature leave the step as reported.
         #expect(observer.log.contains { $0.hasPrefix("step failed") } == kind.hasPrefix("Before"))
     }

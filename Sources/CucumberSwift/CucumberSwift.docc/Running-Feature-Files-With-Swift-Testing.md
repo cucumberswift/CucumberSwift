@@ -296,8 +296,8 @@ The `Feature`, `Scenario` and `Step` an observer receives are this runner's own,
 
 - the test suite starts before the first scenario, and finishes after the last,
 - a feature starts with its first scenario that runs, after its `BeforeFeature` hooks, and finishes after its last and its `AfterFeature` hooks: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
-- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step failed, not if a hook did, and
-- a step starts before its `BeforeStep` hooks, and finishes after its `AfterStep` hooks.
+- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step or a hook failed, and
+- a step starts before its `BeforeStep` hooks, and finishes before its `AfterStep` hooks run, as in CucumberSwift: an `AfterStep` hook that fails fails the scenario, not the step the observers were told about.
 
 A step with no step definition finishes `.failed`, with the message the runner records, and an ambiguous step finishes `.ambiguous`. The events of one scenario arrive in order; don't assume anything about the order of events from different scenarios.
 
