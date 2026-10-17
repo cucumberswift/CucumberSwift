@@ -80,7 +80,7 @@ extension CucumberTests {
     }
 
     @Test(arguments: ["BeforeStep", "AfterStep"])
-    func aThrowingStepHookDoesNotFailItsScenarioOrFeature(kind: String) async throws {
+    func aThrowingStepHookFailsItsStepScenarioAndFeatureAsInXCTest(kind: String) async throws {
         let observer = RecordingObserver()
         Cucumber.shared.reporters = [observer]
         Given("a step") { _, _ in }
@@ -95,9 +95,50 @@ extension CucumberTests {
                 await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
             }
         }
-        #expect(observer.log.contains { $0.hasPrefix("step failed") })
-        #expect(observer.log.contains("scenario passed A"))
-        #expect(observer.log.contains("feature passed F"))
+        // The step's result is reported before its AfterStep hooks run, as in XCTest: a BeforeStep failure lands on
+        // the step, an AfterStep one on the scenario and the feature.
+        #expect(observer.log.contains { $0.hasPrefix("step failed") } == (kind == "BeforeStep"))
+        #expect(observer.log.contains("scenario failed A"))
+        #expect(observer.log.contains("feature failed F"))
+    }
+
+    @Test(arguments: ["BeforeStep", "AfterStep"])
+    func aThrowingStepHookSkipsTheLaterSteps(kind: String) async throws {
+        Given("a step") { [self] _, _ in ran.append("step") }
+        if kind == "BeforeStep" {
+            BeforeStep { _ in throw HookFailure() }
+        } else {
+            AfterStep { _ in throw HookFailure() }
+        }
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a step", line: 3), step(.given, "a step", line: 4)]))
+        }
+        // A BeforeStep failure skips the step; an AfterStep failure runs it once.
+        #expect(ran == (kind == "AfterStep" ? ["step"] : []))
+    }
+
+    @Test(arguments: ["BeforeScenario", "AfterScenario", "BeforeFeature", "AfterFeature"])
+    func aThrowingScenarioOrFeatureHookFailsTheScenarioAndFeatureAsInXCTest(kind: String) async throws {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a step") { _, _ in }
+        switch kind {
+            case "BeforeScenario": BeforeScenario { _ in throw HookFailure() }
+            case "AfterScenario": AfterScenario { _ in throw HookFailure() }
+            case "BeforeFeature": BeforeFeature { _ in throw HookFailure() }
+            default: AfterFeature { _ in throw HookFailure() }
+        }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        }
+        #expect(observer.log.contains("feature failed F"))
+        #expect(observer.log.contains("scenario failed A") == (kind != "AfterFeature"))
+        #expect(observer.log.contains("scenario passed A") == (kind == "AfterFeature"))
+        // BeforeScenario and BeforeFeature fail the first step; AfterScenario and AfterFeature leave the step as reported.
+        #expect(observer.log.contains { $0.hasPrefix("step failed") } == kind.hasPrefix("Before"))
     }
 
     @Test func aFailingStepDefinitionStillFailsItsScenarioAndFeature() async throws {

@@ -374,7 +374,8 @@ extension CucumberTests {
         let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
         let steps = try #require(elements.first?["steps"] as? [[String: Any]])
         let results = steps.compactMap { $0["result"] as? [String: Any] }
-        #expect(results.map { $0["status"] as? String } == ["passed", "failed", "passed"])
+        // The step that follows a failed one doesn't run, so it isn't in the report.
+        #expect(results.map { $0["status"] as? String } == ["passed", "failed"])
         #expect((results[1]["error_message"] as? String)?.contains("the total is wrong") == true)
     }
     #endif

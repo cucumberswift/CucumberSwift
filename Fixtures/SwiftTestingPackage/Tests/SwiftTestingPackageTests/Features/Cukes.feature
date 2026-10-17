@@ -15,6 +15,11 @@ Feature: Counting cukes
       | start | eaten | left |
       | 100   | 1     | 99   |
 
+    @left-out-in-code
+    Examples: Left out
+      | start | eaten | left |
+      | 10    | 1     | 0    |
+
   Scenario: A shopping list
     Given my shopping list is
       """
@@ -38,3 +43,7 @@ Feature: Counting cukes
     And I eat 1 cuke with a regex quickly
     Then the regex step sees 2 cukes
     And 2 cukes are left in a weak regex step
+
+  @left-out-in-code
+  Scenario: Left out by shouldRunWith
+    Given a step that fails if the scenario runs

@@ -6,6 +6,20 @@ import Testing
 @MainActor
 enum ImplementationSettings {
     static var verbose = false
+    static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
+    static var continueTestingAfterFailure = true
+    static var reverseOrderForAfterHooks = false
+    static var asyncStepTimeout: TimeInterval = 60
+    static var regexLiteralStyle = RegexLiteralStyle.extendedDelimiter
+
+    static func reset() {
+        verbose = false
+        shouldRunWith = { _, _ in true }
+        continueTestingAfterFailure = true
+        reverseOrderForAfterHooks = false
+        asyncStepTimeout = 60
+        regexLiteralStyle = .extendedDelimiter
+    }
 }
 
 /// The runner, one scenario at a time, with step definitions each test registers itself.
@@ -29,7 +43,9 @@ final class CucumberTests {
         cucumber.resetObservation()
         Cucumber.reportPath = nil
         Cucumber.verboseOutput = false
-        ImplementationSettings.verbose = false
+        ImplementationSettings.reset()
+        Cucumber.generateRegexLiterals = nil
+        cucumber.skipsLaterStepsAfterRecordedIssue = true
     }
 
     func step(_ keyword: Step.Keyword, _ text: String, line: Int) -> GherkinStep {
@@ -183,6 +199,11 @@ final class CucumberTests {
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
     public var verbose: Bool { ImplementationSettings.verbose }
+    public var continueTestingAfterFailure: Bool { ImplementationSettings.continueTestingAfterFailure }
+    public var reverseOrderForAfterHooks: Bool { ImplementationSettings.reverseOrderForAfterHooks }
+    public var asyncStepTimeout: TimeInterval { ImplementationSettings.asyncStepTimeout }
+    public var regexLiteralStyle: RegexLiteralStyle { ImplementationSettings.regexLiteralStyle }
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool { ImplementationSettings.shouldRunWith(scenario, tags) }
 
     public func setupSteps() {}
 }

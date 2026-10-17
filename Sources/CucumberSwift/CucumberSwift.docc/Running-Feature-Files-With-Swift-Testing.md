@@ -88,9 +88,9 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-<doc:Using-Step-Definition-Macros> describes the macros in full, with the argument each parameter gives, and <doc:Checking-Step-Definitions> the mistakes the compiler reports and the fixes Xcode offers. They work the same with this runner, apart from the localized macros, such as `#ES_Dado`, which are only in `CucumberSwiftMacros`, not in `CucumberSwiftTestingMacros`.
+<doc:Using-Step-Definition-Macros> describes the macros in full, with the argument each parameter gives, and <doc:Checking-Step-Definitions> the mistakes the compiler reports and the fixes Xcode offers. They work the same with this runner, localized macros such as `#ES_Dado` included: `CucumberSwiftTestingMacros` has every one that `CucumberSwiftMacros` has, and the step types they expand to, such as ``ES_Dado``, are in `CucumberSwiftTesting`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. It can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. A deprecated form takes a regular expression in a `String` variable and a closure with the matches as a `[String]`, as in CucumberSwift: `Given(pattern) { matches, step in … }`. As there, a string literal binds to the Cucumber expression form instead, so use a variable or a regex literal. A step definition can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
 `BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
 
@@ -192,20 +192,65 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 
 When a step has no step definition, has more than one, or its step definition or a step hook throws, the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 
-A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A scenario and its feature are `failed` in the report when one of their steps fails, not when a hook throws: a step whose step hook throws finishes `failed`, but that alone doesn't fail its scenario.
+A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A hook that throws, or fails an `#expect`, fails its scenario and feature, as with CucumberSwift, and where it shows in the report is the step that is current when it runs. A `BeforeStep` hook fails its own step. A `BeforeScenario` hook fails the scenario's first step, and a `BeforeFeature` hook the first step of the feature's first scenario; the steps after it don't run. An `AfterStep`, `AfterScenario` or `AfterFeature` hook runs after the step is reported, so it leaves that step as it was and fails the scenario or the feature.
 
-A step that never finishes holds up the run: the runner has no timeout for an async step, as CucumberSwift's `asyncStepTimeout` gives.
+A step or a hook that doesn't finish within `asyncStepTimeout` fails on its line, as in CucumberSwift: see <doc:#Step-and-hook-options>.
 
 A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook. Its message gives the step as it ran, with an example's values, such as `Then the basket has 3 cukes`, and where it was recorded, such as `Recorded at StepDefinitions.swift:31`. A step definition that throws gets the step in its message too. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
 
-### Stop at the first failed assertion
+### After a failed assertion
 
-The runner keeps Swift Testing's own rules, which differ from XCTest's. A scenario is one test, so:
+Swift Testing records a failed `#expect` or `Issue.record` without telling the step, so the step's own code can't stop at it. The runner learns of the issue afterwards, so:
 
-- **`#expect` and `Issue.record` don't stop anything.** They fail the test, and the rest of the step, and the scenario's later steps, still run. This is what `#expect` does in every Swift version, and what XCTest does by default for an assertion inside a step, where `continueTestingAfterFailure` is on.
-- **`try #require`, or any error a step throws, stops the step and the scenario.** The scenario's later steps don't run and aren't in the report, its `AfterScenario` and `AfterStep` hooks still do, and the step is reported `failed`. Use it where CucumberSwift would have `continueTestingAfterFailure` return `false`, or where the next step can't make sense after this one failed.
+- **The step runs to its end, and then counts as failed.** Every failure inside it is reported. The scenario's later steps don't run and aren't in the report, and its `AfterScenario` and `AfterStep` hooks still do. That is what CucumberSwift does once a step has failed.
+- **`continueTestingAfterFailure`.** Return `false` from your `StepImplementation` and an `async` step's task is also cancelled at its first failed expectation, so a step that is waiting stops waiting. The runner still waits for it to finish. A synchronous step can't be stopped part way, whatever this says: XCTest can stop one at a failed assertion, and Swift Testing can't.
+- **`try #require`, or any error a step throws, stops the step at once.** Use it where the next line can't make sense after this one failed.
 
-CucumberSwift skips the later steps of a scenario after any failed assertion, because each step is a test of its own. If a step definition you move to this runner relied on that, change its `#expect` to `try #require`: see <doc:#Move-unit-tests-to-Swift-Testing>.
+This needs Swift 6.2 or later. With Swift 6.1 the runner can't see a failed `#expect`: the step is reported as passed and the scenario goes on, so use `try #require` where a step must stop the scenario.
+
+## Step and hook options
+
+These `StepImplementation` properties and functions work as they do in CucumberSwift. Declare them next to `setupSteps()`; each is optional.
+
+```swift
+import CucumberSwiftTestingMacros
+import Foundation
+
+extension Cucumber: @retroactive StepImplementation {
+    public var asyncStepTimeout: TimeInterval { 120 }
+    public var reverseOrderForAfterHooks: Bool { true }
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+        !tags.contains("wip")
+    }
+    public func setupSteps() { /* Your steps */ }
+}
+```
+
+- **`shouldRunWith(scenario:tags:)`** decides in code which scenarios run, and `CUCUMBER_TAGS` takes over when it is set. The runner asks it once for each scenario, before any scenario runs, after calling `setupSteps()` if that hasn't happened yet, and Xcode shows a scenario it leaves out as skipped, as it does with `CUCUMBER_TAGS`.  An example of a Scenario Outline that it leaves out isn't a test case at all, as `CUCUMBER_TAGS` does with examples.
+- **`reverseOrderForAfterHooks`** runs the `AfterScenario` and `AfterStep` hooks in the reverse of their usual order.
+- **`asyncStepTimeout`** is how many seconds a step or a hook may run, 60 by default. One that suspends for longer is cancelled and fails on its line in the feature file, and the runner waits for it to finish. As in CucumberSwift, the timeout applies only to a step or a hook that suspends: one that blocks the main actor can't be interrupted, and isn't failed.
+- **`continueTestingAfterFailure`**: see <doc:#After-a-failed-assertion>.
+- **`verbose`**: see <doc:#Reports-verbose-output-and-custom-reporters>.
+- **`regexLiteralStyle`** says how the step definitions the runner suggests for undefined steps write their regex literals, `#/…/#` by default or ``RegexLiteralStyle/bareSlash``, when `Cucumber.generateRegexLiterals` is on. Cucumber expressions are suggested by default; set `Cucumber.generateRegexLiterals = true` in `setupSteps()`, or `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, as in <doc:Matching-Steps#Generate-regex-literals-instead>.
+
+### Run another step
+
+`ExecuteFirstStep(keyword:matching:)` runs the step definition that matches some text, from inside a step or a hook, and waits for it. Its difference from CucumberSwift's is that there is only the `async` form, which you `await`: every step here is `async`. The step definition gets a `Step` with that text. A step that no step definition matches, or that more than one matches, or whose step definition throws, fails on the line of the step that called it, and the caller goes on.
+
+```swift
+import CucumberSwiftTestingMacros
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        #Given("I add {int} cukes to the basket") { (count: Int) in
+            Basket.shared.add(count)
+        }
+        #When("I check out as a guest") {
+            await ExecuteFirstStep(matching: "I add 2 cukes to the basket")
+        }
+    }
+}
+```
 
 ## Reports, verbose output and custom reporters
 
@@ -251,8 +296,8 @@ The `Feature`, `Scenario` and `Step` an observer receives are this runner's own,
 
 - the test suite starts before the first scenario, and finishes after the last,
 - a feature starts with its first scenario that runs, after its `BeforeFeature` hooks, and finishes after its last and its `AfterFeature` hooks: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
-- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step failed, not if a hook did, and
-- a step starts before its `BeforeStep` hooks, and finishes after its `AfterStep` hooks.
+- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step or a hook failed, and
+- a step starts before its `BeforeStep` hooks, and finishes before its `AfterStep` hooks run, as in CucumberSwift: an `AfterStep` hook that fails fails the scenario, not the step the observers were told about.
 
 A step with no step definition finishes `.failed`, with the message the runner records, and an ambiguous step finishes `.ambiguous`. The events of one scenario arrive in order; don't assume anything about the order of events from different scenarios.
 
@@ -268,8 +313,8 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 One scheme can test both targets. To move a unit test target:
 
 1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are.
-3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step can't go on: a failed `#expect` doesn't stop the scenario, as <doc:#Stop-at-the-first-failed-assertion> describes.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are. Declare `shouldRunWith(scenario:tags:)` if you filter scenarios in code: this runner asks only that one, so an older `shouldRunWith(tags:)` is ignored and every scenario runs.
+3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once: a failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
 4. Remove anything listed in <doc:#What-isnt-available>.
 
 **Sharing step definitions between the runners.** A step definition file that both targets compile needs a different `import` in each, and assertions that both runners report. Before Swift 6.4, neither runner sees the other's: Swift Testing ignores a failed `XCTAssert`, and CucumberSwift's XCTest runner ignores a failed `#expect`, so in either case the step passes. A failed `try #require` throws, and both runners fail a step that throws, on its line in the feature file. Keep the step definitions for UI tests and for unit tests apart where you can: they usually do different things.
@@ -279,11 +324,8 @@ One scheme can test both targets. To move a unit test target:
 These parts of CucumberSwift have no counterpart in this runner:
 
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
-- `ExecuteFirstStep`,
-- the `StepImplementation` properties: `shouldRunWith(scenario:tags:)`, `continueTestingAfterFailure`, `reverseOrderForAfterHooks`, `asyncStepTimeout` and `regexLiteralStyle`,
-- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH` and `CUCUMBER_VERBOSE`, with `Cucumber.reportPath` and `Cucumber.verboseOutput`, as <doc:Settings> describes,
+- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_GENERATE_REGEX_LITERALS`, with `Cucumber.reportPath`, `Cucumber.verboseOutput` and `Cucumber.generateRegexLiterals`, as <doc:Settings> describes,
 - `Cucumber.expectation(description:)` and `wait(for:timeout:)`,
-- step definitions that take `[String]`, the deprecated regular expression API, and
-- the localized step types such as `ES_Dado`.
+- the deprecated step definitions that take a class and a selector.
 
-Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are always Cucumber expressions.
+Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals.
