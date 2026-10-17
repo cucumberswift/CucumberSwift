@@ -1,0 +1,116 @@
+@testable import CucumberSwiftTesting
+import Foundation
+import Testing
+
+private struct HookFailure: Error {}
+
+// A hook that throws fails at the line where it is written, as with CucumberSwift.
+extension CucumberTests {
+    /// Runs a feature of one scenario with one step, and expects exactly one issue, at `line` of this file.
+    func expectIssue(at line: Int, sourceLocation: Testing.SourceLocation = #_sourceLocation) async throws {
+        Given("a step") { _, _ in }
+        try await withKnownIssue(sourceLocation: sourceLocation) {
+            try await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        } matching: { issue in
+            issue.sourceLocation?.line == line && issue.sourceLocation?._filePath == #filePath
+        }
+    }
+
+    @Test func aThrowingBeforeFeatureHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        BeforeFeature { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aThrowingAfterFeatureHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        AfterFeature { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aThrowingBeforeScenarioHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        BeforeScenario { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aThrowingAfterScenarioHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        AfterScenario { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aThrowingBeforeStepHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        BeforeStep { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aThrowingAfterStepHookFailsAtItsOwnLine() async throws {
+        let line = #line + 1
+        AfterStep { _ in throw HookFailure() }
+        try await expectIssue(at: line)
+    }
+
+    @Test func aHookCanNameWhereItIsWritten() async throws {
+        BeforeScenario(file: "Hooks.swift", line: 12) { _ in throw HookFailure() }
+        Given("a step") { _, _ in }
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a step", line: 3)]))
+        } matching: { issue in
+            issue.sourceLocation?.line == 12 && issue.sourceLocation?._filePath == "Hooks.swift"
+        }
+    }
+
+    @Test func theHooksTheyHadBeforeFileAndLineStillWorkAsFunctionValues() async {
+        let beforeScenario: (UInt?, @escaping @MainActor (Scenario) async throws -> Void) -> Void = BeforeScenario
+        let afterScenario: (UInt?, @escaping @MainActor (Scenario) async throws -> Void) -> Void = AfterScenario
+        let beforeStep: (UInt?, @escaping @MainActor (Step) async throws -> Void) -> Void = BeforeStep
+        let afterStep: (UInt?, @escaping @MainActor (Step) async throws -> Void) -> Void = AfterStep
+        beforeScenario(nil) { [self] _ in ran.append("before scenario") }
+        afterScenario(nil) { [self] _ in ran.append("after scenario") }
+        beforeStep(nil) { [self] _ in ran.append("before step") }
+        afterStep(nil) { [self] _ in ran.append("after step") }
+        Given("a step") { _, _ in }
+
+        await Cucumber.shared.run(scenario([step(.given, "a step", line: 3)]))
+        #expect(ran == ["before scenario", "before step", "after step", "after scenario"])
+    }
+
+    @Test(arguments: ["BeforeStep", "AfterStep"])
+    func aThrowingStepHookDoesNotFailItsScenarioOrFeature(kind: String) async throws {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a step") { _, _ in }
+        if kind == "BeforeStep" {
+            BeforeStep { _ in throw HookFailure() }
+        } else {
+            AfterStep { _ in throw HookFailure() }
+        }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        }
+        #expect(observer.log.contains { $0.hasPrefix("step failed") })
+        #expect(observer.log.contains("scenario passed A"))
+        #expect(observer.log.contains("feature passed F"))
+    }
+
+    @Test func aFailingStepDefinitionStillFailsItsScenarioAndFeature() async throws {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a step") { _, _ in throw HookFailure() }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+            }
+        }
+        #expect(observer.log.contains("scenario failed A"))
+        #expect(observer.log.contains("feature failed F"))
+    }
+}
