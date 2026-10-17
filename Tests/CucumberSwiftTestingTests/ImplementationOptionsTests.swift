@@ -154,6 +154,7 @@ extension CucumberTests {
         #expect(kept.map(\.scenario.line) == [5, 7])
     }
 
+    /// Fails at the hook itself, where #421's hooks report a throw.
     @Test func aHookThatOutlastsTheTimeoutFails() async {
         ImplementationSettings.asyncStepTimeout = 0.05
         BeforeScenario { _ in try await Task.sleep(nanoseconds: 5_000_000_000) }
@@ -162,7 +163,7 @@ extension CucumberTests {
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a step", line: 3)]))
         } matching: { issue in
-            issue.sourceLocation?.line == 2 && issue.error is StepTimeoutError
+            issue.sourceLocation?.fileID.hasSuffix("ImplementationOptionsTests.swift") == true && issue.error is StepTimeoutError
         }
         #expect(ran.isEmpty)
     }

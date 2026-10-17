@@ -17,13 +17,31 @@ public final class Cucumber {
         let body: @MainActor (String) -> (@MainActor (Step) async throws -> Void)?
     }
 
+    /// How a step ended: its result, whether the scenario's later steps run, and whether the step itself
+    /// failed, rather than only one of its hooks.
+    private struct StepOutcome {
+        let result: Reporter.Result
+        let canContinue: Bool
+        let isStepFailed: Bool
+    }
+
     /// A feature the runner has seen a scenario of, and where it is.
     private final class FeatureRun {
         let feature: Feature
         var startDate: Date?
         var isFailed = false
         var isFinished = false
+        /// Starts the feature: runs `BeforeFeature`, then tells the observers. Every scenario of the feature
+        /// waits for it, so the hooks run once.
+        var starting: Task<Void, Never>?
+        /// Why a `BeforeFeature` hook threw, until the feature's first scenario reports it on its first step.
+        var startFailure: String?
         init(_ feature: Feature) { self.feature = feature }
+
+        func takeStartFailure() -> String? {
+            defer { startFailure = nil }
+            return startFailure
+        }
     }
 
     public static let shared = Cucumber()
@@ -33,6 +51,8 @@ public final class Cucumber {
     var afterScenarioHooks = [Hook<Scenario>]()
     var beforeStepHooks = [Hook<Step>]()
     var afterStepHooks = [Hook<Step>]()
+    var beforeFeatureHooks = [Hook<Feature>]()
+    var afterFeatureHooks = [Hook<Feature>]()
     private var isSetUp = false
     private var hasReportedMissingImplementation = false
     /// The process's environment, for the settings that have an environment variable. Tests replace it.
@@ -43,7 +63,7 @@ public final class Cucumber {
     private var openFeature: FeatureRun?
     private var isSuiteStarted = false
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
-    private var approvedScenarios = Set<String>()
+    var approvedScenarios = Set<String>()
 
     /// Whether the scenario's later steps are skipped once a step has recorded an issue, such as a failed
     /// `#expect`, as CucumberSwift skips them once a step has failed. Tests turn it off to see the other.
@@ -55,18 +75,6 @@ public final class Cucumber {
     /// Whether to print each feature, scenario and step as it runs.
     var isVerbose: Bool {
         Cucumber.verboseOutput || VerboseOutput.isEnabled(in: environment) || ((self as Any as? StepImplementation)?.verbose ?? false)
-    }
-
-    /// CucumberSwift's message for a step that no step definition matches.
-    static func missingStepDefinitionMessage(suggestion: String) -> String {
-        "No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file: \n\(suggestion)"
-    }
-
-    /// CucumberSwift's message for a step that more than one step definition matches.
-    static func ambiguousStepMessage(step: String, definitions: [Definition]) -> String {
-        let locations = definitions.map { "\(URL(fileURLWithPath: $0.file).lastPathComponent):\($0.line)" }
-        let list = locations.count < 2 ? locations.joined() : locations.dropLast().joined(separator: ", ") + " and " + (locations.last ?? "")
-        return "Ambiguous step '\(step)': it matches \(locations.count) step definitions, at \(list). Remove all but one of them, or make their patterns more specific." // swiftlint:disable:this line_length
     }
 
     private static func sourceLocation(_ file: String, _ location: Location) -> SourceLocation {
@@ -93,10 +101,6 @@ public final class Cucumber {
         return observers.compactMap { $0 }
     }
 
-    private static func key(of scenario: GherkinScenario) -> String {
-        "\(scenario.file):\(scenario.line):\(scenario.column)"
-    }
-
     func register(
         keyword: Step.Keyword,
         file: StaticString,
@@ -121,54 +125,31 @@ public final class Cucumber {
         await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await perform(gherkinScenario) }
     }
 
-    /// Whether the scenario runs: `CUCUMBER_TAGS` decides when it is set, and otherwise
-    /// `shouldRunWith(scenario:tags:)` does, as in CucumberSwift. The tests that CucumberSwiftTestingPlugin
-    /// generates for scenarios ask this in an `.enabled` trait, so that a scenario it leaves out is
-    /// reported as skipped, and the scenario is not asked again when it runs. It sets up the step
-    /// definitions first, because Swift Testing asks before any test has started. A scenario that is left
-    /// out starts no feature and tells no observer, as CucumberSwift doesn't generate it.
-    public func shouldRun(_ gherkinScenario: GherkinScenario) -> Bool {
-        loadStepDefinitions()
-        let runs: Bool
-        if environment["CUCUMBER_TAGS"] != nil {
-            runs = CucumberTags.shouldRun(gherkinScenario.tags, environment: environment)
-        } else if let implementation = self as Any as? StepImplementation {
-            runs = implementation.shouldRunWith(scenario: Scenario(gherkinScenario, feature: Feature(gherkinScenario)), tags: gherkinScenario.tags)
-        } else {
-            runs = true
-        }
-        if runs { approvedScenarios.insert(Self.key(of: gherkinScenario)) }
-        return runs
-    }
-
-    /// The examples of a Scenario Outline that run, as ``shouldRun(_:)`` decides for each. The test that
-    /// CucumberSwiftTestingPlugin generates for an outline takes them as its arguments, so one that is left out
-    /// is not a test case at all, as with CucumberSwift, which doesn't generate it.
-    public func examplesToRun(_ examples: [GherkinExample]) -> [GherkinExample] {
-        examples.filter { shouldRun($0.scenario) }
-    }
-
     private func perform(_ gherkinScenario: GherkinScenario) async {
         let file = gherkinScenario.file
         reportMissingImplementationIfNeeded(at: Self.sourceLocation(file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         let featureRun = startFeature(of: gherkinScenario)
+        await featureRun.starting?.value
         let scenario = Scenario(gherkinScenario, feature: featureRun.feature)
         let startDate = Date()
         reporters.forEach { $0.didStart(scenario: scenario, at: startDate) }
         let record = IssueRecord()
+        // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
+        // step that is current when the hook fails.
         var isFailed = false
-        if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) == nil {
+        // BeforeFeature and BeforeScenario hooks fail the scenario's first step in XCTest, which is the current
+        // step while they run, and the later steps are skipped.
+        let featureHookFailure = featureRun.takeStartFailure()
+        let scenarioHookFailure = await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record)
+        if let beforeFailure = featureHookFailure ?? scenarioHookFailure {
+            isFailed = true
+            if let first = scenario.steps.first { reportFailed(first, beforeFailure) }
+        } else {
             for step in scenario.steps {
                 let outcome = await run(step, in: file)
-                if case .passed = outcome.result {
-                    // Nothing to record.
-                } else {
-                    isFailed = true
-                }
+                if outcome.isStepFailed { isFailed = true }
                 if !outcome.canContinue { break }
             }
-        } else {
-            isFailed = true
         }
         if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record, reversed: reversesAfterHooks) != nil {
             isFailed = true
@@ -204,21 +185,23 @@ public final class Cucumber {
 
     /// Finishes the features that are still open, and the test suite. `CucumberSuiteTrait` calls it after
     /// the last test.
-    func endSuite() {
+    func endSuite() async {
         guard isSuiteStarted else { return }
         isSuiteStarted = false
-        featureRuns.values
+        let open = featureRuns.values
             .filter { $0.startDate != nil && !$0.isFinished }
             .sorted { ($0.startDate ?? .distantPast) < ($1.startDate ?? .distantPast) }
-            .forEach(finish)
+        for run in open {
+            await finish(run)
+        }
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
     }
 
     /// Finishes a feature, once all of its scenarios have run. `CucumberFeatureTrait` calls it after the
     /// feature's last test.
-    func endFeature(file: String, title: String, line: Int) {
+    func endFeature(file: String, title: String, line: Int) async {
         guard let run = featureRuns[Self.key(file: file, title: title, line: line)], run.startDate != nil else { return }
-        finish(run)
+        await finish(run)
     }
 
     /// The feature a scenario belongs to, started on its first scenario.
@@ -229,24 +212,42 @@ public final class Cucumber {
         guard run.startDate == nil else { return run }
         // Scenarios run without the generated tests' traits have nothing to say where a feature ends: it
         // ends where the next one starts.
-        if let open = openFeature, open !== run { finish(open) }
+        let open = openFeature
         openFeature = run
         let startDate = Date()
         run.startDate = startDate
-        reporters.forEach { $0.didStart(feature: run.feature, at: startDate) }
+        // The hooks get the feature, not the first scenario, and set the running location themselves.
+        run.starting = Task { @MainActor [self] in
+            if let open, open !== run { await finish(open) }
+            // As with CucumberSwift, the hooks run before the observers hear the feature started.
+            let record = IssueRecord()
+            run.startFailure = await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record)
+            if run.startFailure != nil || !record.messages.isEmpty {
+                run.isFailed = true
+            }
+            reporters.forEach { $0.didStart(feature: run.feature, at: Date()) }
+        }
         return run
     }
 
-    private func finish(_ run: FeatureRun) {
+    private func finish(_ run: FeatureRun) async {
         guard !run.isFinished, let startDate = run.startDate else { return }
         run.isFinished = true
         if openFeature === run { openFeature = nil }
+        // The after hooks run even when a before hook threw, once the before hooks are over.
+        _ = await run.starting?.value
+        let record = IssueRecord()
+        if await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record, reversed: reversesAfterHooks) != nil
+            || !record.messages.isEmpty {
+            run.isFailed = true
+        }
+        RunningLocation.shared.current = nil
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(feature: run.feature, result: run.isFailed ? .failed : .passed, duration: duration) }
     }
 
     /// Calls `setupSteps()` once, before the first scenario or the suite starts.
-    private func loadStepDefinitions() {
+    func loadStepDefinitions() {
         guard !isSetUp else { return }
         isSetUp = true
         (self as Any as? StepImplementation)?.setupSteps()
@@ -262,14 +263,15 @@ public final class Cucumber {
 
     /// Runs one step, and tells the observers. Returns how it ended, and whether the scenario's later steps
     /// run: not after a step that is undefined, ambiguous, threw or recorded an issue, such as a failed `#expect`.
-    private func run(_ step: Step, in file: String) async -> (result: Reporter.Result, canContinue: Bool) {
+    private func run(_ step: Step, in file: String) async -> StepOutcome {
         let location = Self.sourceLocation(file, step.location)
         let startDate = Date()
         reporters.forEach { $0.didStart(step: step, at: startDate) }
-        func finish(_ result: Reporter.Result, canContinue: Bool = false) -> (result: Reporter.Result, canContinue: Bool) {
+        // `isStepFailed` is whether the step or one of its hooks failed, as XCTest fails the current step for either.
+        func finish(_ result: Reporter.Result, canContinue: Bool = false, isStepFailed: Bool = true) -> StepOutcome {
             let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
             reporters.forEach { $0.didFinish(step: step, result: result, duration: duration) }
-            return (result, canContinue)
+            return StepOutcome(result: result, canContinue: canContinue, isStepFailed: isStepFailed)
         }
         let matches = definitions.compactMap { definition -> (definition: Definition, body: @MainActor (Step) async throws -> Void)? in
             guard step.keyword.isSuperset(of: definition.keyword), let body = definition.body(step.match) else { return nil }
@@ -287,9 +289,11 @@ public final class Cucumber {
         }
         let ran = "\(step.keywordName) \(step.match)"
         let record = IssueRecord()
+        let beforeRecord = IssueRecord()
+        let afterRecord = IssueRecord()
         // As with CucumberSwift, a step's AfterStep hooks run even when a BeforeStep hook failed, which
         // skips the step itself.
-        var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: record)
+        var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: beforeRecord)
         if failure == nil {
             RunningLocation.shared.current = .init(location: location, step: ran, record: record)
             do {
@@ -299,25 +303,23 @@ public final class Cucumber {
                 failure = Self.describe(error)
             }
         }
-        let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: record, reversed: reversesAfterHooks)
-        failure = failure ?? afterFailure
-        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the record.
-        if failure == nil, !record.messages.isEmpty {
-            return finish(.failed(record.messages.joined(separator: "\n")), canContinue: afterFailure == nil && !skipsLaterStepsAfterRecordedIssue)
-        }
-        return finish(failure.map { .failed($0) } ?? .passed, canContinue: failure == nil)
+        // The step's result goes to the observers before its AfterStep hooks run, as in XCTest: a failure in
+        // those fails the scenario and its feature, and skips the later steps, but the step was reported.
+        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the records.
+        let messages = beforeRecord.messages + record.messages
+        let reported: Reporter.Result = failure.map { .failed($0) } ?? (messages.isEmpty ? .passed : .failed(messages.joined(separator: "\n")))
+        let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
+        reporters.forEach { $0.didFinish(step: step, result: reported, duration: duration) }
+        let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: afterRecord, reversed: reversesAfterHooks)
+        let recordedIssue = !messages.isEmpty || !afterRecord.messages.isEmpty
+        let isStepFailed = failure != nil || afterFailure != nil || recordedIssue
+        // The later steps are skipped after a thrown error, and after an issue, as in CucumberSwift: see `skipsLaterStepsAfterRecordedIssue`.
+        let canContinue = failure == nil && afterFailure == nil && !(skipsLaterStepsAfterRecordedIssue && recordedIssue)
+        return StepOutcome(result: reported, canContinue: canContinue, isStepFailed: isStepFailed)
     }
 
-    /// The step definition to suggest for an undefined step: with a regex literal when
-    /// ``Cucumber/generateRegexLiterals`` or `CUCUMBER_GENERATE_REGEX_LITERALS` asks for one, written as
-    /// ``StepImplementation/regexLiteralStyle`` says, and otherwise with a Cucumber Expression.
-    private func suggestion(for step: Step) -> String {
-        guard CucumberSettings.generatesRegexLiterals(environment: environment) else { return step.suggestion }
-        let style = (self as Any as? StepImplementation)?.regexLiteralStyle ?? .extendedDelimiter
-        return (style == .bareSlash ? step.bareSlashRegexLiteralSuggestion : step.regexLiteralSuggestion) ?? step.suggestion
-    }
-
-    /// Runs each hook in order. Returns why one threw, or `nil` when none did.
+    /// Runs each hook in order, as CucumberSwift does: one that throws doesn't stop the ones after it.
+    /// Returns why the first that threw did, or `nil` when none did.
     private func runHooks<Argument>(
         _ hooks: [Hook<Argument>],
         with argument: Argument,
@@ -327,15 +329,16 @@ public final class Cucumber {
         record: IssueRecord,
         reversed: Bool = false
     ) async -> String? {
+        var failure: String?
         for hook in hooks.inPriorityOrder(reversed: reversed) {
             RunningLocation.shared.current = .init(location: Self.sourceLocation(file, location), step: step, record: record)
             do {
                 try await runWithTimeout(record: record) { try await hook.body(argument) }
             } catch {
-                Issue.record(error, sourceLocation: Self.sourceLocation(file, location))
-                return Self.describe(error)
+                Issue.record(error, sourceLocation: hook.sourceLocation)
+                failure = failure ?? Self.describe(error)
             }
         }
-        return nil
+        return failure
     }
 }
