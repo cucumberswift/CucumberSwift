@@ -140,6 +140,7 @@ final class CucumberTests {
     }
     #endif
 
+    #if compiler(>=6.2)
     /// Two scenarios that run at the same time, each failing an expectation after the other's step has
     /// started. Each failure is reported at its own scenario's step, with that step as it ran.
     @Test(.filterIssues { issue in
@@ -194,6 +195,7 @@ final class CucumberTests {
                 == ["before \(title)", "\(title) step", "\(title) then", "after \(title)"])
         }
     }
+    #endif
 
     @Test func aRegexLiteralMatchesAStepsWholeText() async {
         guard #available(macOS 13.0, *) else { return }
