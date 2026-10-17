@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Testing
 
 /// A feature, as hooks and step definitions see it.
 public final class Feature {
@@ -14,6 +15,7 @@ public final class Feature {
     /// The feature file's path on the Mac that built the tests.
     public let uri: String
     public let location: Location
+    let scenarioState = ScenarioState()
 
     init(title: String, desc: String = "", tags: [String], uri: String, location: Location = Location(line: 1, column: 1)) {
         self.title = title
@@ -41,6 +43,7 @@ public final class Scenario {
     public private(set) var steps = [Step]()
     public let feature: Feature?
     public let location: Location
+    let scenarioState = ScenarioState()
 
     /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
     ///   that observers see one object for a feature.
@@ -50,5 +53,33 @@ public final class Scenario {
         self.feature = feature ?? Feature(scenario)
         location = Location(line: scenario.line, column: scenario.column)
         steps = scenario.steps.map { Step($0, in: self) }
+    }
+
+    /// The running scenario's own value of type `Value`, such as the basket its steps fill in: call it from
+    /// any step or scenario hook, with no scenario to pass. `make` runs the first time any step or hook of
+    /// this scenario asks for a `Value`, and every later call, from any step or hook of this scenario,
+    /// gets the same object. Another scenario has a value of its own, so scenarios that run at the same
+    /// time don't share it. The value is released when the scenario is over.
+    ///
+    /// ```swift
+    /// enum World {
+    ///     static var basket: Basket { Scenario.state(Basket.init) }
+    /// }
+    ///
+    /// Given("the basket has {int} cukes") { match, _ in
+    ///     World.basket.cukes = try match.first(\.int)
+    /// }
+    /// ```
+    ///
+    /// `Value` is a class so that what one step changes, the next sees. Different types are different
+    /// values, so one scenario can have a `Basket` and a `Beach`. Called outside a step or a scenario hook,
+    /// such as from a feature hook or a task a step left running, it records a failure and returns a new
+    /// value that no scenario keeps.
+    public static func state<Value: AnyObject>(_ make: () -> Value) -> Value {
+        guard let scenario = RunningLocation.current?.scenario else {
+            Issue.record("Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.")
+            return make()
+        }
+        return scenario.scenarioState.value(make)
     }
 }

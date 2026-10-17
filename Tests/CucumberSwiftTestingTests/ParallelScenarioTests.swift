@@ -169,4 +169,70 @@ extension CucumberTests {
         Cucumber.parallelTestingUnit = .feature
         #expect(featureOrder(compiled: true, environment: [:]) is ParallelizationTrait)
     }
+
+    // MARK: A scenario's own state
+
+    final class Basket {
+        var cukes = 0
+    }
+
+    @Test func aScenarioKeepsItsStateAcrossStepsAndHooksAndOtherScenariosDontShareIt() async {
+        var seen = [String: Int]()
+        var started = Set<String>()
+        BeforeScenario { _ in Scenario.state(Basket.init).cukes = 100 }
+        Given("a basket for {word}") { match, _ in
+            let name = try match.first(\.word)
+            Scenario.state(Basket.init).cukes += name == "one" ? 1 : 2
+            started.insert(name)
+            // Waits until both scenarios have a step running, so that they overlap.
+            while started.count < 2 { await Task.yield() }
+        }
+        Then("the basket is read for {word}") { match, _ in seen[try match.first(\.word)] = Scenario.state(Basket.init).cukes }
+
+        async let first: Void = Cucumber.shared.run(scenario([
+            step(.given, "a basket for one", line: 3), step(.then, "the basket is read for one", line: 4)]))
+        async let second: Void = Cucumber.shared.run(scenario([
+            step(.given, "a basket for two", line: 3), step(.then, "the basket is read for two", line: 4)]))
+        _ = await (first, second)
+        #expect(seen == ["one": 101, "two": 102])
+    }
+
+    @Test func aStepRunByExecuteFirstStepSeesTheStateOfTheScenarioThatCalledIt() async {
+        var seen = 0
+        Given("a nested step") { _, _ in seen = Scenario.state(Basket.init).cukes }
+        Given("an outer step") { _, _ in
+            Scenario.state(Basket.init).cukes = 7
+            await ExecuteFirstStep(matching: "a nested step")
+        }
+        await Cucumber.shared.run(scenario([step(.given, "an outer step", line: 3)]))
+        #expect(seen == 7)
+    }
+
+    @Test func aScenarioLetsGoOfItsStateWhenItIsOver() async {
+        weak var weakBasket: Basket?
+        Given("a basket") { _, _ in weakBasket = Scenario.state(Basket.init) }
+        await Cucumber.shared.run(scenario([step(.given, "a basket", line: 3)]))
+        #expect(weakBasket == nil)
+    }
+
+    @Test func differentTypesAreDifferentValuesAndAskingTwiceGivesTheSameOne() async {
+        final class Beach {}
+        var checked = false
+        Given("a basket and a beach") { _, _ in
+            let basket = Scenario.state(Basket.init)
+            #expect(Scenario.state(Basket.init) === basket)
+            #expect(Scenario.state(Beach.init) !== (basket as AnyObject))
+            checked = true
+        }
+        await Cucumber.shared.run(scenario([step(.given, "a basket and a beach", line: 3)]))
+        #expect(checked)
+    }
+
+    @Test func askingForStateOutsideAScenarioRecordsAFailureAndReturnsAThrowawayValue() {
+        withKnownIssue {
+            #expect(Scenario.state(Basket.init).cukes == 0)
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue.contains("Scenario.state(_:) needs a running scenario") }
+        }
+    }
 }

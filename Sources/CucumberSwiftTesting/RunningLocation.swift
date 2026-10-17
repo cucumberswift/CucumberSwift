@@ -58,12 +58,15 @@ final class IssueRecord: @unchecked Sendable {
 /// Where in a feature file the runner is: the step that is running, or the scenario while its hooks run.
 /// It is a task-local value, so scenarios that run at the same time each see their own.
 enum RunningLocation {
-    struct Running: Sendable {
+    // `@unchecked`: the scenario is a main-actor class that the task-local only hands to code on the main actor.
+    struct Running: @unchecked Sendable {
         let location: SourceLocation
         /// The step as it runs, such as "Then the basket has 3 cukes", or nil while a scenario hook runs.
         let step: String?
         /// Where the issues recorded now are noted, for the report.
         var record: IssueRecord?
+        /// The scenario the step or hook belongs to, nil for a feature hook.
+        var scenario: Scenario?
     }
 
     /// The running step or hook of the current task, and of the tasks it creates, but not detached ones.

@@ -156,6 +156,7 @@ public final class Cucumber {
         if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record, reversed: reversesAfterHooks) != nil {
             isFailed = true
         }
+        scenario.scenarioState.removeAll()
         // A failed `#expect` in a hook, which Swift Testing 6.2's issue handling reports to the record.
         isFailed = isFailed || !record.messages.isEmpty
         if isFailed { featureRun.isFailed = true }
@@ -231,6 +232,11 @@ public final class Cucumber {
             reporters.forEach { $0.didStart(feature: run.feature, at: Date()) }
         }
         return run
+    }
+
+    /// The scenario that a hook's argument belongs to: the scenario itself, or a step's. A feature hook has none.
+    private static func scenario(of argument: Any) -> Scenario? {
+        (argument as? Scenario) ?? (argument as? Step)?.scenario
     }
 
     private func finish(_ run: FeatureRun) async {
@@ -317,7 +323,7 @@ public final class Cucumber {
         var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: beforeRecord)
         if failure == nil {
             do {
-                try await RunningLocation.$current.withValue(.init(location: location, step: ran, record: record)) {
+                try await RunningLocation.$current.withValue(.init(location: location, step: ran, record: record, scenario: step.scenario)) {
                     try await runWithTimeout(record: record) { try await match.body(step) }
                 }
             } catch {
@@ -354,7 +360,7 @@ public final class Cucumber {
         var failure: String?
         for hook in hooks.inPriorityOrder(reversed: reversed) {
             do {
-                try await RunningLocation.$current.withValue(.init(location: Self.sourceLocation(file, location), step: step, record: record)) {
+                try await RunningLocation.$current.withValue(.init(location: Self.sourceLocation(file, location), step: step, record: record, scenario: Self.scenario(of: argument))) {
                     try await runWithTimeout(record: record) { try await hook.body(argument) }
                 }
             } catch {

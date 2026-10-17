@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import XCTest
 public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var title = ""
     public internal(set)  var tags = [String]()
@@ -16,6 +17,7 @@ public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var location: Lexer.Position
     public private(set)  var endLocation: Lexer.Position
     internal var startDate = Date()
+    let scenarioState = ScenarioState()
 
     init(with node: AST.ScenarioNode, tags: [String], stepNodes: [AST.StepNode]) {
         location = node.tokens.first?.position ?? .start
@@ -52,6 +54,34 @@ public class Scenario: NSObject, Taggable, Positionable {
                 try? step.addPrimaryKeyword(continued)
             }
         }
+    }
+
+    /// The running scenario's own value of type `Value`, such as the basket its steps fill in: call it from
+    /// any step or scenario hook, with no scenario to pass. `make` runs the first time any step or hook of
+    /// this scenario asks for a `Value`, and every later call, from any step or hook of this scenario,
+    /// gets the same object. Another scenario has a value of its own, so scenarios that run at the same
+    /// time don't share it. The value is released when the scenario is over.
+    ///
+    /// ```swift
+    /// enum World {
+    ///     static var basket: Basket { Scenario.state(Basket.init) }
+    /// }
+    ///
+    /// Given("the basket has {int} cukes") { match, _ in
+    ///     World.basket.cukes = try match.first(\.int)
+    /// }
+    /// ```
+    ///
+    /// `Value` is a class so that what one step changes, the next sees. Different types are different
+    /// values, so one scenario can have a `Basket` and a `Beach`. Called outside a step or a scenario hook,
+    /// such as from a feature hook or a task a step left running, it records a failure and returns a new
+    /// value that no scenario keeps.
+    public static func state<Value: AnyObject>(_ make: () -> Value) -> Value {
+        guard let scenario = Cucumber.shared.currentStep?.scenario else {
+            XCTFail("Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.")
+            return make()
+        }
+        return scenario.scenarioState.value(make)
     }
 
     public func containsTags(_ tags: [String]) -> Bool {

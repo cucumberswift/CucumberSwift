@@ -191,19 +191,48 @@ CUCUMBER_PARALLEL_TESTING=YES swift test
 
 You can also set `Cucumber.parallelTesting = true` in `setupSteps()`, as with CucumberSwift: Swift Testing decides when it discovers the tests, so the runner runs `setupSteps()` then. It wins over the environment variable, as it does there. If the runner can't run `setupSteps()` in time, only this variable is affected: scenarios run one at a time unless the environment variable or the compilation condition turns parallel on, and a note says so once, without failing the run. A third way is a compilation condition of the same name in the **test target** that has the feature files, not in your app target: in `Package.swift`, add `swiftSettings: [.define("CUCUMBER_PARALLEL_TESTING")]` to the test target, and in an Xcode project, add `CUCUMBER_PARALLEL_TESTING` to the test target's **Active Compilation Conditions** build setting. It applies when neither the static variable nor the environment variable is set, so `CUCUMBER_PARALLEL_TESTING=NO` still turns it off.
 
-**Choose what runs together.** By default any scenario may run at the same time as any other: the unit is the scenario. Set `Cucumber.parallelTestingUnit = .feature` in `setupSteps()`, or the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature` (`scenario` or `feature`, in any case, with spaces and tabs around it ignored), to run each feature's scenarios one at a time, in the order of the feature file, while features run at the same time. The static variable wins over the environment variable, as with CucumberSwift, and any other value is ignored. The unit only matters when parallel scenarios are on.
+### Choose what runs together
+
+By default any scenario may run at the same time as any other: the unit is the scenario. Set `Cucumber.parallelTestingUnit = .feature` in `setupSteps()`, or the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature` (`scenario` or `feature`, in any case, with spaces and tabs around it ignored), to run each feature's scenarios one at a time, in the order of the feature file, while features run at the same time. The static variable wins over the environment variable, as with CucumberSwift, and any other value is ignored. The unit only matters when parallel scenarios are on.
 
 The setting means something else here than it does in <doc:Running-Scenarios-In-Parallel>. There, Xcode spreads scenarios across worker processes, each with its own copy of your step definitions' state. Swift Testing runs them in one process, so every scenario sees what the others change. The scenarios may then run in any order. The runner starts each scenario's steps in order. Different scenarios can interleave at suspension points: while a step definition or a hook awaits, the main actor can run another scenario's step or hook. Main-actor isolation does not make shared state exclusive for the whole of an async step or hook, so a step definition that never awaits runs from start to finish, and one that awaits does not. Swift Testing's own `--no-parallel` option, as in `swift test --no-parallel`, still runs one test at a time.
 
-**What step definitions must not share between scenarios.** Anything that one scenario writes and another reads:
+### Sharing state between steps in a scenario
+
+Scenarios that run at the same time share one process, so anything one scenario writes, another can read. That includes:
 
 - global and static variables, singletons, and properties of an object your step definitions capture, such as a shared `World` holding "the basket" that each step fills in,
 - files, `UserDefaults`, the keychain, a database, a port, or any other outside state that scenarios change,
 - the app, the server or the fake that the scenarios drive, when they need it in different states.
 
-Give each scenario its own copy instead. Key the state by the step's scenario, which both runners give every step (`step.scenario`, an optional): a dictionary on your `World` that maps a key made from the scenario's feature file and line, such as `"\(scenario.feature?.uri ?? ""):\(scenario.location.line)"`, to the scenario's basket, because a scenario object isn't the same one for every step that runs it, filled in the first time a step asks and emptied in an `AfterScenario` hook, or a folder, a database or a fake named after the scenario. Step definitions and hooks run on the main actor, so the dictionary needs no lock. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
+Instead, keep what the steps of one scenario share in that scenario's own state, with `Scenario.state(_:)`. Called from any step or scenario hook, it gives the running scenario a value of the type you ask for: it makes the value the first time any step or hook of that scenario asks, and gives every later step and hook of that scenario the same object. Another scenario gets a value of its own, so scenarios that overlap never see each other's. The runner lets go of it when the scenario is over, and the lookup needs no lock of yours. Put it behind your `World`, and the steps keep reading `World.basket`:
 
-**What behaves differently with it on:**
+```swift
+final class Basket {
+    var cukes = 0
+}
+
+enum World {
+    static var basket: Basket { Scenario.state(Basket.init) }
+}
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        #Given("the basket has {int} cukes") { (count: Int) in
+            World.basket.cukes = count
+        }
+        #Then("the basket has {int} cukes left") { (count: Int) in
+            #expect(World.basket.cukes == count)
+        }
+    }
+}
+```
+
+The value is a class, so that what one step changes the next one sees. Different types are different values, so a scenario can have a `Basket` and a `Beach`, and a step that runs another with `ExecuteFirstStep` shares its caller's. It works the same in CucumberSwift's XCTest runner, so step definitions that use it move between the runners unchanged. It needs a running scenario: called from a feature hook, or from a task that a step left running with `Task.detached`, it fails the test with a message that says so. Use files, databases and fakes named after the scenario for what lives outside the process. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
+
+### What behaves differently with parallel on
+
+With scenarios running at the same time:
 
 - **Failures stay with their step.** A failed `#expect` or a thrown error is reported on the line of the step that was running in the scenario that failed, in the test results and in the Cucumber JSON report, though other scenarios' steps are running.
 - **Hooks run around their own scenario and step.** `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` hooks run for each scenario, as before, in priority order and around the same scenario. The hooks of different scenarios can be in progress at the same time, so a hook that sets up shared state, such as a database, runs once per scenario, while others are using it.

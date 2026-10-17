@@ -457,4 +457,61 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         XCTAssert(message.hasSuffix(". Remove the anchors, or write a valid regular expression."), message)
         XCTAssertFalse(message.contains(".."), message)
     }
+
+    // MARK: A scenario's own state
+
+    private final class Basket {
+        var cukes = 0
+    }
+
+    private final class Beach {}
+
+    private func twoScenarios() -> [Scenario] {
+        Cucumber.shared.features.removeAll()
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some feature
+            Scenario: First
+                Given a step
+                Then another step
+            Scenario: Second
+                Given a step
+        """)
+        return Cucumber.shared.features.flatMap(\.scenarios)
+    }
+
+    func testAScenarioHasOneValueOfEachTypeForAllOfItsSteps() throws {
+        let scenarios = twoScenarios()
+        let first = try XCTUnwrap(scenarios.first)
+        Cucumber.shared.currentStep = first.steps[0]
+        let basket = Scenario.state(Basket.init)
+        basket.cukes = 3
+        Cucumber.shared.currentStep = first.steps[1]
+        XCTAssertTrue(Scenario.state(Basket.init) === basket)
+        XCTAssertEqual(Scenario.state(Basket.init).cukes, 3)
+        XCTAssertTrue(Scenario.state(Beach.init) !== (basket as AnyObject))
+    }
+
+    func testScenariosDoNotShareTheirState() throws {
+        let scenarios = twoScenarios()
+        Cucumber.shared.currentStep = scenarios[0].steps[0]
+        Scenario.state(Basket.init).cukes = 3
+        Cucumber.shared.currentStep = scenarios[1].steps[0]
+        XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
+    }
+
+    func testAScenarioLetsGoOfItsStateWhenItsStateIsCleared() throws {
+        let scenario = try XCTUnwrap(twoScenarios().first)
+        Cucumber.shared.currentStep = scenario.steps[0]
+        weak var basket: Basket? = Scenario.state(Basket.init)
+        XCTAssertNotNil(basket)
+        scenario.scenarioState.removeAll()
+        XCTAssertNil(basket)
+    }
+
+    func testAskingForStateOutsideAScenarioFailsAndReturnsAThrowawayValue() {
+        Cucumber.shared.currentStep = nil
+        XCTExpectFailure("Scenario.state(_:) needs a running scenario") {
+            XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
+        }
+    }
 }
