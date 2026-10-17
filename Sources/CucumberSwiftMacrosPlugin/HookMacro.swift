@@ -27,6 +27,14 @@ struct HookDefinition {
     let closure: ClosureExprSyntax
     let parameters: [StepDefinition.Parameter]
 
+    /// Whether the closure's own body uses `$0`, which takes the hook's argument without a parameter.
+    private static func usesAnonymousArgument(_ closure: ClosureExprSyntax) -> Bool {
+        StepDefinition.BodyFinder.contains(in: closure) { node in
+            if case .dollarIdentifier = node.as(DeclReferenceExprSyntax.self)?.baseName.tokenKind { return true }
+            return false
+        }
+    }
+
     init(_ node: some FreestandingMacroExpansionSyntax) throws {
         hook = node.macroName.text
         argumentType = Self.argumentTypes[hook] ?? "Scenario"
@@ -75,14 +83,6 @@ struct HookDefinition {
             .with(\.leftBrace, closure.leftBrace.with(\.trailingTrivia, .space))
             .with(\.signature, signature)
             .with(\.statements, closure.statements.with(\.leadingTrivia, startsOnNewLine ? closure.statements.leadingTrivia : []))
-    }
-
-    /// Whether the closure's own body uses `$0`, which takes the hook's argument without a parameter.
-    private static func usesAnonymousArgument(_ closure: ClosureExprSyntax) -> Bool {
-        StepDefinition.BodyFinder.contains(in: closure) { node in
-            if case .dollarIdentifier = node.as(DeclReferenceExprSyntax.self)?.baseName.tokenKind { return true }
-            return false
-        }
     }
 
     // MARK: Diagnostics

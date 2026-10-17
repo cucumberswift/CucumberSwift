@@ -158,7 +158,9 @@ final class HookConverterTests: ConverterTestCase {
             func setUp() {
                 BeforeStep { _ in }
             }
-            """, because: "a `BeforeStep` declared in this file is in scope, so the call may not be a hook", marked: false)
+            """,
+            because: "a `BeforeStep` declared in this file is in scope, so the call may not be a hook",
+            marked: false)
     }
 
     func testAMacroIsLeftAsItIs() {

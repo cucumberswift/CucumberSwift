@@ -14,15 +14,15 @@ struct HookCall {
     /// The hooks, which both runners have a macro for.
     static let names: Set<String> = ["BeforeFeature", "AfterFeature", "BeforeScenario", "AfterScenario", "BeforeStep", "AfterStep"]
 
+    let call: FunctionCallExprSyntax
+    let runner: Runner
+
     /// The hook, when the call looks like one: a hook's name, and a closure or function to call.
     static func hook(of call: FunctionCallExprSyntax) -> String? {
         guard let name = call.calledExpression.as(DeclReferenceExprSyntax.self)?.baseName.text, names.contains(name),
               call.trailingClosure != nil || call.arguments.contains(where: { $0.label?.text == "closure" }) else { return nil }
         return name
     }
-
-    let call: FunctionCallExprSyntax
-    let runner: Runner
 
     func macro() throws -> MacroExpansionExprSyntax {
         guard runner.found != nil else { throw Unconvertible(reason: runner.problem ?? "") }
