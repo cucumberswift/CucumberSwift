@@ -190,9 +190,9 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 - A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
 - A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
 
-In each case the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run.
+When a step has no step definition, has more than one, or its step definition or a step hook throws, the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 
-A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A feature is `failed` in the report when one of its steps is, not when a hook is.
+A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A scenario and its feature are `failed` in the report when one of their steps fails, not when a hook throws: a step whose step hook throws finishes `failed`, but that alone doesn't fail its scenario.
 
 A step that never finishes holds up the run: the runner has no timeout for an async step, as CucumberSwift's `asyncStepTimeout` gives.
 
@@ -251,7 +251,7 @@ The `Feature`, `Scenario` and `Step` an observer receives are this runner's own,
 
 - the test suite starts before the first scenario, and finishes after the last,
 - a feature starts with its first scenario that runs, after its `BeforeFeature` hooks, and finishes after its last and its `AfterFeature` hooks: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
-- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step or a hook failed, and
+- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step failed, not if a hook did, and
 - a step starts before its `BeforeStep` hooks, and finishes after its `AfterStep` hooks.
 
 A step with no step definition finishes `.failed`, with the message the runner records, and an ambiguous step finishes `.ambiguous`. The events of one scenario arrive in order; don't assume anything about the order of events from different scenarios.
