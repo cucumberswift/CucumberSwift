@@ -128,7 +128,7 @@ extension CucumberTests {
     @Test func aSynchronousStepThatBlocksPastTheTimeoutPassesAsInCucumberSwift() async {
         ImplementationSettings.asyncStepTimeout = 0.05
         Given("a blocking step") { [self] _, _ in
-            Thread.sleep(forTimeInterval: 0.3)
+            Thread.sleep(forTimeInterval: 0.15)
             ran.append("given")
         }
         await Cucumber.shared.run(scenario([step(.given, "a blocking step", line: 3)]))

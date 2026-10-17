@@ -267,7 +267,7 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 One scheme can test both targets. To move a unit test target:
 
 1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are. Declare `shouldRunWith(scenario:tags:)` if you filter scenarios in code: this runner asks only that one, so an older `shouldRunWith(tags:)` is ignored and every scenario runs.
 3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once: a failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
 4. Remove anything listed in <doc:#What-isnt-available>.
 
@@ -279,7 +279,7 @@ These parts of CucumberSwift have no counterpart in this runner:
 
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
 - `BeforeFeature` and `AfterFeature`, and `Attach`,
-- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH` and `CUCUMBER_VERBOSE`, with `Cucumber.reportPath` and `Cucumber.verboseOutput`, as <doc:Settings> describes,
+- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_GENERATE_REGEX_LITERALS`, with `Cucumber.reportPath`, `Cucumber.verboseOutput` and `Cucumber.generateRegexLiterals`, as <doc:Settings> describes,
 - `Cucumber.expectation(description:)` and `wait(for:timeout:)`,
 - the deprecated step definitions that take a class and a selector.
 
