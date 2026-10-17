@@ -55,17 +55,6 @@ public struct GherkinStep: Sendable {
     }
 }
 
-extension GherkinStep {
-    private static func englishKeywordText(_ keyword: Step.Keyword, written: String) -> String {
-        if keyword.contains(.given) { return "Given" }
-        if keyword.contains(.when) { return "When" }
-        if keyword.contains(.then) { return "Then" }
-        if keyword.contains(.and) { return "And" }
-        if keyword.contains(.but) { return "But" }
-        return written
-    }
-}
-
 /// One example of a Scenario Outline: one test case of the outline's parameterized test.
 public struct GherkinExample: Sendable, CustomTestStringConvertible, CustomTestArgumentEncodable {
     public let scenario: GherkinScenario
@@ -127,5 +116,16 @@ public struct GherkinScenario: Sendable {
         self.line = line
         self.column = column
         self.steps = steps
+    }
+}
+
+extension GherkinStep {
+    private static func englishKeywordText(_ keyword: Step.Keyword, written: String) -> String {
+        if keyword.contains(.given) { return "Given" }
+        if keyword.contains(.when) { return "When" }
+        if keyword.contains(.then) { return "Then" }
+        if keyword.contains(.and) { return "And" }
+        if keyword.contains(.but) { return "But" }
+        return written
     }
 }

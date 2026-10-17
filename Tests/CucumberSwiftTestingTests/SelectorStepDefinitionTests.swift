@@ -24,7 +24,7 @@ private final class SelectorTarget: NSObject {
 }
 
 #if canImport(XCTest)
-private final class SelectorTestCase: XCTestCase {
+final class SelectorTestCase: XCTestCase {
     override func setUp() {
         MainActor.assumeIsolated { SelectorLog.calls.append("setUp") }
     }
@@ -45,8 +45,11 @@ extension CucumberTests {
     @Test func aMatchingStepCallsTheSelectorOnANewInstanceOfTheClass() async {
         SelectorLog.calls = []
         Given("I point my step to a (\\w+)", class: SelectorTarget.self, selector: #selector(SelectorTarget.run))
-        await Cucumber.shared.run(scenario([step(.given, "I point my step to a target", line: 3),
-                                            step(.given, "I point my step to a target", line: 4)]))
+        let steps = [
+            step(.given, "I point my step to a target", line: 3),
+            step(.given, "I point my step to a target", line: 4)
+        ]
+        await Cucumber.shared.run(scenario(steps))
         #expect(SelectorLog.calls == ["run", "run"])
     }
 

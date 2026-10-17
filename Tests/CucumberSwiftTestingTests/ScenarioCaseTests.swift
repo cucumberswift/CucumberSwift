@@ -9,16 +9,16 @@ import Testing
 
 /// `Cucumber.readableTestNames` and `Cucumber.oneTestPerScenario`: the cases of a scenario's test.
 extension CucumberTests {
-    private func gherkinStep(_ keyword: Step.Keyword, _ written: String, _ canonical: String, _ text: String, line: Int) -> GherkinStep {
-        GherkinStep(keyword: keyword, keywordName: written, keywordText: canonical, text: text, line: line, column: 5, suggestion: "")
-    }
-
     private var threeSteps: GherkinScenario {
         scenario([
             gherkinStep(.given, "Given", "Given", "a basket", line: 3),
             gherkinStep([.and, .given], "And", "Given", "a cuke.", line: 4),
             gherkinStep(.then, "Then", "Then", "the total is 99", line: 5)
         ])
+    }
+
+    private func gherkinStep(_ keyword: Step.Keyword, _ written: String, _ canonical: String, _ text: String, line: Int) -> GherkinStep {
+        GherkinStep(keyword: keyword, keywordName: written, keywordText: canonical, text: text, line: line, column: 5, suggestion: "")
     }
 
     private func names(environment: [String: String] = [:]) -> [String] {

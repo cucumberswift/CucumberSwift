@@ -11,6 +11,16 @@ import Foundation
 import XCTest
 #endif
 
+private func performSelector(_ selector: Selector, on type: NSObject.Type?) {
+    guard let instance = type?.init(), instance.responds(to: selector) else { return }
+    #if canImport(XCTest)
+    let testCase = instance as? XCTestCase
+    testCase?.setUp()
+    defer { testCase?.tearDown() }
+    #endif
+    instance.perform(selector)
+}
+
 extension StepDSL {
     /// A step definition with a regular expression in a string that, for each step it matches, makes an
     /// instance of `class` with `init()` and calls `selector` on it, as CucumberSwift's does. An `XCTestCase`
@@ -26,17 +36,7 @@ extension StepDSL {
                             line: Int = #line,
                             file: StaticString = #file) {
         let type = `class` as? NSObject.Type
-        self.init(regex, callback: { _, _ in Self.perform(selector, on: type) }, line: line, file: file)
-    }
-
-    private static func perform(_ selector: Selector, on type: NSObject.Type?) {
-        guard let instance = type?.init(), instance.responds(to: selector) else { return }
-        #if canImport(XCTest)
-        let testCase = instance as? XCTestCase
-        testCase?.setUp()
-        defer { testCase?.tearDown() }
-        #endif
-        instance.perform(selector)
+        self.init(regex, callback: { _, _ in performSelector(selector, on: type) }, line: line, file: file)
     }
 }
 #endif

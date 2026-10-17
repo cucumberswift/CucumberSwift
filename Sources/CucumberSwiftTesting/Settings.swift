@@ -44,18 +44,6 @@ enum CucumberSettings {
             }
         }
 
-        func flag(_ name: String) -> Bool? {
-            lock.lock()
-            defer { lock.unlock() }
-            return flags[name]
-        }
-
-        func setFlag(_ name: String, _ value: Bool?) {
-            lock.lock()
-            defer { lock.unlock() }
-            flags[name] = value
-        }
-
         var generateRegexLiterals: Bool? {
             get {
                 lock.lock()
@@ -67,6 +55,18 @@ enum CucumberSettings {
                 defer { lock.unlock() }
                 storedGenerateRegexLiterals = newValue
             }
+        }
+
+        func flag(_ name: String) -> Bool? {
+            lock.lock()
+            defer { lock.unlock() }
+            return flags[name]
+        }
+
+        func setFlag(_ name: String, _ value: Bool?) {
+            lock.lock()
+            defer { lock.unlock() }
+            flags[name] = value
         }
     }
 
@@ -99,17 +99,6 @@ enum CucumberSettings {
         set { storage.setFlag("oneTestPerScenario", newValue) }
     }
 
-    /// Whether generated tests are named with the Gherkin text as written: the static variable, then
-    /// `CUCUMBER_READABLE_TEST_NAMES`, then yes, as CucumberSwift's `FeatureFlags` read it.
-    static func isReadableTestNames(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        staticReadableTestNames ?? FeatureFlagValue.bool(environment["CUCUMBER_READABLE_TEST_NAMES"]) ?? true
-    }
-
-    /// Whether each scenario is one test: the static variable, then `CUCUMBER_ONE_TEST_PER_SCENARIO`, then no.
-    static func isOneTestPerScenario(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        staticOneTestPerScenario ?? FeatureFlagValue.bool(environment["CUCUMBER_ONE_TEST_PER_SCENARIO"]) ?? false
-    }
-
     static let generateRegexLiteralsEnvironmentKey = "CUCUMBER_GENERATE_REGEX_LITERALS"
 
     /// ``Cucumber/generateRegexLiterals``.
@@ -122,6 +111,17 @@ enum CucumberSettings {
     /// `CUCUMBER_GENERATE_REGEX_LITERALS`, then no. The value is read as CucumberSwift's `FeatureFlags` read it: see `FeatureFlagValue`.
     static func generatesRegexLiterals(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         staticGenerateRegexLiterals ?? FeatureFlagValue.bool(environment[generateRegexLiteralsEnvironmentKey]) ?? false
+    }
+
+    /// Whether generated tests are named with the Gherkin text as written: the static variable, then
+    /// `CUCUMBER_READABLE_TEST_NAMES`, then yes, as CucumberSwift's `FeatureFlags` read it.
+    static func isReadableTestNames(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticReadableTestNames ?? FeatureFlagValue.bool(environment["CUCUMBER_READABLE_TEST_NAMES"]) ?? true
+    }
+
+    /// Whether each scenario is one test: the static variable, then `CUCUMBER_ONE_TEST_PER_SCENARIO`, then no.
+    static func isOneTestPerScenario(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticOneTestPerScenario ?? FeatureFlagValue.bool(environment["CUCUMBER_ONE_TEST_PER_SCENARIO"]) ?? false
     }
 
     /// Where the JSON report is written: the static variable, then `CUCUMBER_REPORT_PATH`. Nil when neither
