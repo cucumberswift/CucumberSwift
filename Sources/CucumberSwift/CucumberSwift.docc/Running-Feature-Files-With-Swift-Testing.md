@@ -201,7 +201,7 @@ The setting means something else here than it does in <doc:Running-Scenarios-In-
 - files, `UserDefaults`, the keychain, a database, a port, or any other outside state that scenarios change,
 - the app, the server or the fake that the scenarios drive, when they need it in different states.
 
-Give each scenario its own copy instead. Key the state by the step's `scenario`, which both runners give every step: a dictionary on your `World` that maps `ObjectIdentifier(step.scenario)` to the scenario's basket, filled in the first time a step asks and emptied in an `AfterScenario` hook, or a folder, a database or a fake named after the scenario. Step definitions and hooks run on the main actor, so the dictionary needs no lock. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
+Give each scenario its own copy instead. Key the state by the step's scenario, which both runners give every step (`step.scenario`, an optional): a dictionary on your `World` that maps a key made from the scenario's feature file and line, such as `"\(scenario.feature?.uri ?? ""):\(scenario.location.line)"`, to the scenario's basket, because a scenario object isn't the same one for every step that runs it, filled in the first time a step asks and emptied in an `AfterScenario` hook, or a folder, a database or a fake named after the scenario. Step definitions and hooks run on the main actor, so the dictionary needs no lock. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
 
 **What behaves differently with it on:**
 
