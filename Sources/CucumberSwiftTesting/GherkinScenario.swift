@@ -20,6 +20,10 @@ public struct GherkinStep: Sendable {
     public let dataTable: [[String]]?
     /// The step definition to suggest if no step definition matches the step.
     public let suggestion: String
+    /// The same step definition with a regex literal, for ``Cucumber/generateRegexLiterals``.
+    public let regexLiteralSuggestion: String?
+    /// The same step definition with a bare slash regex literal, for ``RegexLiteralStyle/bareSlash``.
+    public let bareSlashRegexLiteralSuggestion: String?
 
     public init(
         keyword: Step.Keyword,
@@ -29,7 +33,9 @@ public struct GherkinStep: Sendable {
         column: Int,
         docString: DocString? = nil,
         dataTable: [[String]]? = nil,
-        suggestion: String
+        suggestion: String,
+        regexLiteralSuggestion: String? = nil,
+        bareSlashRegexLiteralSuggestion: String? = nil
     ) {
         self.keyword = keyword
         self.keywordName = keywordName
@@ -39,6 +45,8 @@ public struct GherkinStep: Sendable {
         self.docString = docString
         self.dataTable = dataTable
         self.suggestion = suggestion
+        self.regexLiteralSuggestion = regexLiteralSuggestion
+        self.bareSlashRegexLiteralSuggestion = bareSlashRegexLiteralSuggestion
     }
 }
 

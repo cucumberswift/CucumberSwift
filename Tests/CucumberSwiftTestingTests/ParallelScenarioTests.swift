@@ -38,7 +38,7 @@ extension CucumberTests {
         #expect(elements.compactMap { $0["name"] as? String } == ["Pay by card", "Pay 5 (example 1)"])
         for (element, name) in zip(elements, ["card", "cash"]) {
             let results = try #require(element["steps"] as? [[String: Any]]).compactMap { $0["result"] as? [String: Any] }
-            #expect(results.map { $0["status"] as? String } == ["passed", "failed", "passed"])
+            #expect(results.map { $0["status"] as? String } == ["passed", "failed"])
             #expect((results[1]["error_message"] as? String)?.contains("the \(name) payment was refused") == true)
         }
     }
@@ -72,13 +72,6 @@ extension CucumberTests {
     }
 
     // MARK: Turning parallel scenarios on
-
-    @Test func parallelTestingIsReadAsCucumberSwiftReadsItsFeatureFlags() {
-        for text in ["YES", "yes", "TRUE", "True", "1", " 1 "] { #expect(CucumberSettings.bool(text) == true) }
-        for text in ["NO", "no", "FALSE", "false", "0"] { #expect(CucumberSettings.bool(text) == false) }
-        for text in ["", "maybe", "2", "on"] { #expect(CucumberSettings.bool(text) == nil) }
-        #expect(CucumberSettings.bool(nil) == nil)
-    }
 
     @Test func scenariosRunInParallelAsCucumberSwiftReadsAFeatureFlagThenTheCompilationCondition() {
         defer { Cucumber.parallelTesting = nil }

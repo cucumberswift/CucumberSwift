@@ -196,7 +196,7 @@ It leaves a step definition unchanged, and lists it with its reason, when:
 - its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
 - it declares a type other than the one the pattern gives, a capture group's included, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
 - the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
-- the file imports neither CucumberSwift nor CucumberSwiftTesting, or both, or uses a localized step definition with CucumberSwiftTesting, which has no localized macros.
+- the file imports neither CucumberSwift nor CucumberSwiftTesting, or both.
 
 It puts a `#warning` before each one that stands alone as a statement, so the compiler points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
 

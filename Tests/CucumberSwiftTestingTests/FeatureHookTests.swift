@@ -44,6 +44,26 @@ extension CucumberTests {
         ])
     }
 
+    @Test func afterFeatureHooksRunInReverseOrderWhenReverseOrderForAfterHooksIsOn() async throws {
+        AfterFeature { [self] _ in ran.append("after 1") }
+        AfterFeature(priority: 1) { [self] _ in ran.append("after p1") }
+        AfterFeature { [self] _ in ran.append("after 2") }
+        Given("a step") { _, _ in }
+
+        try await runFeature {
+            await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+        }
+        #expect(ran == ["after p1", "after 1", "after 2"])
+
+        ran = []
+        Cucumber.shared.resetObservation()
+        ImplementationSettings.reverseOrderForAfterHooks = true
+        try await runFeature {
+            await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
+        }
+        #expect(ran == ["after 2", "after 1", "after p1"])
+    }
+
     @Test func featureHooksRunOnceWhenTheFeaturesScenariosRunInParallel() async throws {
         Given("a slow step") { [self] _, step in
             ran.append("start \(step.scenario?.title ?? "")")
@@ -112,7 +132,7 @@ extension CucumberTests {
         #expect(ran == ["before F", "before G", "after F", "after G"])
     }
 
-    @Test func aThrowingBeforeFeatureHookFailsOnceAtItsLineAndTheScenariosStillRun() async throws {
+    @Test func aThrowingBeforeFeatureHookFailsOnceAtItsLineAndTheFirstScenariosFirstStep() async throws {
         struct Failure: Error {}
         Given("a step") { [self] _, _ in ran.append("step") }
         let hookLine = #line + 1
@@ -127,7 +147,9 @@ extension CucumberTests {
         } matching: { issue in
             issue.sourceLocation?.line == hookLine
         }
-        #expect(ran == ["step", "step", "after feature"])
+        // As in XCTest the first scenario's first step is the one that fails, and its steps don't run; the
+        // feature's other scenarios do.
+        #expect(ran == ["step", "after feature"])
     }
 
     @Test func theBeforeFeatureHooksRunBeforeTheObserversHearTheFeatureStarted() async throws {
@@ -173,7 +195,7 @@ extension CucumberTests {
         #expect(ran == ["second after scenario", "second after feature"])
     }
 
-    @Test func aScenarioAndItsFeatureFailWhenAStepDoesAndNotWhenAHookDoes() async throws {
+    @Test func aScenarioAndItsFeatureFailWhenAHookDoesAsInXCTest() async throws {
         struct Failure: Error {}
         let observer = RecordingObserver()
         Cucumber.shared.reporters = [observer]
@@ -185,8 +207,8 @@ extension CucumberTests {
                 await Cucumber.shared.run(self.scenario("A", line: 2, steps: [self.step(.given, "a step", line: 3)]))
             }
         }
-        #expect(observer.log.contains("scenario passed A"))
-        #expect(observer.log.contains("feature passed F"))
+        #expect(observer.log.contains("scenario failed A"))
+        #expect(observer.log.contains("feature failed F"))
     }
 
     @Test func theAfterFeatureHooksRunBeforeTheObserversHearTheFeatureFinished() async throws {

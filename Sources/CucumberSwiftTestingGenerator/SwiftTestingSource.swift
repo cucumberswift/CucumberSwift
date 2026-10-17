@@ -137,7 +137,7 @@ enum SwiftTestingSource {
                 steps: scenario.steps)
             let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
-                    @Test(\(displayName).enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(\(constant).tags)))
+                    @Test(\(displayName).enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) })
                     func \(name)() async { await CucumberSwiftTesting.Cucumber.shared.run(\(constant)) }
             """
         }
@@ -147,7 +147,7 @@ enum SwiftTestingSource {
         }
         let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
         return """
-                @Test(\(displayName)arguments: \(constant).filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })
+                @Test(\(displayName)arguments: await CucumberSwiftTesting.Cucumber.shared.examplesToRun(\(constant)))
                 func \(name)(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
         """
     }
@@ -189,6 +189,9 @@ enum SwiftTestingSource {
             arguments.append("dataTable: [\(dataTable.map(array).joined(separator: ", "))]")
         }
         arguments.append("suggestion: \(literal(step.suggestedStepDefinition(failure: failure)))")
+        // For `Cucumber.generateRegexLiterals`, which the runner reads when a step is undefined.
+        arguments.append("regexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: false)))")
+        arguments.append("bareSlashRegexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: true)))")
         return "CucumberSwiftTesting.GherkinStep(\n"
             + arguments.map { pad + "    " + $0 }.joined(separator: ",\n")
             + ")"

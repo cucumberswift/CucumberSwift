@@ -26,6 +26,7 @@ enum CucumberSettings {
         private var storedParallelTesting: Bool?
         private var storedParallelTestingUnit: ParallelTestingUnit?
         private var storedIsSuiteSerialized = false
+        private var storedGenerateRegexLiterals: Bool?
 
         // `lock()` and `unlock()` rather than `withLock`, which needs macOS 13, iOS 16 and tvOS 16.
         var reportPath: String? {
@@ -92,6 +93,19 @@ enum CucumberSettings {
                 storedIsSuiteSerialized = newValue
             }
         }
+
+        var generateRegexLiterals: Bool? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedGenerateRegexLiterals
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedGenerateRegexLiterals = newValue
+            }
+        }
     }
 
     private static let storage = Storage()
@@ -132,22 +146,26 @@ enum CucumberSettings {
 
     static var reportPath: String? { reportPath() }
 
+    static let generateRegexLiteralsEnvironmentKey = "CUCUMBER_GENERATE_REGEX_LITERALS"
+
+    /// ``Cucumber/generateRegexLiterals``.
+    static var staticGenerateRegexLiterals: Bool? {
+        get { storage.generateRegexLiterals }
+        set { storage.generateRegexLiterals = newValue }
+    }
+
+    /// Whether the step definitions the runner suggests use regex literals: the static variable, then
+    /// `CUCUMBER_GENERATE_REGEX_LITERALS`, then no. The value is read as CucumberSwift's `FeatureFlags` read it: see `FeatureFlagValue`.
+    static func generatesRegexLiterals(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticGenerateRegexLiterals ?? FeatureFlagValue.bool(environment[generateRegexLiteralsEnvironmentKey]) ?? false
+    }
+
     /// Where the JSON report is written: the static variable, then `CUCUMBER_REPORT_PATH`. Nil when neither
     /// is set, or is empty, so the report goes to its default place.
     static func reportPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
         let path = staticReportPath ?? environment[reportPathEnvironmentKey]
         let trimmed = path?.trimmingCharacters(in: .whitespaces)
         return trimmed?.isEmpty == false ? trimmed : nil
-    }
-
-    /// `YES`, `TRUE` or `1`, and `NO`, `FALSE` or `0`, in any case, as CucumberSwift's feature flags read
-    /// an environment variable. Any other value is not a setting.
-    static func bool(_ value: String?) -> Bool? {
-        switch value?.trimmingCharacters(in: .whitespaces).uppercased() {
-            case "YES", "TRUE", "1": return true
-            case "NO", "FALSE", "0": return false
-            default: return nil
-        }
     }
 
     /// `scenario` or `feature`, in any case, with spaces and tabs around it ignored, as CucumberSwift reads
@@ -166,7 +184,7 @@ enum CucumberSettings {
     /// variable, then the environment variable `CUCUMBER_PARALLEL_TESTING`, then, the one addition, the
     /// compilation condition of the same name, which the generated code passes as `compiled`. Off by default.
     static func runsInParallel(compiled: Bool, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        staticParallelTesting ?? bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
     }
 }
 
@@ -211,5 +229,17 @@ extension Cucumber {
     nonisolated public static var verboseOutput: Bool {
         get { CucumberSettings.staticVerboseOutput }
         set { CucumberSettings.staticVerboseOutput = newValue }
+    }
+
+    /// Whether the step definitions the runner suggests for undefined steps use regex literals, such as
+    /// `Then(#/^I see (\d+) messages$/#)`, rather than Cucumber Expressions with typed parameters, such as
+    /// `Then("I see {int} messages")`. Cucumber Expressions are the default, and work on every deployment
+    /// target; regex literals need iOS 16, macOS 13 or tvOS 16. Set this to `true`, or the environment
+    /// variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, written as
+    /// ``StepImplementation/regexLiteralStyle`` says. This variable, when set, wins over the environment
+    /// variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var generateRegexLiterals: Bool? {
+        get { CucumberSettings.staticGenerateRegexLiterals }
+        set { CucumberSettings.staticGenerateRegexLiterals = newValue }
     }
 }

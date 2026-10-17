@@ -24,6 +24,7 @@ public struct FeatureFileIssuesTrait: SuiteTrait, TestTrait {
 final class IssueRecord: @unchecked Sendable {
     private let lock = NSLock()
     private var recorded = [String]()
+    private var observer: (@Sendable () -> Void)?
 
     var messages: [String] {
         lock.lock()
@@ -31,10 +32,26 @@ final class IssueRecord: @unchecked Sendable {
         return recorded
     }
 
+    /// Called when an issue is added, until it is set to `nil`. The runner uses it to cancel a step.
+    var onIssue: (@Sendable () -> Void)? {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return observer
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            observer = newValue
+        }
+    }
+
     func add(_ message: String) {
         lock.lock()
-        defer { lock.unlock() }
         recorded.append(message)
+        let observer = observer
+        lock.unlock()
+        observer?()
     }
 }
 

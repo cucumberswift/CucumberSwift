@@ -6,8 +6,24 @@ import Testing
 @MainActor
 enum ImplementationSettings {
     static var verbose = false
+    static var shouldRunWith: (Scenario?, [String]) -> Bool = { _, _ in true }
+    static var continueTestingAfterFailure = true
+    static var reverseOrderForAfterHooks = false
+    static var asyncStepTimeout: TimeInterval = 60
+    static var regexLiteralStyle = RegexLiteralStyle.extendedDelimiter
+
     /// What `setupSteps()` sets `Cucumber.parallelTesting` to, if anything.
     static var parallelTesting: Bool?
+
+    static func reset() {
+        verbose = false
+        parallelTesting = nil
+        shouldRunWith = { _, _ in true }
+        continueTestingAfterFailure = true
+        reverseOrderForAfterHooks = false
+        asyncStepTimeout = 60
+        regexLiteralStyle = .extendedDelimiter
+    }
 }
 
 /// The runner, one scenario at a time, with step definitions each test registers itself.
@@ -31,7 +47,9 @@ final class CucumberTests {
         cucumber.resetObservation()
         Cucumber.reportPath = nil
         Cucumber.verboseOutput = false
-        ImplementationSettings.verbose = false
+        ImplementationSettings.reset()
+        Cucumber.generateRegexLiterals = nil
+        cucumber.skipsLaterStepsAfterRecordedIssue = true
     }
 
     func step(_ keyword: Step.Keyword, _ text: String, line: Int) -> GherkinStep {
@@ -192,10 +210,11 @@ final class CucumberTests {
         }
         #expect(OverlapRecord.shared.values.sorted() == ["Given the first fails", "Given the second fails"])
         #expect(failed == ["first", "second"])
-        // Each scenario's steps run in order, between its own hooks, though the scenarios overlap.
+        // Each scenario's steps run in order, between its own hooks, though the scenarios overlap. A failed
+        // `#expect` skips the later steps, as after a failed XCTest assertion.
         for title in ["first", "second"] {
             #expect(ran.filter { $0.hasSuffix(" \(title)") || $0.hasPrefix("\(title) ") }
-                == ["before \(title)", "\(title) step", "\(title) then", "after \(title)"])
+                == ["before \(title)", "\(title) step", "after \(title)"])
         }
     }
     #endif
@@ -261,6 +280,11 @@ final class OverlapRecord: @unchecked Sendable {
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
     public var verbose: Bool { ImplementationSettings.verbose }
+    public var continueTestingAfterFailure: Bool { ImplementationSettings.continueTestingAfterFailure }
+    public var reverseOrderForAfterHooks: Bool { ImplementationSettings.reverseOrderForAfterHooks }
+    public var asyncStepTimeout: TimeInterval { ImplementationSettings.asyncStepTimeout }
+    public var regexLiteralStyle: RegexLiteralStyle { ImplementationSettings.regexLiteralStyle }
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool { ImplementationSettings.shouldRunWith(scenario, tags) }
 
     public func setupSteps() {
         if let parallelTesting = ImplementationSettings.parallelTesting { Cucumber.parallelTesting = parallelTesting }

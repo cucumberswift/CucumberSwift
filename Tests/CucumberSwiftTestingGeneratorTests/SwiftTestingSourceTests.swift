@@ -28,7 +28,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         @MainActor
         @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1), CucumberSwiftTesting.cucumberFeatureOrder(compiled: cucumberParallelTesting))
         struct EatFruit {
-            @Test("Eat an apple", .enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(cucumberScenario1.tags)))
+            @Test("Eat an apple", .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(cucumberScenario1) })
             func EatAnApple() async { await CucumberSwiftTesting.Cucumber.shared.run(cucumberScenario1) }
         }
     }
@@ -61,7 +61,9 @@ final class SwiftTestingSourceTests: XCTestCase {
                 text: "an apple",
                 line: 4,
                 column: 5,
-                suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
+                suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                regexLiteralSuggestion: "Given(#/^an apple$/#) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                bareSlashRegexLiteralSuggestion: "Given(/^an apple$/) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
         ])
 
     """#
@@ -94,7 +96,7 @@ final class SwiftTestingSourceTests: XCTestCase {
               | 20    | 5     | 15   |
         """)
         XCTAssertTrue(source.contains(#"""
-                @Test("Eat <eaten>", arguments: cucumberExamples1.filter { CucumberSwiftTesting.CucumberTags.shouldRun($0.scenario.tags) })
+                @Test("Eat <eaten>", arguments: await CucumberSwiftTesting.Cucumber.shared.examplesToRun(cucumberExamples1))
                 func EatEaten(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
         """#), source)
         XCTAssertTrue(source.contains("private let cucumberExamples1 = [\n"), source)

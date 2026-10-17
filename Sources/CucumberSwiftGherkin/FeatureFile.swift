@@ -246,12 +246,21 @@ extension FeatureFile.Step {
     /// The step definition CucumberSwift suggests for this step when no step definition matches it,
     /// with a Cucumber Expression. `failure` is its last line, which fails the step until it is filled in.
     public func suggestedStepDefinition(failure: String) -> String {
+        suggestedStepDefinition(failure: failure, style: .cucumberExpression)
+    }
+
+    /// The same step definition with a regex literal, written `#/…/#`, or `/…/` with `bareSlash`.
+    public func suggestedRegexLiteralStepDefinition(failure: String, bareSlash: Bool) -> String {
+        suggestedStepDefinition(failure: failure, style: .regexLiteral(bareSlash ? .bareSlash : .extendedDelimiter))
+    }
+
+    private func suggestedStepDefinition(failure: String, style: StubGenerator.Style) -> String {
         let keyword = keywords.reduce(into: Step.Keyword()) { $0.insert(Step.Keyword($1)) }
         return StubGenerator.method(for: text,
                                     keyword: keyword,
                                     hasDataTable: dataTable != nil,
                                     hasDocString: docString != nil,
-                                    style: .cucumberExpression)
+                                    style: style)
             .generateSwift(failure: failure)
     }
 }

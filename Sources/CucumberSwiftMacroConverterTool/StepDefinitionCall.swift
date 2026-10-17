@@ -65,9 +65,6 @@ struct StepDefinitionCall {
 
     func macro() throws -> MacroExpansionExprSyntax {
         guard let found = runner.found else { throw Unconvertible(reason: runner.problem ?? "") }
-        if StepDefinitionConverter.localizedNames.contains(keyword), !found.hasLocalizedMacros {
-            throw Unconvertible(reason: "\(found.macrosModule) has no localized macros")
-        }
         let arguments = try arguments()
         let (pattern, closure) = (arguments.pattern, arguments.closure)
         let isRegexLiteral = arguments.isRegexLiteral

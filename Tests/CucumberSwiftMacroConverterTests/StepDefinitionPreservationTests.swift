@@ -187,14 +187,17 @@ final class StepDefinitionPreservationTests: ConverterTestCase {
         XCTAssertFalse(result.source.contains("import CucumberSwiftMacros"))
     }
 
-    func testALocalizedStepDefinitionIsLeftUnchangedForTheSwiftTestingRunner() {
-        assertLeftUnchanged("""
+    func testALocalizedStepDefinitionBecomesALocalizedMacroForTheSwiftTestingRunner() {
+        assertConverts("""
             ES_Dado("tengo {int} pepinos") { match, _ in
                 let cantidad = try match.first(\\.int)
                 use(cantidad)
             }
+            """, to: """
+            #ES_Dado("tengo {int} pepinos") { (cantidad: Int) in
+                use(cantidad)
+            }
             """,
-            because: "has no localized macros",
             header: "import CucumberSwiftTestingMacros\n")
     }
 }

@@ -118,9 +118,10 @@ struct Hook<Argument> {
 }
 
 extension Array {
-    /// Hooks with a priority first, lowest first, then the others, each group in the order it was added.
-    func inPriorityOrder<Argument>() -> [Hook<Argument>] where Element == Hook<Argument> {
-        enumerated()
+    /// Hooks with a priority first, lowest first, then the others, each group in the order it was added,
+    /// or that whole order reversed, as `reverseOrderForAfterHooks` asks for the after hooks.
+    func inPriorityOrder<Argument>(reversed: Bool = false) -> [Hook<Argument>] where Element == Hook<Argument> {
+        let ordered = enumerated()
             .sorted { lhs, rhs in
                 switch (lhs.element.priority, rhs.element.priority) {
                     case let (l?, r?): return l == r ? lhs.offset < rhs.offset : l < r
@@ -130,5 +131,6 @@ extension Array {
                 }
             }
             .map(\.element)
+        return reversed ? ordered.reversed() : ordered
     }
 }
