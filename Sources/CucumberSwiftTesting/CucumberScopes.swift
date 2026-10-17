@@ -89,13 +89,31 @@ public func cucumberScenarioOrder(compiled: Bool) -> any SuiteTrait {
 }
 
 func scenarioOrder(compiled: Bool, environment: [String: String]) -> any SuiteTrait {
-    // `Cucumber.parallelTesting` is set in `setupSteps()`, so run it now, as the runner would for the first
-    // scenario. It needs the main actor, which the tests are discovered on, except in a host that
-    // discovers them elsewhere: then the static variable is too late, and the first scenario says so.
+    let parallel = parallelAtDiscovery(compiled: compiled, environment: environment)
+    CucumberSettings.isSuiteSerialized = !parallel
+    return parallel ? CucumberParallelScenariosTrait() : ParallelizationTrait.serialized
+}
+
+/// The trait that each feature's suite has: serialized, so that its scenarios run one at a time in the order
+/// of the feature file while features run at the same time, when scenarios run in parallel and
+/// `Cucumber.parallelTestingUnit` is `.feature`. Otherwise it does nothing.
+public func cucumberFeatureOrder(compiled: Bool) -> any SuiteTrait {
+    featureOrder(compiled: compiled, environment: ProcessInfo.processInfo.environment)
+}
+
+func featureOrder(compiled: Bool, environment: [String: String]) -> any SuiteTrait {
+    let parallel = parallelAtDiscovery(compiled: compiled, environment: environment)
+    let unit = CucumberSettings.parallelTestingUnit(environment: environment)
+    return parallel && unit == .feature ? ParallelizationTrait.serialized : CucumberParallelScenariosTrait()
+}
+
+private func parallelAtDiscovery(compiled: Bool, environment: [String: String]) -> Bool {
+    // `Cucumber.parallelTesting` and `Cucumber.parallelTestingUnit` are set in `setupSteps()`, so run it
+    // now, as the runner would for the first scenario. It needs the main actor, which the tests are
+    // discovered on, except in a host that discovers them elsewhere: then the static variables are too
+    // late, and the first scenario says so.
     if pthread_main_np() == 1 {
         MainActor.assumeIsolated { Cucumber.shared.loadStepDefinitions() }
     }
-    let parallel = CucumberSettings.runsInParallel(compiled: compiled, environment: environment)
-    CucumberSettings.isSuiteSerialized = !parallel
-    return parallel ? CucumberParallelScenariosTrait() : ParallelizationTrait.serialized
+    return CucumberSettings.runsInParallel(compiled: compiled, environment: environment)
 }

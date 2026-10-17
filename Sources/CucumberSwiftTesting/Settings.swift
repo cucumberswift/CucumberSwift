@@ -6,6 +6,15 @@
 
 import Foundation
 
+/// What runs together when scenarios run at the same time. See ``Cucumber/parallelTestingUnit``.
+public enum ParallelTestingUnit: String, Sendable {
+    /// Any scenario may run at the same time as any other. The default.
+    case scenario
+    /// A feature's scenarios run one at a time, in the order of the feature file, and features run at the
+    /// same time.
+    case feature
+}
+
 /// The static variables' values. Computed static variables over locked storage are safe to read and set
 /// from any isolation, and don't warn in a consumer's Swift 6 target, as stored ones on a main-actor
 /// class would.
@@ -15,6 +24,7 @@ enum CucumberSettings {
         private var storedReportPath: String?
         private var storedVerboseOutput = false
         private var storedParallelTesting: Bool?
+        private var storedParallelTestingUnit: ParallelTestingUnit?
         private var storedIsSuiteSerialized = false
 
         // `lock()` and `unlock()` rather than `withLock`, which needs macOS 13, iOS 16 and tvOS 16.
@@ -57,6 +67,19 @@ enum CucumberSettings {
             }
         }
 
+        var parallelTestingUnit: ParallelTestingUnit? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedParallelTestingUnit
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedParallelTestingUnit = newValue
+            }
+        }
+
         var isSuiteSerialized: Bool {
             get {
                 lock.lock()
@@ -75,6 +98,7 @@ enum CucumberSettings {
 
     static let reportPathEnvironmentKey = "CUCUMBER_REPORT_PATH"
     static let parallelTestingEnvironmentKey = "CUCUMBER_PARALLEL_TESTING"
+    static let parallelTestingUnitEnvironmentKey = "CUCUMBER_PARALLEL_TESTING_UNIT"
 
     /// ``Cucumber/reportPath``.
     static var staticReportPath: String? {
@@ -91,6 +115,12 @@ enum CucumberSettings {
     static var staticParallelTesting: Bool? {
         get { storage.parallelTesting }
         set { storage.parallelTesting = newValue }
+    }
+
+    /// ``Cucumber/parallelTestingUnit``.
+    static var staticParallelTestingUnit: ParallelTestingUnit? {
+        get { storage.parallelTestingUnit }
+        set { storage.parallelTestingUnit = newValue }
     }
 
     /// Whether the generated suite was made serialized when Swift Testing discovered the tests, which is
@@ -118,6 +148,18 @@ enum CucumberSettings {
             case "NO", "FALSE", "0": return false
             default: return nil
         }
+    }
+
+    /// `scenario` or `feature`, in any case, with spaces and tabs around it ignored, as CucumberSwift reads
+    /// it. Any other value is not a setting.
+    static func parallelTestingUnit(_ value: String?) -> ParallelTestingUnit? {
+        value.flatMap { ParallelTestingUnit(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) }
+    }
+
+    /// What runs together when scenarios run at the same time: the static variable, then
+    /// `CUCUMBER_PARALLEL_TESTING_UNIT`, then `.scenario`.
+    static func parallelTestingUnit(environment: [String: String] = ProcessInfo.processInfo.environment) -> ParallelTestingUnit {
+        staticParallelTestingUnit ?? parallelTestingUnit(environment[parallelTestingUnitEnvironmentKey]) ?? .scenario
     }
 
     /// Whether scenarios run at the same time, read as CucumberSwift reads a feature flag: the static
@@ -150,6 +192,17 @@ extension Cucumber {
     nonisolated public static var parallelTesting: Bool? {
         get { CucumberSettings.staticParallelTesting }
         set { CucumberSettings.staticParallelTesting = newValue }
+    }
+
+    /// What runs together when ``parallelTesting`` is on: each scenario, the default, or each whole feature,
+    /// whose scenarios then run one at a time, in the order of the feature file, while features run at the
+    /// same time. Set this to ``ParallelTestingUnit/feature``, or the environment variable
+    /// `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature`, to run features at the same time and scenarios in
+    /// order. This variable, when set, wins over the environment variable. Set it in your
+    /// `StepImplementation`'s `setupSteps()`: Swift Testing reads it when it discovers the tests.
+    nonisolated public static var parallelTestingUnit: ParallelTestingUnit? {
+        get { CucumberSettings.staticParallelTestingUnit }
+        set { CucumberSettings.staticParallelTestingUnit = newValue }
     }
 
     /// Whether the runner prints each feature, scenario and step, with its result and duration, as it

@@ -26,7 +26,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         func gherkin() { cucumberGherkinProblems() }
 
         @MainActor
-        @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1))
+        @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1), CucumberSwiftTesting.cucumberFeatureOrder(compiled: cucumberParallelTesting))
         struct EatFruit {
             @Test("Eat an apple", .enabled(if: CucumberSwiftTesting.CucumberTags.shouldRun(cucumberScenario1.tags)))
             func EatAnApple() async { await CucumberSwiftTesting.Cucumber.shared.run(cucumberScenario1) }

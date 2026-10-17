@@ -144,4 +144,36 @@ extension CucumberTests {
         await Cucumber.shared.run(scenario([]))
         #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
     }
+
+    // MARK: What runs together
+
+    @Test func theUnitIsReadAsCucumberSwiftReadsItsFeatureFlags() {
+        defer { Cucumber.parallelTestingUnit = nil }
+        let key = "CUCUMBER_PARALLEL_TESTING_UNIT"
+        #expect(CucumberSettings.parallelTestingUnit(environment: [:]) == .scenario)
+        for text in ["feature", "FEATURE", " Feature\t"] {
+            #expect(CucumberSettings.parallelTestingUnit(environment: [key: text]) == .feature)
+        }
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "scenario"]) == .scenario)
+        // A value that isn't a setting is ignored, as it is for CucumberSwift.
+        for text in ["", "features", "yes"] { #expect(CucumberSettings.parallelTestingUnit(environment: [key: text]) == .scenario) }
+        // The static variable wins over the environment variable.
+        Cucumber.parallelTestingUnit = .feature
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "scenario"]) == .feature)
+        Cucumber.parallelTestingUnit = .scenario
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "feature"]) == .scenario)
+    }
+
+    @Test func aFeaturesSuiteIsSerializedOnlyWhenScenariosRunInParallelAndTheUnitIsTheFeature() {
+        defer { Cucumber.parallelTestingUnit = nil }
+        let parallel = ["CUCUMBER_PARALLEL_TESTING": "YES"]
+        let feature = parallel.merging(["CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]) { $1 }
+        #expect(featureOrder(compiled: false, environment: parallel) is CucumberParallelScenariosTrait)
+        #expect(featureOrder(compiled: false, environment: feature) is ParallelizationTrait)
+        // Not in parallel, the whole suite is serialized, so a feature has nothing to add.
+        #expect(featureOrder(compiled: false, environment: ["CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]) is CucumberParallelScenariosTrait)
+        // The compilation condition turns parallel on, and the static variable chooses the unit.
+        Cucumber.parallelTestingUnit = .feature
+        #expect(featureOrder(compiled: true, environment: [:]) is ParallelizationTrait)
+    }
 }

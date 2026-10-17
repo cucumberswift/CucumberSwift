@@ -194,9 +194,11 @@ enum SwiftTestingSource {
             + ")"
     }
 
-    /// The trait that tells the runner where the feature ends.
+    /// The traits that tell the runner where the feature ends, and whether its scenarios run one at a time
+    /// while features run at the same time.
     private static func featureTrait(_ feature: FeatureFile.Feature, path: String) -> String {
-        ".cucumberFeature(file: \(literal(path)), title: \(literal(feature.title)), line: \(feature.line))"
+        ".cucumberFeature(file: \(literal(path)), title: \(literal(feature.title)), line: \(feature.line)), "
+            + "CucumberSwiftTesting.cucumberFeatureOrder(compiled: cucumberParallelTesting)"
     }
 
     /// `("title", trait)` for a suite with a title, `(trait)` for one without.
