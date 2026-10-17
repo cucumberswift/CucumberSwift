@@ -156,6 +156,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 #endif
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithoutParameter() {
         let featureFile: String =
         """
@@ -179,6 +180,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(givenCalledCount, 2)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithKeyword() {
         let featureFile: String =
         """
@@ -212,6 +214,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(whenCalledCount, 2)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithParameter() {
         let featureFile: String =
         """
@@ -237,6 +240,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(givenParameters[1], "parameter2")
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithoutParameterWithCucumberExpression() {
         let featureFile: String =
         """
@@ -260,6 +264,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(givenCalledCount, 2)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithParameterWithCucumberExpression() {
         let featureFile: String =
         """
@@ -285,6 +290,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(givenParameters[1], "parameter2")
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStep_WithKeywordWithCucumberExpression() {
         let featureFile: String =
         """
@@ -319,6 +325,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
 #if swift(>=5.7)
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     func testExecuteFirstStep_WithoutParameterWithRegexLiteral() {
         let featureFile: String =
@@ -343,6 +350,7 @@ class CucumberSwiftTests: XCTestCase {
         XCTAssertEqual(givenCalledCount, 2)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
     func testExecuteFirstStep_WithParameterWithRegexLiteral() {
         let featureFile: String =

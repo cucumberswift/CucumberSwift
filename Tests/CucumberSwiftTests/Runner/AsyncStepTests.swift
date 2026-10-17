@@ -281,6 +281,7 @@ class AsyncStepTests: XCTestCase {
 
     // MARK: ExecuteFirstStep
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testAwaitExecuteFirstStepRunsAsyncAndSyncStepsFromAnAsyncStep() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Some text
@@ -309,6 +310,7 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(executionOrder, ["async", "sync", "async", "sync", "reuse"])
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testSyncExecuteFirstStepWaitsForAnAsyncStep() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Some text
@@ -332,6 +334,7 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(executionOrder, ["async", "async", "sync"])
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @MainActor
     func testAwaitExecuteFirstStepFailsWhenNoStepDefinitionMatches() async throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
@@ -342,6 +345,7 @@ class AsyncStepTests: XCTestCase {
         await ExecuteFirstStep(matching: "nothing matches this")
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @MainActor
     func testAwaitExecuteFirstStepFailsWhenTheStepItRunsThrows() async throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
@@ -664,6 +668,7 @@ class AsyncStepTests: XCTestCase {
         XCTAssertEqual(Cucumber.shared.features.first?.scenarios.first?.steps.first?.result, .ambiguous)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @MainActor
     func testAwaitExecuteFirstStepFailsOnAnAmbiguousStepAndRunsNothing() async throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }

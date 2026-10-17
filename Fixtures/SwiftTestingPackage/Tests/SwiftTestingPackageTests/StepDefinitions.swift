@@ -25,6 +25,15 @@ enum World {
     static var featureScenarios = [String: Int]()
 }
 
+/// Shared by the `BeforeScenario` hook and the "the world is reset" step definition, as a helper function.
+@MainActor
+func resetWorld() {
+    World.fruit = nil
+    World.cukes = 0
+    World.list = []
+    World.prices = [:]
+}
+
 // A consumer in another package writes `@retroactive`, because both Cucumber and StepImplementation
 // come from CucumberSwiftTesting.
 extension Cucumber: @retroactive StepImplementation {
@@ -40,14 +49,11 @@ extension Cucumber: @retroactive StepImplementation {
         BeforeScenario { scenario in
             World.scenarios.append(scenario.title)
             World.featureScenarios[scenario.feature?.title ?? "", default: 0] += 1
-            // Runs the step definition below, as CucumberSwift's ExecuteFirstStep does.
-            await ExecuteFirstStep(matching: "the world is reset")
+            // The helper function the step definition below calls too.
+            resetWorld()
         }
         #Given("the world is reset") {
-            World.fruit = nil
-            World.cukes = 0
-            World.list = []
-            World.prices = [:]
+            resetWorld()
         }
         BeforeFeature { feature in
             World.featureStarts[feature.title, default: 0] += 1
