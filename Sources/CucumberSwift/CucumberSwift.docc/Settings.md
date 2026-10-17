@@ -52,7 +52,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Settings#Where-the-feature-files-are> | Info.plist `FeaturesPath` | — | `Features` | XCTest, in an Xcode test target | — |
 | <doc:Settings#Test-name-delimiter> | Info.plist `FeatureScenarioDelimiter` | — | ` › `, or `\|` with readable test names off | XCTest, in an Xcode test target | — |
 
-"Requires" lists what a setting needs beyond the Xcode that CucumberSwift supports, which <doc:Supported-Platforms> gives. The Swift Testing runner reads `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_PARALLEL_TESTING`, with `Cucumber.reportPath`, `Cucumber.verboseOutput` and `StepImplementation.verbose`: none of the other settings apply to it. See <doc:Running-Feature-Files-With-Swift-Testing>.
+"Requires" lists what a setting needs beyond the Xcode that CucumberSwift supports, which <doc:Supported-Platforms> gives. The Swift Testing runner reads `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_PARALLEL_TESTING`, with `Cucumber.reportPath`, `Cucumber.verboseOutput`, `StepImplementation.verbose` and `Cucumber.parallelTesting`: none of the other settings apply to it. See <doc:Running-Feature-Files-With-Swift-Testing>.
 
 ### Settings that work differently
 

@@ -242,9 +242,17 @@ final class OverlapRecord: @unchecked Sendable {
     private let lock = NSLock()
     private var recorded = [String]()
 
-    var values: [String] { lock.withLock { recorded } }
+    var values: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
 
-    func append(_ value: String) { lock.withLock { recorded.append(value) } }
+    func append(_ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.append(value)
+    }
 }
 
 // Within this package, the conformance needs no `@retroactive`.
