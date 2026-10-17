@@ -28,4 +28,16 @@ extension Cucumber {
     public func wait(for expectations: [XCTestExpectation], timeout seconds: TimeInterval) {
         XCTWaiter().wait(for: expectations, timeout: seconds)
     }
+
+    /// Wait for a list of expectations to be fulfilled, without holding the main actor. In an `async` step,
+    /// work on the main actor or the main queue can fulfill them only while the step suspends, which
+    /// `wait(for:timeout:)` does not; write `await` before the call to choose this one.
+    ///
+    /// - Parameters:
+    ///   - expectations: the expectations to wait for
+    ///   - seconds: the wait timeout
+    ///
+    public func wait(for expectations: [XCTestExpectation], timeout seconds: TimeInterval) async {
+        await XCTWaiter().fulfillment(of: expectations, timeout: seconds)
+    }
 }

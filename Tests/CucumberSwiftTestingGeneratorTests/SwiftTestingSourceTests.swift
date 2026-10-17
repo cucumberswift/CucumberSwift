@@ -26,8 +26,9 @@ final class SwiftTestingSourceTests: XCTestCase {
         @MainActor
         @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1))
         struct EatFruit {
-            @Test("Eat an apple", .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(cucumberScenario1) })
-            func EatAnApple() async { await CucumberSwiftTesting.Cucumber.shared.run(cucumberScenario1) }
+            @Test("Eat an apple", .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(cucumberScenario1) },
+                  arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberScenario1))
+            func EatAnApple(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
         }
     }
 
@@ -50,6 +51,7 @@ final class SwiftTestingSourceTests: XCTestCase {
             CucumberSwiftTesting.GherkinStep(
                 keyword: [.given],
                 keywordName: "Given",
+                keywordText: "Given",
                 text: "an apple",
                 line: 4,
                 column: 5,
@@ -88,8 +90,8 @@ final class SwiftTestingSourceTests: XCTestCase {
               | 20    | 5     | 15   |
         """)
         XCTAssertTrue(source.contains(#"""
-                @Test("Eat <eaten>", arguments: await CucumberSwiftTesting.Cucumber.shared.examplesToRun(cucumberExamples1))
-                func EatEaten(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
+                @Test("Eat <eaten>", arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberExamples1))
+                func EatEaten(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
         """#), source)
         XCTAssertTrue(source.contains("private let cucumberExamples1 = [\n"), source)
         XCTAssertEqual(source.components(separatedBy: "CucumberSwiftTesting.GherkinExample(\n").count - 1, 2)
@@ -150,6 +152,9 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(#"contentType: "json")"#), source)
         XCTAssertTrue(source.contains("keyword: [.given, .and],"), source)
         XCTAssertTrue(source.contains(#"keywordName: "Given","#), source)
+        // An `And` step counts as the keyword it continues, for the camel-case test names.
+        XCTAssertTrue(source.contains(#"keywordName: "And","#), source)
+        XCTAssertEqual(source.components(separatedBy: #"keywordText: "Given","#).count - 1, 2, source)
     }
 
     func testALocalizedFeatureFileIsReadInItsLanguage() {
@@ -160,9 +165,11 @@ final class SwiftTestingSourceTests: XCTestCase {
             Dado un paso
         """)
         XCTAssertTrue(source.contains("struct Comer {"), source)
-        XCTAssertTrue(source.contains("func Uno() async {"), source)
+        XCTAssertTrue(source.contains("func Uno(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
         XCTAssertTrue(source.contains("keyword: [.given],"), source)
         XCTAssertTrue(source.contains(#"text: "un paso","#), source)
+        XCTAssertTrue(source.contains(#"keywordName: "Dado","#), source)
+        XCTAssertTrue(source.contains(#"keywordText: "Dadas","#), source)
     }
 
     func testValidFeatureFilesStillHaveTheGherkinTest() {
@@ -199,10 +206,10 @@ final class SwiftTestingSourceTests: XCTestCase {
           Scenario: 🥒
             Given a step
         """)
-        XCTAssertTrue(source.contains("func Same() async {"), source)
-        XCTAssertTrue(source.contains("func Same_2() async {"), source)
+        XCTAssertTrue(source.contains("func Same(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
+        XCTAssertTrue(source.contains("func Same_2(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
         XCTAssertTrue(source.contains(#"@Test("🥒", .enabled"#), source)
-        XCTAssertTrue(source.contains("func Scenario() async {"), source)
+        XCTAssertTrue(source.contains("func Scenario(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
     }
 
     func testTextIsAlwaysAValidStringLiteral() {

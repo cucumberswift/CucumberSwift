@@ -44,6 +44,24 @@ public final class Cucumber {
         }
     }
 
+    /// A scenario that has started and not finished: between its cases, when each of its steps is a test.
+    private final class ScenarioProgress {
+        let gherkin: GherkinScenario
+        let scenario: Scenario
+        let featureRun: FeatureRun
+        let startDate = Date()
+        let record = IssueRecord()
+        var nextStep = 0
+        var isFailed = false
+        /// Whether a step or a hook failed, so that the later steps don't run.
+        var isStopped = false
+        init(_ gherkin: GherkinScenario, scenario: Scenario, featureRun: FeatureRun) {
+            self.gherkin = gherkin
+            self.scenario = scenario
+            self.featureRun = featureRun
+        }
+    }
+
     public static let shared = Cucumber()
 
     var definitions = [Definition]()
@@ -64,6 +82,7 @@ public final class Cucumber {
     private var isSuiteStarted = false
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
     var approvedScenarios = Set<String>()
+    private var startedScenarios = [String: ScenarioProgress]()
 
     /// Whether the scenario's later steps are skipped once a step has recorded an issue, such as a failed
     /// `#expect`, as CucumberSwift skips them once a step has failed. Tests turn it off to see the other.
@@ -126,39 +145,103 @@ public final class Cucumber {
     }
 
     private func perform(_ gherkinScenario: GherkinScenario) async {
+        let progress = await begin(gherkinScenario)
+        while !progress.isStopped, progress.nextStep < progress.scenario.steps.count {
+            await runNextStep(of: progress)
+        }
+        await end(progress)
+    }
+
+    /// Runs one case of a scenario's test: the whole scenario, or one step. The cases of a scenario run in
+    /// order, so the first runs `BeforeScenario` hooks and the last the `AfterScenario` hooks, and a case
+    /// run alone first runs the steps before it. Once a step has failed, the cases after it don't run its
+    /// steps; Swift 6.3 reports them as cancelled, and before it they pass.
+    public func run(_ testCase: ScenarioCase) async throws {
+        guard let index = testCase.stepIndex else { return await run(testCase.scenario) }
+        let gherkinScenario = testCase.scenario
+        loadStepDefinitions()
+        guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
+        let key = Self.key(of: gherkinScenario)
+        var skipped = false
+        await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) {
+            var started = startedScenarios[key]
+            if let previous = started, previous.nextStep > index {
+                await end(previous)
+                started = nil
+            }
+            let progress: ScenarioProgress
+            if let started {
+                progress = started
+            } else {
+                progress = await begin(gherkinScenario)
+            }
+            startedScenarios[key] = progress
+            while !progress.isStopped, progress.nextStep < index {
+                await runNextStep(of: progress)
+            }
+            if progress.isStopped {
+                skipped = true
+            } else {
+                await runNextStep(of: progress)
+            }
+            if index == gherkinScenario.steps.count - 1 {
+                await end(progress)
+            }
+        }
+        if skipped { try skipStep() }
+    }
+
+    private func skipStep() throws {
+        #if compiler(>=6.3)
+        try Test.cancel("Skipped: an earlier step in this scenario failed.")
+        #endif
+    }
+
+    /// Starts a scenario: its feature if it is the first, the observers, and the `BeforeScenario` hooks. A hook
+    /// that fails fails the scenario's first step, as in XCTest, and the later steps don't run.
+    private func begin(_ gherkinScenario: GherkinScenario) async -> ScenarioProgress {
         let file = gherkinScenario.file
         reportMissingImplementationIfNeeded(at: Self.sourceLocation(file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         let featureRun = startFeature(of: gherkinScenario)
         await featureRun.starting?.value
         let scenario = Scenario(gherkinScenario, feature: featureRun.feature)
-        let startDate = Date()
-        reporters.forEach { $0.didStart(scenario: scenario, at: startDate) }
-        let record = IssueRecord()
-        // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
-        // step that is current when the hook fails.
-        var isFailed = false
+        let progress = ScenarioProgress(gherkinScenario, scenario: scenario, featureRun: featureRun)
+        reporters.forEach { $0.didStart(scenario: scenario, at: progress.startDate) }
         // BeforeFeature and BeforeScenario hooks fail the scenario's first step in XCTest, which is the current
         // step while they run, and the later steps are skipped.
         let featureHookFailure = featureRun.takeStartFailure()
-        let scenarioHookFailure = await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record)
+        let scenarioHookFailure = await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record)
         if let beforeFailure = featureHookFailure ?? scenarioHookFailure {
-            isFailed = true
+            progress.isFailed = true
+            progress.isStopped = true
             if let first = scenario.steps.first { reportFailed(first, beforeFailure) }
-        } else {
-            for step in scenario.steps {
-                let outcome = await run(step, in: file)
-                if outcome.isStepFailed { isFailed = true }
-                if !outcome.canContinue { break }
-            }
         }
-        if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record, reversed: reversesAfterHooks) != nil {
+        return progress
+    }
+
+    private func runNextStep(of progress: ScenarioProgress) async {
+        let step = progress.scenario.steps[progress.nextStep]
+        progress.nextStep += 1
+        let outcome = await run(step, in: progress.gherkin.file)
+        // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
+        // step that is current when the hook fails.
+        if outcome.isStepFailed { progress.isFailed = true }
+        if !outcome.canContinue { progress.isStopped = true }
+    }
+
+    /// Finishes a scenario: the `AfterScenario` hooks and the observers.
+    private func end(_ progress: ScenarioProgress) async {
+        startedScenarios[Self.key(of: progress.gherkin)] = nil
+        let (scenario, file) = (progress.scenario, progress.gherkin.file)
+        var isFailed = progress.isFailed
+        if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record, reversed: reversesAfterHooks) != nil {
             isFailed = true
         }
         RunningLocation.shared.current = nil
         // A failed `#expect` in a hook, which Swift Testing 6.2's issue handling reports to the record.
-        isFailed = isFailed || !record.messages.isEmpty
-        if isFailed { featureRun.isFailed = true }
-        let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
+        isFailed = isFailed || !progress.record.messages.isEmpty
+        if isFailed { progress.featureRun.isFailed = true }
+        let duration = Measurement(value: Date().timeIntervalSince(progress.startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(scenario: scenario, result: isFailed ? .failed : .passed, duration: duration) }
     }
 
@@ -170,6 +253,7 @@ public final class Cucumber {
         openFeature = nil
         isSuiteStarted = false
         approvedScenarios.removeAll()
+        startedScenarios.removeAll()
     }
 
     /// Starts the test suite for the observers, once. `CucumberSuiteTrait` calls it before the first test.
@@ -188,6 +272,10 @@ public final class Cucumber {
     func endSuite() async {
         guard isSuiteStarted else { return }
         isSuiteStarted = false
+        // A scenario whose last case didn't run, such as one left out, ends with the suite.
+        for progress in Array(startedScenarios.values) {
+            await end(progress)
+        }
         let open = featureRuns.values
             .filter { $0.startDate != nil && !$0.isFinished }
             .sorted { ($0.startDate ?? .distantPast) < ($1.startDate ?? .distantPast) }
@@ -232,6 +320,10 @@ public final class Cucumber {
 
     private func finish(_ run: FeatureRun) async {
         guard !run.isFinished, let startDate = run.startDate else { return }
+        // A scenario whose last case didn't run ends before its feature's after hooks and completion.
+        for progress in Array(startedScenarios.values) where progress.featureRun === run {
+            await end(progress)
+        }
         run.isFinished = true
         if openFeature === run { openFeature = nil }
         // The after hooks run even when a before hook threw, once the before hooks are over.
