@@ -3,7 +3,7 @@
 //  CucumberSwift
 //
 // A title as a Swift type name, which names the camel-case tests of both runners. This folder is compiled by
-// CucumberSwift and, through a symlink, by CucumberSwiftTesting.
+// CucumberSwift and, through symlinks, by CucumberSwiftGherkin and CucumberSwiftTesting.
 
 import Foundation
 

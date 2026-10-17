@@ -1,1 +1,0 @@
-../CucumberSwift/Reporter/Core/ClassNameString.swift
