@@ -622,7 +622,7 @@ class AsyncStepTests: XCTestCase {
 
         guard case .failure(let error) = result else { return XCTFail("Expected an error") }
         XCTAssert(error is AsyncStepRunner.NestedWaitError)
-        XCTAssert(error.localizedDescription.contains("Use `await ExecuteFirstStep(matching:)` there instead"), error.localizedDescription)
+        XCTAssert(error.localizedDescription.contains("Put the code both steps need in a function, and `await` it from each step"), error.localizedDescription)
     }
 
     // MARK: Ambiguous steps
