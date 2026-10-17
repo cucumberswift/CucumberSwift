@@ -32,7 +32,7 @@ extension CucumberTests {
             async let second: Void = Cucumber.shared.run(scenarios[1])
             _ = await (first, second)
         }
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endSuite()
 
         let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
         #expect(elements.compactMap { $0["name"] as? String } == ["Pay by card", "Pay 5 (example 1)"])
@@ -64,9 +64,9 @@ extension CucumberTests {
         async let secondRun: Void = Cucumber.shared.run(other)
         _ = await (firstRun, secondRun)
         #expect(!observer.log.contains("feature passed F"))
-        Cucumber.shared.endFeature(file: first.file, title: "F", line: 1)
-        Cucumber.shared.endFeature(file: other.file, title: "G", line: 1)
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endFeature(file: first.file, title: "F", line: 1)
+        await Cucumber.shared.endFeature(file: other.file, title: "G", line: 1)
+        await Cucumber.shared.endSuite()
 
         #expect(observer.log.suffix(3) == ["feature passed F", "feature passed G", "suite finished"])
     }

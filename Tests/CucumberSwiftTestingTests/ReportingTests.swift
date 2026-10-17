@@ -68,8 +68,8 @@ extension CucumberTests {
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a thing", line: 3), step(.then, "a result", line: 4)]))
         }
-        Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
+        await Cucumber.shared.endSuite()
 
         #expect(observer.log == [
             "suite started",
@@ -153,8 +153,8 @@ extension CucumberTests {
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "a thing", line: 3), step(.then, "a result", line: 4)]))
         }
-        Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
+        await Cucumber.shared.endSuite()
 
         let masked = lines.map { $0.replacingOccurrences(of: #"\(\d+\.\d{3}s\)"#, with: "(0.000s)", options: .regularExpression) }
         #expect(masked == [
@@ -268,8 +268,8 @@ extension CucumberTests {
         for scenario in [scenarios[2], scenarios[0], scenarios[1]] {
             await Cucumber.shared.run(scenario)
         }
-        Cucumber.shared.endFeature(file: "/Features/Checkout.feature", title: "Checkout", line: 1)
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endFeature(file: "/Features/Checkout.feature", title: "Checkout", line: 1)
+        await Cucumber.shared.endSuite()
 
         let written = try Data(contentsOf: url)
         let expected = try Data(contentsOf: directoryOfCucumberSwiftTests().appendingPathComponent("ParityReport.json"))
@@ -324,7 +324,7 @@ extension CucumberTests {
         async let second: Void = Cucumber.shared.run(scenarios[0])
         async let third: Void = Cucumber.shared.run(scenarios[1])
         _ = await (first, second, third)
-        Cucumber.shared.endSuite()
+        await Cucumber.shared.endSuite()
 
         let features = try readReport(url)
         #expect(features.count == 1)
