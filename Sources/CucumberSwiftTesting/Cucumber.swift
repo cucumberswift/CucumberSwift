@@ -320,6 +320,10 @@ public final class Cucumber {
 
     private func finish(_ run: FeatureRun) async {
         guard !run.isFinished, let startDate = run.startDate else { return }
+        // A scenario whose last case didn't run ends before its feature's after hooks and completion.
+        for progress in Array(startedScenarios.values) where progress.featureRun === run {
+            await end(progress)
+        }
         run.isFinished = true
         if openFeature === run { openFeature = nil }
         // The after hooks run even when a before hook threw, once the before hooks are over.

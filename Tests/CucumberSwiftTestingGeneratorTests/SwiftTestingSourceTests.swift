@@ -152,6 +152,9 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(#"contentType: "json")"#), source)
         XCTAssertTrue(source.contains("keyword: [.given, .and],"), source)
         XCTAssertTrue(source.contains(#"keywordName: "Given","#), source)
+        // An `And` step counts as the keyword it continues, for the camel-case test names.
+        XCTAssertTrue(source.contains(#"keywordName: "And","#), source)
+        XCTAssertEqual(source.components(separatedBy: #"keywordText: "Given","#).count - 1, 2, source)
     }
 
     func testALocalizedFeatureFileIsReadInItsLanguage() {
@@ -165,6 +168,8 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains("func Uno(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
         XCTAssertTrue(source.contains("keyword: [.given],"), source)
         XCTAssertTrue(source.contains(#"text: "un paso","#), source)
+        XCTAssertTrue(source.contains(#"keywordName: "Dado","#), source)
+        XCTAssertTrue(source.contains(#"keywordText: "Dadas","#), source)
     }
 
     func testValidFeatureFilesStillHaveTheGherkinTest() {

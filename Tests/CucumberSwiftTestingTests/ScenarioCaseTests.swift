@@ -122,4 +122,16 @@ extension CucumberTests {
         try await Cucumber.shared.run(Cucumber.shared.casesToRun(threeSteps)[0])
         #expect(ran == ["basket", "cuke", "total"])
     }
+
+    @Test func aScenarioWhoseLastCaseDidNotRunEndsBeforeItsFeature() async throws {
+        resetSettings()
+        AfterScenario { [self] _ in ran.append("after scenario") }
+        AfterFeature { [self] _ in ran.append("after feature") }
+        Given("a basket") { [self] _, _ in ran.append("basket") }
+        And("a cuke.") { [self] _, _ in ran.append("cuke") }
+        Then("the total is 99") { [self] _, _ in ran.append("total") }
+        try await Cucumber.shared.run(Cucumber.shared.casesToRun(threeSteps)[1])
+        await Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
+        #expect(ran == ["basket", "cuke", "after scenario", "after feature"])
+    }
 }
