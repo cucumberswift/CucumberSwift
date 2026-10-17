@@ -17,6 +17,14 @@ public final class Cucumber {
         let body: @MainActor (String) -> (@MainActor (Step) async throws -> Void)?
     }
 
+    /// How a step ended: its result, whether the scenario's later steps run, and whether the step itself
+    /// failed, rather than only one of its hooks.
+    private struct StepOutcome {
+        let result: Reporter.Result
+        let canContinue: Bool
+        let isStepFailed: Bool
+    }
+
     /// A feature the runner has seen a scenario of, and where it is.
     private final class FeatureRun {
         let feature: Feature
@@ -123,11 +131,7 @@ public final class Cucumber {
         if await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: record) == nil {
             for step in scenario.steps {
                 let outcome = await run(step, in: file)
-                if case .passed = outcome.result {
-                    // Nothing to record.
-                } else {
-                    isStepFailed = true
-                }
+                if outcome.isStepFailed { isStepFailed = true }
                 if !outcome.canContinue { break }
             }
         }
@@ -230,14 +234,15 @@ public final class Cucumber {
 
     /// Runs one step, and tells the observers. Returns how it ended, and whether the scenario's later steps
     /// run: not after a step that is undefined, ambiguous or threw. A failed `#expect` lets them run.
-    private func run(_ step: Step, in file: String) async -> (result: Reporter.Result, canContinue: Bool) {
+    private func run(_ step: Step, in file: String) async -> StepOutcome {
         let location = Self.sourceLocation(file, step.location)
         let startDate = Date()
         reporters.forEach { $0.didStart(step: step, at: startDate) }
-        func finish(_ result: Reporter.Result, canContinue: Bool = false) -> (result: Reporter.Result, canContinue: Bool) {
+        // `isStepFailed` is whether the step itself failed, rather than only one of its hooks, as with CucumberSwift.
+        func finish(_ result: Reporter.Result, canContinue: Bool = false, isStepFailed: Bool = true) -> StepOutcome {
             let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
             reporters.forEach { $0.didFinish(step: step, result: result, duration: duration) }
-            return (result, canContinue)
+            return StepOutcome(result: result, canContinue: canContinue, isStepFailed: isStepFailed)
         }
         let matches = definitions.compactMap { definition -> (definition: Definition, body: @MainActor (Step) async throws -> Void)? in
             guard step.keyword.isSuperset(of: definition.keyword), let body = definition.body(step.match) else { return nil }
@@ -255,9 +260,11 @@ public final class Cucumber {
         }
         let ran = "\(step.keywordName) \(step.match)"
         let record = IssueRecord()
+        let hookRecord = IssueRecord()
+        var isBodyFailed = false
         // As with CucumberSwift, a step's AfterStep hooks run even when a BeforeStep hook failed, which
         // skips the step itself.
-        var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: record)
+        var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: hookRecord)
         if failure == nil {
             RunningLocation.shared.current = .init(location: location, step: ran, record: record)
             do {
@@ -265,15 +272,18 @@ public final class Cucumber {
             } catch {
                 Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
                 failure = Self.describe(error)
+                isBodyFailed = true
             }
         }
-        let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: record)
+        let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: hookRecord)
         failure = failure ?? afterFailure
-        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the record.
-        if failure == nil, !record.messages.isEmpty {
-            return finish(.failed(record.messages.joined(separator: "\n")), canContinue: afterFailure == nil)
+        isBodyFailed = isBodyFailed || !record.messages.isEmpty
+        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the records.
+        let messages = record.messages + hookRecord.messages
+        if failure == nil, !messages.isEmpty {
+            return finish(.failed(messages.joined(separator: "\n")), canContinue: afterFailure == nil, isStepFailed: isBodyFailed)
         }
-        return finish(failure.map { .failed($0) } ?? .passed, canContinue: failure == nil)
+        return finish(failure.map { .failed($0) } ?? .passed, canContinue: failure == nil, isStepFailed: isBodyFailed)
     }
 
     /// Runs each hook in order, as CucumberSwift does: one that throws doesn't stop the ones after it.

@@ -74,6 +74,34 @@ public func AfterStep(
     Cucumber.shared.afterStepHooks.append(Hook(priority: priority, file: file, line: line, body: closure))
 }
 
+// The hooks that existed before `file:` and `line:`, for code that uses them as values, such as
+// `let register: (UInt?, @escaping @MainActor (Scenario) async throws -> Void) -> Void = BeforeScenario`:
+// default arguments don't apply to a function used as a value. A call with a closure uses the hooks above.
+
+@_disfavoredOverload
+@MainActor
+public func BeforeScenario(priority: UInt? = nil, closure: @escaping @MainActor (Scenario) async throws -> Void) {
+    BeforeScenario(priority: priority, file: #filePath, line: #line, closure: closure)
+}
+
+@_disfavoredOverload
+@MainActor
+public func AfterScenario(priority: UInt? = nil, closure: @escaping @MainActor (Scenario) async throws -> Void) {
+    AfterScenario(priority: priority, file: #filePath, line: #line, closure: closure)
+}
+
+@_disfavoredOverload
+@MainActor
+public func BeforeStep(priority: UInt? = nil, closure: @escaping @MainActor (Step) async throws -> Void) {
+    BeforeStep(priority: priority, file: #filePath, line: #line, closure: closure)
+}
+
+@_disfavoredOverload
+@MainActor
+public func AfterStep(priority: UInt? = nil, closure: @escaping @MainActor (Step) async throws -> Void) {
+    AfterStep(priority: priority, file: #filePath, line: #line, closure: closure)
+}
+
 struct Hook<Argument> {
     let priority: UInt?
     /// Where the hook is written, which is where it fails when it throws, as with CucumberSwift.
