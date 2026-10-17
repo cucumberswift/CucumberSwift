@@ -165,11 +165,13 @@ This needs no package trait, and so works in an Xcode project with any supported
 
 ## Run scenarios
 
-Each scenario's test is named after its title in camel case: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard()`. That is how CucumberSwift names the tests it generates with `Cucumber.readableTestNames` off, and this runner doesn't have that setting: the name is always camel case. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card", and a repeated name gets `_2`, `_3` and so on.
+Each scenario is a test, named after its title in camel case: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard(_:)`. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card", and a repeated name gets `_2`, `_3` and so on.
+
+As with CucumberSwift, each step is a test of its own: the scenario's test has a test case for each step, named as CucumberSwift names the step's test, such as `3 › Then the total is 99`, or with `Cucumber.readableTestNames` off, `Step002_ThenTheTotalIs99`. The test navigator and the test report give a result for each step. A scenario's `BeforeScenario` hooks run with its first step and its `AfterScenario` hooks with its last, and running one step alone runs the steps before it. Once a step fails, the later steps don't run: with Swift 6.3 they are reported as cancelled, and before it Swift Testing can't skip a test case from inside it, so they pass without running. Set `Cucumber.oneTestPerScenario` to `true`, or the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`, for one test case for the whole scenario. An example of a Scenario Outline adds `Example (line 7)` before the step's name. Swift Testing needs the names of suites and tests as literals when the tests build, so the feature's and the scenario's names, unlike the step's, don't follow `Cucumber.readableTestNames`.
 
 ```bash
 swift test --filter PayWithAGiftCard
-xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithAGiftCard()'
+xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithAGiftCard(_:)'
 ```
 
 A Scenario Outline is one test, and each example is one of its test cases, named after the line of its row, such as `Example (line 17)`, so that its results stay on its row when you change a value. Xcode can run a single example from the test navigator, but `xcodebuild -only-testing` can only select the whole outline: given a test case, it runs nothing, and still succeeds.
@@ -324,8 +326,6 @@ One scheme can test both targets. To move a unit test target:
 These parts of CucumberSwift have no counterpart in this runner:
 
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
-- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_GENERATE_REGEX_LITERALS`, with `Cucumber.reportPath`, `Cucumber.verboseOutput` and `Cucumber.generateRegexLiterals`, as <doc:Settings> describes,
-- `Cucumber.expectation(description:)` and `wait(for:timeout:)`,
-- the deprecated step definitions that take a class and a selector.
+- the settings that <doc:Settings> marks as XCTest only.
 
 Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals.
