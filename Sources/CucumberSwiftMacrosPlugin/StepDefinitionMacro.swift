@@ -102,7 +102,7 @@ struct StepDefinition {
 
     // MARK: Parameters
 
-    private static func parameters(of closure: ClosureExprSyntax) -> [Parameter] {
+    static func parameters(of closure: ClosureExprSyntax) -> [Parameter] {
         switch closure.signature?.parameterClause {
             case .simpleInput(let list):
                 return list.map { Parameter(name: $0.name.text, type: nil) }
