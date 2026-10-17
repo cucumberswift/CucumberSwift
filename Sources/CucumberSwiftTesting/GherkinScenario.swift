@@ -13,6 +13,9 @@ public struct GherkinStep: Sendable {
     public let keyword: Step.Keyword
     /// The keyword as written in the feature file, such as `Dado` or `And`, for messages.
     public let keywordName: String
+    /// The keyword the step counts as, in the file's language: an `And` step's is the one it continues.
+    /// The camel-case names of its tests use it. English when the generator didn't give one.
+    public let keywordText: String
     public let text: String
     public let line: Int
     public let column: Int
@@ -28,6 +31,7 @@ public struct GherkinStep: Sendable {
     public init(
         keyword: Step.Keyword,
         keywordName: String,
+        keywordText: String? = nil,
         text: String,
         line: Int,
         column: Int,
@@ -39,6 +43,7 @@ public struct GherkinStep: Sendable {
     ) {
         self.keyword = keyword
         self.keywordName = keywordName
+        self.keywordText = keywordText ?? Self.englishKeywordText(keyword, written: keywordName)
         self.text = text
         self.line = line
         self.column = column
@@ -47,6 +52,17 @@ public struct GherkinStep: Sendable {
         self.suggestion = suggestion
         self.regexLiteralSuggestion = regexLiteralSuggestion
         self.bareSlashRegexLiteralSuggestion = bareSlashRegexLiteralSuggestion
+    }
+}
+
+extension GherkinStep {
+    private static func englishKeywordText(_ keyword: Step.Keyword, written: String) -> String {
+        if keyword.contains(.given) { return "Given" }
+        if keyword.contains(.when) { return "When" }
+        if keyword.contains(.then) { return "Then" }
+        if keyword.contains(.and) { return "And" }
+        if keyword.contains(.but) { return "But" }
+        return written
     }
 }
 

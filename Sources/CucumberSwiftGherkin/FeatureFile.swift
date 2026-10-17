@@ -84,6 +84,9 @@ extension FeatureFile {
         /// The keyword as written in the feature file, such as `Dado` or `And`, as CucumberSwift names it in
         /// its messages.
         public let keywordName: String
+        /// The keyword the step counts as, in the file's language: for an `And` or `But` step, the one it
+        /// continues. CucumberSwift names the camel-case tests of a step after it.
+        public let keywordText: String
         /// The step's text, after its keyword.
         public let text: String
         public let line: Int
@@ -210,6 +213,7 @@ extension FeatureFile.Step {
         keywords = Set(FeatureFile.Keyword.allCases.filter { keyword.contains(Step.Keyword($0)) })
         // Steps are read straight after their file is lexed, so the lexer's language is still the file's.
         keywordName = content.keyword.written(in: Scope.language)
+        keywordText = keyword.toString(in: Scope.language)
         text = content.match
         line = Int(content.location.line)
         column = Int(content.location.column)
