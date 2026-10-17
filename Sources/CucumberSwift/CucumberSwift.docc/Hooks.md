@@ -45,6 +45,22 @@ extension Cucumber: StepImplementation {
 }
 ```
 
+### Hook macros
+
+Each hook also has a macro, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, and the macros are the preferred way to write hooks. The compiler checks the closure where you write it: it takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and anything else is an error that says what the hook passes, with a fix. They also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does:
+
+<!-- swift-example: steps -->
+```swift
+#BeforeScenario {
+    try await server.reset()
+}
+#AfterStep(priority: 1) { (step: Step) in
+    print("Ran \(step.match)")
+}
+```
+
+The functions keep working, so existing hooks need no change, and they are the way to write hooks where the macros aren't available: they need CucumberSwift's `Macros` package trait, which downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros along with your step definitions. The examples on this page use the functions. Tagged hooks have no macro.
+
 ### Async hooks
 A hook can be `async` and `throws`. Write `await` in its closure:
 
