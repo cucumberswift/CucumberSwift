@@ -80,6 +80,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   # Symlinks to files and folders that are linted where they are.
   - Sources/CucumberSwiftGherkin/Core
   - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
+  - Sources/CucumberSwiftTestingMacros/HookMacros.swift
   - Sources/CucumberSwiftTestingMacros/LocalizedStepDefinitionMacros.swift
   - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
   - Sources/CucumberSwiftMacroConverterTool/LocalizedStepDefinitionNames.swift

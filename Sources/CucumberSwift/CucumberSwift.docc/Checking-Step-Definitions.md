@@ -27,7 +27,7 @@ extension Cucumber: StepImplementation {
 
 The closure takes one argument per parameter in the expression, already converted to its type. A mistake is a compile error on the line that has it, and where the fix is clear, Xcode offers to make it for you.
 
-Each macro expands to the step definition you would otherwise write by hand, so nothing about how steps match or run changes. Feature files, hooks and the step definitions you already have keep working, and you can mix both styles in one target.
+Each macro expands to the step definition you would otherwise write by hand, so nothing about how steps match or run changes. Feature files, the hook functions and the step definitions you already have keep working, and you can mix both styles in one target.
 
 This article describes what the compiler checks. <doc:Using-Step-Definition-Macros> shows how to set the macros up, write step definitions with them and convert the ones you have.
 

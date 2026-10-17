@@ -34,7 +34,7 @@ CucumberSwift comes with four Swift package plugins of two kinds: two run by the
 | `CucumberSwiftLint` | Build tool plugin: on every build of a target you add it to | Checks feature files and step definitions | Add it to each test target with feature files (recommended) | Xcode 16.0 |
 | `CucumberSwiftTestingPlugin` | Build tool plugin: on every build of a target you add it to | Generates Swift Testing tests from feature files | Add it to a target that runs feature files with Swift Testing | Xcode 16.3 |
 | Command: Fix Feature Files | Command plugin: only when you choose it | Fixes misspelt keywords in feature files | Choose it on the project's menu when you want it | Xcode 16.0 |
-| Command: Convert to Gherkin Macros | Command plugin: only when you choose it | Rewrites step definitions as step definition macros | Choose it on the project's menu when you want it | Xcode 16.3 and the `Macros` trait |
+| Command: Convert to Gherkin Macros | Command plugin: only when you choose it | Rewrites step definitions and hooks as macros | Choose it on the project's menu when you want it | Xcode 16.3 and the `Macros` trait |
 
 Xcode 16.0 to 16.2 read a manifest without `CucumberSwiftTestingPlugin` and Convert to Gherkin Macros, so they don't appear there.
 
@@ -153,7 +153,7 @@ Xcode shows the command's report, the line for each step definition and the tota
 
 What Xcode can't do is convert a file that isn't in a target you chose: `--path` narrows the targets chosen, and a path with no files in them stops the command. For that, or to run the command in a script, use Terminal.
 
-It converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself, or as a regex literal. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
+It converts hook calls such as `BeforeScenario { … }` to their macros, which take the same arguments and closure and expand back to the call, unless the call passes a function or an argument the macros don't take. It also converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``, written with a trailing closure or with `callback:`, and with a pattern written as a string literal, with or without `as CucumberExpression`, which the macro adds itself, or as a regex literal. A step definition is converted when its closure reads each parameter from `match` in its first statements, in the pattern's order, as `let count = try match.first(\.int)` or `let count: Int = match[\.int, index: 0]`, and uses `match` for nothing else. Those statements become the closure's arguments, and the macro expands to the same step definition as before. A type you wrote on a read stays; otherwise the argument gets the type the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are, and the command adds `import CucumberSwiftMacros` (or `CucumberSwiftTestingMacros`) when the file doesn't import it.
 
 ### Before it changes anything
 
@@ -195,7 +195,8 @@ It leaves a step definition unchanged, and lists it with its reason, when:
 - its pattern is not a string literal or a regex literal, has a mistake the macro would report, or is a regex literal whose capture groups the command can't read;
 - its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector;
 - it declares a type other than the one the pattern gives, a capture group's included, or doesn't read a custom parameter type, so the macro's closure couldn't be given its type;
-- the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition;
+- the file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition or hook;
+- a hook passes a function rather than a closure, or an argument the macros don't take;
 - the file imports neither CucumberSwift nor CucumberSwiftTesting, or both.
 
 It puts a `#warning` before each one that stands alone as a statement, so the compiler points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
@@ -215,7 +216,7 @@ It prints a line for each step definition it found, with the file's absolute pat
 ```
 /Users/me/MyApp/Tests/MyAppTests/Steps.swift:7: converted Given("I have {int} cukes in my {string}")
 /Users/me/MyApp/Tests/MyAppTests/Steps.swift:12: left unchanged When("I pass match on"): it passes match on to other code
-Converted 1 step definition in 1 of 4 Swift files. Left 1 unchanged, 1 marked with #warning.
+Converted 1 step definition and 1 hook in 1 of 4 Swift files. Left 1 unchanged, 1 marked with #warning.
 ```
 
 Review the result with your version control before you commit it, and build your tests: a macro reports a mistake the original only found when the tests ran.

@@ -18,7 +18,7 @@ The step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#Mat
 }
 ```
 
-The compiler checks each pattern and closure where you write it, and offers a fix for the common mistakes: see <doc:Checking-Step-Definitions>. Each macro expands to the step definition you would otherwise write by hand, so nothing about how steps match or run changes. Feature files, hooks and the step definitions you already have keep working, and you can mix both styles in one target.
+The compiler checks each pattern and closure where you write it, and offers a fix for the common mistakes: see <doc:Checking-Step-Definitions>. Each macro expands to the step definition you would otherwise write by hand, so nothing about how steps match or run changes. Feature files, the hook functions and the step definitions you already have keep working, and you can mix both styles in one target.
 
 This article covers, in order: what the macros need, setting them up for each kind of project, writing step definitions with them for XCTest and for Swift Testing, converting the step definitions you have, and troubleshooting.
 
@@ -317,9 +317,29 @@ Every localized step definition has a macro too, with the same name: `#ES_Dado` 
 }
 ```
 
+### Hooks
+
+The hooks have macros too, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, so a step definition file can be written in one style. Each expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as that does: in the same order, on the main actor, and failing the same way when it throws. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and may be `async throws`:
+
+<!-- swift-example: steps -->
+```swift
+#BeforeScenario {
+    try await server.reset()
+}
+#AfterScenario(priority: 1) { (scenario: Scenario) in
+    print("Finished \(scenario.title)")
+}
+#BeforeStep { @MainActor step async throws in
+    try await basket.waitForCount(nil)
+    print("Running \(step.match)")
+}
+```
+
+The compiler checks the closure where you write it: a closure with more than one argument, or an argument of another type, is an error that names the type the hook passes, with a fix. The hook functions keep working, and a project can use both. Tagged hooks have no macro.
+
 ## Convert existing step definitions
 
-The **Convert to Gherkin Macros** command rewrites step definitions written as ``Given`` and the like as macros, wherever a macro expands to the same step definition. <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> says how to run it, what it converts and what it leaves, and <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything> how to convert one file, one folder or everything.
+The **Convert to Gherkin Macros** command rewrites step definitions written as ``Given`` and the like as macros, wherever a macro expands to the same step definition, and hook calls such as `BeforeScenario { … }` as their macros. <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> says how to run it, what it converts and what it leaves, and <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything> how to convert one file, one folder or everything.
 
 What it leaves for you to do:
 

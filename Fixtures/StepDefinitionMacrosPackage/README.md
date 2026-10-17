@@ -5,7 +5,8 @@ Compile" describes: CucumberSwift with the `Macros` package trait turned on, the
 `CucumberSwiftMacros` product, and a test target in the Swift 6 language mode. Its step definitions
 use each kind of macro: Cucumber expression parameters, a custom parameter, a regular expression's
 capture group, the `Step` argument, an async step, closures with capture lists, a localized
-macro (`#ES_Dado`), and regex literals (`#/…/#` and `/…/`) with numbered, named and optional captures.
+macro (`#ES_Dado`), and regex literals (`#/…/#` and `/…/`) with numbered, named and optional captures. The
+hook macros, such as `#BeforeScenario`, run in each closure form and with priorities.
 
 If a macro's expansion stops compiling, or stops matching its steps, this fixture fails.
 
