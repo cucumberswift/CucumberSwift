@@ -30,7 +30,7 @@ public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) asy
 
 extension Cucumber {
     func executeFirstStep(keyword: Step.Keyword?, matching: String) async {
-        let running = RunningLocation.shared.current
+        let running = RunningLocation.current
         guard let running, let gherkinScenario = ScenarioContext.gherkinScenario else {
             Issue.record("ExecuteFirstStep runs a step definition from inside a step or a hook, and nothing is running.")
             return

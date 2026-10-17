@@ -23,8 +23,28 @@ extension CucumberTests {
         #expect(recorded.map(\.line) == [3])
     }
 
+    @Test func attachesFromScenariosThatRunAtTheSameTimeAreRecordedAtTheirOwnStepsLines() async {
+        var recorded = [String: Int?]()
+        var started = Set<String>()
+        Given("a log for {word}") { match, _ in
+            let name = try match.first(\.word)
+            started.insert(name)
+            // Waits until both scenarios have a step running, so that each attaches while the other's
+            // step is the one that started last.
+            while started.count < 2 { await Task.yield() }
+            attach(Attachment(name, named: "\(name).txt")) { attachment, location in
+                recorded[Self.text(of: attachment)] = .some(location?.line)
+            }
+        }
+
+        async let first: Void = Cucumber.shared.run(scenario([step(.given, "a log for one", line: 3)]))
+        async let second: Void = Cucumber.shared.run(scenario([step(.given, "a log for two", line: 9)]))
+        _ = await (first, second)
+        #expect(recorded["one"] == .some(3))
+        #expect(recorded["two"] == .some(9))
+    }
+
     @Test func attachOutsideAStepHasNoLocationInTheFeatureFile() {
-        RunningLocation.shared.current = nil
         var location: SourceLocation?? = .none
         attach(Attachment("x", named: "x.txt")) { _, recordedAt in location = .some(recordedAt) }
         #expect(location == .some(nil))

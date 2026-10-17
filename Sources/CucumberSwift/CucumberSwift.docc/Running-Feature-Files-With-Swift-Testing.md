@@ -176,7 +176,41 @@ A Scenario Outline is one test, and each example is one of its test cases, named
 
 `CUCUMBER_TAGS` works as it does with CucumberSwift: a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, which Swift Testing reports as a pass.
 
-Scenarios run one at a time, as with CucumberSwift, because step definitions usually share state. That applies to the scenarios: your target's other Swift Testing tests aren't held back by it, and can run alongside them.
+Scenarios run one at a time, in the order of the feature files, as with CucumberSwift, because step definitions usually share state. That applies to the scenarios: your target's other Swift Testing tests aren't held back by it, and can run alongside them. To run scenarios at the same time, see <doc:#Run-scenarios-in-parallel>.
+
+### Run scenarios in parallel
+
+Swift Testing can run tests at the same time, and a test target with many slow scenarios finishes sooner if it does. It is off by default, as with CucumberSwift, and turned on the same way: set the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`. `TRUE` and `1` work too, in any case, and `NO`, `FALSE` and `0` turn it off.
+
+- **Xcode:** choose **Product → Scheme → Edit Scheme…**, select **Test**, open **Arguments**, and add `CUCUMBER_PARALLEL_TESTING` with the value `YES` under **Environment Variables**.
+- **Swift Package Manager or `xcodebuild`:** set it on the command line.
+
+```bash
+CUCUMBER_PARALLEL_TESTING=YES swift test
+```
+
+You can also set `Cucumber.parallelTesting = true` in `setupSteps()`, as with CucumberSwift: Swift Testing decides when it discovers the tests, so the runner runs `setupSteps()` then. It wins over the environment variable, as it does there. If the runner can't run `setupSteps()` in time, only this variable is affected: scenarios run one at a time unless the environment variable or the compilation condition turns parallel on, and a note says so once, without failing the run. A third way is a compilation condition of the same name in the **test target** that has the feature files, not in your app target: in `Package.swift`, add `swiftSettings: [.define("CUCUMBER_PARALLEL_TESTING")]` to the test target, and in an Xcode project, add `CUCUMBER_PARALLEL_TESTING` to the test target's **Active Compilation Conditions** build setting. It applies when neither the static variable nor the environment variable is set, so `CUCUMBER_PARALLEL_TESTING=NO` still turns it off.
+
+**Choose what runs together.** By default any scenario may run at the same time as any other: the unit is the scenario. Set `Cucumber.parallelTestingUnit = .feature` in `setupSteps()`, or the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature` (`scenario` or `feature`, in any case, with spaces and tabs around it ignored), to run each feature's scenarios one at a time, in the order of the feature file, while features run at the same time. The static variable wins over the environment variable, as with CucumberSwift, and any other value is ignored. The unit only matters when parallel scenarios are on.
+
+The setting means something else here than it does in <doc:Running-Scenarios-In-Parallel>. There, Xcode spreads scenarios across worker processes, each with its own copy of your step definitions' state. Swift Testing runs them in one process, so every scenario sees what the others change. The scenarios may then run in any order. The runner starts each scenario's steps in order. Different scenarios can interleave at suspension points: while a step definition or a hook awaits, the main actor can run another scenario's step or hook. Main-actor isolation does not make shared state exclusive for the whole of an async step or hook, so a step definition that never awaits runs from start to finish, and one that awaits does not. Swift Testing's own `--no-parallel` option, as in `swift test --no-parallel`, still runs one test at a time.
+
+**What step definitions must not share between scenarios.** Anything that one scenario writes and another reads:
+
+- global and static variables, singletons, and properties of an object your step definitions capture, such as a shared `World` holding "the basket" that each step fills in,
+- files, `UserDefaults`, the keychain, a database, a port, or any other outside state that scenarios change,
+- the app, the server or the fake that the scenarios drive, when they need it in different states.
+
+Give each scenario its own copy instead. Key the state by the step's scenario, which both runners give every step (`step.scenario`, an optional): a dictionary on your `World` that maps a key made from the scenario's feature file and line, such as `"\(scenario.feature?.uri ?? ""):\(scenario.location.line)"`, to the scenario's basket, because a scenario object isn't the same one for every step that runs it, filled in the first time a step asks and emptied in an `AfterScenario` hook, or a folder, a database or a fake named after the scenario. Step definitions and hooks run on the main actor, so the dictionary needs no lock. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
+
+**What behaves differently with it on:**
+
+- **Failures stay with their step.** A failed `#expect` or a thrown error is reported on the line of the step that was running in the scenario that failed, in the test results and in the Cucumber JSON report, though other scenarios' steps are running.
+- **Hooks run around their own scenario and step.** `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` hooks run for each scenario, as before, in priority order and around the same scenario. The hooks of different scenarios can be in progress at the same time, so a hook that sets up shared state, such as a database, runs once per scenario, while others are using it.
+- **Verbose output interleaves.** It prints each line as it happens, so the lines of different scenarios mix, as they do in a parallel XCTest run. See <doc:Verbose-Output>.
+- **The JSON report is the same,** with each scenario once, in the order of the feature files.
+- **Observers get events from several scenarios in turn.** A custom `CucumberTestObserver` sees one scenario's events in order, with other scenarios' events between them: see <doc:#Reports-verbose-output-and-custom-reporters>.
+- **A scenario's duration includes the time it waited** for other scenarios to give back the main actor.
 
 ### Check the feature files
 
@@ -324,7 +358,7 @@ One scheme can test both targets. To move a unit test target:
 These parts of CucumberSwift have no counterpart in this runner:
 
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
-- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE` and `CUCUMBER_GENERATE_REGEX_LITERALS`, with `Cucumber.reportPath`, `Cucumber.verboseOutput` and `Cucumber.generateRegexLiterals`, as <doc:Settings> describes,
+- the `Cucumber` settings, such as `readableTestNames`: the runner reads only `CUCUMBER_TAGS`, `CUCUMBER_REPORT_PATH`, `CUCUMBER_VERBOSE`, `CUCUMBER_GENERATE_REGEX_LITERALS`, `CUCUMBER_PARALLEL_TESTING` and `CUCUMBER_PARALLEL_TESTING_UNIT`, with `Cucumber.reportPath`, `Cucumber.verboseOutput`, `Cucumber.generateRegexLiterals`, `Cucumber.parallelTesting` and `Cucumber.parallelTestingUnit`, as <doc:Settings> describes,
 - `Cucumber.expectation(description:)` and `wait(for:timeout:)`,
 - the deprecated step definitions that take a class and a selector.
 

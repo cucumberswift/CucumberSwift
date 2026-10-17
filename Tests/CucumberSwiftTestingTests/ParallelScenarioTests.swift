@@ -1,0 +1,172 @@
+@testable import CucumberSwiftTesting
+import Foundation
+import Testing
+
+/// Scenarios that run at the same time: where their failures, their verbose lines and their features land.
+extension CucumberTests {
+    #if compiler(>=6.2)
+    /// Scenarios that fail at the same time, each while the other's step is the one that started last, are
+    /// failed at their own steps in the report, with their own messages.
+    @Test(.reportedInFeatureFiles)
+    func failuresInScenariosThatRunAtTheSameTimeAreInTheirOwnStepsInTheReport() async throws {
+        let url = reportURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        Cucumber.reportPath = url.path
+        Cucumber.shared.reporters = [try #require(CucumberJSONReporter())]
+        var paying = Set<String>()
+        // Each payment step waits until both have started, so that each fails while the other is running.
+        func pay(_ name: String) async {
+            paying.insert(name)
+            while paying.count < 2 { await Task.yield() }
+            #expect(Bool(false), "the \(name) payment was refused")
+        }
+        Given("a basket") { _, _ in await Task.yield() }
+        When("I pay by card") { _, _ in await pay("card") }
+        When("I pay {int}") { _, _ in await pay("cash") }
+        Then("the order is paid") { _, _ in await Task.yield() }
+
+        let scenarios = parityScenarios()
+        Cucumber.shared.beginSuite()
+        await withKnownIssue {
+            async let first: Void = Cucumber.shared.run(scenarios[0])
+            async let second: Void = Cucumber.shared.run(scenarios[1])
+            _ = await (first, second)
+        }
+        await Cucumber.shared.endSuite()
+
+        let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
+        #expect(elements.compactMap { $0["name"] as? String } == ["Pay by card", "Pay 5 (example 1)"])
+        for (element, name) in zip(elements, ["card", "cash"]) {
+            let results = try #require(element["steps"] as? [[String: Any]]).compactMap { $0["result"] as? [String: Any] }
+            #expect(results.map { $0["status"] as? String } == ["passed", "failed"])
+            #expect((results[1]["error_message"] as? String)?.contains("the \(name) payment was refused") == true)
+        }
+    }
+    #endif
+
+    @Test func aFeatureWhoseScenariosAreStillRunningIsNotEndedWhenAnotherFeatureStarts() async {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Given("a thing") { _, _ in await Task.yield() }
+        let first = scenario([step(.given, "a thing", line: 3), step(.given, "a thing", line: 4)])
+        let other = GherkinScenario(
+            featureTitle: "G",
+            featureTags: [],
+            title: "T",
+            tags: [],
+            file: first.file.replacingOccurrences(of: "Test", with: "Other"),
+            line: 2,
+            column: 3,
+            steps: [])
+
+        Cucumber.shared.beginSuite()
+        async let firstRun: Void = Cucumber.shared.run(first)
+        async let secondRun: Void = Cucumber.shared.run(other)
+        _ = await (firstRun, secondRun)
+        #expect(!observer.log.contains("feature passed F"))
+        await Cucumber.shared.endFeature(file: first.file, title: "F", line: 1)
+        await Cucumber.shared.endFeature(file: other.file, title: "G", line: 1)
+        await Cucumber.shared.endSuite()
+
+        #expect(observer.log.suffix(3) == ["feature passed F", "feature passed G", "suite finished"])
+    }
+
+    // MARK: Turning parallel scenarios on
+
+    @Test func scenariosRunInParallelAsCucumberSwiftReadsAFeatureFlagThenTheCompilationCondition() {
+        defer { Cucumber.parallelTesting = nil }
+        let key = "CUCUMBER_PARALLEL_TESTING"
+        #expect(!CucumberSettings.runsInParallel(compiled: false, environment: [:]))
+        #expect(CucumberSettings.runsInParallel(compiled: true, environment: [:]))
+        #expect(CucumberSettings.runsInParallel(compiled: false, environment: [key: "yes"]))
+        #expect(!CucumberSettings.runsInParallel(compiled: true, environment: [key: "NO"]))
+        // A value that isn't a setting is ignored, as it is for CucumberSwift.
+        #expect(!CucumberSettings.runsInParallel(compiled: false, environment: [key: "maybe"]))
+        #expect(CucumberSettings.runsInParallel(compiled: true, environment: [key: "maybe"]))
+        // The static variable wins over the environment variable, which wins over the compilation condition.
+        Cucumber.parallelTesting = true
+        #expect(CucumberSettings.runsInParallel(compiled: false, environment: [key: "NO"]))
+        Cucumber.parallelTesting = false
+        #expect(!CucumberSettings.runsInParallel(compiled: true, environment: [key: "YES"]))
+    }
+
+    @Test func theGeneratedSuiteIsSerializedUnlessScenariosRunInParallel() {
+        defer { CucumberSettings.isSuiteSerialized = false }
+        #expect(scenarioOrder(compiled: false, environment: [:]) is ParallelizationTrait)
+        #expect(CucumberSettings.isSuiteSerialized)
+        #expect(scenarioOrder(compiled: false, environment: ["CUCUMBER_PARALLEL_TESTING": "1"]) is CucumberParallelScenariosTrait)
+        #expect(!CucumberSettings.isSuiteSerialized)
+    }
+
+    @Test func parallelTestingSetInSetupStepsCountsBecauseTheStepsAreLoadedWhenTheTestsAreDiscovered() {
+        defer {
+            Cucumber.parallelTesting = nil
+            ImplementationSettings.parallelTesting = nil
+            CucumberSettings.isSuiteSerialized = false
+        }
+        Cucumber.shared.isSetUp = false
+        ImplementationSettings.parallelTesting = true
+        #expect(scenarioOrder(compiled: false, environment: [:]) is CucumberParallelScenariosTrait)
+    }
+
+    @Test func parallelTestingThatCameTooLateIsSaidOnceWithoutFailingTheRun() async {
+        defer {
+            Cucumber.parallelTesting = nil
+            CucumberSettings.isSuiteSerialized = false
+        }
+        Cucumber.shared.hasReportedParallelTestingTooLate = false
+        CucumberSettings.isSuiteSerialized = true
+
+        // Not set, or off: nothing to say.
+        await Cucumber.shared.run(scenario([]))
+        Cucumber.parallelTesting = false
+        await Cucumber.shared.run(scenario([]))
+        #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
+
+        // It isn't an issue that fails the test, only a note, and only once.
+        Cucumber.parallelTesting = true
+        await Cucumber.shared.run(scenario([]))
+        #expect(Cucumber.shared.hasReportedParallelTestingTooLate)
+    }
+
+    @Test func parallelTestingIsNotTooLateWhenTheSuiteIsNotSerialized() async {
+        defer { Cucumber.parallelTesting = nil }
+        Cucumber.shared.hasReportedParallelTestingTooLate = false
+        CucumberSettings.isSuiteSerialized = false
+        Cucumber.parallelTesting = true
+        await Cucumber.shared.run(scenario([]))
+        #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
+    }
+
+    // MARK: What runs together
+
+    @Test func theUnitIsReadAsCucumberSwiftReadsItsFeatureFlags() {
+        defer { Cucumber.parallelTestingUnit = nil }
+        let key = "CUCUMBER_PARALLEL_TESTING_UNIT"
+        #expect(CucumberSettings.parallelTestingUnit(environment: [:]) == .scenario)
+        for text in ["feature", "FEATURE", " Feature\t"] {
+            #expect(CucumberSettings.parallelTestingUnit(environment: [key: text]) == .feature)
+        }
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "scenario"]) == .scenario)
+        // A value that isn't a setting is ignored, as it is for CucumberSwift.
+        for text in ["", "features", "yes"] { #expect(CucumberSettings.parallelTestingUnit(environment: [key: text]) == .scenario) }
+        // The static variable wins over the environment variable.
+        Cucumber.parallelTestingUnit = .feature
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "scenario"]) == .feature)
+        Cucumber.parallelTestingUnit = .scenario
+        #expect(CucumberSettings.parallelTestingUnit(environment: [key: "feature"]) == .scenario)
+    }
+
+    @Test func aFeaturesSuiteIsSerializedOnlyWhenScenariosRunInParallelAndTheUnitIsTheFeature() {
+        defer { Cucumber.parallelTestingUnit = nil }
+        let parallel = ["CUCUMBER_PARALLEL_TESTING": "YES"]
+        let feature = parallel.merging(["CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]) { $1 }
+        #expect(featureOrder(compiled: false, environment: parallel) is CucumberParallelScenariosTrait)
+        #expect(featureOrder(compiled: false, environment: feature) is ParallelizationTrait)
+        // Not in parallel, the whole suite is serialized, so a feature has nothing to add.
+        #expect(featureOrder(compiled: false, environment: ["CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]) is CucumberParallelScenariosTrait)
+        // The compilation condition turns parallel on, and the static variable chooses the unit.
+        Cucumber.parallelTestingUnit = .feature
+        #expect(featureOrder(compiled: true, environment: [:]) is ParallelizationTrait)
+    }
+}

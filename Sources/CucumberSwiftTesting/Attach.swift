@@ -27,7 +27,7 @@ func attach<Value: Attachable & Sendable>(
     _ attachment: Attachment<Value>,
     record: (Attachment<Value>, SourceLocation?) -> Void
 ) {
-    record(attachment, RunningLocation.shared.current?.location)
+    record(attachment, RunningLocation.current?.location)
 }
 #else
 /// Unavailable before Swift 6.2, which added attachments to Swift Testing.
