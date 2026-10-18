@@ -146,6 +146,25 @@ extension CucumberTests {
         #expect(Cucumber.shared.hasReportedParallelTestingTooLate)
     }
 
+    @Test func parallelTestingThatCameTooLateIsSaidForAStepCaseToo() async throws {
+        defer {
+            Cucumber.parallelTesting = nil
+            Cucumber.oneTestPerScenario = nil
+            CucumberSettings.isSuiteSerialized = false
+        }
+        Cucumber.shared.hasReportedParallelTestingTooLate = false
+        CucumberSettings.isSuiteSerialized = true
+        Cucumber.parallelTesting = true
+        Cucumber.oneTestPerScenario = false
+        Cucumber.shared.environment = [:]
+        let gherkinScenario = scenario([step(.given, "a step", line: 3)])
+        Given("a step") { _, _ in }
+        let cases = Cucumber.shared.casesToRun(gherkinScenario)
+        #expect(cases.first?.testDescription.hasPrefix("1 ") == true)
+        try await Cucumber.shared.run(cases[0])
+        #expect(Cucumber.shared.hasReportedParallelTestingTooLate)
+    }
+
     @Test func parallelTestingIsNotTooLateWhenTheSuiteIsNotSerialized() async {
         defer { Cucumber.parallelTesting = nil }
         Cucumber.shared.hasReportedParallelTestingTooLate = false

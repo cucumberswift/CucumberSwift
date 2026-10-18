@@ -167,6 +167,7 @@ public final class Cucumber {
         guard let index = testCase.stepIndex else { return await run(testCase.scenario) }
         let gherkinScenario = testCase.scenario
         loadStepDefinitions()
+        reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
         let key = Self.key(of: gherkinScenario)
         var skipped = false

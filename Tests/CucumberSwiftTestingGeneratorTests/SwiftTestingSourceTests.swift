@@ -28,7 +28,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         @MainActor
         @Suite("Eat fruit", .cucumberFeature(file: "/Features/Test.feature", title: "Eat fruit", line: 1), CucumberSwiftTesting.cucumberFeatureOrder(compiled: cucumberParallelTesting))
         struct EatFruit {
-            @Test("Eat an apple", .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(cucumberScenario1) },
+            @Test("Eat an apple", .serialized, .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(cucumberScenario1) },
                   arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberScenario1))
             func EatAnApple(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
         }
@@ -98,7 +98,7 @@ final class SwiftTestingSourceTests: XCTestCase {
               | 20    | 5     | 15   |
         """)
         XCTAssertTrue(source.contains(#"""
-                @Test("Eat <eaten>", arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberExamples1))
+                @Test("Eat <eaten>", .serialized, arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberExamples1))
                 func EatEaten(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
         """#), source)
         XCTAssertTrue(source.contains("private let cucumberExamples1 = [\n"), source)
@@ -216,7 +216,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         """)
         XCTAssertTrue(source.contains("func Same(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
         XCTAssertTrue(source.contains("func Same_2(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
-        XCTAssertTrue(source.contains(#"@Test("🥒", .enabled"#), source)
+        XCTAssertTrue(source.contains(#"@Test("🥒", .serialized, .enabled"#), source)
         XCTAssertTrue(source.contains("func Scenario(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws {"), source)
     }
 
