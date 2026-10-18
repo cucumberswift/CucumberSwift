@@ -127,6 +127,7 @@
 		B1CCDDA288AE05759A3608D7 /* CustomReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1ADBAACCE85FCB69F0BF9B /* CustomReporterTests.swift */; };
 		B5B0B8227175BC32F64C3B85 /* Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD957A565ADF0989A4B9BA3 /* Language.swift */; };
 		B7AB9889896FEBC7BDFFF94B /* StubGeneratorToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68F8BB794347FC46B5DF34BF /* StubGeneratorToken.swift */; };
+		B9B06EB33F57EC216D794C79 /* ScenarioState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2324AB83B082A9E31C20DB97 /* ScenarioState.swift */; };
 		BBA451C9237DC59103FEC6E2 /* StringExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12EDE24C1BB7489CC9DF22B1 /* StringExtensions.swift */; };
 		BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */; };
 		BED4FB179E9F0997A5F2EAB5 /* VerboseReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6649D7E0697DDC105796B27 /* VerboseReporterTests.swift */; };
@@ -252,6 +253,7 @@
 		1A61873CC13CDA29724B585F /* FeatureDSL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureDSL.swift; sourceTree = "<group>"; };
 		1DD544C032479A582CD2F0DF /* DocstringTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocstringTests.swift; sourceTree = "<group>"; };
 		1EDABCBC861D11AD3E422012 /* DSLBackgroundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLBackgroundTests.swift; sourceTree = "<group>"; };
+		2324AB83B082A9E31C20DB97 /* ScenarioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioState.swift; sourceTree = "<group>"; };
 		27A4629AADAE67C860A203C2 /* Locked.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Locked.swift; sourceTree = "<group>"; };
 		28B76CF44C2A8ACE0C03F295 /* AmbiguousStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmbiguousStepTests.swift; sourceTree = "<group>"; };
 		28DACBFA3E45CE73235B8ED3 /* UndefinedStepTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndefinedStepTests.swift; sourceTree = "<group>"; };
@@ -616,6 +618,7 @@
 				600722401DD9D86945067DE9 /* JSONReport.swift */,
 				1861AD0348C2F216B846AF86 /* ReporterResult.swift */,
 				4830673F37C3B443E5F8FC86 /* ReportFile.swift */,
+				2324AB83B082A9E31C20DB97 /* ScenarioState.swift */,
 				AB3D20EBD92B249FB1015BAC /* TestNames.swift */,
 				DEAC28E976D694A370CC2234 /* VerboseOutput.swift */,
 			);
@@ -1212,6 +1215,7 @@
 				94925191CBFD0644A0D751E2 /* JSONReport.swift in Sources */,
 				5FED2584A54215AD3034F19F /* ReportFile.swift in Sources */,
 				7453F43AD14C71DB42E271D4 /* ReporterResult.swift in Sources */,
+				B9B06EB33F57EC216D794C79 /* ScenarioState.swift in Sources */,
 				1B592B8118B6F2FEBA993516 /* TestNames.swift in Sources */,
 				8FC8A449E1CECC28335F61E5 /* VerboseOutput.swift in Sources */,
 				0E5179311CFBFB0C3D103F26 /* JSONReporter.swift in Sources */,

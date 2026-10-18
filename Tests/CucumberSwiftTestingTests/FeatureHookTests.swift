@@ -108,7 +108,19 @@ extension CucumberTests {
         #expect(ran == ["before F", "after F", "before G", "after G"])
     }
 
-    @Test func withoutTheFeatureTraitAFeatureEndsWhenTheNextOneStartsOrTheSuiteEnds() async {
+    @Test func withoutASuiteAFeatureEndsWhenTheNextOneStarts() async {
+        Given("a step") { _, _ in }
+        BeforeFeature { [self] feature in ran.append("before \(feature.title)") }
+        AfterFeature { [self] feature in ran.append("after \(feature.title)") }
+
+        await Cucumber.shared.run(scenario("A", feature: "F", line: 2, steps: [step(.given, "a step", line: 3)]))
+        await Cucumber.shared.run(scenario("B", feature: "G", line: 2, steps: [step(.given, "a step", line: 3)]))
+        #expect(ran == ["before F", "after F", "before G"])
+    }
+
+    /// Features run at the same time, so with the suite started a feature ends after its last scenario, or
+    /// with the suite, not where another feature starts.
+    @Test func withTheSuiteButNotTheFeatureTraitFeaturesEndWhenTheSuiteEnds() async {
         Given("a step") { _, _ in }
         BeforeFeature { [self] feature in ran.append("before \(feature.title)") }
         AfterFeature { [self] feature in ran.append("after \(feature.title)") }
@@ -117,7 +129,7 @@ extension CucumberTests {
         await Cucumber.shared.run(scenario("A", feature: "F", line: 2, steps: [step(.given, "a step", line: 3)]))
         await Cucumber.shared.run(scenario("B", feature: "G", line: 2, steps: [step(.given, "a step", line: 3)]))
         await Cucumber.shared.endSuite()
-        #expect(ran == ["before F", "after F", "before G", "after G"])
+        #expect(ran == ["before F", "before G", "after F", "after G"])
     }
 
     @Test func aThrowingBeforeFeatureHookFailsOnceAtItsLineAndTheFirstScenariosFirstStep() async throws {

@@ -8,6 +8,8 @@ Xcode's parallel testing, the **Execute in parallel** option on a test target in
 
 With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES` (the value is case-insensitive, and `TRUE` or `1` work too: see <doc:Settings>), each scenario is a test class of its own, which Xcode hands to one worker, with a test per step, the default, and with one test per scenario (``Cucumber/oneTestPerScenario``). The scenario's steps run in order in that worker, as they do in a serial run. A serial run with the experiment on also runs each scenario as a class of its own, once, in the order of the feature files: each class's name starts with its position in them, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
 
+Each scenario also has state of its own, which its steps and hooks reach with `Scenario.state(Basket.init)`: see <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>. The Swift Testing runner has the same setting, which lets scenarios run at the same time in one process: see <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>.
+
 It is experimental. Before you rely on it, read what works and what doesn't in the table below, and check your kind of test target and platform against it.
 
 ## What works
