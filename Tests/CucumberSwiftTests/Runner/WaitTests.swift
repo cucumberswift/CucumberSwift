@@ -30,6 +30,18 @@ class WaitTests: XCTestCase {
         return expectation
     }
 
+    private static func expectationMainQueueWorkFulfills() -> XCTestExpectation {
+        let expectation = Cucumber.shared.expectation(description: "main queue")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { expectation.fulfill() }
+        return expectation
+    }
+
+    private static func expectationAMainActorTaskFulfills() -> XCTestExpectation {
+        let expectation = Cucumber.shared.expectation(description: "main actor")
+        Task { @MainActor in expectation.fulfill() }
+        return expectation
+    }
+
     override func setUpWithError() throws {
         Self.resetCucumber()
         addTeardownBlock { Self.resetCucumber() }
@@ -89,8 +101,7 @@ class WaitTests: XCTestCase {
     func testAWaitThatMainQueueWorkFulfillsPasses() throws {
         try runTheScenario {
             Given("a wait") { _, _ in
-                let expectation = Cucumber.shared.expectation(description: "main queue")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { expectation.fulfill() }
+                let expectation = Self.expectationMainQueueWorkFulfills()
                 Cucumber.shared.wait(for: [expectation], timeout: 5)
             }
         }
@@ -114,8 +125,7 @@ class WaitTests: XCTestCase {
     func testAnAwaitedWaitLetsMainQueueWorkFulfillTheExpectation() throws {
         try runTheScenario {
             Given("a wait") { _, _ in
-                let expectation = Cucumber.shared.expectation(description: "main queue")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { expectation.fulfill() }
+                let expectation = Self.expectationMainQueueWorkFulfills()
                 await Cucumber.shared.wait(for: [expectation], timeout: 5)
             }
         }
@@ -125,8 +135,7 @@ class WaitTests: XCTestCase {
     func testAnAwaitedWaitLetsAMainActorTaskFulfillTheExpectation() throws {
         try runTheScenario {
             Given("a wait") { _, _ in
-                let expectation = Cucumber.shared.expectation(description: "main actor")
-                Task { @MainActor in expectation.fulfill() }
+                let expectation = Self.expectationAMainActorTaskFulfills()
                 await Cucumber.shared.wait(for: [expectation], timeout: 5)
             }
         }

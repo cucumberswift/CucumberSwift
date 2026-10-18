@@ -28,13 +28,13 @@ private final class WaitFailures: NSObject, XCTWaiterDelegate, @unchecked Sendab
         messages.append(message)
     }
 
-    func waiter(_ waiter: XCTWaiter, didTimeoutWithUnfulfilledExpectations unfulfilledExpectations: [XCTestExpectation]) {
+    func waiter(_: XCTWaiter, didTimeoutWithUnfulfilledExpectations unfulfilledExpectations: [XCTestExpectation]) {
         let descriptions = unfulfilledExpectations.map(\.expectationDescription).joined(separator: "\", \"")
         let format = "Asynchronous wait failed: Exceeded timeout of %g seconds, with unfulfilled expectations: \"%@\"."
         add(String(format: format, timeout, descriptions))
     }
 
-    func waiter(_ waiter: XCTWaiter, didFulfillInvertedExpectation expectation: XCTestExpectation) {
+    func waiter(_: XCTWaiter, didFulfillInvertedExpectation expectation: XCTestExpectation) {
         add(String(format: "Fulfilled inverted expectation \"%@\".", expectation.expectationDescription))
     }
 
