@@ -85,7 +85,11 @@ Steps still run one at a time, in the order the feature file declares them. The 
 
   XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
 - **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
-- **Running another step.** `ExecuteFirstStep(matching:)` is deprecated, and works as before. Cucumber's guidance is to keep step definitions thin and not have one step run another: put the code both need in a function, and call it from each step definition, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A helper function can be `async`, so it works the same from synchronous and asynchronous steps.
+- **Running another step.** Put the code both step definitions need in a function, and call it from each, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A helper function can be `async`, so it works the same from synchronous and asynchronous steps.
+
+  > Deprecation Warning: `ExecuteFirstStep(matching:)` is deprecated and will be removed in a future major version.
+  >
+  > Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
 
 With the Swift DSL, pass an async function or closure rather than a call:
 

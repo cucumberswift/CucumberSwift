@@ -235,12 +235,16 @@ extension Cucumber: @retroactive StepImplementation {
 
 ### Run another step
 
-`ExecuteFirstStep(keyword:matching:)` is deprecated, in this runner and in CucumberSwift's, and still works as before. Cucumber recommends keeping step definitions thin, and not having one step run another, because a step that depends on another's text breaks when that text changes. Put the code both step definitions need in a function instead, and call it from each:
+> Deprecation Warning: `ExecuteFirstStep(keyword:matching:)` is deprecated, in this runner and in CucumberSwift's, and will be removed in a future major version. It still works as before.
+>
+> Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
+
+Put the code both step definitions need in a function instead, and call it from each:
 
 ```swift
 import CucumberSwiftTestingMacros
 
-func addCukes(_ count: Int) {
+@MainActor func addCukes(_ count: Int) {
     Basket.shared.add(count)
 }
 
