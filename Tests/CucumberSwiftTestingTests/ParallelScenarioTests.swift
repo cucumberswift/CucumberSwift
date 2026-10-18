@@ -4,6 +4,10 @@ import Testing
 
 /// Scenarios that run at the same time: where their failures, their verbose lines and their features land.
 extension CucumberTests {
+    final class Basket {
+        var cukes = 0
+    }
+
     #if compiler(>=6.2)
     /// Scenarios that fail at the same time, each while the other's step is the one that started last, are
     /// failed at their own steps in the report, with their own messages.
@@ -172,10 +176,6 @@ extension CucumberTests {
 
     // MARK: A scenario's own state
 
-    final class Basket {
-        var cukes = 0
-    }
-
     @Test func aScenarioKeepsItsStateAcrossStepsAndHooksAndOtherScenariosDontShareIt() async {
         var seen = [String: Int]()
         var started = Set<String>()
@@ -189,10 +189,10 @@ extension CucumberTests {
         }
         Then("the basket is read for {word}") { match, _ in seen[try match.first(\.word)] = Scenario.state(Basket.init).cukes }
 
-        async let first: Void = Cucumber.shared.run(scenario([
-            step(.given, "a basket for one", line: 3), step(.then, "the basket is read for one", line: 4)]))
-        async let second: Void = Cucumber.shared.run(scenario([
-            step(.given, "a basket for two", line: 3), step(.then, "the basket is read for two", line: 4)]))
+        let oneSteps = [step(.given, "a basket for one", line: 3), step(.then, "the basket is read for one", line: 4)]
+        let twoSteps = [step(.given, "a basket for two", line: 3), step(.then, "the basket is read for two", line: 4)]
+        async let first: Void = Cucumber.shared.run(scenario(oneSteps))
+        async let second: Void = Cucumber.shared.run(scenario(twoSteps))
         _ = await (first, second)
         #expect(seen == ["one": 101, "two": 102])
     }
