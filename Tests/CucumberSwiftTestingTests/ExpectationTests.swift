@@ -7,6 +7,20 @@ import XCTest
 /// `Cucumber.expectation(description:)` and `wait(for:timeout:)`, from synchronous and `async` steps. An
 /// extension of `CucumberTests`, so that it runs one test at a time with the runner's other tests.
 extension CucumberTests {
+    private static let timedOutMessage = #"Asynchronous wait failed: Exceeded timeout of 0.1 seconds, with unfulfilled expectations: "never", "nor this"."#
+    private static let invertedMessage = #"Fulfilled inverted expectation "inverted"."#
+
+    private static func unfulfilledExpectations() -> [XCTestExpectation] {
+        [Cucumber.shared.expectation(description: "never"), Cucumber.shared.expectation(description: "nor this")]
+    }
+
+    private static func invertedExpectation() -> XCTestExpectation {
+        let expectation = Cucumber.shared.expectation(description: "inverted")
+        expectation.isInverted = true
+        expectation.fulfill()
+        return expectation
+    }
+
     private func scenario(texts: [String]) -> GherkinScenario {
         scenario(texts.enumerated().map { index, text in step(.given, text, line: 3 + index) })
     }
@@ -50,18 +64,49 @@ extension CucumberTests {
         #expect(ran == ["fulfilled", "waited"])
     }
 
-    /// As with CucumberSwift, whose `XCTWaiter` has no delegate to tell.
-    @Test func aWaitThatTimesOutDoesNotFailTheStep() async {
-        Given("a sync timeout") { [self] _, _ in
-            Cucumber.shared.wait(for: [Cucumber.shared.expectation(description: "never")], timeout: 0.1)
-            ran.append("sync")
+    /// Runs a scenario whose first step, at line 3, is the wait that the test defined as "a wait", and expects
+    /// it to fail there with `message`, and the next step to be skipped.
+    private func expectTheWaitFails(with message: String) async {
+        Then("the next step") { [self] _, _ in ran.append("next") }
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a wait", line: 3), step(.then, "the next step", line: 4)]))
+        } matching: { issue in
+            issue.sourceLocation?.fileID == "Features/Test.feature" && issue.sourceLocation?.line == 3
+                && issue.comments.map(\.rawValue) == [message]
         }
-        Then("an async timeout") { [self] _, _ in
-            await Cucumber.shared.wait(for: [Cucumber.shared.expectation(description: "never")], timeout: 0.1)
-            ran.append("async")
+        #expect(ran == ["waited"])
+    }
+
+    @Test func aWaitThatTimesOutFailsTheStep() async {
+        Given("a wait") { [self] _, _ in
+            Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1)
+            ran.append("waited")
         }
-        await Cucumber.shared.run(scenario([step(.given, "a sync timeout", line: 3), step(.then, "an async timeout", line: 4)]))
-        #expect(ran == ["sync", "async"])
+        await expectTheWaitFails(with: Self.timedOutMessage)
+    }
+
+    @Test func aWaitForAFulfilledInvertedExpectationFailsTheStep() async {
+        Given("a wait") { [self] _, _ in
+            Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1)
+            ran.append("waited")
+        }
+        await expectTheWaitFails(with: Self.invertedMessage)
+    }
+
+    @Test func anAwaitedWaitThatTimesOutFailsTheStep() async {
+        Given("a wait") { [self] _, _ in
+            await Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1)
+            ran.append("waited")
+        }
+        await expectTheWaitFails(with: Self.timedOutMessage)
+    }
+
+    @Test func anAwaitedWaitForAFulfilledInvertedExpectationFailsTheStep() async {
+        Given("a wait") { [self] _, _ in
+            await Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1)
+            ran.append("waited")
+        }
+        await expectTheWaitFails(with: Self.invertedMessage)
     }
 }
 #endif
