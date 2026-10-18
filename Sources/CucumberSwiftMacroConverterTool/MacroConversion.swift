@@ -13,6 +13,7 @@ public enum MacroConversion {
     /// What a run did, file by file.
     private struct Tally {
         var converted = 0
+        var convertedHooks = 0
         var left = 0
         var marked = 0
         var changedFiles = 0
@@ -168,6 +169,7 @@ public enum MacroConversion {
                 ?? "\(file):\(entry.line): converted \(entry.stepDefinition)")
         }
         tally.converted += result.converted.count
+        tally.convertedHooks += result.converted.filter(\.isHook).count
         tally.left += result.leftUnchanged.count
         guard result.source != source else { return }
         tally.marked += markers(in: result.source) - markers(in: source)
@@ -184,7 +186,9 @@ public enum MacroConversion {
     private static func summary(of tally: Tally, fileCount: Int, dryRun: Bool) -> String {
         let verb = dryRun ? "Would convert" : "Converted"
         let marked = tally.marked == 0 ? "" : ", \(tally.marked) \(dryRun ? "to mark" : "marked") with #warning"
-        return "\(verb) \(tally.converted) step definition\(tally.converted == 1 ? "" : "s") "
+        let steps = tally.converted - tally.convertedHooks
+        let hooks = tally.convertedHooks == 0 ? "" : " and \(tally.convertedHooks) hook\(tally.convertedHooks == 1 ? "" : "s")"
+        return "\(verb) \(steps) step definition\(steps == 1 ? "" : "s")\(hooks) "
             + "in \(tally.changedFiles) of \(fileCount) Swift file\(fileCount == 1 ? "" : "s"). "
             + "Left \(tally.left) unchanged\(marked)."
     }

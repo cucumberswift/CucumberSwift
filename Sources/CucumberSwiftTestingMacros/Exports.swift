@@ -2,8 +2,9 @@
 //  Exports.swift
 //  CucumberSwiftTestingMacros
 //
-// The step definition macros of CucumberSwiftMacros, for the Swift Testing runner. StepDefinitionMacros.swift
-// is a symlink to CucumberSwiftMacros' declarations, and the macros return the step types re-exported here.
+// The step definition and hook macros of CucumberSwiftMacros, for the Swift Testing runner. StepDefinitionMacros.swift
+// and HookMacros.swift are symlinks to CucumberSwiftMacros' declarations, and the macros return the step types,
+// and call the hooks, re-exported here.
 // The localized macros, such as `#ES_Dado`, are not here: CucumberSwiftTesting has no localized step types.
 
 // The expansions use CucumberSwiftTesting's step types and CucumberSwiftExpressions' `CucumberExpression`

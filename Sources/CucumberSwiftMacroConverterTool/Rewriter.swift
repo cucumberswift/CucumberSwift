@@ -88,7 +88,7 @@ final class Rewriter: SyntaxRewriter {
         super.init(viewMode: .sourceAccurate)
     }
 
-    /// Puts a `#warning` before each step definition the converter left, so the compiler points to it.
+    /// Puts a `#warning` before each step definition or hook the converter left, so the compiler points to it.
     override func visit(_ node: CodeBlockItemListSyntax) -> CodeBlockItemListSyntax {
         let rewritten = Array(super.visit(node))
         guard !markers.isEmpty, rewritten.count == node.count else { return CodeBlockItemListSyntax(rewritten) }
@@ -114,21 +114,39 @@ final class Rewriter: SyntaxRewriter {
         // The line in the source as given; converting a step definition inside this one moves nothing before it.
         let line = node.startLocation(converter: converter).line
         let visited = super.visit(node)
-        guard let call = visited.as(FunctionCallExprSyntax.self),
-              let keyword = Self.keyword(of: call) else { return visited }
-        let description = "\(keyword)(\(call.arguments.first?.expression.trimmedDescription ?? ""))"
+        guard let call = visited.as(FunctionCallExprSyntax.self) else { return visited }
+        let isHook: Bool
+        let keyword: String
+        let description: String
+        if let hook = HookCall.hook(of: call) {
+            isHook = true
+            keyword = hook
+            // `BeforeScenario`, or `BeforeScenario(priority: 1)` with the arguments other than the closure.
+            let arguments = call.arguments.filter { $0.label?.text != "closure" }
+                .map { $0.with(\.trailingComma, nil).trimmedDescription }
+            description = arguments.isEmpty ? hook : "\(hook)(\(arguments.joined(separator: ", ")))"
+        } else if let step = Self.keyword(of: call) {
+            isHook = false
+            keyword = step
+            description = "\(step)(\(call.arguments.first?.expression.trimmedDescription ?? ""))"
+        } else {
+            return visited
+        }
         // The original node still has its parents, which the rewritten one doesn't.
         if Self.isShadowed(keyword, around: node) {
-            let reason = "a `\(keyword)` declared in this file is in scope, so the call may not be a step definition"
-            leftUnchanged.append(.init(line: line, stepDefinition: description, reason: reason))
+            let what = isHook ? "hook" : "step definition"
+            let reason = "a `\(keyword)` declared in this file is in scope, so the call may not be a \(what)"
+            leftUnchanged.append(.init(line: line, stepDefinition: description, reason: reason, isHook: isHook))
             return visited
         }
         do {
-            let macro = try StepDefinitionCall(call, keyword: keyword, runner: runner).macro()
-            converted.append(.init(line: line, stepDefinition: description, reason: nil))
+            let macro = isHook
+                ? try HookCall(call: call, runner: runner).macro()
+                : try StepDefinitionCall(call, keyword: keyword, runner: runner).macro()
+            converted.append(.init(line: line, stepDefinition: description, reason: nil, isHook: isHook))
             return ExprSyntax(macro)
         } catch let problem as Unconvertible {
-            leftUnchanged.append(.init(line: line, stepDefinition: description, reason: problem.reason))
+            leftUnchanged.append(.init(line: line, stepDefinition: description, reason: problem.reason, isHook: isHook))
             if node.parent?.is(CodeBlockItemSyntax.self) == true { markers[node.id] = problem.reason }
             return visited
         } catch {

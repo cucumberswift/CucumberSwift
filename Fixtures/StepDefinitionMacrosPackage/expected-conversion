@@ -1,6 +1,7 @@
 # What Convert to Gherkin Macros must report on this fixture: `mise run test-fixtures` runs it, then the
 # fixture's tests on what it converted, then puts the Swift files back. Each line, other than comments
 # and blank lines, must be in the command's output. See "Fixtures" in CONTRIBUTING.md.
+: converted BeforeScenario
 : converted Given("the basket holds these cukes:")
 : converted Given("a note on the basket:")
 : left unchanged Then("the note says {string}" as CucumberExpression): it reads a parameter of match after other code
@@ -8,4 +9,4 @@
 : converted ES_Dado("una nota en la cesta:")
 : converted Given(#/^the till holds (\d+) coins from (?<city>\w+)( today)?$/#)
 : converted Then(/^the till has (\d+) coins? left$/)
-Converted 6 step definitions in 1 of 2 Swift files. Left 1 unchanged, 1 marked with #warning.
+Converted 6 step definitions and 1 hook in 1 of 2 Swift files. Left 1 unchanged, 1 marked with #warning.
