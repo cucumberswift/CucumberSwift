@@ -27,6 +27,7 @@ enum CucumberSettings {
         private var storedParallelTestingUnit: ParallelTestingUnit?
         private var storedIsSuiteSerialized = false
         private var storedGenerateRegexLiterals: Bool?
+        private var flags = [String: Bool]()
 
         // `lock()` and `unlock()` rather than `withLock`, which needs macOS 13, iOS 16 and tvOS 16.
         var reportPath: String? {
@@ -106,6 +107,18 @@ enum CucumberSettings {
                 storedGenerateRegexLiterals = newValue
             }
         }
+
+        func flag(_ name: String) -> Bool? {
+            lock.lock()
+            defer { lock.unlock() }
+            return flags[name]
+        }
+
+        func setFlag(_ name: String, _ value: Bool?) {
+            lock.lock()
+            defer { lock.unlock() }
+            flags[name] = value
+        }
     }
 
     private static let storage = Storage()
@@ -146,6 +159,18 @@ enum CucumberSettings {
 
     static var reportPath: String? { reportPath() }
 
+    /// ``Cucumber/readableTestNames``.
+    static var staticReadableTestNames: Bool? {
+        get { storage.flag("readableTestNames") }
+        set { storage.setFlag("readableTestNames", newValue) }
+    }
+
+    /// ``Cucumber/oneTestPerScenario``.
+    static var staticOneTestPerScenario: Bool? {
+        get { storage.flag("oneTestPerScenario") }
+        set { storage.setFlag("oneTestPerScenario", newValue) }
+    }
+
     static let generateRegexLiteralsEnvironmentKey = "CUCUMBER_GENERATE_REGEX_LITERALS"
 
     /// ``Cucumber/generateRegexLiterals``.
@@ -158,6 +183,17 @@ enum CucumberSettings {
     /// `CUCUMBER_GENERATE_REGEX_LITERALS`, then no. The value is read as CucumberSwift's `FeatureFlags` read it: see `FeatureFlagValue`.
     static func generatesRegexLiterals(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         staticGenerateRegexLiterals ?? FeatureFlagValue.bool(environment[generateRegexLiteralsEnvironmentKey]) ?? false
+    }
+
+    /// Whether generated tests are named with the Gherkin text as written: the static variable, then
+    /// `CUCUMBER_READABLE_TEST_NAMES`, then yes, as CucumberSwift's `FeatureFlags` read it.
+    static func isReadableTestNames(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticReadableTestNames ?? FeatureFlagValue.bool(environment["CUCUMBER_READABLE_TEST_NAMES"]) ?? true
+    }
+
+    /// Whether each scenario is one test: the static variable, then `CUCUMBER_ONE_TEST_PER_SCENARIO`, then no.
+    static func isOneTestPerScenario(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticOneTestPerScenario ?? FeatureFlagValue.bool(environment["CUCUMBER_ONE_TEST_PER_SCENARIO"]) ?? false
     }
 
     /// Where the JSON report is written: the static variable, then `CUCUMBER_REPORT_PATH`. Nil when neither
@@ -229,6 +265,27 @@ extension Cucumber {
     nonisolated public static var verboseOutput: Bool {
         get { CucumberSettings.staticVerboseOutput }
         set { CucumberSettings.staticVerboseOutput = newValue }
+    }
+
+    /// Whether the test for a step, and for an example of a Scenario Outline, is named with the Gherkin text as
+    /// written, such as `3 › Then the total is 99`, rather than in camel case, such as
+    /// `Step002_ThenTheTotalIs99`. On by default; set this to `false`, or the environment variable
+    /// `CUCUMBER_READABLE_TEST_NAMES` to `NO`, for camel case. This variable, when set, wins over the
+    /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`. Swift Testing needs the
+    /// names of suites and tests as string literals when the tests build, so their display names, the
+    /// feature's and the scenario's title, are always the Gherkin text.
+    nonisolated public static var readableTestNames: Bool? {
+        get { CucumberSettings.staticReadableTestNames }
+        set { CucumberSettings.staticReadableTestNames = newValue }
+    }
+
+    /// Whether each scenario is one test, rather than a test for each of its steps, which is the default, as
+    /// with CucumberSwift. Set this to `true`, or the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to
+    /// `YES`, for one test per scenario. This variable, when set, wins over the environment variable. Set it
+    /// in your `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var oneTestPerScenario: Bool? {
+        get { CucumberSettings.staticOneTestPerScenario }
+        set { CucumberSettings.staticOneTestPerScenario = newValue }
     }
 
     /// Whether the step definitions the runner suggests for undefined steps use regex literals, such as

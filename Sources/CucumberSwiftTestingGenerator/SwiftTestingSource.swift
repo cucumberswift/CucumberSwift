@@ -137,8 +137,9 @@ enum SwiftTestingSource {
                 steps: scenario.steps)
             let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
-                    @Test(\(displayName).enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) })
-                    func \(name)() async { await CucumberSwiftTesting.Cucumber.shared.run(\(constant)) }
+                    @Test(\(displayName).serialized, .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) },
+                          arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(\(constant)))
+                    func \(name)(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
             """
         }
         let arguments = examples.map { example in
@@ -147,8 +148,8 @@ enum SwiftTestingSource {
         }
         let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
         return """
-                @Test(\(displayName)arguments: await CucumberSwiftTesting.Cucumber.shared.examplesToRun(\(constant)))
-                func \(name)(_ example: CucumberSwiftTesting.GherkinExample) async { await CucumberSwiftTesting.Cucumber.shared.run(example.scenario) }
+                @Test(\(displayName).serialized, arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(\(constant)))
+                func \(name)(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
         """
     }
 
@@ -176,6 +177,7 @@ enum SwiftTestingSource {
         var arguments = [
             "keyword: [\(keywords.joined(separator: ", "))]",
             "keywordName: \(literal(step.keywordName))",
+            "keywordText: \(literal(step.keywordText))",
             "text: \(literal(step.text))",
             "line: \(step.line)",
             "column: \(step.column)"
