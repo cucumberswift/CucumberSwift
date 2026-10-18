@@ -3,6 +3,9 @@ tignore contributors: remember to update Global/Xcode.gitignore, Objective-C.git
 ## Build generated
 build/
 DerivedData/
+# Test result bundles, such as from xcodebuild -resultBundlePath. Attach them as CI artifacts or
+# read them locally; never commit them.
+*.xcresult
 
 ## Various settings
 *.pbxuser

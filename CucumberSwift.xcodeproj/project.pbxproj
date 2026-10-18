@@ -24,6 +24,7 @@
 		1A9BEB00D0199A934BBAFBDF /* TagTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7AC01561165E18CBD85F6 /* TagTests.swift */; };
 		1B592B8118B6F2FEBA993516 /* TestNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3D20EBD92B249FB1015BAC /* TestNames.swift */; };
 		1DFC89A88CA651D7722F1469 /* AsyncIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BFC4AC8518624BC6134E5E0 /* AsyncIsolationTests.swift */; };
+		2170BAC867E0E8E0FB99D25E /* ParallelTestingTests+WholeFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 982C6C2A82DBDBF10DC88672 /* ParallelTestingTests+WholeFeatures.swift */; };
 		22A8213B548DAA379C6C8732 /* CucumberExpressionStepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */; };
 		236EF96FE93AC5FBE917491D /* AsyncWaitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672CCFFB8D1BDC653FBDD1B2 /* AsyncWaitTests.swift */; };
 		24A75AEEBA738F6BE416FF5C /* CucumberStepTest.m in Sources */ = {isa = PBXBuildFile; fileRef = DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */; };
@@ -146,6 +147,7 @@
 		D9EFB2266A4CA52E1F763B65 /* AmbiguousStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B76CF44C2A8ACE0C03F295 /* AmbiguousStepTests.swift */; };
 		DB858CA7419399013562B297 /* Lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9429E744A8289D27041F659 /* Lexer.swift */; };
 		DC4169C60D2ACEE3CC643B43 /* StepNodeContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45F283022A47C730FD152D0A /* StepNodeContent.swift */; };
+		DE0ACFB7C587EA1FA65B9C9C /* ParallelTestingTests+WithoutTheSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922A3C52CEF65A5849153463 /* ParallelTestingTests+WithoutTheSetting.swift */; };
 		E00263D7C34A872002540F26 /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
 		E10546FDAB80CCB963406CA9 /* CucumberSwiftConsumerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 773F463B113B1BBB6A9F93F5 /* CucumberSwiftConsumerTests.swift */; };
 		E1E1A294B890F9C5FB25FDB9 /* DuplicateStepDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0C284D7333521C49F93910 /* DuplicateStepDefinition.swift */; };
@@ -330,11 +332,13 @@
 		8E9A5C50E6EFEF58ED875D57 /* Scenario.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scenario.swift; sourceTree = "<group>"; };
 		8F90CFE781710D2F441F1E96 /* DSLScenarioOutlineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLScenarioOutlineTests.swift; sourceTree = "<group>"; };
 		90D6CB95F24FF7AF1525EE7E /* CharacterExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterExtensions.swift; sourceTree = "<group>"; };
+		922A3C52CEF65A5849153463 /* ParallelTestingTests+WithoutTheSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ParallelTestingTests+WithoutTheSetting.swift"; sourceTree = "<group>"; };
 		932DC90167770A7459AAB029 /* ScenarioTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioTest.swift; sourceTree = "<group>"; };
 		94D690BBE97A1201015F066B /* CucumberSwiftDSLConsumerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberSwiftDSLConsumerTests.swift; sourceTree = "<group>"; };
 		9504EDF8F885BD114BB8C371 /* ReporterReportURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReporterReportURL.swift; sourceTree = "<group>"; };
 		96BBE62FF265DFC714FF9EA0 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		9829016F161840A41E6B2099 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		982C6C2A82DBDBF10DC88672 /* ParallelTestingTests+WholeFeatures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ParallelTestingTests+WholeFeatures.swift"; sourceTree = "<group>"; };
 		9857C6432AEBB50998D56A05 /* MightEqualOperator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MightEqualOperator.swift; sourceTree = "<group>"; };
 		98C7AC01561165E18CBD85F6 /* TagTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagTests.swift; sourceTree = "<group>"; };
 		9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelFeatureHooksTests.swift; sourceTree = "<group>"; };
@@ -794,6 +798,8 @@
 				086CE04A08240D7473E13F9E /* LockedTests.swift */,
 				9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */,
 				5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */,
+				982C6C2A82DBDBF10DC88672 /* ParallelTestingTests+WholeFeatures.swift */,
+				922A3C52CEF65A5849153463 /* ParallelTestingTests+WithoutTheSetting.swift */,
 				9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */,
 				3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */,
 				7C5C1AA95213B61845C3EFB5 /* ScenarioRunsTests.swift */,
@@ -1068,7 +1074,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\n\nif which swiftlint > /dev/null; then\n  swiftlint --config .swiftlint.yml\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin:$HOME/.local/bin\"\n\n# The SwiftLint that .mise.lint.toml pins, as CI's Workflow checks job runs it, once\n# `MISE_ENV=lint mise install` has installed it. Otherwise, whichever swiftlint is on the PATH.\n# An error from a version that isn't the pinned one can be a rule that version gets wrong\n# (Homebrew's 0.59.1 flags `count > 0` on an Int), so that run reports its errors as warnings\n# and can't fail the build. CI runs the pinned version and is the gate.\nswiftlint=\"\"\ndemote=\"\"\nif command -v mise > /dev/null; then\n  swiftlint=$(MISE_ENV=lint mise which swiftlint 2> /dev/null)\nfi\nif [ -z \"$swiftlint\" ] && command -v swiftlint > /dev/null; then\n  swiftlint=$(command -v swiftlint)\n  pinned=$(grep realm/SwiftLint .mise.lint.toml | cut -d '\"' -f 4)\n  if [ \"$(\"$swiftlint\" version)\" != \"$pinned\" ]; then\n    demote=1\n    echo \"warning: SwiftLint $(\"$swiftlint\" version) at $swiftlint isn't the $pinned that .mise.lint.toml pins, so its errors are warnings. Install the pin: MISE_ENV=lint mise install\"\n  fi\nfi\nif [ -z \"$swiftlint\" ]; then\n  echo \"warning: SwiftLint not installed. Install the version .mise.lint.toml pins with: MISE_ENV=lint mise install\"\nelif [ -n \"$demote\" ]; then\n  \"$swiftlint\" --config .swiftlint.yml | sed 's/: error: /: warning: /'\n  exit 0\nelse\n  echo \"SwiftLint $(\"$swiftlint\" version) at $swiftlint\"\n  \"$swiftlint\" --config .swiftlint.yml\nfi";
 		};
 		FEBAF56FE60331EE6355A7B1 /* Embed CucumberSwiftExpressions module */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1137,6 +1143,8 @@
 				A1F590874442D55A90B364C7 /* HookTests.swift in Sources */,
 				AEBB98859745A1B9AF5D30AD /* LockedTests.swift in Sources */,
 				8BC9768CA891E50D213628B9 /* ParallelFeatureHooksTests.swift in Sources */,
+				2170BAC867E0E8E0FB99D25E /* ParallelTestingTests+WholeFeatures.swift in Sources */,
+				DE0ACFB7C587EA1FA65B9C9C /* ParallelTestingTests+WithoutTheSetting.swift in Sources */,
 				ED73A523FA6CAFF7A6AF6898 /* ParallelTestingTests.swift in Sources */,
 				82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */,
 				EE45728A5308997E65DD4E20 /* RunWithLineNumberTests.swift in Sources */,
