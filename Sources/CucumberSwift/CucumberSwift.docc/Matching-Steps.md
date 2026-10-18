@@ -85,7 +85,20 @@ Steps still run one at a time, in the order the feature file declares them. The 
 
   XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
 - **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
-- **Running another step.** Put the code both step definitions need in a function, and call it from each, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A helper function can be `async`, so it works the same from synchronous and asynchronous steps.
+- **Running another step.** Put the code both step definitions need in a function, and call it from each, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A synchronous helper works from any step. An `async` helper needs `await`, so only an async step or hook can call it, and a step that calls one has to be async itself.
+
+  <!-- swift-example: steps -->
+  ```swift
+  func addCukes(_ count: Int) {
+      basket.add(count, to: "basket")
+  }
+  #Given("I have {int} cukes in my basket") { (count: Int) in
+      addCukes(count)
+  }
+  #When("I add {int} more cukes") { (count: Int) in
+      addCukes(count)
+  }
+  ```
 
   > Deprecation Warning: `ExecuteFirstStep(matching:)` is deprecated and will be removed in a future major version.
   >
