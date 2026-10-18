@@ -464,7 +464,9 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         var cukes = 0
     }
 
-    private final class Beach {}
+    private final class Beach {
+        let sand = true
+    }
 
     private func twoScenarios() -> [Scenario] {
         Cucumber.shared.features.removeAll()

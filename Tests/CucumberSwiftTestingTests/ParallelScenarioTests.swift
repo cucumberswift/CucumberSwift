@@ -216,7 +216,9 @@ extension CucumberTests {
     }
 
     @Test func differentTypesAreDifferentValuesAndAskingTwiceGivesTheSameOne() async {
-        final class Beach {}
+        final class Beach {
+            let sand = true
+        }
         var checked = false
         Given("a basket and a beach") { _, _ in
             let basket = Scenario.state(Basket.init)

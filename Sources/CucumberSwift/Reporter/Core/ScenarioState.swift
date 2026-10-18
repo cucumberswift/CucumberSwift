@@ -28,11 +28,12 @@ final class ScenarioState: @unchecked Sendable {
 
     /// Lets go of every value, once the scenario is over.
     func removeAll() {
+        var released = [ObjectIdentifier: AnyObject]()
         lock.lock()
-        let old = values
-        values = [:]
+        swap(&released, &values)
         lock.unlock()
-        withExtendedLifetime(old) {}
+        // The values go here, after the lock: letting go of one may run a deinit that asks for state.
+        released.removeAll()
     }
 
     private func existingValue(for key: ObjectIdentifier) -> AnyObject? {
