@@ -76,7 +76,7 @@ expect_all() {
 with_xcode() {
   if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
 }
-if [ -n "${FIXTURES:-}" ]; then
+if [ "${FIXTURES+x}" ]; then
   if [ -z "$(echo "$FIXTURES" | tr -d ', ')" ]; then
     echo "error: FIXTURES names no fixture"
     exit 1
