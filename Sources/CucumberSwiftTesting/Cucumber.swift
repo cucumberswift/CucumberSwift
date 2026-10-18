@@ -110,6 +110,11 @@ public final class Cucumber {
         (error as? any LocalizedError)?.errorDescription ?? String(describing: error)
     }
 
+    /// The scenario that a hook's argument belongs to: the scenario itself, or a step's. A feature hook has none.
+    private static func scenario(of argument: Any) -> Scenario? {
+        (argument as? Scenario) ?? (argument as? Step)?.scenario
+    }
+
     private init() {}
 
     func makeReporters() -> [CucumberTestObserver] {
@@ -320,11 +325,6 @@ public final class Cucumber {
             reporters.forEach { $0.didStart(feature: run.feature, at: Date()) }
         }
         return run
-    }
-
-    /// The scenario that a hook's argument belongs to: the scenario itself, or a step's. A feature hook has none.
-    private static func scenario(of argument: Any) -> Scenario? {
-        (argument as? Scenario) ?? (argument as? Step)?.scenario
     }
 
     private func finish(_ run: FeatureRun) async {
