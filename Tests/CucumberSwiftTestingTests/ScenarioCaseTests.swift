@@ -130,8 +130,9 @@ extension CucumberTests {
         Given("a basket") { [self] _, _ in ran.append("basket") }
         And("a cuke.") { [self] _, _ in ran.append("cuke") }
         Then("the total is 99") { [self] _, _ in ran.append("total") }
-        try await Cucumber.shared.run(Cucumber.shared.casesToRun(threeSteps)[1])
-        await Cucumber.shared.endFeature(file: "/Features/Test.feature", title: "F", line: 1)
+        let gherkinScenario = threeSteps
+        try await Cucumber.shared.run(Cucumber.shared.casesToRun(gherkinScenario)[1])
+        await Cucumber.shared.endFeature(file: gherkinScenario.file, title: gherkinScenario.featureTitle, line: gherkinScenario.featureLine)
         #expect(ran == ["basket", "cuke", "after scenario", "after feature"])
     }
 }
