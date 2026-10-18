@@ -140,6 +140,15 @@ extension Cucumber {
         set { FeatureFlags.storage["generateRegexLiterals"] = newValue }
     }
 
+    /// Whether the step definitions CucumberSwift generates for undefined steps are step definition macros,
+    /// such as `#Then("I see {int} messages") { (int: Int) in`, rather than functions, such as
+    /// `Then("I see {int} messages") { match, _ in`. By default they are macros when the test target links
+    /// the `CucumberSwiftMacros` product with the `Macros` package trait on (see
+    /// <doc:Using-Step-Definition-Macros>), and functions otherwise. Set this to `false`, or the environment
+    /// variable `CUCUMBER_GENERATE_MACROS` to `NO`, for functions anyway, or to `true` or `YES` for macros.
+    /// With ``generateRegexLiterals`` the macros take regex literals. This variable, when set, wins over the
+    /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`, before CucumberSwift runs
+    /// the tests.
     public static var generateMacros: Bool? {
         get { FeatureFlags.storage["generateMacros"] }
         set { FeatureFlags.storage["generateMacros"] = newValue }

@@ -214,7 +214,7 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 > Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 ## Step definitions for undefined steps
-For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target. Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
+For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target, in a step definition function as below, or in a macro if you use the step definition macros (see <doc:Matching-Steps#Step-definition-macros>). Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
 
 <!-- swift-example: steps -->
 ```swift
@@ -238,6 +238,20 @@ Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
 ```
 
 They are written as `#/…/#`, which compiles in any test target. Return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle` to get `/…/` instead; it has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target, which CucumberSwift can't read, so check it in your own code: see <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions>. Regex literals need iOS 16, macOS 13 or tvOS 16.
+
+### Step definition macros
+If your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), CucumberSwift suggests macros instead, as Convert to Gherkin Macros writes them:
+
+<!-- swift-example: steps -->
+```swift
+#Then("the display shows {string}") { (string: String) in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+```
+
+It suggests macros when the test target links `CucumberSwiftMacros`, or `CucumberSwiftTestingMacros` with the Swift Testing runner, built with the `Macros` trait, and functions otherwise, such as with Carthage. To choose for yourself, set `Cucumber.generateMacros` in `setupSteps()` to `false` for functions or `true` for macros, or set the environment variable `CUCUMBER_GENERATE_MACROS` to `NO` or `YES`. When both are set, the static variable wins. The Swift Testing runner reads the same two settings.
+
+The closure takes one typed argument for each parameter: `Int` for `{int}`, `Float` for `{float}` and `String` for `{string}`. A step with a data table or a doc string adds `step: Step` last, to read it. A step that starts with `^` gets a regular expression, such as `#Then("^\\^a caret$")`, because the macro checks the Cucumber expression when it compiles, and a Cucumber expression can't escape a `^`. With `generateRegexLiterals` on as well, the macros take regex literals in the style that `regexLiteralStyle` says, with a `Substring` for each capture group, such as `#Then(#/^the display shows \"(.*?)\"$/#) { (string: Substring) in`.
 
 ## When more than one step definition matches a step
 Each step should match exactly one step definition. A step that more than one step definition matches is *ambiguous*, as in other Cucumber implementations: CucumberSwift runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
