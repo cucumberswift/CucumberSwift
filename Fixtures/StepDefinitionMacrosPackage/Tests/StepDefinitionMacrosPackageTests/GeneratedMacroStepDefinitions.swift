@@ -178,3 +178,5 @@ final class SuggestedStepDefinitionTests: XCTestCase {
         XCTAssertTrue(suggestion().hasPrefix(#"Given("I have {int} cukes") { match, _ in"#), suggestion())
     }
 }
+
+// swiftlint:enable all
