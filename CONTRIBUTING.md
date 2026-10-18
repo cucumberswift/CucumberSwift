@@ -186,6 +186,12 @@ CI's `Bazel tests` jobs run the same against a `git archive` of the commit, whic
 mise run test-fixtures
 ```
 
+To run some of them, list their folder names in `FIXTURES`, separated by commas. A name that isn't a fixture fails the task:
+
+```bash
+FIXTURES=SwiftTestingPackage,BrokenFeaturesPackage mise run test-fixtures
+```
+
 CI runs them in the `Fixture tests` job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
 
 `Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with the following, which builds the framework with Carthage first; CI runs it in the `Carthage tests` jobs:
