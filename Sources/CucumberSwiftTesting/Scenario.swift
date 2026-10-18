@@ -42,7 +42,7 @@ public final class Scenario {
     public private(set) var steps = [Step]()
     public let feature: Feature?
     public let location: Location
-    let state = ScenarioState()
+    let internalState = ScenarioState()
 
     /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
     ///   that observers see one object for a feature.
@@ -79,6 +79,6 @@ public final class Scenario {
             Issue.record("Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.")
             return make()
         }
-        return scenario.state.value(make)
+        return scenario.internalState.value(make)
     }
 }

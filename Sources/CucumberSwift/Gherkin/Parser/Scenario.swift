@@ -17,7 +17,7 @@ public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var location: Lexer.Position
     public private(set)  var endLocation: Lexer.Position
     internal var startDate = Date()
-    let state = ScenarioState()
+    let internalState = ScenarioState()
 
     init(with node: AST.ScenarioNode, tags: [String], stepNodes: [AST.StepNode]) {
         location = node.tokens.first?.position ?? .start
@@ -81,7 +81,7 @@ public class Scenario: NSObject, Taggable, Positionable {
             XCTFail("Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.")
             return make()
         }
-        return scenario.state.value(make)
+        return scenario.internalState.value(make)
     }
 
     public func containsTags(_ tags: [String]) -> Bool {

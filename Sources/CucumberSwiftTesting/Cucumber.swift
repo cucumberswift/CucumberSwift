@@ -156,7 +156,7 @@ public final class Cucumber {
         if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record, reversed: reversesAfterHooks) != nil {
             isFailed = true
         }
-        scenario.state.removeAll()
+        scenario.internalState.removeAll()
         // A failed `#expect` in a hook, which Swift Testing 6.2's issue handling reports to the record.
         isFailed = isFailed || !record.messages.isEmpty
         if isFailed { featureRun.isFailed = true }
