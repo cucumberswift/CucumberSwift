@@ -185,6 +185,12 @@ enum CucumberSettings {
         set { storage.setFlag("generateMacros", newValue) }
     }
 
+    /// Whether the test target links `CucumberSwiftTestingMacros` built with the `Macros` trait, which
+    /// declares this class.
+    static var linksMacros: Bool {
+        NSClassFromString("CucumberSwiftTestingMacrosMarker") != nil
+    }
+
     /// Whether the step definitions the runner suggests use regex literals: the static variable, then
     /// `CUCUMBER_GENERATE_REGEX_LITERALS`, then no. The value is read as CucumberSwift's `FeatureFlags` read it: see `FeatureFlagValue`.
     static func generatesRegexLiterals(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
@@ -196,12 +202,6 @@ enum CucumberSettings {
     /// target links the macros.
     static func generatesMacros(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         staticGenerateMacros ?? FeatureFlagValue.bool(environment["CUCUMBER_GENERATE_MACROS"]) ?? linksMacros
-    }
-
-    /// Whether the test target links `CucumberSwiftTestingMacros` built with the `Macros` trait, which
-    /// declares this class.
-    static var linksMacros: Bool {
-        NSClassFromString("CucumberSwiftTestingMacrosMarker") != nil
     }
 
     /// Whether generated tests are named with the Gherkin text as written: the static variable, then
