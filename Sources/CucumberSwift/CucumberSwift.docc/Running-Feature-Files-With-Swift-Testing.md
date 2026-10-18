@@ -257,6 +257,7 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 - A step that no step definition matches fails on its line in the feature file, and the message includes a step definition to paste into `setupSteps()`.
 - A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
 - A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
+- A `wait(for:timeout:)` whose timeout passes first, or that sees an inverted expectation fulfilled, fails on the step's line in the feature file with XCTest's message for that result, as with CucumberSwift, in Swift 6.1 too. The step runs to its end, and the scenario's later steps don't run. To wait without holding the main actor, write `await wait(for:timeout:)`.
 
 When a step has no step definition, has more than one, or its step definition or a step hook throws, the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 
