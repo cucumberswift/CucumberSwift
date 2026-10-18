@@ -11,6 +11,14 @@ import XCTest
 @testable import CucumberSwift
 
 class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
+    private final class Basket {
+        var cukes = 0
+    }
+
+    private final class Beach {
+        let sand = true
+    }
+
     override func setUpWithError() throws {
         Cucumber.shared.reset()
     }
@@ -460,14 +468,6 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
 
     // MARK: A scenario's own state
 
-    private final class Basket {
-        var cukes = 0
-    }
-
-    private final class Beach {
-        let sand = true
-    }
-
     private func twoScenarios() -> [Scenario] {
         Cucumber.shared.features.removeAll()
         Cucumber.shared.parseIntoFeatures("""
@@ -505,14 +505,39 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         let scenario = try XCTUnwrap(twoScenarios().first)
         Cucumber.shared.currentStep = scenario.steps[0]
         weak var basket: Basket? = Scenario.state(Basket.init)
+        let basketID = basket.map(ObjectIdentifier.init)
         var hadStateInHook = false
-        AfterScenario { _ in hadStateInHook = basket != nil }
+        var hookSawTheSameValue = false
+        AfterScenario { _ in
+            // Asked again from the hook, as a step's code would: the same value, still alive.
+            let inHook = Scenario.state(Basket.init)
+            hookSawTheSameValue = ObjectIdentifier(inHook) == basketID
+            hadStateInHook = basket != nil
+        }
         XCTAssertNotNil(basket)
 
         Cucumber.shared.setupAfterHooksFor(try XCTUnwrap(scenario.steps.last))
 
         XCTAssertTrue(hadStateInHook, "The AfterScenario hooks should still see the scenario's state")
+        XCTAssertTrue(hookSawTheSameValue, "Scenario.state(_:) in an AfterScenario hook should give the same value")
         XCTAssertNil(basket, "The scenario's state should be released once its AfterScenario hooks ran")
+    }
+
+    func testReleasingAValueThatAsksForStateAgainDoesNotDeadlock() {
+        final class Greedy {
+            let state: ScenarioState
+            init(_ state: ScenarioState) { self.state = state }
+            // Runs while the state lets go of its values: the lock must not be held then.
+            deinit { _ = state.value(Basket.init) }
+        }
+        let state = ScenarioState()
+        _ = state.value { Greedy(state) }
+        let finished = DispatchSemaphore(value: 0)
+        Thread.detachNewThread {
+            state.removeAll()
+            finished.signal()
+        }
+        XCTAssertEqual(finished.wait(timeout: .now() + 5), .success, "removeAll() should not hold the lock while values are released")
     }
 
     func testAskingForStateOutsideAScenarioFailsAndReturnsAThrowawayValue() {

@@ -80,7 +80,7 @@ env:
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
   # run today (544 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 637
+  MIN_TESTS: 638
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs

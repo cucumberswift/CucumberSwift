@@ -174,6 +174,7 @@ final class CucumberTests {
         return false
     }, .reportedInFeatureFiles)
     func failuresInOverlappingScenariosAreReportedAtTheirOwnSteps() async {
+        OverlapRecord.shared.removeAll()
         var started = [String]()
         var failed = [String]()
         BeforeScenario { [self] scenario in ran.append("before \(scenario.title)") }
@@ -272,6 +273,12 @@ final class OverlapRecord: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         recorded.append(value)
+    }
+
+    func removeAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.removeAll()
     }
 }
 
