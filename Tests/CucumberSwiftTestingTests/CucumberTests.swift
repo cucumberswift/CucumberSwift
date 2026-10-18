@@ -12,8 +12,12 @@ enum ImplementationSettings {
     static var asyncStepTimeout: TimeInterval = 60
     static var regexLiteralStyle = RegexLiteralStyle.extendedDelimiter
 
+    /// What `setupSteps()` sets `Cucumber.parallelTesting` to, if anything.
+    static var parallelTesting: Bool?
+
     static func reset() {
         verbose = false
+        parallelTesting = nil
         shouldRunWith = { _, _ in true }
         continueTestingAfterFailure = true
         reverseOrderForAfterHooks = false
@@ -157,6 +161,63 @@ final class CucumberTests {
     }
     #endif
 
+    #if compiler(>=6.2)
+    /// Two scenarios that run at the same time, each failing an expectation after the other's step has
+    /// started. Each failure is reported at its own scenario's step, with that step as it ran.
+    @Test(.filterIssues { issue in
+        let comments = issue.comments.map(\.rawValue)
+        let expected = [("First.feature", 3, "Given the first fails"), ("Second.feature", 13, "Given the second fails")]
+        guard let match = expected.first(where: { issue.sourceLocation?.fileName == $0.0 && issue.sourceLocation?.line == $0.1 }),
+              comments.contains(match.2),
+              comments.contains(where: { $0.hasPrefix("Recorded at CucumberTests.swift:") }) else { return true }
+        OverlapRecord.shared.append(match.2)
+        return false
+    }, .reportedInFeatureFiles)
+    func failuresInOverlappingScenariosAreReportedAtTheirOwnSteps() async {
+        OverlapRecord.shared.removeAll()
+        var started = [String]()
+        var failed = [String]()
+        BeforeScenario { [self] scenario in ran.append("before \(scenario.title)") }
+        AfterScenario { [self] scenario in ran.append("after \(scenario.title)") }
+        Given("the {word} fails") { [self] match, step in
+            let name = try match.first(\.word)
+            let other = name == "first" ? "second" : "first"
+            started.append(name)
+            ran.append("\(step.scenario?.title ?? "") step")
+            // The first waits until the second's step has started, and the second until the first has
+            // failed, so each fails while the other's step is the one that started last.
+            await Self.yield(until: { name == "first" ? started.contains(other) : failed.contains(other) }, "the other scenario")
+            #expect(Bool(false), "deliberately")
+            failed.append(name)
+        }
+        Then("it stops") { [self] _, step in ran.append("\(step.scenario?.title ?? "") then") }
+
+        func scenario(_ title: String, file: String, line: Int) -> GherkinScenario {
+            GherkinScenario(
+                featureTitle: "F",
+                featureTags: [],
+                title: title,
+                tags: [],
+                file: "/Features/\(file).feature",
+                line: line - 1,
+                column: 3,
+                steps: [step(.given, "the \(title) fails", line: line), step(.then, "it stops", line: line + 1)])
+        }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await Cucumber.shared.run(scenario("first", file: "First", line: 3)) }
+            group.addTask { await Cucumber.shared.run(scenario("second", file: "Second", line: 13)) }
+        }
+        #expect(OverlapRecord.shared.values.sorted() == ["Given the first fails", "Given the second fails"])
+        #expect(failed == ["first", "second"])
+        // Each scenario's steps run in order, between its own hooks, though the scenarios overlap. A failed
+        // `#expect` skips the later steps, as after a failed XCTest assertion.
+        for title in ["first", "second"] {
+            #expect(ran.filter { $0.hasSuffix(" \(title)") || $0.hasPrefix("\(title) ") }
+                == ["before \(title)", "\(title) step", "after \(title)"])
+        }
+    }
+    #endif
+
     @Test func aRegexLiteralMatchesAStepsWholeText() async {
         guard #available(macOS 13.0, *) else { return }
         Given(#/I have (\d+) cukes/#) { [self] match, _ in ran.append(String(match.1)) }
@@ -196,6 +257,31 @@ final class CucumberTests {
     }
 }
 
+/// The failures `failuresInOverlappingScenariosAreReportedAtTheirOwnSteps` saw where it expected them.
+final class OverlapRecord: @unchecked Sendable {
+    static let shared = OverlapRecord()
+    private let lock = NSLock()
+    private var recorded = [String]()
+
+    var values: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorded
+    }
+
+    func append(_ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.append(value)
+    }
+
+    func removeAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        recorded.removeAll()
+    }
+}
+
 // Within this package, the conformance needs no `@retroactive`.
 extension Cucumber: StepImplementation {
     public var verbose: Bool { ImplementationSettings.verbose }
@@ -205,5 +291,7 @@ extension Cucumber: StepImplementation {
     public var regexLiteralStyle: RegexLiteralStyle { ImplementationSettings.regexLiteralStyle }
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool { ImplementationSettings.shouldRunWith(scenario, tags) }
 
-    public func setupSteps() {}
+    public func setupSteps() {
+        if let parallelTesting = ImplementationSettings.parallelTesting { Cucumber.parallelTesting = parallelTesting }
+    }
 }

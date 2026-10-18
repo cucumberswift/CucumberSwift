@@ -195,6 +195,7 @@ import XCTest
            let lastScenarioStep = scenario.steps.last,
            lastScenarioStep === step {
             Cucumber.shared.afterScenarioHooks.forEach { $0.hook(scenario) }
+            scenario.internalState.removeAll()
             let result: Reporter.Result = (scenario.steps.contains { $0.result == .failed || $0.result == .ambiguous }) ? .failed : .passed
             reporters.forEach { $0.didFinish(scenario: scenario,
                                              result: result,

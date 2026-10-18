@@ -53,7 +53,7 @@ public final class Cucumber {
     var afterStepHooks = [Hook<Step>]()
     var beforeFeatureHooks = [Hook<Feature>]()
     var afterFeatureHooks = [Hook<Feature>]()
-    private var isSetUp = false
+    var isSetUp = false
     private var hasReportedMissingImplementation = false
     /// The process's environment, for the settings that have an environment variable. Tests replace it.
     var environment = ProcessInfo.processInfo.environment
@@ -62,6 +62,7 @@ public final class Cucumber {
     /// The feature that started last and hasn't finished, for runs that don't say where a feature ends.
     private var openFeature: FeatureRun?
     private var isSuiteStarted = false
+    var hasReportedParallelTestingTooLate = false
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
     var approvedScenarios = Set<String>()
 
@@ -121,6 +122,7 @@ public final class Cucumber {
     /// and each of its steps as they start and finish.
     public func run(_ gherkinScenario: GherkinScenario) async {
         loadStepDefinitions()
+        reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
         await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await perform(gherkinScenario) }
     }
@@ -154,7 +156,7 @@ public final class Cucumber {
         if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: record, reversed: reversesAfterHooks) != nil {
             isFailed = true
         }
-        RunningLocation.shared.current = nil
+        scenario.internalState.removeAll()
         // A failed `#expect` in a hook, which Swift Testing 6.2's issue handling reports to the record.
         isFailed = isFailed || !record.messages.isEmpty
         if isFailed { featureRun.isFailed = true }
@@ -211,8 +213,10 @@ public final class Cucumber {
         featureRuns[key] = run
         guard run.startDate == nil else { return run }
         // Scenarios run without the generated tests' traits have nothing to say where a feature ends: it
-        // ends where the next one starts.
-        let open = openFeature
+        // ends where the next one starts. With them, the suite has started and each feature ends after its
+        // last scenario, and ending a feature when another starts would cut short one whose scenarios are
+        // still running, since features run at the same time.
+        let open = isSuiteStarted ? nil : openFeature
         openFeature = run
         let startDate = Date()
         run.startDate = startDate
@@ -230,6 +234,11 @@ public final class Cucumber {
         return run
     }
 
+    /// The scenario that a hook's argument belongs to: the scenario itself, or a step's. A feature hook has none.
+    private static func scenario(of argument: Any) -> Scenario? {
+        (argument as? Scenario) ?? (argument as? Step)?.scenario
+    }
+
     private func finish(_ run: FeatureRun) async {
         guard !run.isFinished, let startDate = run.startDate else { return }
         run.isFinished = true
@@ -241,7 +250,6 @@ public final class Cucumber {
             || !record.messages.isEmpty {
             run.isFailed = true
         }
-        RunningLocation.shared.current = nil
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(feature: run.feature, result: run.isFailed ? .failed : .passed, duration: duration) }
     }
@@ -251,6 +259,25 @@ public final class Cucumber {
         guard !isSetUp else { return }
         isSetUp = true
         (self as Any as? StepImplementation)?.setupSteps()
+    }
+
+    /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
+    /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
+    /// in time, the scenarios run one at a time and this says so once, without failing the run.
+    private func reportParallelTestingSetTooLate(at location: SourceLocation) {
+        guard !hasReportedParallelTestingTooLate, CucumberSettings.staticParallelTesting == true,
+              CucumberSettings.isSuiteSerialized else { return }
+        hasReportedParallelTestingTooLate = true
+        let message = """
+            Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decided that before \
+            setupSteps() ran. Set the environment variable CUCUMBER_PARALLEL_TESTING to YES in your scheme, or on the \
+            command line, or define CUCUMBER_PARALLEL_TESTING as a compilation condition in the test target.
+            """
+        #if compiler(>=6.3)
+        Issue.record(Comment(rawValue: message), severity: .warning, sourceLocation: location)
+        #else
+        FileHandle.standardError.write(Data((message + "\n").utf8))
+        #endif
     }
 
     /// Without step definitions, fails at the first scenario in its feature file.
@@ -295,9 +322,10 @@ public final class Cucumber {
         // skips the step itself.
         var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: beforeRecord)
         if failure == nil {
-            RunningLocation.shared.current = .init(location: location, step: ran, record: record)
             do {
-                try await runWithTimeout(record: record) { try await match.body(step) }
+                try await RunningLocation.$current.withValue(.init(location: location, step: ran, record: record, scenario: step.scenario)) {
+                    try await runWithTimeout(record: record) { try await match.body(step) }
+                }
             } catch {
                 Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
                 failure = Self.describe(error)
@@ -331,9 +359,10 @@ public final class Cucumber {
     ) async -> String? {
         var failure: String?
         for hook in hooks.inPriorityOrder(reversed: reversed) {
-            RunningLocation.shared.current = .init(location: Self.sourceLocation(file, location), step: step, record: record)
             do {
-                try await runWithTimeout(record: record) { try await hook.body(argument) }
+                try await RunningLocation.$current.withValue(.init(location: Self.sourceLocation(file, location), step: step, record: record, scenario: Self.scenario(of: argument))) {
+                    try await runWithTimeout(record: record) { try await hook.body(argument) }
+                }
             } catch {
                 Issue.record(error, sourceLocation: hook.sourceLocation)
                 failure = failure ?? Self.describe(error)
