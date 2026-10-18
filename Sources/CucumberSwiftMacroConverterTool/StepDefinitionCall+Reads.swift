@@ -70,22 +70,22 @@ extension StepDefinitionCall {
         for item in closure.statements {
             guard let source = Self.read(item, match: match.name) else { break }
             let (name, type, parameter, index) = (source.name, source.type, source.parameter, source.index)
-            let count = countByParameter[parameter] ?? 0
-            guard count > 0 else {
+            let patternCount = countByParameter[parameter] ?? 0
+            guard patternCount > 0 else {
                 throw Unconvertible(reason: "it reads {\(parameter)}, which its pattern doesn't have")
             }
             let occurrence: Int
             if let index {
-                guard count > 1 else {
+                guard patternCount > 1 else {
                     throw Unconvertible(reason: "it reads {\(parameter)} as \(match.name)[\\.\(parameter), index: \(index)], "
                         + "and the macro reads a parameter type the pattern has once as \(match.name).first(\\.\(parameter))")
                 }
-                guard index < count else {
-                    throw Unconvertible(reason: "it reads {\(parameter)} at index \(index), and its pattern has \(count)")
+                guard index < patternCount else {
+                    throw Unconvertible(reason: "it reads {\(parameter)} at index \(index), and its pattern has \(patternCount)")
                 }
                 occurrence = index
             } else {
-                guard count == 1 else {
+                guard patternCount == 1 else {
                     throw Unconvertible(reason: "it reads {\(parameter)} with first(\\.\(parameter)), and the macro reads a parameter type "
                         + "the pattern has more than once by position, as \(match.name)[\\.\(parameter), index: 0]")
                 }

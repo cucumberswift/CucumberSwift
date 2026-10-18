@@ -14,17 +14,17 @@ extension StepDefinitionCall {
         Array(trivia.pieces.reversed().prefix { !$0.isNewline }.reversed().filter { $0.isSpaceOrTab })
     }
 
-    func rewritten(_ closure: ClosureExprSyntax, parameters: [String], droppingReads count: Int) throws -> ClosureExprSyntax {
+    func rewritten(_ closure: ClosureExprSyntax, parameters: [String], droppingReads readCount: Int) throws -> ClosureExprSyntax {
         var closure = closure
         try replaceParameters(of: &closure, with: parameters)
-        guard count > 0 else { return closure }
+        guard readCount > 0 else { return closure }
 
-        let removed = closure.statements.prefix(count)
+        let removed = closure.statements.prefix(readCount)
         let comments = removed.flatMap { item in
             item.tokens(viewMode: .sourceAccurate).flatMap { ($0.leadingTrivia + $0.trailingTrivia).pieces.filter(\.isComment) }
         }
         let indentation = Self.indentation(of: removed.first?.leadingTrivia ?? [])
-        var kept = Array(closure.statements.dropFirst(count))
+        var kept = Array(closure.statements.dropFirst(readCount))
         // Each comment on a line of its own, where the reads were.
         let carried = comments.flatMap { [TriviaPiece.newlines(1)] + indentation + [$0] }
         if var first = kept.first {
