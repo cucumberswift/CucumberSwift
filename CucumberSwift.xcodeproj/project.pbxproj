@@ -89,6 +89,7 @@
 		7A8947F876323F92020B9311 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DC264A5553551E1D8FBB53B /* XCTest.framework */; };
 		7BF61FF266DC5416E9191807 /* ItemCountWait.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CEE856EF1D2E84192E70F3 /* ItemCountWait.swift */; };
 		7CE534F756C528287DA119F7 /* StepBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEA7D8F25DD9C78B1F89FE0 /* StepBuilder.swift */; };
+		7DC7A14420D12A4C297CCDDF /* WaitFailures.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC620A0BDB9A5BF397977D3D /* WaitFailures.swift */; };
 		821A0D266658C11825710BDC /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90EB9C3F250AE6A89F8A5DF /* Position.swift */; };
 		82441236BA3F493DD3D9DF98 /* ReadableTestNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */; };
 		8516266936C3D4A5F25EEBD1 /* WaitUntil.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57AB3A7392FB1651B0C69F5F /* WaitUntil.swift */; };
@@ -397,6 +398,7 @@
 		F6649D7E0697DDC105796B27 /* VerboseReporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerboseReporterTests.swift; sourceTree = "<group>"; };
 		F7186AE45E7F0E5C115CB318 /* CucumberTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTest.swift; sourceTree = "<group>"; };
 		F90EB9C3F250AE6A89F8A5DF /* Position.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Position.swift; sourceTree = "<group>"; };
+		FC620A0BDB9A5BF397977D3D /* WaitFailures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitFailures.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -531,6 +533,14 @@
 			path = CucumberTests;
 			sourceTree = "<group>";
 		};
+		4687BEBB656A97B019114C85 /* Waiting */ = {
+			isa = PBXGroup;
+			children = (
+				FC620A0BDB9A5BF397977D3D /* WaitFailures.swift */,
+			);
+			path = Waiting;
+			sourceTree = "<group>";
+		};
 		49A13E1C851EDABA073CC617 /* CucumberSwift */ = {
 			isa = PBXGroup;
 			children = (
@@ -542,6 +552,7 @@
 				D0E76326763DCBAADA919A57 /* Runner */,
 				0511C8BC58A41837734E466C /* StubGeneration */,
 				1AF046F672F576E285AA4E58 /* TestNaming */,
+				4687BEBB656A97B019114C85 /* Waiting */,
 				6AC3A0FB7924BF40DD41AA7F /* XCTestCaseGenerator */,
 				7E6A4ED0E3F31B73FC4A0EEF /* CucumberSwift.docc */,
 				9829016F161840A41E6B2099 /* Info.plist */,
@@ -1242,6 +1253,7 @@
 				4A9CEDF1C16443FECD6DE693 /* StubGenerator+Features.swift in Sources */,
 				F3197F205CB9FBE1C79AD824 /* ClassNameString.swift in Sources */,
 				62C155CF9512C77E8676D2A6 /* TestingExtensions.swift in Sources */,
+				7DC7A14420D12A4C297CCDDF /* WaitFailures.swift in Sources */,
 				72D3B1246BD126EB9FD7E7A5 /* TestCaseGenerator.swift in Sources */,
 				3B1A19EE7BEDFA7C9B8FD8AC /* TestCaseMethod.swift in Sources */,
 				8FBB04607AD4F4BF3C6F955A /* CucumberScenarioTest.m in Sources */,

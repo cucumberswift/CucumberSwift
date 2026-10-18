@@ -9,46 +9,6 @@
 import Foundation
 import XCTest
 
-/// What a wait reported, with XCTest's messages: the format strings are those `XCTestCase` uses as a waiter's
-/// delegate. An `XCTestCase` delegate records the failure only once XCTest gets back to the test, which with
-/// Xcode 16 is after the step has ended, so this one keeps the messages, and they are recorded when the wait
-/// returns, while the step still runs. The waiter calls its delegate on any queue.
-final class WaitFailures: NSObject, XCTWaiterDelegate, @unchecked Sendable {
-    private let timeout: TimeInterval
-    private let lock = NSLock()
-    private var messages = [String]()
-
-    init(timeout: TimeInterval) {
-        self.timeout = timeout
-    }
-
-    private func add(_ message: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        messages.append(message)
-    }
-
-    func waiter(_: XCTWaiter, didTimeoutWithUnfulfilledExpectations unfulfilledExpectations: [XCTestExpectation]) {
-        let descriptions = unfulfilledExpectations.map(\.expectationDescription).joined(separator: "\", \"")
-        let format = "Asynchronous wait failed: Exceeded timeout of %g seconds, with unfulfilled expectations: \"%@\"."
-        add(String(format: format, timeout, descriptions))
-    }
-
-    func waiter(_: XCTWaiter, didFulfillInvertedExpectation expectation: XCTestExpectation) {
-        add(String(format: "Fulfilled inverted expectation \"%@\".", expectation.expectationDescription))
-    }
-
-    /// Fails the running test, which moves the failure to the step's line in its feature file.
-    func recordOnTheRunningTest() {
-        lock.lock()
-        let messages = messages
-        lock.unlock()
-        for message in messages {
-            Cucumber.shared.runningTestCase?.record(XCTIssue(type: .assertionFailure, compactDescription: message))
-        }
-    }
-}
-
 extension Cucumber {
     /// Create an unfulfilled expectation.
     ///
@@ -74,7 +34,7 @@ extension Cucumber {
     public func wait(for expectations: [XCTestExpectation], timeout seconds: TimeInterval) {
         let failures = WaitFailures(timeout: seconds)
         XCTWaiter(delegate: failures).wait(for: expectations, timeout: seconds)
-        failures.recordOnTheRunningTest()
+        recordWaitFailures(failures)
     }
 
     /// Wait for a list of expectations to be fulfilled, without holding the main actor.
@@ -90,6 +50,13 @@ extension Cucumber {
     public func wait(for expectations: [XCTestExpectation], timeout seconds: TimeInterval) async {
         let failures = WaitFailures(timeout: seconds)
         await XCTWaiter(delegate: failures).fulfillment(of: expectations, timeout: seconds)
-        failures.recordOnTheRunningTest()
+        recordWaitFailures(failures)
+    }
+
+    /// Fails the running test, which moves the failure to the step's line in its feature file.
+    private func recordWaitFailures(_ failures: WaitFailures) {
+        for message in failures.messages {
+            runningTestCase?.record(XCTIssue(type: .assertionFailure, compactDescription: message))
+        }
     }
 }
