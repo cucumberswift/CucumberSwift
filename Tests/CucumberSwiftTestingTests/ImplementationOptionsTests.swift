@@ -299,7 +299,7 @@ extension CucumberTests {
 
     // MARK: Suggested step definitions
 
-    func undefinedStep() -> GherkinStep {
+    func undefinedStep(macros: Bool = true) -> GherkinStep {
         GherkinStep(
             keyword: .given,
             keywordName: "Given",
@@ -308,14 +308,17 @@ extension CucumberTests {
             column: 5,
             suggestion: "EXPRESSION",
             regexLiteralSuggestion: "REGEX",
-            bareSlashRegexLiteralSuggestion: "BARE")
+            bareSlashRegexLiteralSuggestion: "BARE",
+            macroSuggestion: macros ? "MACRO EXPRESSION" : nil,
+            regexLiteralMacroSuggestion: macros ? "MACRO REGEX" : nil,
+            bareSlashRegexLiteralMacroSuggestion: macros ? "MACRO BARE" : nil)
     }
 
     /// The suggestion in the message of the issue an undefined step records.
-    func suggestionReported() async -> String {
+    func suggestionReported(macros: Bool = true) async -> String {
         var suggestion = ""
         await withKnownIssue {
-            await Cucumber.shared.run(scenario([undefinedStep()]))
+            await Cucumber.shared.run(scenario([undefinedStep(macros: macros)]))
         } matching: { issue in
             suggestion = issue.comments.last?.rawValue.components(separatedBy: "\n").last ?? ""
             return true
@@ -323,7 +326,9 @@ extension CucumberTests {
         return suggestion
     }
 
-    @Test func anUndefinedStepSuggestsACucumberExpressionByDefault() async {
+    // This target doesn't link CucumberSwiftTestingMacros, so the suggestion is a function.
+    @Test func anUndefinedStepSuggestsACucumberExpressionFunctionByDefault() async {
+        #expect(!CucumberSettings.linksMacros)
         #expect(await suggestionReported() == "EXPRESSION")
     }
 
@@ -356,6 +361,29 @@ extension CucumberTests {
         #expect(!CucumberSettings.generatesRegexLiterals(environment: environment))
         Cucumber.generateRegexLiterals = true
         #expect(CucumberSettings.generatesRegexLiterals(environment: [:]))
+    }
+
+    @Test func generateMacrosSuggestsAMacroInEachPatternStyle() async {
+        Cucumber.generateMacros = true
+        #expect(await suggestionReported() == "MACRO EXPRESSION")
+        Cucumber.generateRegexLiterals = true
+        #expect(await suggestionReported() == "MACRO REGEX")
+        ImplementationSettings.regexLiteralStyle = .bareSlash
+        #expect(await suggestionReported() == "MACRO BARE")
+    }
+
+    @Test func theEnvironmentVariableTurnsMacrosOnAndTheVariableWinsOverIt() async {
+        Cucumber.shared.environment = ["CUCUMBER_GENERATE_MACROS": "YES"]
+        #expect(await suggestionReported() == "MACRO EXPRESSION")
+        Cucumber.generateMacros = false
+        #expect(await suggestionReported() == "EXPRESSION")
+    }
+
+    @Test func aStepFromOlderGeneratedTestsWithoutMacroSuggestionsKeepsItsFunctions() async {
+        Cucumber.generateMacros = true
+        #expect(await suggestionReported(macros: false) == "EXPRESSION")
+        Cucumber.generateRegexLiterals = true
+        #expect(await suggestionReported(macros: false) == "REGEX")
     }
 
     @Test func aStepFromOlderGeneratedTestsWithoutRegexSuggestionsKeepsItsExpression() async {

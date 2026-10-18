@@ -15,6 +15,7 @@ class FeatureFlagsTests: XCTestCase {
         "CUCUMBER_READABLE_TEST_NAMES",
         "CUCUMBER_ONE_TEST_PER_SCENARIO",
         "CUCUMBER_GENERATE_REGEX_LITERALS",
+        "CUCUMBER_GENERATE_MACROS",
         "CUCUMBER_PARALLEL_TESTING",
         "CUCUMBER_PARALLEL_TESTING_UNIT",
         "CUCUMBER_REPORT_PATH"
@@ -24,6 +25,7 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.readableTestNames = nil
         Cucumber.oneTestPerScenario = nil
         Cucumber.generateRegexLiterals = nil
+        Cucumber.generateMacros = nil
         Cucumber.parallelTesting = nil
         Cucumber.parallelTestingUnit = nil
         Cucumber.reportPath = nil
@@ -45,6 +47,13 @@ class FeatureFlagsTests: XCTestCase {
 
     func testRegexLiteralStepDefinitionsAreOffByDefault() {
         XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
+    }
+
+    // This bundle doesn't link CucumberSwiftMacros. The StepDefinitionMacrosPackage fixture, which does,
+    // checks that macros are then the default.
+    func testMacroStepDefinitionsAreOffByDefaultWithoutTheMacrosLinked() {
+        XCTAssertFalse(FeatureFlags.linksMacros)
+        XCTAssertFalse(FeatureFlags.isGenerateMacros)
     }
 
     func testReportPathIsUnsetByDefault() {
@@ -77,11 +86,13 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.shared.environment["CUCUMBER_READABLE_TEST_NAMES"] = "NO"
         Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
         Cucumber.shared.environment["CUCUMBER_GENERATE_REGEX_LITERALS"] = "YES"
+        Cucumber.shared.environment["CUCUMBER_GENERATE_MACROS"] = "YES"
         Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING"] = "YES"
 
         XCTAssertFalse(FeatureFlags.isReadableTestNames)
         XCTAssertTrue(FeatureFlags.isOneTestPerScenario)
         XCTAssertTrue(FeatureFlags.isGenerateRegexLiterals)
+        XCTAssertTrue(FeatureFlags.isGenerateMacros)
         XCTAssertTrue(FeatureFlags.isParallelTesting)
     }
 
@@ -92,12 +103,15 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.readableTestNames = true
         Cucumber.oneTestPerScenario = false
         Cucumber.generateRegexLiterals = false
+        Cucumber.shared.environment["CUCUMBER_GENERATE_MACROS"] = "YES"
+        Cucumber.generateMacros = false
         Cucumber.shared.environment["CUCUMBER_PARALLEL_TESTING"] = "YES"
         Cucumber.parallelTesting = false
 
         XCTAssertTrue(FeatureFlags.isReadableTestNames)
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
         XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
+        XCTAssertFalse(FeatureFlags.isGenerateMacros)
         XCTAssertFalse(FeatureFlags.isParallelTesting)
     }
 
@@ -105,10 +119,12 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.shared.environment["CUCUMBER_READABLE_TEST_NAMES"] = "maybe"
         Cucumber.shared.environment["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "maybe"
         Cucumber.shared.environment["CUCUMBER_GENERATE_REGEX_LITERALS"] = "maybe"
+        Cucumber.shared.environment["CUCUMBER_GENERATE_MACROS"] = "maybe"
 
         XCTAssertTrue(FeatureFlags.isReadableTestNames)
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
         XCTAssertFalse(FeatureFlags.isGenerateRegexLiterals)
+        XCTAssertFalse(FeatureFlags.isGenerateMacros)
     }
 
     func testBooleanValuesInAnyCase() {

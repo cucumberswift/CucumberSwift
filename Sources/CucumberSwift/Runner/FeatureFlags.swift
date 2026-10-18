@@ -53,6 +53,18 @@ enum FeatureFlags {
         value(Cucumber.generateRegexLiterals, environmentVariable: "CUCUMBER_GENERATE_REGEX_LITERALS", default: false)
     }
 
+    /// Whether the step definitions generated for undefined steps are step definition macros rather than
+    /// step definition functions. By default, whether the test target links the macros.
+    static var isGenerateMacros: Bool {
+        value(Cucumber.generateMacros, environmentVariable: "CUCUMBER_GENERATE_MACROS", default: linksMacros)
+    }
+
+    /// Whether the test target links `CucumberSwiftMacros` built with the `Macros` trait, which declares
+    /// this class.
+    static var linksMacros: Bool {
+        NSClassFromString("CucumberSwiftMacrosMarker") != nil
+    }
+
     /// Whether Xcode's parallel testing may run each scenario in a worker of its own. Off by default.
     static var isParallelTesting: Bool {
         value(Cucumber.parallelTesting, environmentVariable: "CUCUMBER_PARALLEL_TESTING", default: false)
@@ -126,6 +138,11 @@ extension Cucumber {
     public static var generateRegexLiterals: Bool? {
         get { FeatureFlags.storage["generateRegexLiterals"] }
         set { FeatureFlags.storage["generateRegexLiterals"] = newValue }
+    }
+
+    public static var generateMacros: Bool? {
+        get { FeatureFlags.storage["generateMacros"] }
+        set { FeatureFlags.storage["generateMacros"] = newValue }
     }
 
     /// Experimental: whether Xcode's parallel testing ("Execute in parallel") may spread the scenarios

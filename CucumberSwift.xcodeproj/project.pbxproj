@@ -146,6 +146,7 @@
 		D9EFB2266A4CA52E1F763B65 /* AmbiguousStepTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B76CF44C2A8ACE0C03F295 /* AmbiguousStepTests.swift */; };
 		DB858CA7419399013562B297 /* Lexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9429E744A8289D27041F659 /* Lexer.swift */; };
 		DC4169C60D2ACEE3CC643B43 /* StepNodeContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45F283022A47C730FD152D0A /* StepNodeContent.swift */; };
+		DEAC98386542689D730631D9 /* MacroStepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B86EEDD33346C1DD6D2D74B /* MacroStepGenerationTests.swift */; };
 		E00263D7C34A872002540F26 /* CucumberSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5678F78BBF5D312EE942F07 /* CucumberSwift.framework */; };
 		E10546FDAB80CCB963406CA9 /* CucumberSwiftConsumerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 773F463B113B1BBB6A9F93F5 /* CucumberSwiftConsumerTests.swift */; };
 		E1E1A294B890F9C5FB25FDB9 /* DuplicateStepDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0C284D7333521C49F93910 /* DuplicateStepDefinition.swift */; };
@@ -339,6 +340,7 @@
 		98C7AC01561165E18CBD85F6 /* TagTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagTests.swift; sourceTree = "<group>"; };
 		9993FC6A94EF941F085B48B1 /* ParallelFeatureHooksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelFeatureHooksTests.swift; sourceTree = "<group>"; };
 		9B330B9C8309E062DC5F80CC /* HookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookTests.swift; sourceTree = "<group>"; };
+		9B86EEDD33346C1DD6D2D74B /* MacroStepGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacroStepGenerationTests.swift; sourceTree = "<group>"; };
 		9BB5321E29869AEB96319604 /* StepImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepImplementation.swift; sourceTree = "<group>"; };
 		9CDEF4E3330B2BB484871533 /* CucumberSwift.xctestplan */ = {isa = PBXFileReference; path = CucumberSwift.xctestplan; sourceTree = "<group>"; };
 		9DA771B10F6E5F87D4FB3BF5 /* DocString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocString.swift; sourceTree = "<group>"; };
@@ -596,6 +598,7 @@
 				3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */,
 				2C6AD0750E2501E709CA8DD2 /* GeneratedStepDefinitions.swift */,
 				EB31CA8D0415641318CC4C20 /* GeneratedStepDefinitionTests.swift */,
+				9B86EEDD33346C1DD6D2D74B /* MacroStepGenerationTests.swift */,
 			);
 			path = StubGeneration;
 			sourceTree = "<group>";
@@ -1153,6 +1156,7 @@
 				22A8213B548DAA379C6C8732 /* CucumberExpressionStepGenerationTests.swift in Sources */,
 				64B9C1211D231BEA471125E9 /* GeneratedStepDefinitionTests.swift in Sources */,
 				17F19DEBC239F488DF36A1CD /* GeneratedStepDefinitions.swift in Sources */,
+				DEAC98386542689D730631D9 /* MacroStepGenerationTests.swift in Sources */,
 				8516266936C3D4A5F25EEBD1 /* WaitUntil.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
