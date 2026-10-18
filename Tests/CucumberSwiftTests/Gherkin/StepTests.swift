@@ -501,13 +501,18 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
     }
 
-    func testAScenarioLetsGoOfItsStateWhenItsStateIsCleared() throws {
+    func testAScenarioLetsGoOfItsStateOnlyAfterItsAfterScenarioHooksRan() throws {
         let scenario = try XCTUnwrap(twoScenarios().first)
         Cucumber.shared.currentStep = scenario.steps[0]
         weak var basket: Basket? = Scenario.state(Basket.init)
+        var hadStateInHook = false
+        AfterScenario { _ in hadStateInHook = basket != nil }
         XCTAssertNotNil(basket)
-        scenario.scenarioState.removeAll()
-        XCTAssertNil(basket)
+
+        Cucumber.shared.setupAfterHooksFor(try XCTUnwrap(scenario.steps.last))
+
+        XCTAssertTrue(hadStateInHook, "The AfterScenario hooks should still see the scenario's state")
+        XCTAssertNil(basket, "The scenario's state should be released once its AfterScenario hooks ran")
     }
 
     func testAskingForStateOutsideAScenarioFailsAndReturnsAThrowawayValue() {

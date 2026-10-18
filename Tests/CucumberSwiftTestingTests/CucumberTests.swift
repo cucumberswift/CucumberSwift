@@ -185,9 +185,7 @@ final class CucumberTests {
             ran.append("\(step.scenario?.title ?? "") step")
             // The first waits until the second's step has started, and the second until the first has
             // failed, so each fails while the other's step is the one that started last.
-            while name == "first" ? !started.contains(other) : !failed.contains(other) {
-                await Task.yield()
-            }
+            await Self.yield(until: { name == "first" ? started.contains(other) : failed.contains(other) }, "the other scenario")
             #expect(Bool(false), "deliberately")
             failed.append(name)
         }

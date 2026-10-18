@@ -31,7 +31,7 @@ extension CucumberTests {
             started.insert(name)
             // Waits until both scenarios have a step running, so that each attaches while the other's
             // step is the one that started last.
-            while started.count < 2 { await Task.yield() }
+            await Self.yield(until: { started.count == 2 }, "both scenarios to start")
             attach(Attachment(name, named: "\(name).txt")) { attachment, location in
                 recorded[Self.text(of: attachment)] = .some(location?.line)
             }

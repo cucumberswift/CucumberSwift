@@ -8,6 +8,19 @@ extension CucumberTests {
         var cukes = 0
     }
 
+    /// Lets the other scenarios run until `condition` holds, and fails the test, instead of hanging it, if
+    /// that takes more than five seconds: a scenario that never started would otherwise be waited for forever.
+    static func yield(until condition: () -> Bool, _ what: String) async {
+        let deadline = Date().addingTimeInterval(5)
+        while !condition() {
+            guard Date() < deadline else {
+                Issue.record("Timed out waiting for \(what).")
+                return
+            }
+            await Task.yield()
+        }
+    }
+
     #if compiler(>=6.2)
     /// Scenarios that fail at the same time, each while the other's step is the one that started last, are
     /// failed at their own steps in the report, with their own messages.
@@ -21,7 +34,7 @@ extension CucumberTests {
         // Each payment step waits until both have started, so that each fails while the other is running.
         func pay(_ name: String) async {
             paying.insert(name)
-            while paying.count < 2 { await Task.yield() }
+            await Self.yield(until: { paying.count == 2 }, "both scenarios to be paying")
             #expect(Bool(false), "the \(name) payment was refused")
         }
         Given("a basket") { _, _ in await Task.yield() }
@@ -185,7 +198,7 @@ extension CucumberTests {
             Scenario.state(Basket.init).cukes += name == "one" ? 1 : 2
             started.insert(name)
             // Waits until both scenarios have a step running, so that they overlap.
-            while started.count < 2 { await Task.yield() }
+            await Self.yield(until: { started.count == 2 }, "both scenarios to start")
         }
         Then("the basket is read for {word}") { match, _ in seen[try match.first(\.word)] = Scenario.state(Basket.init).cukes }
 
