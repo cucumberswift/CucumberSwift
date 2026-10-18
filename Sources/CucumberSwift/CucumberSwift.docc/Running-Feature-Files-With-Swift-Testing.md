@@ -99,16 +99,16 @@ A step definition can be synchronous or `async`, and it runs on the main actor. 
 `BeforeFeature` runs once, before the first scenario of a feature, and `AfterFeature` once, after its last. Each takes the `Feature`:
 
 ```swift
-import CucumberSwiftTesting
+import CucumberSwiftTestingMacros
 import Testing
 
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
-        BeforeFeature { feature in
+        #BeforeFeature { feature in
             // Once for "\(feature.title)", before its first scenario.
             Basket.shared.add(10)
         }
-        AfterFeature { _ in
+        #AfterFeature { _ in
             Basket.shared.empty()
         }
     }
@@ -124,12 +124,12 @@ As with CucumberSwift, `BeforeFeature` hooks run before the observers hear that 
 `Attach` adds an attachment, such as a log or a file, to the test that is running. Call it from any hook or step, as with CucumberSwift. It takes a Swift Testing `Attachment`, where CucumberSwift takes an `XCTAttachment`:
 
 ```swift
-import CucumberSwiftTesting
+import CucumberSwiftTestingMacros
 import Testing
 
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
-        Then("I save the basket") { _, _ in
+        #Then("I save the basket") {
             #if compiler(>=6.2)
             Attach(Attachment("\(Basket.shared.count) cukes", named: "basket.txt"))
             #endif
@@ -142,7 +142,7 @@ Xcode's test report shows the attachment under the scenario, and `swift test --a
 
 ### Without the macros
 
-Each macro expands to a step definition you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`:
+Each macro expands to a step definition you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`. The macros are the recommended style; this form is for when you can't use them:
 
 ```swift
 import CucumberSwiftTesting

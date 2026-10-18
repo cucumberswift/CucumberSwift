@@ -33,29 +33,178 @@ When you pass a string to ``Given``, ``When`` or ``Then``, CucumberSwift decides
 A step definition whose closure takes `[String]`, such as `{ matches, _ in … matches[1] … }`, uses the older regular expression API instead: its string is always a regular expression, and Xcode shows a deprecation warning.
 
 ### Upgrading to 6.0.0
-Before 6.0.0, a string that started with `^` or ended with `$` was read as a Cucumber expression, which treated `^` and `$` as literal characters. A step definition such as `Given("^the app is at the Main Menu$") { _, _ in }` therefore matched nothing, and its step was reported as unimplemented. From 6.0.0 it is a regular expression and matches as written.
+Before 6.0.0, a string that started with `^` or ended with `$` was read as a Cucumber expression, which treated `^` and `$` as literal characters. A step definition that anchored its pattern therefore matched nothing, and its step was reported as unimplemented. From 6.0.0 it is a regular expression and matches as written.
 
-Most step definitions need no change. Step definitions whose closure takes `[String]` are not affected at all: they already read the string as a regular expression. For the rest, check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`:
+Most step definitions need no change. Step definitions whose closure takes `[String]` are not affected at all: they already read the string as a regular expression. For the rest, check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`.
 
-- If it is a valid regular expression, it silently stops matching. `Given("I owe 5$")` no longer matches the step `I owe 5$`, because `$` now means "end of text".
-- If it is not a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
+#### Anchored patterns
+These step definitions all match the step `the app is at the Main Menu`. From 6.0.0 the second one, which the older versions read as a Cucumber expression and so never matched, is a regular expression and matches as written:
 
-To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. This works on every platform and deployment target:
-
+@TabNavigator {
+@Tab("Swift Package Manager") {
 <!-- swift-example: steps -->
 ```swift
-Given("^I owe 5\\$$") { _, _ in }   // matches the step "I owe 5$"
+// a Cucumber expression
+#Given("the app is at the Main Menu") { }
+
+// a regular expression in a string
+#Given("^the app is at the Main Menu$") { }
+
+// a regex literal, which compiles in any target
+#Given(#/^the app is at the Main Menu$/#) { }
 ```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+// a Cucumber expression
+Given("the app is at the Main Menu") { _, _ in }
+
+// a regular expression in a string
+Given("^the app is at the Main Menu$") { _, _ in }
+
+// a regex literal, which compiles in any target
+Given(#/^the app is at the Main Menu$/#) { _, _ in }
+```
+}
+}
+
+A regex literal without the `#` delimiters, `/^…$/`, matches the same step. It needs iOS 16, macOS 13 or tvOS 16 at run time, and your target must allow bare regex literals: the Swift 6 language mode does, as does the `BareSlashRegexLiterals` feature (see <doc:Matching-Steps#Matching-with-Regular-Expressions>):
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps bare-slash-regex -->
+```swift
+#Given(/^the app is at the Main Menu$/) { }
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps bare-slash-regex -->
+```swift
+Given(/^the app is at the Main Menu$/) { _, _ in }
+```
+}
+}
+
+#### A literal dollar sign or caret
+If a pattern ends with `$` or starts with `^` but you meant the character itself, the step definition changes meaning:
+
+- If it is a valid regular expression, it silently stops matching. `"I owe 5$"` no longer matches the step `I owe 5$`, because `$` now means "end of text":
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+// Before 6.0.0, this matched the step "I owe 5$".
+// From 6.0.0, it matches nothing.
+#Given("I owe 5$") { }
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+// Before 6.0.0, this matched the step "I owe 5$".
+// From 6.0.0, it matches nothing.
+Given("I owe 5$") { _, _ in }
+```
+}
+}
+
+- If it is not a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
+
+To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. These all match the step `I owe 5$`, and work on every platform and deployment target except where noted:
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+// a regular expression in a string
+#Given("^I owe 5\\$$") { }
+
+// a regex literal, which compiles in any target
+#Given(#/^I owe 5\$$/#) { }
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+// a regular expression in a string
+Given("^I owe 5\\$$") { _, _ in }
+
+// a regex literal, which compiles in any target
+Given(#/^I owe 5\$$/#) { _, _ in }
+```
+}
+}
+
+The bare form, `/^I owe 5\$$/`, needs iOS 16, macOS 13 or tvOS 16 and a target that allows bare regex literals, as above:
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps bare-slash-regex -->
+```swift
+#Given(/^I owe 5\$$/) { }
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps bare-slash-regex -->
+```swift
+Given(/^I owe 5\$$/) { _, _ in }
+```
+}
+}
+
+To read the amount instead of matching one price, capture it. A regular expression gives the closure text, which it converts itself: a `String` for a regular expression in a string, a `Substring` for a regex literal.
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+// a regular expression in a string
+#Given("^I owe (\\d+)\\$$") { (amount: String) in }
+
+// a regex literal
+#Given(#/^I owe (\d+)\$$/#) { (amount: Substring) in }
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+Given("^I owe (\\d+)\\$$") { match, _ in
+
+    // a regular expression in a string: text
+    let amount = match[\.anonymous, index: 0]
+}
+Given(#/^I owe (\d+)\$$/#) { match, _ in
+
+    // a regex literal: its output, typed
+    let (_, amount): (_, Substring) = match.output
+}
+```
+}
+}
 
 ## Async steps
 A step definition can be `async` and `throws`. Write `await` in its closure and CucumberSwift runs it as an async step:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#Given("the user has signed in") {
+    try await session.signIn(as: .testUser)
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 Given("the user has signed in") { _, _ in
     try await session.signIn(as: .testUser)
 }
 ```
+}
+}
 
 A closure without `await` is an ordinary synchronous step definition, exactly as before. This works with Cucumber expressions, string patterns and regex literals alike.
 
@@ -76,12 +225,14 @@ Steps still run one at a time, in the order the feature file declares them. The 
 
   <!-- swift-example: fragment: taps with XCUIElement.tap(), which a macOS build doesn't have -->
   ```swift
-  When("I add an item") { _, _ in
+  #When("I add an item") {
       try await cart.prepare()
       app.buttons["add"].tap()
       XCTAssert(app.staticTexts["Items: 1"].waitForExistence(timeout: 10))
   }
   ```
+
+  With Carthage, which can't deliver the macros, write it as `When("I add an item") { _, _ in … }` with the same body.
 
   XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
 - **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
@@ -127,7 +278,18 @@ Imagine the following step:
 Given there are 3 flights from lax.
 ```
 
-We could match it in CucumberSwift like this:
+We could match it in CucumberSwift like this. The macro's closure takes each parameter as an argument, already converted to its type. Written as a function, you read each one from `match`:
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#Given("there is/are/were {int} flight(s) from {airport}.") { (count: Int, airport: Airport) in
+    XCTAssertEqual(count, 3)
+    XCTAssertIdentical(airport, Airport.lax)
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 Given("there is/are/were {int} flight(s) from {airport}." as CucumberExpression) { match, _ in 
@@ -142,6 +304,8 @@ Given("there is/are/were {int} flight(s) from {airport}." as CucumberExpression)
     XCTAssertIdentical(try match.allParameters(\.airport).first, Airport.lax)
 }
 ```
+}
+}
 
 Notice that `{airport}` is a custom parameter. It's type-safe which is great, but how do we create our own custom parameters?
 
@@ -193,7 +357,7 @@ extension Match {
 ## Matching with Regular Expressions
 Regular expressions can match what a Cucumber expression can't, at the cost of readability and typed arguments (see <doc:Matching-Steps#Choose-a-pattern>). When you need one and your tests run on iOS 16, macOS 13 or tvOS 16 or later, prefer a regex literal to a regular expression in a string: the compiler checks it.
 
-Here's a trivial example:
+Here's a trivial example. A step definition macro takes the regex literal itself, so it can't take `ignoresCase()`; the function style is the one to use here, and the macros are the recommended style for step definitions that don't need it:
 <!-- swift-example: steps bare-slash-regex -->
 ```swift
 When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
@@ -244,12 +408,24 @@ Each step should match exactly one step definition. A step that more than one st
 
 A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step and any `And` or `But` step that follows one, and ``MatchAll`` fits every step. So:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#Given("some precondition") { }
+#When("some precondition") { }      // not ambiguous for "Given some precondition": When never fits a Given step
+#MatchAll("^some (.*)$") { (text: String) in }   // ambiguous with the Given above: both fit "Given some precondition"
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 Given("some precondition") { _, _ in }
 When("some precondition") { _, _ in }      // not ambiguous for "Given some precondition": When never fits a Given step
 MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: both fit "Given some precondition"
 ```
+}
+}
 
 Two step definitions with the *same* pattern are a mistake even when no step uses them, as in Cucumber for Java. The test run fails at the second one, and the failure names both, if their keywords can match the same steps: the same keyword, ``MatchAll`` with any keyword, or ``And`` or ``But`` with ``Given``, ``When`` or ``Then``. `Given("x")` and `When("x")` are not duplicates. Two patterns count as the same when they are the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, cannot be compared, so only the ambiguity check applies to them.
 
