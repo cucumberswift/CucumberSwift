@@ -12,6 +12,8 @@ class WaitTests: XCTestCase {
     private var capturing = false
     private var recordedIssues = [XCTIssue]()
     private var ranTheNextStep = false
+    /// How many issues the step had recorded when its wait returned: the wait must fail the step there, not later.
+    private var issuesWhenTheWaitReturned: Int?
 
     private static func resetCucumber() {
         Cucumber.shared.reset()
@@ -74,7 +76,12 @@ class WaitTests: XCTestCase {
         _ = CucumberTest.run(scenario, on: self)
     }
 
+    private func noteTheIssuesWhenTheWaitReturns() {
+        issuesWhenTheWaitReturned = recordedIssues.count
+    }
+
     private func assertTheStepFailed(with message: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(issuesWhenTheWaitReturned, 1, "The wait didn't fail the step before it returned", file: file, line: line)
         XCTAssertEqual(recordedIssues.map(\.compactDescription), [message], file: file, line: line)
         XCTAssertFalse(ranTheNextStep, "The step after the failed wait ran", file: file, line: line)
     }
@@ -86,14 +93,20 @@ class WaitTests: XCTestCase {
 
     func testAWaitThatTimesOutFailsTheStep() throws {
         try runTheScenario {
-            Given("a wait") { _, _ in Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1) }
+            Given("a wait") { _, _ in
+                Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1)
+                self.noteTheIssuesWhenTheWaitReturns()
+            }
         }
         assertTheStepFailed(with: Self.timedOutMessage)
     }
 
     func testAWaitForAFulfilledInvertedExpectationFailsTheStep() throws {
         try runTheScenario {
-            Given("a wait") { _, _ in Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1) }
+            Given("a wait") { _, _ in
+                Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1)
+                self.noteTheIssuesWhenTheWaitReturns()
+            }
         }
         assertTheStepFailed(with: Self.invertedMessage)
     }
@@ -110,14 +123,20 @@ class WaitTests: XCTestCase {
 
     func testAnAwaitedWaitThatTimesOutFailsTheStep() throws {
         try runTheScenario {
-            Given("a wait") { _, _ in await Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1) }
+            Given("a wait") { _, _ in
+                await Cucumber.shared.wait(for: Self.unfulfilledExpectations(), timeout: 0.1)
+                self.noteTheIssuesWhenTheWaitReturns()
+            }
         }
         assertTheStepFailed(with: Self.timedOutMessage)
     }
 
     func testAnAwaitedWaitForAFulfilledInvertedExpectationFailsTheStep() throws {
         try runTheScenario {
-            Given("a wait") { _, _ in await Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1) }
+            Given("a wait") { _, _ in
+                await Cucumber.shared.wait(for: [Self.invertedExpectation()], timeout: 0.1)
+                self.noteTheIssuesWhenTheWaitReturns()
+            }
         }
         assertTheStepFailed(with: Self.invertedMessage)
     }
