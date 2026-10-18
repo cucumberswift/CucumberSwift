@@ -54,16 +54,6 @@ public final class Scenario {
         steps = scenario.steps.map { Step($0, in: self) }
     }
 
-    /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
-    ///   that observers see one object for a feature.
-    init(_ scenario: GherkinScenario, feature: Feature? = nil) {
-        title = scenario.title
-        tags = scenario.tags
-        self.feature = feature ?? Feature(scenario)
-        location = Location(line: scenario.line, column: scenario.column)
-        steps = scenario.steps.map { Step($0, in: self) }
-    }
-
     /// The running scenario's own value of type `Value`, such as the basket its steps fill in: call it from
     /// any step or scenario hook, with no scenario to pass. `make` runs the first time any step or hook of
     /// this scenario asks for a `Value`, and every later call, from any step or hook of this scenario,
@@ -91,6 +81,4 @@ public final class Scenario {
         }
         return scenario.scenarioState.value(make)
     }
-
-
 }
