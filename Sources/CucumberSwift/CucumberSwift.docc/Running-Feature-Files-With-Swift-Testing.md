@@ -75,7 +75,7 @@ import Testing
 
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
-        BeforeScenario { _ in
+        #BeforeScenario {
             Basket.shared.empty()
         }
         #Given("I have {int} cukes") { (count: Int) in
@@ -92,7 +92,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. A deprecated form takes a regular expression in a `String` variable and a closure with the matches as a `[String]`, as in CucumberSwift: `Given(pattern) { matches, step in … }`. As there, a string literal binds to the Cucumber expression form instead, so use a variable or a regex literal. A step definition can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
-`BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first.
+`BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first. Each also has a macro, such as `#BeforeScenario`, that expands to it with the same arguments: see <doc:Using-Step-Definition-Macros#Hooks>.
 
 ### Feature hooks
 
@@ -257,6 +257,7 @@ The test navigator lists the scenarios that Xcode found when it last indexed the
 - A step that no step definition matches fails on its line in the feature file, and the message includes a step definition to paste into `setupSteps()`.
 - A step that more than one step definition matches fails on its line in the feature file, and none of them runs.
 - A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
+- A `wait(for:timeout:)` whose timeout passes first, or that sees an inverted expectation fulfilled, fails on the step's line in the feature file with XCTest's message for that result, as with CucumberSwift, in Swift 6.1 too. The step runs to its end, and the scenario's later steps don't run. To wait without holding the main actor, write `await wait(for:timeout:)`.
 
 When a step has no step definition, has more than one, or its step definition or a step hook throws, the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 

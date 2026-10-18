@@ -154,7 +154,7 @@ let package = Package(
             name: "CucumberSwiftTesting",
             dependencies: ["CucumberSwiftExpressions"],
             path: "Sources/CucumberSwiftTesting"),
-        // StepDefinitionMacros.swift is a symlink to CucumberSwiftMacros' declarations.
+        // StepDefinitionMacros.swift and HookMacros.swift are symlinks to CucumberSwiftMacros' declarations.
         .target(
             name: "CucumberSwiftTestingMacros",
             dependencies: ["CucumberSwiftTesting", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],

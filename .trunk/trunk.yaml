@@ -121,6 +121,7 @@ lint:
         - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
         - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
         - Sources/CucumberSwiftTesting/LocalizedStepTypes.swift
+        - Sources/CucumberSwiftTestingMacros/HookMacros.swift
         - Sources/CucumberSwiftTestingMacros/LocalizedStepDefinitionMacros.swift
         - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
 

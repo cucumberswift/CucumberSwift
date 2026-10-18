@@ -17,6 +17,15 @@ import XCTest
     var note: String?
 }
 
+/// What the hook macros did in the "Hook macros" feature, in the order they ran.
+@MainActor enum HookLog {
+    static var entries = [String]()
+
+    static func record(_ entry: String, in feature: Feature?) {
+        if feature?.title == "Hook macros" { entries.append(entry) }
+    }
+}
+
 enum Color: String, Sendable {
     case green, red
 }
@@ -175,6 +184,7 @@ extension Cucumber: @retroactive StepImplementation {
         // Then(#/^a broken (step$/#) { _, _ in }
 
         regexLiteralSteps()
+        hookMacros()
     }
 
     /// The sum of the second column of the step's table, under its header row.
@@ -249,6 +259,52 @@ extension Cucumber: @retroactive StepImplementation {
             XCTAssertEqual(container, "basket")
             XCTAssertEqual(step.match, "the till has 7 coins left")
             XCTAssertEqual(Basket.shared.cukes, Int(count))
+        }
+    }
+
+    /// The hook macros, each closure form of them, and the steps that check they ran as the hooks do.
+    @MainActor private func hookMacros() {
+        #BeforeFeature { feature in
+            HookLog.record("before feature", in: feature)
+        }
+        // Added out of order, they run in order of priority.
+        #BeforeScenario(priority: 2) { (scenario: Scenario) in
+            HookLog.record("before scenario 2", in: scenario.feature)
+        }
+        #BeforeScenario(priority: 1) { @MainActor scenario async throws in
+            await Task.yield()
+            HookLog.record("before scenario 1", in: scenario.feature)
+        }
+        #BeforeStep { step async in
+            await Task.yield()
+            HookLog.record("before step", in: step.scenario?.feature)
+        }
+        #AfterStep {
+            HookLog.record("after step", in: $0.scenario?.feature)
+        }
+        #AfterScenario(priority: 1) { scenario in
+            HookLog.record("after scenario", in: scenario.feature)
+        }
+        #AfterFeature(priority: 1) { feature in
+            guard feature.title == "Hook macros" else { return }
+            XCTAssertEqual(HookLog.entries.suffix(2), ["after step", "after scenario"])
+        }
+        // A hook without an argument, which runs after the one above.
+        #AfterFeature(priority: 2) {
+            HookLog.entries.removeAll()
+        }
+
+        #Given("the before hook macros have run in order of priority") {
+            XCTAssertEqual(HookLog.entries, ["before feature", "before scenario 1", "before scenario 2", "before step"])
+        }
+        #Then("the step hook macros run before and after each step") {
+            XCTAssertEqual(HookLog.entries.suffix(3), ["before step", "after step", "before step"])
+        }
+        #Then("the after hook macros of the first scenario have run") {
+            XCTAssertEqual(HookLog.entries.dropFirst(4), [
+                "after step", "before step", "after step", "after scenario",
+                "before scenario 1", "before scenario 2", "before step"
+            ])
         }
     }
 }
