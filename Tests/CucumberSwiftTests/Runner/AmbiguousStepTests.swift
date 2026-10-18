@@ -201,6 +201,7 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertTrue(message.contains("\(firstLine), AmbiguousStepTests.swift:\(firstLine + 1) and AmbiguousStepTests.swift:\(firstLine + 2). "), message)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepFailsOnAnAmbiguousStepAndRunsNothing() throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
         parseFeature(withSteps: "Given some precondition")
@@ -215,6 +216,7 @@ class AmbiguousStepTests: XCTestCase {
     }
 
     // Ambiguity for ExecuteFirstStep is about the text asked for, not the text of the step it finds.
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepRunsTheOneDefinitionThatMatchesTheRequestedText() throws {
         parseFeature(withSteps: "Given there are 3 flights")
         var exactCalled = false
@@ -229,6 +231,7 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertTrue(patternCalled)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepNamesOnlyTheDefinitionsThatMatchTheRequestedText() throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
         parseFeature(withSteps: "Given there are 3 flights")
@@ -247,6 +250,7 @@ class AmbiguousStepTests: XCTestCase {
     }
 
     // A definition attached only to a later step still competes for the requested text.
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepIsAmbiguousWhenAnotherStepHasTheOtherMatchingDefinition() throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
         parseFeature(withSteps: """
@@ -269,6 +273,7 @@ class AmbiguousStepTests: XCTestCase {
         XCTAssertEqual(calls, 0)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepFailsWhenNoDefinitionMatchesTheRequestedText() throws {
         guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("Needs XCTExpectFailure") }
         parseFeature(withSteps: "Given there are 3 flights")
@@ -286,6 +291,7 @@ class AmbiguousStepTests: XCTestCase {
     }
 
     // A definition attached to several steps is still one step definition.
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testExecuteFirstStepCountsADefinitionOnSeveralStepsOnce() throws {
         parseFeature(withSteps: """
              Given there are 3 flights

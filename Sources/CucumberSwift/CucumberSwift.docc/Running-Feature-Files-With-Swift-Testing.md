@@ -304,18 +304,26 @@ extension Cucumber: @retroactive StepImplementation {
 
 ### Run another step
 
-`ExecuteFirstStep(keyword:matching:)` runs the step definition that matches some text, from inside a step or a hook, and waits for it. Its difference from CucumberSwift's is that there is only the `async` form, which you `await`: every step here is `async`. The step definition gets a `Step` with that text. A step that no step definition matches, or that more than one matches, or whose step definition throws, fails on the line of the step that called it, and the caller goes on.
+> Deprecation Warning: `ExecuteFirstStep(keyword:matching:)` is deprecated, in this runner and in CucumberSwift's, and will be removed in a future major version. It still works as before.
+>
+> Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
+
+Put the code both step definitions need in a function instead, and call it from each:
 
 ```swift
 import CucumberSwiftTestingMacros
 
+@MainActor func addCukes(_ count: Int) {
+    Basket.shared.add(count)
+}
+
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
         #Given("I add {int} cukes to the basket") { (count: Int) in
-            Basket.shared.add(count)
+            addCukes(count)
         }
         #When("I check out as a guest") {
-            await ExecuteFirstStep(matching: "I add 2 cukes to the basket")
+            addCukes(2)
         }
     }
 }
