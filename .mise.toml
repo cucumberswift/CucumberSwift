@@ -107,8 +107,11 @@ for fixture in Fixtures/*/; do
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
     # Resolving the project rewrites the checkout's Package.resolved, so each step puts it back.
     with_xcode .github/scripts/keep-package-resolved.sh tuist generate --no-open --path "$fixture"
+    # ARCHS is this Mac's architecture: with an iOS Simulator destination, Xcode otherwise builds the
+    # tools that run on the Mac during the build (the macro plugin with swift-syntax, the lint tool and
+    # the Swift Testing generator) for arm64 and x86_64, and only one of them ever runs.
     with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
-      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
+      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO ARCHS="$(uname -m)" > "$log" 2>&1 || status=$?
   fi
   cat "$log"
   if [ -f "$fixture/expected-failures" ]; then
