@@ -242,6 +242,7 @@ extension CucumberTests {
 
     // MARK: ExecuteFirstStep
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @Test func executeFirstStepRunsTheMatchingStepDefinitionFromAnotherStep() async {
         Given("a basket") { _, _ in await ExecuteFirstStep(matching: "I add 2 cukes") }
         When("I add {int} cukes") { [self] match, step in
@@ -251,6 +252,7 @@ extension CucumberTests {
         #expect(ran == ["add 2 I add 2 cukes S"])
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @Test func executeFirstStepWithAKeywordConsidersOnlyThatKeywordsStepDefinitions() async {
         Given("a basket") { _, _ in
             await ExecuteFirstStep(keyword: .given, matching: "I add 2 cukes")
@@ -263,6 +265,7 @@ extension CucumberTests {
         #expect(ran == ["given", "when"])
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @Test func executeFirstStepFailsAtTheCallingStepsLineWhenNothingMatchesOrMoreThanOneDoes() async {
         Given("a basket") { _, _ in
             await ExecuteFirstStep(matching: "nothing matches this")
@@ -282,6 +285,7 @@ extension CucumberTests {
         #expect(messages.last?.contains("Ambiguous step 'twice': it matches 2 step definitions") == true)
     }
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @Test func executeFirstStepReportsWhatTheStepDefinitionThrows() async {
         struct Failure: Error {}
         Given("a basket") { [self] _, _ in
