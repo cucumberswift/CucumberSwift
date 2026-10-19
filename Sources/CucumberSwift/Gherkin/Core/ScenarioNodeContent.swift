@@ -22,15 +22,6 @@ extension AST.FeatureNode {
             .flatMap { $0.children.compactMap { $0 as? AST.StepNode } }
     }
 
-    /// The feature's scenarios, in the order they are written. A Rule's Scenarios and Scenario Outlines
-    /// are in its place, after the feature's tags and Background, and the Rule's.
-    func scenarioContents(featureTags: [String], uri: String = "") -> [ScenarioNodeContent] {
-        Self.scenarioContents(of: self,
-                              inheritedTags: featureTags,
-                              backgroundSteps: Self.backgroundSteps(of: self),
-                              uri: uri)
-    }
-
     private static func scenarioContents(of parent: AST.Node,
                                          inheritedTags: [String],
                                          backgroundSteps: [AST.StepNode],
@@ -53,5 +44,14 @@ extension AST.FeatureNode {
             }
             return []
         }
+    }
+
+    /// The feature's scenarios, in the order they are written. A Rule's Scenarios and Scenario Outlines
+    /// are in its place, after the feature's tags and Background, and the Rule's.
+    func scenarioContents(featureTags: [String], uri: String = "") -> [ScenarioNodeContent] {
+        Self.scenarioContents(of: self,
+                              inheritedTags: featureTags,
+                              backgroundSteps: Self.backgroundSteps(of: self),
+                              uri: uri)
     }
 }

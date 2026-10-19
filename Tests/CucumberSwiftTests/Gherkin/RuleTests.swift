@@ -12,6 +12,39 @@ import XCTest
 @testable import CucumberSwift
 
 class RuleTests: XCTestCase {
+    // A Rule's Scenario Outline runs every example, after the feature's and the Rule's Backgrounds, and
+    // every scenario in a Rule has the Rule's tags after the feature's and before its own (#468).
+    let ruleWithAnOutline = """
+    @feature
+    Feature: Some rules
+
+    Background:
+      Given fb
+
+    @rule
+    Rule: A
+      Background:
+        Given ab
+
+      @first
+      Scenario: Scenario A
+        Given a
+
+      @outline
+      Scenario Outline: Outline A
+        Given I eat <n> cukes
+
+        @small
+        Examples:
+          | n |
+          | 1 |
+          | 2 |
+
+    Rule: B
+      Scenario: Scenario B
+        Given b
+    """
+
     override func setUpWithError() throws {
         Cucumber.shared.reset()
     }
@@ -112,39 +145,6 @@ class RuleTests: XCTestCase {
         XCTAssertEqual(secondScenario?.steps[safe: 1]?.keyword, .given)
         XCTAssertEqual(secondScenario?.steps[safe: 1]?.match, "b")
     }
-
-    // A Rule's Scenario Outline runs every example, after the feature's and the Rule's Backgrounds, and
-    // every scenario in a Rule has the Rule's tags after the feature's and before its own (#468).
-    let ruleWithAnOutline = """
-    @feature
-    Feature: Some rules
-
-    Background:
-      Given fb
-
-    @rule
-    Rule: A
-      Background:
-        Given ab
-
-      @first
-      Scenario: Scenario A
-        Given a
-
-      @outline
-      Scenario Outline: Outline A
-        Given I eat <n> cukes
-
-        @small
-        Examples:
-          | n |
-          | 1 |
-          | 2 |
-
-    Rule: B
-      Scenario: Scenario B
-        Given b
-    """
 
     func testARulesScenarioOutlineRunsEveryExampleAfterBothBackgrounds() {
         Cucumber.shared.features.removeAll()
