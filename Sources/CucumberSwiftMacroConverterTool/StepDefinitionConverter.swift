@@ -11,16 +11,20 @@ import SwiftSyntax
 /// as `#Given("…") { (count: Int, step: Step) in … }`, when the macro expands to exactly the step
 /// definition it replaces. That is when the closure reads each parameter at its top, in the pattern's
 /// order, the way the macro's expansion reads it, and uses `match` for nothing else. Every other step
-/// definition is left as it is, with the reason.
+/// definition is left as it is, with the reason. Hooks, such as `BeforeScenario { scenario in … }`, become their
+/// macros, such as `#BeforeScenario { scenario in … }`, which take the same arguments.
 public enum StepDefinitionConverter {
-    /// A step definition the converter found, and what it did with it.
+    /// A step definition or hook the converter found, and what it did with it.
     public struct Entry: Equatable {
         /// The step definition's line in the source it was given.
         public let line: Int
-        /// The step definition's keyword and pattern, as written: `Given("I have {int} cukes")`.
+        /// The step definition's keyword and pattern, as written: `Given("I have {int} cukes")`, or the hook and
+        /// its arguments other than the closure: `BeforeScenario(priority: 1)`.
         public let stepDefinition: String
         /// Why it was left unchanged. `nil` when it was converted.
         public let reason: String?
+        /// Whether it is a hook, such as `BeforeScenario { … }`, which converts to its macro, `#BeforeScenario { … }`.
+        public var isHook = false
     }
 
     public struct Result {

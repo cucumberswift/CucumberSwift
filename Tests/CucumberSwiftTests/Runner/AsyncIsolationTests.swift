@@ -301,6 +301,7 @@ class AsyncIsolationTests: XCTestCase {
 
     // MARK: ExecuteFirstStep and reporters
 
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
     func testAwaitExecuteFirstStepKeepsTheIsolationOfTheStepItRuns() {
         Cucumber.shared.parseIntoFeatures("""
         Feature: Where steps run

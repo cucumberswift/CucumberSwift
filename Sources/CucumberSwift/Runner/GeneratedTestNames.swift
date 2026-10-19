@@ -17,7 +17,7 @@ struct ScenarioToRun {
 extension CucumberTest {
     private static let defaultDelimiter = "|"
     /// With readable test names, a scenario's test reads `Checkout › Pay with a gift card`.
-    private static let readableDelimiter = " \u{203A} "
+    private static let readableDelimiter = TestNames.readableDelimiter
 
     /// A feature's, scenario's or step's text as it appears in the name of a generated test.
     static func generatedTestName(_ text: String) -> String {
@@ -25,19 +25,7 @@ extension CucumberTest {
     }
 
     static func generatedTestName(_ text: String, readable: Bool) -> String {
-        guard readable else { return text.toClassString() }
-        return String(text.filter { !$0.isNewline }.map(readableNameCharacter)).trimmingCharacters(in: .whitespaces)
-    }
-
-    /// XCTest separates a test's class from its method with "/", and Xcode shows only what follows the
-    /// last "." of a class name, as it would for a module, so a readable name can contain neither. A one
-    /// dot leader (U+2024) looks like a full stop.
-    private static func readableNameCharacter(_ character: Character) -> Character {
-        switch character {
-            case "/": return "-"
-            case ".": return "\u{2024}"
-            default: return character
-        }
+        TestNames.name(text, readable: readable)
     }
 
     /// What goes before the name of a scenario's class with parallel testing, so that XCTest, which orders
@@ -137,11 +125,6 @@ extension Step {
     /// order the same as the feature file's: `Step002_ThenTheTotalIs99`, or with readable test names,
     /// `3 › Then the total is 99`.
     static func methodName(for text: String, at index: Int, of count: Int, readable: Bool) -> String {
-        guard readable else {
-            let position = String(format: "%0*d", max(3, String(count - 1).count), index)
-            return "Step\(position)_" + CucumberTest.generatedTestName(text, readable: false)
-        }
-        let position = String(format: "%0*d", String(count).count, index + 1)
-        return "\(position) \u{203A} " + CucumberTest.generatedTestName(text, readable: true)
+        TestNames.stepName(for: text, at: index, of: count, readable: readable)
     }
 }

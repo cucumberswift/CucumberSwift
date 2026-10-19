@@ -11,6 +11,14 @@ import XCTest
 @testable import CucumberSwift
 
 class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
+    private final class Basket {
+        var cukes = 0
+    }
+
+    private final class Beach {
+        let sand = true
+    }
+
     override func setUpWithError() throws {
         Cucumber.shared.reset()
     }
@@ -456,5 +464,86 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         let message = RegularExpression.errors.snapshot.first?.message ?? ""
         XCTAssert(message.hasSuffix(". Remove the anchors, or write a valid regular expression."), message)
         XCTAssertFalse(message.contains(".."), message)
+    }
+
+    // MARK: A scenario's own state
+
+    private func twoScenarios() -> [Scenario] {
+        Cucumber.shared.features.removeAll()
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Some feature
+            Scenario: First
+                Given a step
+                Then another step
+            Scenario: Second
+                Given a step
+        """)
+        return Cucumber.shared.features.flatMap(\.scenarios)
+    }
+
+    func testAScenarioHasOneValueOfEachTypeForAllOfItsSteps() throws {
+        let scenarios = twoScenarios()
+        let first = try XCTUnwrap(scenarios.first)
+        Cucumber.shared.currentStep = first.steps[0]
+        let basket = Scenario.state(Basket.init)
+        basket.cukes = 3
+        Cucumber.shared.currentStep = first.steps[1]
+        XCTAssertTrue(Scenario.state(Basket.init) === basket)
+        XCTAssertEqual(Scenario.state(Basket.init).cukes, 3)
+        XCTAssertTrue(Scenario.state(Beach.init) !== (basket as AnyObject))
+    }
+
+    func testScenariosDoNotShareTheirState() throws {
+        let scenarios = twoScenarios()
+        Cucumber.shared.currentStep = scenarios[0].steps[0]
+        Scenario.state(Basket.init).cukes = 3
+        Cucumber.shared.currentStep = scenarios[1].steps[0]
+        XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
+    }
+
+    func testAScenarioLetsGoOfItsStateOnlyAfterItsAfterScenarioHooksRan() throws {
+        let scenario = try XCTUnwrap(twoScenarios().first)
+        Cucumber.shared.currentStep = scenario.steps[0]
+        weak var basket: Basket? = Scenario.state(Basket.init)
+        let basketID = basket.map(ObjectIdentifier.init)
+        var hadStateInHook = false
+        var hookSawTheSameValue = false
+        AfterScenario { _ in
+            // Asked again from the hook, as a step's code would: the same value, still alive.
+            let inHook = Scenario.state(Basket.init)
+            hookSawTheSameValue = ObjectIdentifier(inHook) == basketID
+            hadStateInHook = basket != nil
+        }
+        XCTAssertNotNil(basket)
+
+        Cucumber.shared.setupAfterHooksFor(try XCTUnwrap(scenario.steps.last))
+
+        XCTAssertTrue(hadStateInHook, "The AfterScenario hooks should still see the scenario's state")
+        XCTAssertTrue(hookSawTheSameValue, "Scenario.state(_:) in an AfterScenario hook should give the same value")
+        XCTAssertNil(basket, "The scenario's state should be released once its AfterScenario hooks ran")
+    }
+
+    func testReleasingAValueThatAsksForStateAgainDoesNotDeadlock() {
+        final class Greedy {
+            let state: ScenarioState
+            init(_ state: ScenarioState) { self.state = state }
+            // Runs while the state lets go of its values: the lock must not be held then.
+            deinit { _ = state.value(Basket.init) }
+        }
+        let state = ScenarioState()
+        _ = state.value { Greedy(state) }
+        let finished = DispatchSemaphore(value: 0)
+        Thread.detachNewThread {
+            state.removeAll()
+            finished.signal()
+        }
+        XCTAssertEqual(finished.wait(timeout: .now() + 5), .success, "removeAll() should not hold the lock while values are released")
+    }
+
+    func testAskingForStateOutsideAScenarioFailsAndReturnsAThrowawayValue() {
+        Cucumber.shared.currentStep = nil
+        XCTExpectFailure("Scenario.state(_:) needs a running scenario") {
+            XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
+        }
     }
 }

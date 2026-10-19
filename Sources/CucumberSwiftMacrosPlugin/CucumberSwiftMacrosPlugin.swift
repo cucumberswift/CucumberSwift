@@ -18,6 +18,6 @@ import SwiftSyntaxMacros
 
 @main
 struct CucumberSwiftMacrosPlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [StepDefinitionMacro.self]
+    let providingMacros: [Macro.Type] = [StepDefinitionMacro.self, HookMacro.self]
 }
 #endif

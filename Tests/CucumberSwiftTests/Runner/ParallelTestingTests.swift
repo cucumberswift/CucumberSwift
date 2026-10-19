@@ -305,9 +305,11 @@ class ParallelTestingTests: XCTestCase {
         XCTAssertEqual(names.sorted(), names)
         XCTAssertEqual(Set(names).count, names.count)
     }
+}
 
-    // MARK: Whole features
+// MARK: Whole features
 
+extension ParallelTestingTests {
     /// Parses two features, the first with two scenarios of the same title, and returns their titles.
     private func parseFeatures() -> (first: String, second: String) {
         let first = "Parallel \(UUID().uuidString)"

@@ -380,7 +380,7 @@ extension Step {
     func method(at index: Int, of count: Int, methodNamePrefix: String = "") -> TestCaseMethod? {
         let readable = FeatureFlags.isReadableTestNames
         // Readable names show the keyword as written; camel-case names keep the ones tests already have.
-        let text = "\(readable ? writtenKeyword : keywordText) \(match)"
+        let text = TestNames.stepText(writtenKeyword: writtenKeyword, keywordText: keywordText, match: match, readable: readable)
         return TestCaseMethod(withName: methodNamePrefix + Self.methodName(for: text, at: index, of: count, readable: readable)) {
             // Counted before the guard below, which skips the steps of a scenario that already failed, so
             // that a second start of such a scenario is still seen.

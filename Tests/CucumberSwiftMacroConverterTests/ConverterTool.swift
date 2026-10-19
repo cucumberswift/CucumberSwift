@@ -61,6 +61,10 @@ enum ConverterTool {
             } else if text.hasPrefix("left unchanged "), let end = text.dropFirst("left unchanged ".count).range(of: "): ") {
                 let rest = text.dropFirst("left unchanged ".count)
                 left.append(Entry(line: number, stepDefinition: String(rest[..<end.lowerBound]) + ")", reason: String(rest[end.upperBound...])))
+            } else if text.hasPrefix("left unchanged "), let end = text.dropFirst("left unchanged ".count).range(of: ": ") {
+                // A hook without arguments other than its closure: `BeforeScenario: <reason>`.
+                let rest = text.dropFirst("left unchanged ".count)
+                left.append(Entry(line: number, stepDefinition: String(rest[..<end.lowerBound]), reason: String(rest[end.upperBound...])))
             }
         }
         return Result(source: run.output, converted: converted, leftUnchanged: left)

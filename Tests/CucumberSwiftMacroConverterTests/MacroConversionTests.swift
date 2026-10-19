@@ -134,6 +134,14 @@ final class MacroConversionTests: XCTestCase {
         let run = try ConverterTool.run(["--dry-run", folder.path])
         XCTAssertTrue(run.output.hasSuffix("Would convert 2 step definitions in 1 of 2 Swift files. Left 0 unchanged.\n"), run.output)
     }
+
+    func testCountsHooksApartFromStepDefinitionsInTheSummary() throws {
+        _ = try write(convertible + "\n\nBeforeScenario { _ in }\nAfterScenario(priority: 1) { _ in }\n", to: "A.swift")
+        let run = try ConverterTool.run(["--dry-run", folder.path])
+        XCTAssertTrue(run.output.contains(":8: converted BeforeScenario\n"), run.output)
+        XCTAssertTrue(run.output.contains(":9: converted AfterScenario(priority: 1)\n"), run.output)
+        XCTAssertTrue(run.output.hasSuffix("Would convert 1 step definition and 2 hooks in 1 of 1 Swift file. Left 0 unchanged.\n"), run.output)
+    }
 }
 
 /// `--path`: one file, one folder or everything, alone or with the files of the targets.

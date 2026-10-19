@@ -23,6 +23,21 @@ enum World {
     static var featureStarts = [String: Int]()
     static var featureEnds = [String: Int]()
     static var featureScenarios = [String: Int]()
+    /// What the hook macros did in the "Hook macros" feature, in the order they ran.
+    static var hooks = [String]()
+
+    static func record(_ hook: String, in feature: Feature?) {
+        if feature?.title == "Hook macros" { hooks.append(hook) }
+    }
+}
+
+/// Shared by the `BeforeScenario` hook and the "the world is reset" step definition, as a helper function.
+@MainActor
+func resetWorld() {
+    World.fruit = nil
+    World.cukes = 0
+    World.list = []
+    World.prices = [:]
 }
 
 // A consumer in another package writes `@retroactive`, because both Cucumber and StepImplementation
@@ -40,14 +55,11 @@ extension Cucumber: @retroactive StepImplementation {
         BeforeScenario { scenario in
             World.scenarios.append(scenario.title)
             World.featureScenarios[scenario.feature?.title ?? "", default: 0] += 1
-            // Runs the step definition below, as CucumberSwift's ExecuteFirstStep does.
-            await ExecuteFirstStep(matching: "the world is reset")
+            // The helper function the step definition below calls too.
+            resetWorld()
         }
         #Given("the world is reset") {
-            World.fruit = nil
-            World.cukes = 0
-            World.list = []
-            World.prices = [:]
+            resetWorld()
         }
         BeforeFeature { feature in
             World.featureStarts[feature.title, default: 0] += 1
@@ -65,6 +77,7 @@ extension Cucumber: @retroactive StepImplementation {
         dslSteps()
         localizedSteps()
         hookSteps()
+        hookMacros()
     }
 
     /// The step definition macros: typed closure parameters, checked against the expression when the
@@ -181,6 +194,53 @@ extension Cucumber: @retroactive StepImplementation {
             #if compiler(>=6.2)
             Attach(Attachment("a note", named: "note.txt"))
             #endif
+        }
+    }
+
+    /// The hook macros, each closure form of them, and the steps that check they ran as the hooks do.
+    private func hookMacros() {
+        #BeforeFeature { feature in
+            World.record("before feature", in: feature)
+        }
+        // Added out of order, they run in order of priority.
+        #BeforeScenario(priority: 2) { (scenario: Scenario) in
+            World.record("before scenario 2", in: scenario.feature)
+        }
+        #BeforeScenario(priority: 1) { @MainActor scenario async throws in
+            await Task.yield()
+            World.record("before scenario 1", in: scenario.feature)
+        }
+        #BeforeStep { step async in
+            await Task.yield()
+            World.record("before step", in: step.scenario?.feature)
+        }
+        #AfterStep {
+            World.record("after step", in: $0.scenario?.feature)
+        }
+        #AfterScenario(priority: 1) { scenario in
+            World.record("after scenario", in: scenario.feature)
+        }
+        // reverseOrderForAfterHooks runs these two in reverse order of priority: this one first.
+        #AfterFeature(priority: 2) { feature in
+            guard feature.title == "Hook macros" else { return }
+            #expect(World.hooks.suffix(2) == ["after step", "after scenario"])
+        }
+        // A hook without an argument.
+        #AfterFeature(priority: 1) {
+            World.hooks.removeAll()
+        }
+
+        #Given("the before hook macros have run in order of priority") {
+            #expect(World.hooks == ["before feature", "before scenario 1", "before scenario 2", "before step"])
+        }
+        #Then("the step hook macros run before and after each step") {
+            #expect(World.hooks.suffix(3) == ["before step", "after step", "before step"])
+        }
+        #Then("the after hook macros of the first scenario have run") {
+            #expect(World.hooks.dropFirst(4) == [
+                "after step", "before step", "after step", "after scenario",
+                "before scenario 1", "before scenario 2", "before step"
+            ])
         }
     }
 }
