@@ -145,30 +145,4 @@ extension CucumberTests {
         #expect(try readReport(url).first?["uri"] as? String == URL(fileURLWithPath: scenario.file).absoluteString)
         #expect(try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path) == ["report.json"])
     }
-
-    /// The feature file's copy in the test bundle, matched on as much of its path as it shares; where it would
-    /// be in the Features folder when the bundle has none, as a Swift package that excludes the feature files.
-    @Test func aFeatureFilesURIIsItsCopyInTheTestBundle() throws {
-        let bundleURL = try testBundle(with: ["Checkout.feature", "Shop/Checkout.feature", "Shop/Basket.feature"])
-        defer { try? FileManager.default.removeItem(at: bundleURL.deletingLastPathComponent()) }
-        let bundle = try #require(Bundle(url: bundleURL))
-        let folder = TestBundleFiles.featuresFolder(in: bundle)
-        let files = TestBundleFiles.featureFiles(at: folder)
-        // As paths with symbolic links resolved: the files' URLs name the temporary folder as /private/var.
-        // A feature file in the source tree, at a path relative to its project's Tests folder.
-        let tests = FileManager.default.temporaryDirectory.appendingPathComponent("MyApp").appendingPathComponent("Tests")
-        func uri(_ path: String) -> String {
-            let source = tests.appendingPathComponent(path).path
-            return TestBundleFiles.bundledFeatureFile(forSourcePath: source, in: folder, files: files).resolvingSymlinksInPath().path
-        }
-        func inFeatures(_ path: String) -> String { folder.appendingPathComponent(path).resolvingSymlinksInPath().path }
-
-        #expect(files.map(\.lastPathComponent) == ["Checkout.feature", "Basket.feature", "Checkout.feature"])
-        #expect(uri("Features/Checkout.feature") == inFeatures("Checkout.feature"))
-        #expect(uri("Features/Shop/Checkout.feature") == inFeatures("Shop/Checkout.feature"))
-        #expect(uri("Specs/Shop/Basket.feature") == inFeatures("Shop/Basket.feature"))
-        #expect(uri("Features/Shop/Pay.feature") == inFeatures("Shop/Pay.feature"))
-        #expect(uri("Specs/Pay.feature") == inFeatures("Pay.feature"))
-        #expect(TestBundleFiles.resultsFileName(forBundleAt: bundleURL) == "CucumberTestResultsForTests.json")
-    }
 }

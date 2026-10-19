@@ -25,6 +25,7 @@
 		1A9BEB00D0199A934BBAFBDF /* TagTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C7AC01561165E18CBD85F6 /* TagTests.swift */; };
 		1B592B8118B6F2FEBA993516 /* TestNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB3D20EBD92B249FB1015BAC /* TestNames.swift */; };
 		1DFC89A88CA651D7722F1469 /* AsyncIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BFC4AC8518624BC6134E5E0 /* AsyncIsolationTests.swift */; };
+		229F876AC4C77C5E55DDD8A4 /* TestBundleFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CFA411F9AB540661BAE0415 /* TestBundleFilesTests.swift */; };
 		22A8213B548DAA379C6C8732 /* CucumberExpressionStepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */; };
 		24A75AEEBA738F6BE416FF5C /* CucumberStepTest.m in Sources */ = {isa = PBXBuildFile; fileRef = DDF99C78CB4F562429CF2487 /* CucumberStepTest.m */; };
 		2748A4ED7ACBF4CDA22DC04A /* ReportFileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE618725911A9587B6955609 /* ReportFileTests.swift */; };
@@ -327,6 +328,7 @@
 		86949B12F415FBCBC5D340FC /* Nodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Nodes.swift; sourceTree = "<group>"; };
 		885A533EDAA54BB3AE5BB05B /* Step.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Step.swift; sourceTree = "<group>"; };
 		889AD6A99BE7F115DF7FAF53 /* Taggable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Taggable.swift; sourceTree = "<group>"; };
+		8CFA411F9AB540661BAE0415 /* TestBundleFilesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestBundleFilesTests.swift; sourceTree = "<group>"; };
 		8DAB9BC0497A374AE29C9D6A /* ClassNameString.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassNameString.swift; sourceTree = "<group>"; };
 		8E1EB42E722B6F018907E184 /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
 		8E9A5C50E6EFEF58ED875D57 /* Scenario.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scenario.swift; sourceTree = "<group>"; };
@@ -875,6 +877,7 @@
 				DE618725911A9587B6955609 /* ReportFileTests.swift */,
 				C865E2FDA6BE8F96D61E3E78 /* ReportParityTests.swift */,
 				A1468289F8DC67FAA8D3E667 /* Schema.json */,
+				8CFA411F9AB540661BAE0415 /* TestBundleFilesTests.swift */,
 				F6649D7E0697DDC105796B27 /* VerboseReporterTests.swift */,
 			);
 			path = Reporter;
@@ -1139,6 +1142,7 @@
 				2748A4ED7ACBF4CDA22DC04A /* ReportFileTests.swift in Sources */,
 				51C59B3DC7E0E396A5AD7A69 /* ReportParityTests.swift in Sources */,
 				6B4A543BCCB35C350BB65F77 /* ReporterTests.swift in Sources */,
+				229F876AC4C77C5E55DDD8A4 /* TestBundleFilesTests.swift in Sources */,
 				BED4FB179E9F0997A5F2EAB5 /* VerboseReporterTests.swift in Sources */,
 				D9EFB2266A4CA52E1F763B65 /* AmbiguousStepTests.swift in Sources */,
 				3859273DD63104B8F8884F39 /* AnchoredExpressionTests.swift in Sources */,
