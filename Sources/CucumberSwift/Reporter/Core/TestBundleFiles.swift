@@ -71,6 +71,9 @@ enum TestBundleFiles {
               let folder = folder ?? (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
         else { return }
         let fileURL = folder.appendingPathComponent(resultsFileName(forBundleAt: bundleURL, prefix: prefix))
+        // The report is already there when `reportPath` names the copy, and only a written report replaces one.
+        guard reportURL.standardizedFileURL.resolvingSymlinksInPath() != fileURL.standardizedFileURL.resolvingSymlinksInPath(),
+              FileManager.default.fileExists(atPath: reportURL.path) else { return }
         // copyItem doesn't overwrite, so without this the first run's copy would stay.
         try? FileManager.default.removeItem(at: fileURL)
         try? FileManager.default.copyItem(at: reportURL, to: fileURL)

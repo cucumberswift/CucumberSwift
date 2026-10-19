@@ -75,4 +75,24 @@ final class TestBundleFilesTests: XCTestCase {
 
         XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
     }
+
+    /// A report written where the copy goes, as when `reportPath` names it, stays.
+    func testAReportThatIsAlreadyTheCopyStays() throws {
+        let copy = folder.appendingPathComponent("CucumberTestResultsForTests.json")
+        try Data("[{}]".utf8).write(to: copy)
+
+        TestBundleFiles.copyReport(at: copy, forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
+
+        XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
+    }
+
+    /// Without a report, an earlier run's copy stays rather than leaving nothing.
+    func testAnEarlierCopyStaysWhenThereIsNoReport() throws {
+        let copy = folder.appendingPathComponent("CucumberTestResultsForTests.json")
+        try Data("[]".utf8).write(to: copy)
+
+        TestBundleFiles.copyReport(at: folder.appendingPathComponent("missing.json"), forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
+
+        XCTAssertEqual(try Data(contentsOf: copy), Data("[]".utf8))
+    }
 }
