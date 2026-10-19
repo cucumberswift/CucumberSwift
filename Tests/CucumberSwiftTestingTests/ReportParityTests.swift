@@ -138,10 +138,11 @@ extension CucumberTests {
         registerParityStepDefinitions()
 
         Cucumber.shared.beginSuite()
-        await Cucumber.shared.run(parityScenarios()[0])
+        let scenario = parityScenarios()[0]
+        await Cucumber.shared.run(scenario)
         await Cucumber.shared.endSuite()
 
-        #expect(try readReport(url).first?["uri"] as? String == "file:///Features/Checkout.feature")
+        #expect(try readReport(url).first?["uri"] as? String == URL(fileURLWithPath: scenario.file).absoluteString)
         #expect(try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path) == ["report.json"])
     }
 
