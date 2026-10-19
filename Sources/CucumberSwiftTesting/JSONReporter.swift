@@ -37,18 +37,11 @@ public final class CucumberJSONReporter: CucumberTestObserver {
     }
 
     private static func entry(for feature: Feature) -> CucumberJSONReport.Feature {
-        CucumberJSONReport.Feature(uri: uri(of: feature),
+        CucumberJSONReport.Feature(uri: feature.uri,
                                    title: feature.title,
                                    description: feature.desc,
                                    line: line(feature.location),
                                    tags: feature.tags)
-    }
-
-    /// A feature file's URI as CucumberSwift writes it: the `file://` URL of its copy in the test bundle, or
-    /// of its path when the runner doesn't know the test bundle.
-    private static func uri(of feature: Feature) -> String {
-        if let reportURI = feature.reportURI { return reportURI }
-        return feature.uri.contains("://") ? feature.uri : URL(fileURLWithPath: feature.uri).absoluteString
     }
 
     private static func line(_ location: Location) -> UInt {

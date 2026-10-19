@@ -80,8 +80,9 @@ public final class Cucumber {
     /// The feature that started last and hasn't finished, for runs that don't say where a feature ends.
     private var openFeature: FeatureRun?
     private var isSuiteStarted = false
-    /// The test bundle the generated tests are in, from the suite's trait. `nil` for scenarios run without
-    /// the generated tests' traits.
+    /// The test bundles of the scenarios seen, by URL, and the last one, whose report `endSuite()` copies.
+    /// `nil` for scenarios that don't say, as the generated tests do.
+    var testBundles = [URL: TestBundle]()
     var testBundle: TestBundle?
     /// Where `endSuite()` copies the report: the documents folder unless set. Tests set it.
     var resultsFolder: URL?
@@ -265,18 +266,17 @@ public final class Cucumber {
         featureRuns.removeAll()
         openFeature = nil
         isSuiteStarted = false
+        testBundles.removeAll()
         testBundle = nil
         resultsFolder = nil
         approvedScenarios.removeAll()
         startedScenarios.removeAll()
     }
 
-    /// Starts the test suite for the observers, once. `CucumberSuiteTrait` calls it before the first test,
-    /// with the test bundle the generated tests are in.
-    func beginSuite(testBundleURL: URL? = nil) {
+    /// Starts the test suite for the observers, once. `CucumberSuiteTrait` calls it before the first test.
+    func beginSuite() {
         guard !isSuiteStarted else { return }
         isSuiteStarted = true
-        testBundle = testBundleURL.flatMap(TestBundle.init(url:))
         featureRuns.removeAll()
         openFeature = nil
         // The step definitions can set `Cucumber.reportPath`, which the report is written to.
@@ -314,7 +314,7 @@ public final class Cucumber {
     /// The feature a scenario belongs to, started on its first scenario.
     private func startFeature(of scenario: GherkinScenario) -> FeatureRun {
         let key = Self.key(file: scenario.file, title: scenario.featureTitle, line: scenario.featureLine)
-        let run = featureRuns[key] ?? FeatureRun(Feature(scenario, reportURI: testBundle?.reportURI(ofFeatureFileAt: scenario.file)))
+        let run = featureRuns[key] ?? FeatureRun(feature(of: scenario))
         featureRuns[key] = run
         guard run.startDate == nil else { return run }
         // Scenarios run without the generated tests' traits have nothing to say where a feature ends: it
@@ -330,7 +330,7 @@ public final class Cucumber {
             if let open, open !== run { await finish(open) }
             // As with CucumberSwift, the hooks run before the observers hear the feature started.
             let record = IssueRecord()
-            run.startFailure = await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record)
+            run.startFailure = await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.sourcePath, record: record)
             if run.startFailure != nil || !record.messages.isEmpty {
                 run.isFailed = true
             }
@@ -350,7 +350,7 @@ public final class Cucumber {
         // The after hooks run even when a before hook threw, once the before hooks are over.
         _ = await run.starting?.value
         let record = IssueRecord()
-        if await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.uri, record: record, reversed: reversesAfterHooks) != nil
+        if await runHooks(afterFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.sourcePath, record: record, reversed: reversesAfterHooks) != nil
             || !record.messages.isEmpty {
             run.isFailed = true
         }

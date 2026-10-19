@@ -92,4 +92,16 @@ final class ReportParityTests: XCTestCase {
         let result = try JSONSchema.validate(JSONSerialization.jsonObject(with: written), schema: schema)
         XCTAssertEqual(result.errors?.count ?? 0, 0, "\(String(describing: result.errors))")
     }
+
+    /// The copy of the report that testBundleDidFinish makes replaces the one an earlier run left (#463).
+    func testTheCopyOfTheReportReplacesAnEarlierOne() throws {
+        let report = folder.appendingPathComponent("report.json")
+        let copy = folder.appendingPathComponent("CucumberTestResultsForTests.json")
+        try Data("[{}]".utf8).write(to: report)
+        try Data("[]".utf8).write(to: copy)
+
+        TestBundleFiles.copyReport(at: report, forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
+
+        XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
+    }
 }

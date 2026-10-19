@@ -12,29 +12,31 @@ public final class Feature {
     /// The text under the feature's title, if there is any.
     public let desc: String
     public let tags: [String]
-    /// The feature file's path on the Mac that built the tests.
+    /// The feature file's URI, as CucumberSwift's XCTest runner gives it: the `file://` URL of its copy in the
+    /// test bundle, or of where its copy would be. The JSON report's `uri` is the same.
     public let uri: String
     public let location: Location
-    /// The feature file's URI in the JSON report, the `file://` URL of its copy in the test bundle, as
-    /// CucumberSwift writes it. `nil` when the runner doesn't know the test bundle.
-    let reportURI: String?
+    /// The feature file's path on the Mac that built the tests, where issues are reported, so that Xcode
+    /// shows them in the file you edit.
+    let sourcePath: String
 
-    init(title: String, desc: String = "", tags: [String], uri: String, location: Location = Location(line: 1, column: 1), reportURI: String? = nil) {
+    init(title: String, desc: String = "", tags: [String], uri: String? = nil, sourcePath: String, location: Location = Location(line: 1, column: 1)) {
         self.title = title
         self.desc = desc
         self.tags = tags
-        self.uri = uri
+        self.uri = uri ?? (sourcePath.contains("://") ? sourcePath : URL(fileURLWithPath: sourcePath).absoluteString)
+        self.sourcePath = sourcePath
         self.location = location
-        self.reportURI = reportURI
     }
 
-    convenience init(_ scenario: GherkinScenario, reportURI: String? = nil) {
+    /// `uri` is the feature file's copy in the test bundle; without it, the URL of its path.
+    convenience init(_ scenario: GherkinScenario, uri: String? = nil) {
         self.init(title: scenario.featureTitle,
                   desc: scenario.featureDescription,
                   tags: scenario.featureTags,
-                  uri: scenario.file,
-                  location: Location(line: scenario.featureLine, column: 1),
-                  reportURI: reportURI)
+                  uri: uri,
+                  sourcePath: scenario.file,
+                  location: Location(line: scenario.featureLine, column: 1))
     }
 }
 

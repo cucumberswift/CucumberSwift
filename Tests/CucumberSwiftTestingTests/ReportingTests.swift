@@ -22,7 +22,11 @@ final class RecordingObserver: CucumberTestObserver {
 
     func testSuiteStarted(at _: Date) { log.append("suite started") }
     func testSuiteFinished(at _: Date) { log.append("suite finished") }
-    func didStart(feature: Feature, at _: Date) { log.append("feature started \(feature.title)") }
+    var onFeature: (Feature) -> Void = { _ in }
+    func didStart(feature: Feature, at _: Date) {
+        onFeature(feature)
+        log.append("feature started \(feature.title)")
+    }
     func didStart(scenario: Scenario, at _: Date) { log.append("scenario started \(scenario.title)") }
     func didStart(step: Step, at _: Date) { log.append("step started \(step.keywordName) \(step.match)") }
     func didFinish(feature: Feature, result: Reporter.Result, duration _: Measurement<UnitDuration>) {
@@ -206,8 +210,9 @@ extension CucumberTests {
         #expect(CucumberSettings.reportPath(environment: [:]) == "/tmp/static.json")
     }
 
-    /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them.
-    func parityScenarios() -> [GherkinScenario] {
+    /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them,
+    /// with their test bundle when given.
+    func parityScenarios(in testBundle: URL? = nil) -> [GherkinScenario] {
         func step(_ keyword: Step.Keyword, _ name: String, _ text: String, line: Int) -> GherkinStep {
             GherkinStep(keyword: keyword, keywordName: name, text: text, line: line, column: 5, suggestion: "")
         }
@@ -220,6 +225,7 @@ extension CucumberTests {
                 title: title,
                 tags: tags,
                 file: "/Features/Checkout.feature",
+                testBundle: testBundle,
                 line: line,
                 column: 3,
                 steps: steps)

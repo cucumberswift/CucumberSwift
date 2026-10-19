@@ -89,6 +89,9 @@ public struct GherkinScenario: Sendable {
     public let tags: [String]
     /// The feature file's path on the Mac that built the tests.
     public let file: String
+    /// The test bundle the scenario's test is in, whose copy of the feature file names it in the report and
+    /// in ``Feature/uri``, as with CucumberSwift. The generated tests set it.
+    public let testBundle: URL?
     public let line: Int
     public let column: Int
     /// The Background's steps, then the scenario's.
@@ -102,6 +105,7 @@ public struct GherkinScenario: Sendable {
         title: String,
         tags: [String],
         file: String,
+        testBundle: URL? = nil,
         line: Int,
         column: Int,
         steps: [GherkinStep]
@@ -113,6 +117,7 @@ public struct GherkinScenario: Sendable {
         self.title = title
         self.tags = tags
         self.file = file
+        self.testBundle = testBundle
         self.line = line
         self.column = column
         self.steps = steps

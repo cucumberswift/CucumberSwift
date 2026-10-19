@@ -60,12 +60,14 @@ enum TestBundleFiles {
     }
 
     /// Copies the report to `CucumberTestResultsFor<bundle name>.json` in `folder`, the documents folder
-    /// unless given, when the test bundle finishes.
+    /// unless given, when the test bundle finishes. The copy replaces the one an earlier run left.
     static func copyReport(at reportURL: URL?, forBundleAt bundleURL: URL, prefix: String = resultsName, into folder: URL? = nil) {
         guard let reportURL,
               let folder = folder ?? (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
         else { return }
         let fileURL = folder.appendingPathComponent(resultsFileName(forBundleAt: bundleURL, prefix: prefix))
+        // copyItem doesn't overwrite, so without this the first run's copy would stay.
+        try? FileManager.default.removeItem(at: fileURL)
         try? FileManager.default.copyItem(at: reportURL, to: fileURL)
     }
 }

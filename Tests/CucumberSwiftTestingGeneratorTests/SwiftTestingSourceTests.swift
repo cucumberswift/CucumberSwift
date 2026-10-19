@@ -20,7 +20,7 @@ final class SwiftTestingSourceTests: XCTestCase {
     import Testing
 
     @MainActor
-    @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber(bundleOf: CucumberFeaturesBundle.self))
+    @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber)
     struct CucumberFeatures {
         @Test("Feature files are valid Gherkin")
         func gherkin() { cucumberGherkinProblems() }
@@ -56,6 +56,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         title: "Eat an apple",
         tags: ["fruit"],
         file: "/Features/Test.feature",
+        testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),
         line: 3,
         column: 3,
         steps: [

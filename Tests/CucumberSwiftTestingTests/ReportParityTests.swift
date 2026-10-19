@@ -3,6 +3,13 @@ import Foundation
 import JSONSchema
 import Testing
 
+/// What a test's hooks and observers saw.
+@MainActor
+private final class SeenURIs {
+    var uris = [String]()
+    var issuePath: String?
+}
+
 // CucumberSwift and CucumberSwiftTesting write one Cucumber JSON report for the same feature files (#420),
 // with the same `uri`, the feature file's URL in the test bundle, and copy it to the same file when the
 // tests finish (#463). CucumberSwift's side is CucumberSwiftTests/Reporter/ReportParityTests.swift: both
@@ -54,12 +61,12 @@ extension CucumberTests {
         Cucumber.shared.resultsFolder = url.deletingLastPathComponent()
 
         // In an order of their own: Swift Testing doesn't promise the order of the tests in a suite.
-        let scenarios = parityScenarios()
-        Cucumber.shared.beginSuite(testBundleURL: bundleURL)
+        let scenarios = parityScenarios(in: bundleURL)
+        Cucumber.shared.beginSuite()
         for scenario in [scenarios[2], scenarios[0], scenarios[1]] {
             await Cucumber.shared.run(scenario)
         }
-        await Cucumber.shared.endFeature(file: "/Features/Checkout.feature", title: "Checkout", line: 1)
+        await Cucumber.shared.endFeature(file: scenarios[0].file, title: "Checkout", line: 1)
         await Cucumber.shared.endSuite()
 
         let written = try Data(contentsOf: url)
@@ -86,12 +93,40 @@ extension CucumberTests {
         registerParityStepDefinitions()
         let copy = documents.appendingPathComponent("CucumberTestResultsForTests.json")
 
-        Cucumber.shared.beginSuite(testBundleURL: bundleURL)
-        await Cucumber.shared.run(parityScenarios()[0])
-        #expect(!FileManager.default.fileExists(atPath: copy.path))
+        // The copy an earlier run left, which CucumberSwift used to keep.
+        try Data("[]".utf8).write(to: copy)
+
+        Cucumber.shared.beginSuite()
+        await Cucumber.shared.run(parityScenarios(in: bundleURL)[0])
+        #expect(try Data(contentsOf: copy) == Data("[]".utf8))
         await Cucumber.shared.endSuite()
 
         #expect(try Data(contentsOf: copy) == Data(contentsOf: url))
+    }
+
+    /// Hooks and observers see the `uri` that the report has, as with CucumberSwift, and an issue in a feature
+    /// hook is still moved to the feature file you edit.
+    @Test func hooksAndObserversSeeTheReportsURIAndIssuesStayInTheSourceFile() async throws {
+        let bundleURL = try testBundle(with: ["Checkout.feature"])
+        defer { try? FileManager.default.removeItem(at: bundleURL.deletingLastPathComponent()) }
+        let seen = SeenURIs()
+        let observer = RecordingObserver()
+        observer.onFeature = { seen.uris.append($0.uri) }
+        Cucumber.shared.reporters = [observer]
+        registerParityStepDefinitions()
+        BeforeFeature { feature in
+            seen.uris.append(feature.uri)
+            seen.issuePath = RunningLocation.current?.location._filePath
+        }
+        let scenario = parityScenarios(in: bundleURL)[0]
+        let expected = try #require(TestBundle(url: bundleURL)?.uri(ofFeatureFileAt: scenario.file))
+
+        await Cucumber.shared.run(scenario)
+
+        #expect(URL(string: expected)?.pathComponents.suffix(3) == ["Tests.bundle", "Features", "Checkout.feature"])
+        #expect(seen.uris == [expected, expected])
+        #expect(seen.issuePath == scenario.file)
+        #expect(Cucumber.shared.feature(of: scenario).uri == expected)
     }
 
     @Test func withoutATestBundleTheReportIsNotCopiedAndNamesTheFeatureFilesPath() async throws {
@@ -119,17 +154,20 @@ extension CucumberTests {
         let folder = TestBundleFiles.featuresFolder(in: bundle)
         let files = TestBundleFiles.featureFiles(at: folder)
         // As paths with symbolic links resolved: the files' URLs name the temporary folder as /private/var.
+        // A feature file in the source tree, at a path relative to its project's Tests folder.
+        let tests = FileManager.default.temporaryDirectory.appendingPathComponent("MyApp").appendingPathComponent("Tests")
         func uri(_ path: String) -> String {
-            TestBundleFiles.bundledFeatureFile(forSourcePath: path, in: folder, files: files).resolvingSymlinksInPath().path
+            let source = tests.appendingPathComponent(path).path
+            return TestBundleFiles.bundledFeatureFile(forSourcePath: source, in: folder, files: files).resolvingSymlinksInPath().path
         }
         func inFeatures(_ path: String) -> String { folder.appendingPathComponent(path).resolvingSymlinksInPath().path }
 
         #expect(files.map(\.lastPathComponent) == ["Checkout.feature", "Basket.feature", "Checkout.feature"])
-        #expect(uri("/Users/me/MyApp/Tests/Features/Checkout.feature") == inFeatures("Checkout.feature"))
-        #expect(uri("/Users/me/MyApp/Tests/Features/Shop/Checkout.feature") == inFeatures("Shop/Checkout.feature"))
-        #expect(uri("/Users/me/MyApp/Tests/Specs/Shop/Basket.feature") == inFeatures("Shop/Basket.feature"))
-        #expect(uri("/Users/me/MyApp/Tests/Features/Shop/Pay.feature") == inFeatures("Shop/Pay.feature"))
-        #expect(uri("/Users/me/MyApp/Tests/Specs/Pay.feature") == inFeatures("Pay.feature"))
+        #expect(uri("Features/Checkout.feature") == inFeatures("Checkout.feature"))
+        #expect(uri("Features/Shop/Checkout.feature") == inFeatures("Shop/Checkout.feature"))
+        #expect(uri("Specs/Shop/Basket.feature") == inFeatures("Shop/Basket.feature"))
+        #expect(uri("Features/Shop/Pay.feature") == inFeatures("Shop/Pay.feature"))
+        #expect(uri("Specs/Pay.feature") == inFeatures("Pay.feature"))
         #expect(TestBundleFiles.resultsFileName(forBundleAt: bundleURL) == "CucumberTestResultsForTests.json")
     }
 }

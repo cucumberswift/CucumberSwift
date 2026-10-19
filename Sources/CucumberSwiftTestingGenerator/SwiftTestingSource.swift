@@ -78,7 +78,7 @@ enum SwiftTestingSource {
         import Testing
 
         @MainActor
-        @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber(bundleOf: CucumberFeaturesBundle.self))
+        @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber)
         struct CucumberFeatures {
             @Test("Feature files are valid Gherkin")
             func gherkin() { cucumberGherkinProblems() }
@@ -167,6 +167,7 @@ enum SwiftTestingSource {
             + pad + "    title: \(literal(parts.title)),\n"
             + pad + "    tags: \(array(parts.tags)),\n"
             + pad + "    file: \(literal(path)),\n"
+            + pad + "    testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),\n"
             + pad + "    line: \(parts.line),\n"
             + pad + "    column: \(parts.column),\n"
             + pad + "    steps: [\n"
