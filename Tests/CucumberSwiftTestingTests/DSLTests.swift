@@ -221,10 +221,8 @@ extension CucumberTests {
     }
     #endif
 
-    @Test func withParallelTestingEachScenarioIsOneCaseAndTheyRunAtTheSameTime() async throws {
-        resetNames()
-        let observer = RecordingObserver()
-        Cucumber.shared.reporters = [observer]
+    /// A feature whose first scenario takes a while and whose second doesn't.
+    private func slowAndQuickFeature() {
         Feature("F") {
             Scenario("Slow") {
                 Given(_macroStep: {
@@ -240,6 +238,13 @@ extension CucumberTests {
                 Given(_macroStep: self.ran.append("quick"), stepText: "I: goAtOnce()", line: 2, column: 1, file: "/B.swift")
             }
         }
+    }
+
+    @Test func withParallelTestingEachScenarioIsOneCaseAndTheyRunAtTheSameTime() async throws {
+        resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        slowAndQuickFeature()
         Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES"]
         let cases = Cucumber.shared.dslCasesToRun()
         #expect(cases.map(\.testDescription) == ["F › Slow", "F › Quick"])
@@ -258,21 +263,7 @@ extension CucumberTests {
 
     @Test func withParallelTestingByFeatureAFeaturesScenariosRunOneAtATime() async throws {
         resetNames()
-        Feature("F") {
-            Scenario("Slow") {
-                Given(_macroStep: {
-                          try await Task.sleep(nanoseconds: 50_000_000)
-                          self.ran.append("slow")
-                      },
-                      stepText: "I: waitAWhile()",
-                      line: 1,
-                      column: 1,
-                      file: "/B.swift")
-            }
-            Scenario("Quick") {
-                Given(_macroStep: self.ran.append("quick"), stepText: "I: goAtOnce()", line: 2, column: 1, file: "/B.swift")
-            }
-        }
+        slowAndQuickFeature()
         Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES", "CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]
         let cases = Cucumber.shared.dslCasesToRun()
         await withTaskGroup(of: Void.self) { group in
