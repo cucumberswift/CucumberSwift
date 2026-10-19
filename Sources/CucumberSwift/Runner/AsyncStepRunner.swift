@@ -36,7 +36,7 @@ enum AsyncStepRunner {
 
     struct NestedWaitError: LocalizedError {
         var errorDescription: String? {
-            "An async step was started synchronously from inside another async step or hook. Use `await ExecuteFirstStep(matching:)` there instead."
+            "An async step was started synchronously from inside another async step or hook. Put the code both steps need in a function, and `await` it from each step."
         }
     }
 

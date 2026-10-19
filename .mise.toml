@@ -57,6 +57,9 @@ description = "Build and test every project in Fixtures/"
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either. Its Swift files are put back as they were afterwards.
+# FIXTURES, a comma-separated list of folder names in Fixtures/, runs only those fixtures, such as
+# FIXTURES=SwiftTestingPackage mise run test-fixtures. A name that isn't a fixture is an error, so
+# that a typo fails instead of passing with nothing run.
 run = '''
 set -e
 # Fails unless every line of $1, other than comments and blank lines, is in the output $2.
@@ -73,10 +76,29 @@ expect_all() {
 with_xcode() {
   if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
 }
+if [ "${FIXTURES+x}" ]; then
+  if [ -z "$(echo "$FIXTURES" | tr -d ', ')" ]; then
+    echo "error: FIXTURES names no fixture"
+    exit 1
+  fi
+  for name in $(echo "$FIXTURES" | tr ',' ' '); do
+    if [ "$name" = CarthageXCFramework ]; then
+      echo "error: FIXTURES names CarthageXCFramework, which mise run test-carthage runs"
+      exit 1
+    elif [ ! -d "Fixtures/$name" ]; then
+      echo "error: FIXTURES names $name, which is not a folder in Fixtures/"
+      exit 1
+    fi
+  done
+fi
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
+  case ",$(echo "${FIXTURES:-$name}" | tr -d ' ')," in
+    *",$name,"*) ;;
+    *) continue ;;
+  esac
   developer_dir=
   if [ -f "$fixture/xcode-version" ]; then
     # Only the edges are trimmed, such as a CRLF line ending.

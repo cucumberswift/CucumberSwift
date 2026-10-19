@@ -68,10 +68,12 @@ public func AfterStep(priority: UInt? = nil,
 }
 
 // Execute a step matching the given step definition
+@available(*, deprecated, message: "Move the code both steps need into a function, and call it from each step definition, instead of running one step from another.")
 public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) {
     Cucumber.shared.executeFirstStep(keyword: keyword, matching: matching)
 }
 // From inside an async step or hook, execute a step matching the given step definition and wait for it
+@available(*, deprecated, message: "Move the code both steps need into a function, and call it from each step definition, instead of running one step from another.")
 @MainActor
 public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) async {
     await Cucumber.shared.executeFirstStep(keyword: keyword, matching: matching)
