@@ -300,7 +300,7 @@ extension Cucumber: @retroactive StepImplementation {
 - **`asyncStepTimeout`** is how many seconds a step or a hook may run, 60 by default. One that suspends for longer is cancelled and fails on its line in the feature file, and the runner waits for it to finish. As in CucumberSwift, the timeout applies only to a step or a hook that suspends: one that blocks the main actor can't be interrupted, and isn't failed.
 - **`continueTestingAfterFailure`**: see <doc:#After-a-failed-assertion>.
 - **`verbose`**: see <doc:#Reports-verbose-output-and-custom-reporters>.
-- **`regexLiteralStyle`** says how the step definitions the runner suggests for undefined steps write their regex literals, `#/…/#` by default or ``RegexLiteralStyle/bareSlash``, when `Cucumber.generateRegexLiterals` is on. Cucumber expressions are suggested by default; set `Cucumber.generateRegexLiterals = true` in `setupSteps()`, or `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, as in <doc:Matching-Steps#Generate-regex-literals-instead>.
+- **`regexLiteralStyle`** says how the step definitions the runner suggests for undefined steps write their regex literals, `#/…/#` by default or ``RegexLiteralStyle/bareSlash``, when `Cucumber.generateRegexLiterals` is on. Cucumber expressions are suggested by default; set `Cucumber.generateRegexLiterals = true` in `setupSteps()`, or `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, as in <doc:Matching-Steps#Generate-regex-literals-instead>. With `CucumberSwiftTestingMacros` linked, the suggestions are step definition macros, unless `Cucumber.generateMacros` is `false`: see <doc:Matching-Steps#Step-definition-macros>.
 
 ### Run another step
 
@@ -403,4 +403,4 @@ These parts of CucumberSwift have no counterpart in this runner:
 - the Swift DSL for writing features: `Feature`, `Scenario`, `Given(I:)` and the rest,
 - the settings that <doc:Settings> marks as XCTest only.
 
-Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals.
+Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals, and step definition macros when the target links `CucumberSwiftTestingMacros`.

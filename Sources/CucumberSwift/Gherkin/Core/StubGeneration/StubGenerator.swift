@@ -20,7 +20,7 @@ enum StubGenerator {
     private struct Definition {
         let pattern: String
         let matchesParameter: String
-        let captures: [(type: String, value: String)]
+        let captures: [Method.Capture]
     }
 
     static func regexForTokens(_ tokens: [Token]) -> String {
@@ -117,18 +117,22 @@ enum StubGenerator {
             return nil
         }
         // A regex literal's match holds the whole match at .0 and each capture at .1, .2, …
-        let captures = types.enumerated().map { (type: $1, value: "matches.\($0 + 1)") }
+        let captures = types.enumerated().map { Method.Capture(type: $1, value: "matches.\($0 + 1)", swiftType: "Substring") }
         return Definition(pattern: literal, matchesParameter: captures.isEmpty ? "_" : "matches", captures: captures)
     }
 
-    private static func cucumberExpressionDefinition(regex: String, tokens: [Token]) -> Definition {
+    private static func cucumberExpressionDefinition(regex: String, tokens: [Token], macro: Bool) -> Definition {
         let expression = expression(for: expressionTokens(tokens))
-        guard !expression.hasSuffix("$") else {
+        // A step definition macro checks its Cucumber Expression as the specification reads it, which can't
+        // escape a `^`.
+        guard !expression.hasSuffix("$"), !(macro && expression.hasPrefix("\\^")) else {
             // A pattern that ends in `$` is always a regular expression, so the step can't be a Cucumber
             // Expression. An anchored string is a regular expression on every deployment target, and
             // each of its capture groups, one for each string and number in `regex`, is an anonymous parameter.
             let captureCount = tokens.filter { $0.isString() || $0.isInteger() }.count
-            let captures = (0..<captureCount).map { (type: "string", value: "match[\\.anonymous, index: \($0)]") }
+            let captures = (0..<captureCount).map {
+                Method.Capture(type: "string", value: "match[\\.anonymous, index: \($0)]", swiftType: "String")
+            }
             return Definition(pattern: swiftStringLiteral("^\(regex)$"),
                               matchesParameter: captures.isEmpty ? "_" : "match",
                               captures: captures)
@@ -144,11 +148,11 @@ enum StubGenerator {
         var countByType = [String: Int]()
         types.forEach { countByType[$0, default: 0] += 1 }
         var indexByType = [String: Int]()
-        let captures = types.map { type -> (type: String, value: String) in
+        let captures = types.map { type -> Method.Capture in
             let index = indexByType[type, default: 0]
             indexByType[type] = index + 1
             let value = countByType[type] == 1 ? "try match.first(\\.\(type))" : "match[\\.\(type), index: \(index)]"
-            return (type: type, value: value)
+            return Method.Capture(type: type, value: value, swiftType: type.capitalizingFirstLetter())
         }
         return Definition(pattern: swiftStringLiteral(expression),
                           matchesParameter: captures.isEmpty ? "_" : "match",
@@ -157,12 +161,18 @@ enum StubGenerator {
 
     /// The step definition CucumberSwift suggests for a step with `match` and `keyword` that no step
     /// definition matches. It binds `step` when the step has a data table or a doc string, to read them.
-    static func method(for match: String, keyword: Step.Keyword, hasDataTable: Bool, hasDocString: Bool, style: Style) -> Method {
+    /// With `macro`, it is a step definition macro, such as `#Given("I have {int} cukes") { (int: Int) in`.
+    static func method(for match: String,
+                       keyword: Step.Keyword,
+                       hasDataTable: Bool,
+                       hasDocString: Bool,
+                       style: Style,
+                       macro: Bool = false) -> Method {
         let tokens = StubGenerator.Lexer(match).lex()
         let regex = regexForTokens(tokens)
         let definition: Definition
         switch style {
-            case .cucumberExpression: definition = cucumberExpressionDefinition(regex: regex, tokens: tokens)
+            case .cucumberExpression: definition = cucumberExpressionDefinition(regex: regex, tokens: tokens, macro: macro)
             case .regexLiteral(let regexLiteralStyle):
                 definition = regexLiteralDefinition(regex: regex, tokens: tokens, style: regexLiteralStyle)
         }
@@ -175,6 +185,7 @@ enum StubGenerator {
                       regex: regex,
                       matchesParameter: definition.matchesParameter,
                       captures: definition.captures,
-                      variables: variables)
+                      variables: variables,
+                      isMacro: macro)
     }
 }

@@ -11,12 +11,23 @@ import XCTest
 /// and in both regex literal styles, by comparing the generator's output with copies that are compiled:
 /// `GeneratedStepDefinitions.swift` here (Cucumber Expressions and `#/…/#`) and
 /// `GeneratedBareSlashStepDefinitions.swift` in CucumberSwiftConsumerTests (`/…/`), a target with
-/// bare slash regex literals turned on.
+/// bare slash regex literals turned on. The same step definitions as macros, in all three, are compiled in
+/// `GeneratedMacroStepDefinitions.swift` in the StepDefinitionMacrosPackage fixture, which has the macros.
 class GeneratedStepDefinitionTests: XCTestCase {
     private var generatedStepDefinitionsFile: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("GeneratedStepDefinitions.swift")
+    }
+
+    private var generatedMacroStepDefinitionsFile: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/StepDefinitionMacrosPackage/Tests/StepDefinitionMacrosPackageTests")
+            .appendingPathComponent("GeneratedMacroStepDefinitions.swift")
     }
 
     override func setUpWithError() throws {
@@ -44,6 +55,27 @@ class GeneratedStepDefinitionTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent("CucumberSwiftConsumerTests/GeneratedBareSlashStepDefinitions.swift")
         try assertGeneratedSection(of: file, equalsGeneratorOutputFor: .regexLiteral(.bareSlash))
+    }
+
+    func testCompiledCucumberExpressionMacrosMatchTheGenerator() throws {
+        try assertGeneratedSection("GENERATED CUCUMBER EXPRESSION MACROS",
+                                   of: generatedMacroStepDefinitionsFile,
+                                   equalsGeneratorOutputFor: .cucumberExpression,
+                                   macro: true)
+    }
+
+    func testCompiledExtendedDelimiterMacrosMatchTheGenerator() throws {
+        try assertGeneratedSection("GENERATED EXTENDED DELIMITER MACROS",
+                                   of: generatedMacroStepDefinitionsFile,
+                                   equalsGeneratorOutputFor: .regexLiteral(.extendedDelimiter),
+                                   macro: true)
+    }
+
+    func testCompiledBareSlashMacrosMatchTheGenerator() throws {
+        try assertGeneratedSection("GENERATED BARE SLASH MACROS",
+                                   of: generatedMacroStepDefinitionsFile,
+                                   equalsGeneratorOutputFor: .regexLiteral(.bareSlash),
+                                   macro: true)
     }
 
     func testGeneratedCucumberExpressionsMatchEveryStep() {
@@ -79,9 +111,11 @@ class GeneratedStepDefinitionTests: XCTestCase {
     private func assertGeneratedSection(_ marker: String = "GENERATED",
                                         of file: URL,
                                         equalsGeneratorOutputFor style: StubGenerator.Style,
+                                        macro: Bool = false,
                                         line: UInt = #line) throws {
         let generated = StubGenerator.getStubs(for: Cucumber(withString: GeneratedStepDefinitions.feature).features,
-                                               style: style)
+                                               style: style,
+                                               macro: macro)
             .map(\.generatedSwift)
             .joined(separator: "\n")
         let lines = try String(contentsOf: file, encoding: .utf8).components(separatedBy: "\n")

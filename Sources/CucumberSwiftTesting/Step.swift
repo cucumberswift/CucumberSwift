@@ -53,6 +53,9 @@ public final class Step {
     let suggestion: String
     let regexLiteralSuggestion: String?
     let bareSlashRegexLiteralSuggestion: String?
+    let macroSuggestion: String?
+    let regexLiteralMacroSuggestion: String?
+    let bareSlashRegexLiteralMacroSuggestion: String?
 
     /// The scenario's tags.
     public var tags: [String] { scenario?.tags ?? [] }
@@ -67,6 +70,9 @@ public final class Step {
         suggestion = step.suggestion
         regexLiteralSuggestion = step.regexLiteralSuggestion
         bareSlashRegexLiteralSuggestion = step.bareSlashRegexLiteralSuggestion
+        macroSuggestion = step.macroSuggestion
+        regexLiteralMacroSuggestion = step.regexLiteralMacroSuggestion
+        bareSlashRegexLiteralMacroSuggestion = step.bareSlashRegexLiteralMacroSuggestion
         self.scenario = scenario
     }
 }
