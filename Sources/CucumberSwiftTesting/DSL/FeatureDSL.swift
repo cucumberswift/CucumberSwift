@@ -55,22 +55,23 @@ public struct Background: ScenarioDSL {
     }
 }
 
-/// A group of scenarios, in the Swift DSL. As in CucumberSwift, its scenarios belong to the feature.
+/// A group of scenarios, in the Swift DSL. As in CucumberSwift, its scenarios belong to the feature, and its
+/// title, tags and position are not used.
 public struct Rule: ScenarioDSL {
     public let scenarios: [Scenario]
     @MainActor
-    public init(_ title: String,
-                tags: [String] = [],
-                line: UInt = #line,
-                column: UInt = #column,
+    public init(_: String,
+                tags _: [String] = [],
+                line _: UInt = #line,
+                column _: UInt = #column,
                 @ScenarioBuilder _ content: () -> [ScenarioDSL]) {
         scenarios = content().flatMap(\.scenarios)
     }
     @MainActor
-    public init(_ title: String,
-                tags: [String] = [],
-                line: UInt = #line,
-                column: UInt = #column,
+    public init(_: String,
+                tags _: [String] = [],
+                line _: UInt = #line,
+                column _: UInt = #column,
                 @ScenarioBuilder _ content: () -> ScenarioDSL) {
         scenarios = content().scenarios
     }
@@ -84,7 +85,7 @@ public struct ScenarioOutline: ScenarioDSL {
     @discardableResult public init<T>(_ title: String,
                                       tags: [String] = [],
                                       description: String = "",
-                                      headers: T.Type,
+                                      headers _: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
                                       @StepBuilder steps: (T) -> [StepDSL],
@@ -98,7 +99,7 @@ public struct ScenarioOutline: ScenarioDSL {
     @discardableResult public init<T>(_ title: String,
                                       tags: [String] = [],
                                       description: String = "",
-                                      headers: T.Type,
+                                      headers _: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
                                       @StepBuilder steps: (T) -> StepDSL,
@@ -112,7 +113,7 @@ public struct ScenarioOutline: ScenarioDSL {
     @discardableResult public init<T>(_ title: (T) -> String,
                                       tags: [String] = [],
                                       description: String = "",
-                                      headers: T.Type,
+                                      headers _: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
                                       @StepBuilder steps: (T) -> [StepDSL],
@@ -126,7 +127,7 @@ public struct ScenarioOutline: ScenarioDSL {
     @discardableResult public init<T>(_ title: (T) -> String,
                                       tags: [String] = [],
                                       description: String = "",
-                                      headers: T.Type,
+                                      headers _: T.Type,
                                       line: UInt = #line,
                                       column: UInt = #column,
                                       @StepBuilder steps: (T) -> StepDSL,

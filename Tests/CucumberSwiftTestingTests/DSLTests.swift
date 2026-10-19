@@ -50,21 +50,6 @@ extension CucumberTests {
         ])
     }
 
-    @Test func theFunctionFormReadsItsTextFromTheSwiftFile() {
-        func printAStatement() {}
-        Feature("F") {
-            Scenario("S") {
-                Given(I: printAStatement())
-                When(a:
-                    printAStatement())
-            }
-        }
-        let steps = Cucumber.shared.dsl.scenarios.first?.steps
-        #expect(steps?.map(\.text) == ["I: printAStatement()", "a:printAStatement()"])
-        #expect(steps?.map(\.keyword) == [.given, .when])
-        #expect(Cucumber.shared.dsl.scenarios.first?.file == #filePath)
-    }
-
     @Test func theCasesAreNamedAfterTheFeatureTheScenarioAndTheStep() {
         resetNames()
         Feature("Basket", tags: ["basket"]) {
@@ -217,4 +202,82 @@ extension CucumberTests {
         #expect(ran.isEmpty)
     }
     #endif
+
+    @Test func withParallelTestingEachScenarioIsOneCaseAndTheyRunAtTheSameTime() async throws {
+        resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        Feature("F") {
+            Scenario("Slow") {
+                Given(_macroStep: {
+                          try await Task.sleep(nanoseconds: 50_000_000)
+                          self.ran.append("slow")
+                      },
+                      stepText: "I: waitAWhile()",
+                      line: 1,
+                      column: 1,
+                      file: "/B.swift")
+            }
+            Scenario("Quick") {
+                Given(_macroStep: self.ran.append("quick"), stepText: "I: goAtOnce()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES"]
+        let cases = Cucumber.shared.dslCasesToRun()
+        #expect(cases.map(\.testDescription) == ["F › Slow", "F › Quick"])
+        Cucumber.shared.beginSuite()
+        await withTaskGroup(of: Void.self) { group in
+            for testCase in cases {
+                group.addTask { try? await Cucumber.shared.run(testCase) }
+            }
+        }
+        await Cucumber.shared.endSuite()
+        // The quick scenario didn't wait for the slow one, and the feature ended once, after both.
+        #expect(ran == ["quick", "slow"])
+        #expect(observer.log.filter { $0.hasPrefix("feature") } == ["feature started F", "feature passed F"])
+        #expect(observer.log.dropLast().last == "feature passed F")
+    }
+
+    @Test func withParallelTestingByFeatureAFeaturesScenariosRunOneAtATime() async throws {
+        resetNames()
+        Feature("F") {
+            Scenario("Slow") {
+                Given(_macroStep: {
+                          try await Task.sleep(nanoseconds: 50_000_000)
+                          self.ran.append("slow")
+                      },
+                      stepText: "I: waitAWhile()",
+                      line: 1,
+                      column: 1,
+                      file: "/B.swift")
+            }
+            Scenario("Quick") {
+                Given(_macroStep: self.ran.append("quick"), stepText: "I: goAtOnce()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES", "CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]
+        let cases = Cucumber.shared.dslCasesToRun()
+        await withTaskGroup(of: Void.self) { group in
+            for testCase in cases {
+                group.addTask { try? await Cucumber.shared.run(testCase) }
+                // So that the slow scenario starts first.
+                await Task.yield()
+            }
+        }
+        #expect(ran == ["slow", "quick"])
+    }
+
+    @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.beginSuite()
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue.hasPrefix("setupSteps() wrote features in the Swift DSL, but none of them ran") }
+        }
+    }
 }

@@ -5,7 +5,7 @@
 // The text of a step written in the Swift DSL with a function, such as `Given(I: logIn())`: read from the
 // Swift file at run time, from the step's line and column. It needs the source file, so it finds nothing on a
 // device or from an archived test bundle; the DSL step macros, such as `#Given(I: logIn())`, capture the text
-// when the tests compile instead. CucumberSwiftTesting compiles this file too, through a symlink.
+// when the tests compile instead. CucumberSwiftTesting has only the macros.
 
 import Foundation
 

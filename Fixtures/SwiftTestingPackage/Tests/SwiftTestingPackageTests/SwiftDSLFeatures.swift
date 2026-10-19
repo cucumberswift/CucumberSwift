@@ -3,8 +3,7 @@
 //  SwiftTestingPackageTests
 //
 //  A feature written in the Swift DSL rather than in a feature file: the generated "Swift DSL features" test
-//  runs it. Its steps are the DSL step macros, whose text is captured when the tests compile, and one step in
-//  the function form, whose text is read from this file when they run.
+//  runs it. Its steps are the DSL step macros, whose text is captured when the tests compile.
 //
 
 import CucumberSwiftTestingMacros
@@ -54,7 +53,7 @@ extension Cucumber {
             // swiftlint:disable:next multiline_arguments
             ScenarioOutline({ "Buy \($0) cukes" }, headers: Int.self, steps: { count in
                 #When(I: addCukes(count))
-                Then(the: #expect(World.cukes == count))
+                #Then(the: #expect(World.cukes == count))
             }, examples: { [1, 4] })
         }
     }

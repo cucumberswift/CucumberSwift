@@ -16,8 +16,20 @@ struct DSLFeatures {
     var scenarios = [GherkinScenario]()
     /// What each step of a scenario runs, by the scenario's `dslID`.
     var steps = [Int: [DSLStep]]()
-    /// The key of the last scenario of each feature that runs, after which the feature ends.
-    var lastScenarios = Set<String>()
+    /// How many of each feature's scenarios that run have not finished, by ``featureKey(of:)``. The feature ends
+    /// when its last one does, whichever that is when scenarios run at the same time.
+    var unfinished = [String: Int]()
+    /// With parallel testing by feature, the scenario of each feature that runs or ran last, which the next waits
+    /// for, so that a feature's scenarios run one at a time while features run at the same time.
+    var lastInFeature = [String: Task<Void, Never>]()
+    /// Whether the cases run at the same time, as parallel testing has them.
+    var runsInParallel = false
+    /// Whether the generated "Swift DSL features" test asked for its cases.
+    var casesRequested = false
+
+    static func featureKey(of scenario: GherkinScenario) -> String {
+        "\(scenario.file):\(scenario.featureLine):\(scenario.featureTitle)"
+    }
 }
 
 extension Cucumber {
@@ -44,17 +56,20 @@ extension Cucumber {
 
     /// The cases of the generated "Swift DSL features" test: the cases of each scenario of the Swift DSL that
     /// runs, as ``shouldRun(_:)`` decides, named after its feature and itself, in the order they were declared.
-    /// Each feature ends after the last of its scenarios that runs.
-    public func dslCasesToRun() -> [ScenarioCase] {
+    /// With parallel testing, which `parallelCompiled` says the compilation condition turns on, as for the
+    /// generated suite, each scenario is one case, so that scenarios run at the same time, as XCTest runs them,
+    /// and a scenario's steps still run in order.
+    public func dslCasesToRun(parallelCompiled: Bool = false) -> [ScenarioCase] {
         loadStepDefinitions()
         let readable = CucumberSettings.isReadableTestNames(environment: environment)
         let delimiter = readable ? TestNames.readableDelimiter : "_"
-        let running = dsl.scenarios.filter(shouldRun)
-        var lastOfFeature = [String: String]()
+        dsl.casesRequested = true
+        dsl.runsInParallel = CucumberSettings.runsInParallel(compiled: parallelCompiled, environment: environment)
+        dsl.unfinished = [:]
         var names = Set<String>()
         var cases = [ScenarioCase]()
-        for scenario in running {
-            lastOfFeature["\(scenario.file):\(scenario.featureLine):\(scenario.featureTitle)"] = Self.key(of: scenario)
+        for scenario in dsl.scenarios.filter(shouldRun) {
+            dsl.unfinished[DSLFeatures.featureKey(of: scenario), default: 0] += 1
             // As CucumberSwift names a test: a number after a name already taken, as an outline's examples are.
             let base = TestNames.name(scenario.featureTitle, readable: readable) + delimiter + TestNames.name(scenario.title, readable: readable)
             var label = base
@@ -64,9 +79,36 @@ extension Cucumber {
                 label = "\(base) \(count)"
             }
             names.insert(label)
-            cases += self.cases(of: scenario, label: label)
+            cases += dsl.runsInParallel ? [ScenarioCase(scenario: scenario, stepIndex: nil, name: label)] : self.cases(of: scenario, label: label)
         }
-        dsl.lastScenarios = Set(lastOfFeature.values)
         return cases
+    }
+
+    /// Fails the suite when `setupSteps()` wrote features in the Swift DSL but the generated tests have no "Swift DSL
+    /// features" test to run them: CucumberSwiftTestingPlugin adds it when one of the target's Swift files calls
+    /// `Feature(…)`, and these were written somewhere else, such as in another module.
+    func reportDSLFeaturesNotRun() {
+        guard !dsl.scenarios.isEmpty, !dsl.casesRequested else { return }
+        Issue.record("""
+            setupSteps() wrote features in the Swift DSL, but none of them ran: CucumberSwiftTestingPlugin adds the test \
+            that runs them when one of the test target's own Swift files calls Feature(…). Write the features in the \
+            test target.
+            """)
+    }
+
+    /// Runs `body`, a scenario of the Swift DSL, after the scenario of its feature that started before it, with
+    /// parallel testing by feature, as CucumberSwift hands a whole feature to one worker. Otherwise it runs it.
+    func inFeatureOrder(_ scenario: GherkinScenario, _ body: @escaping @MainActor () async -> Void) async {
+        guard dsl.runsInParallel, CucumberSettings.parallelTestingUnit(environment: environment) == .feature else {
+            return await body()
+        }
+        let key = DSLFeatures.featureKey(of: scenario)
+        let previous = dsl.lastInFeature[key]
+        let task = Task { @MainActor in
+            await previous?.value
+            await body()
+        }
+        dsl.lastInFeature[key] = task
+        await task.value
     }
 }

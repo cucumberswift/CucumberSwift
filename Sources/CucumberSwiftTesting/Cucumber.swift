@@ -150,7 +150,7 @@ public final class Cucumber {
         loadStepDefinitions()
         reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
-        await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await perform(gherkinScenario) }
+        await inFeatureOrder(gherkinScenario) { await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await self.perform(gherkinScenario) } }
     }
 
     private func perform(_ gherkinScenario: GherkinScenario) async {
@@ -295,6 +295,7 @@ public final class Cucumber {
         for run in open {
             await finish(run)
         }
+        reportDSLFeaturesNotRun()
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
     }
 
@@ -480,7 +481,10 @@ extension Cucumber {
     /// Finishes a feature of the Swift DSL after its last scenario that runs, as CucumberSwift does. They are all
     /// one test, so no feature's suite says where it ends.
     private func endDSLFeatureIfLast(_ progress: ScenarioProgress) async {
-        guard progress.gherkin.dslID != nil, dsl.lastScenarios.contains(Self.key(of: progress.gherkin)) else { return }
-        await finish(progress.featureRun)
+        guard progress.gherkin.dslID != nil else { return }
+        let key = DSLFeatures.featureKey(of: progress.gherkin)
+        guard let unfinished = dsl.unfinished[key] else { return }
+        dsl.unfinished[key] = unfinished - 1
+        if unfinished <= 1 { await finish(progress.featureRun) }
     }
 }

@@ -18,7 +18,8 @@ final class DSLStepMacroTests: XCTestCase {
         "Then": DSLStepMacro.self,
         "And": DSLStepMacro.self,
         "But": DSLStepMacro.self,
-        "MatchAll": DSLStepMacro.self
+        "MatchAll": DSLStepMacro.self,
+        "ES_Dado": DSLStepMacro.self
     ]
 
     func testTheTextIsTheLabelAndTheCallAsTheFunctionFormReadsIt() {
@@ -97,6 +98,13 @@ final class DSLStepMacroTests: XCTestCase {
                 MatchAll(_macroStep: wait(), stepText: "I: wait()", line: 2, column: 14, file: "test.swift")
             }
             """,
+            macros: macros)
+    }
+
+    func testALocalizedStepExpandsToItsLocalizedType() {
+        assertMacroExpansion(
+            "#ES_Dado(I: abrirLaTienda())",
+            expandedSource: #"ES_Dado(_macroStep: abrirLaTienda(), stepText: "I: abrirLaTienda()", line: 1, column: 9, file: "test.swift")"#,
             macros: macros)
     }
 
