@@ -173,6 +173,6 @@
         "name" : "shop"
       }
     ],
-    "uri" : "file:\/\/\/Features\/Checkout.feature"
+    "uri" : "file:\/\/\/Tests.bundle\/Features\/Checkout.feature"
   }
 ]

@@ -14,12 +14,7 @@ extension Cucumber: XCTestObservation {
         // First, so that the report has each feature's result.
         finishStartedFeatures()
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
-        let name = Cucumber.shared.reportName.appending(String(testBundle.bundleURL.lastPathComponent.prefix { $0 != "." })).appending(".json")
-        if  let documentDirectory = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false),
-            let reportURL = Reporter.reportURL {
-            let fileURL = documentDirectory.appendingPathComponent(name)
-            try? FileManager.default.copyItem(at: reportURL, to: fileURL)
-        }
+        TestBundleFiles.copyReport(at: Reporter.reportURL, forBundleAt: testBundle.bundleURL, prefix: Cucumber.shared.reportName)
     }
 
     public func testCase(_ testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: Int) {

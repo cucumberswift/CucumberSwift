@@ -39,7 +39,7 @@ extension Cucumber {
         if environment["CUCUMBER_TAGS"] != nil {
             runs = CucumberTags.shouldRun(gherkinScenario.tags, environment: environment)
         } else if let implementation = self as Any as? StepImplementation {
-            runs = implementation.shouldRunWith(scenario: Scenario(gherkinScenario, feature: Feature(gherkinScenario)), tags: gherkinScenario.tags)
+            runs = implementation.shouldRunWith(scenario: Scenario(gherkinScenario, feature: feature(of: gherkinScenario)), tags: gherkinScenario.tags)
         } else {
             runs = true
         }

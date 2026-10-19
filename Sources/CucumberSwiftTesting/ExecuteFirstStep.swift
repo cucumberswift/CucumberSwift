@@ -50,7 +50,7 @@ extension Cucumber {
             return
         }
         // The nested step is in the scenario that is running, so that it shares the scenario's state.
-        let scenario = running.scenario ?? Scenario(gherkinScenario, feature: Feature(gherkinScenario))
+        let scenario = running.scenario ?? Scenario(gherkinScenario, feature: feature(of: gherkinScenario))
         let step = Step(GherkinStep(keyword: keyword ?? [],
                                     keywordName: "",
                                     text: matching,

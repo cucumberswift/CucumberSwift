@@ -55,6 +55,9 @@ enum SwiftTestingSource {
         private let cucumberParallelTesting = false
         #endif
 
+        /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
+        private final class CucumberFeaturesBundle {}
+
 
         """
 
@@ -184,6 +187,7 @@ enum SwiftTestingSource {
             + pad + "    title: \(literal(parts.title)),\n"
             + pad + "    tags: \(array(parts.tags)),\n"
             + pad + "    file: \(literal(path)),\n"
+            + pad + "    testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),\n"
             + pad + "    line: \(parts.line),\n"
             + pad + "    column: \(parts.column),\n"
             + pad + "    steps: [\n"
