@@ -114,7 +114,13 @@ let lintScript = TargetScript.post(
     if [ -z "$swiftlint" ]; then
       echo "warning: SwiftLint not installed. Install the version .mise.lint.toml pins with: MISE_ENV=lint mise install"
     elif [ -n "$demote" ]; then
-      "$swiftlint" --config .swiftlint.yml | sed 's/: error: /: warning: /'
+      # SwiftLint exits 2 when it finds errors and 1 when it can't lint at all (an unreadable config, say).
+      status=0
+      report=$("$swiftlint" --config .swiftlint.yml) || status=$?
+      echo "$report" | sed 's/: error: /: warning: /'
+      if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
+        echo "warning: SwiftLint $("$swiftlint" version) failed with status $status before it finished linting, so nothing was checked."
+      fi
       exit 0
     else
       echo "SwiftLint $("$swiftlint" version) at $swiftlint"
