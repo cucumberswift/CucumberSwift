@@ -197,12 +197,16 @@ extension CucumberTests {
         resetNames()
         Feature("F") {
             Scenario("S") {
-                // swiftlint:disable:next multiline_arguments
                 Given(_macroStep: {
-                    #expect(Bool(false), "deliberately")
-                    try await Task.sleep(nanoseconds: 5_000_000_000)
-                    self.ran.append("went on")
-                }, stepText: "I: fail()", line: 1, column: 1, file: "/B.swift").continueAfterFailure(false)
+                          #expect(Bool(false), "deliberately")
+                          try await Task.sleep(nanoseconds: 5_000_000_000)
+                          self.ran.append("went on")
+                      },
+                      stepText: "I: fail()",
+                      line: 1,
+                      column: 1,
+                      file: "/B.swift")
+                    .continueAfterFailure(false)
             }
         }
         try await withKnownIssue {
