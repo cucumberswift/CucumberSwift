@@ -94,7 +94,7 @@
             }
 
             @Step {
-                Paste the suggested definitions into `setupSteps()`. Each one is a step definition macro, `#Given`, `#When` or `#Then`, that matches its step with a Cucumber Expression: `{int}` matches a whole number, and the closure receives it as an `Int` argument. Each step fails until you replace its `XCTFail` line with your test code.
+                Paste the suggested definitions into `setupSteps()`. Each one is a step definition macro, `#Given`, `#When` or `#Then`, that matches its step with a Cucumber Expression: `{int}` matches a whole number, and the closure receives it as an `Int` argument. CucumberSwift suggests macros because your test target links `CucumberSwiftMacros`: see <doc:Matching-Steps#Step-definition-macros>. Each step fails until you replace its `XCTFail` line with your test code.
 
                 > Note: To have regular expression literals suggested instead, turn on `Cucumber.generateRegexLiterals`: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
 

@@ -210,50 +210,84 @@ A closure without `await` is an ordinary synchronous step definition, exactly as
 
 Steps still run one at a time, in the order the feature file declares them. The next step starts only once an async step has finished, so nothing in a scenario ever runs in parallel. A step definition's closure runs on the main actor. Awaiting work on other threads or actors is fine: the step resumes on the main actor afterwards.
 
-- **Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. By default a failed assertion doesn't stop its step, and CucumberSwift doesn't cancel the step's task. With `continueTestingAfterFailure` turned off, which you do by returning `false` from your `StepImplementation` (see <doc:Settings#Continue-after-a-failed-assertion>), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
-- **Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. The timeout applies only to async steps and async hooks: a synchronous step or hook has none. To change it, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
+**Failures and errors.** An assertion that fails inside an async step fails that step, and a thrown error fails it too. As for any failed step, the rest of the scenario is skipped. By default a failed assertion doesn't stop its step, and CucumberSwift doesn't cancel the step's task. With `continueTestingAfterFailure` turned off, which you do by returning `false` from your `StepImplementation` (see <doc:Settings#Continue-after-a-failed-assertion>), CucumberSwift cancels the step's task when it fails, then waits for it to finish before going on.
 
-  ```swift
-  extension Cucumber: StepImplementation {
-      public var asyncStepTimeout: TimeInterval { 120 }
-      // ...
-  }
-  ```
+**Timeout.** An async step fails if it has not finished within 60 seconds, and is cancelled. The timeout applies only to async steps and async hooks: a synchronous step or hook has none. To change it, set `asyncStepTimeout` (in seconds) in your `StepImplementation`:
 
-  Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
-- **UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous one can. Its closure runs on the main actor, as `XCUIApplication` needs:
+```swift
+extension Cucumber: StepImplementation {
+    public var asyncStepTimeout: TimeInterval { 120 }
+    // ...
+}
+```
 
-  <!-- swift-example: fragment: taps with XCUIElement.tap(), which a macOS build doesn't have -->
-  ```swift
-  #When("I add an item") {
-      try await cart.prepare()
-      app.buttons["add"].tap()
-      XCTAssert(app.staticTexts["Items: 1"].waitForExistence(timeout: 10))
-  }
-  ```
+Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before starting the next one, so a step that ignores cancellation holds up the run rather than overlap the step after it.
 
-  With Carthage, which can't deliver the macros, write it as `When("I add an item") { _, _ in … }` with the same body.
+**UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous one can. Its closure runs on the main actor, as `XCUIApplication` needs:
 
-  XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
-- **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
-- **Running another step.** Put the code both step definitions need in a function, and call it from each, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A synchronous helper works from any step. An `async` helper needs `await`, so only an async step or hook can call it, and a step that calls one has to be async itself.
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: fragment: taps with XCUIElement.tap(), which a macOS build doesn't have -->
+```swift
+#When("I add an item") {
+    try await cart.prepare()
+    app.buttons["add"].tap()
+    XCTAssert(app.staticTexts["Items: 1"].waitForExistence(timeout: 10))
+}
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: fragment: taps with XCUIElement.tap(), which a macOS build doesn't have -->
+```swift
+When("I add an item") { _, _ in
+    try await cart.prepare()
+    app.buttons["add"].tap()
+    XCTAssert(app.staticTexts["Items: 1"].waitForExistence(timeout: 10))
+}
+```
+}
+}
 
-  <!-- swift-example: steps -->
-  ```swift
-  func addCukes(_ count: Int) {
-      basket.add(count, to: "basket")
-  }
-  #Given("I have {int} cukes in my basket") { (count: Int) in
-      addCukes(count)
-  }
-  #When("I add {int} more cukes") { (count: Int) in
-      addCukes(count)
-  }
-  ```
+XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's `asyncStepTimeout`, together with everything else the step does, so set it longer than the whole step: all of its XCUI waits added up, plus its other work. When the timeout passes while an XCUI call is still waiting, XCTest interrupts that call ("Interrupted by waiter"), and the step fails with the timeout.
 
-  > Deprecation Warning: `ExecuteFirstStep(matching:)` is deprecated and will be removed in a future major version.
-  >
-  > Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
+**Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to touch UI state; a plain `async` function runs on a background thread. Either way, the next step waits for it.
+
+**Running another step.** Put the code both step definitions need in a function, and call it from each, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. A synchronous helper works from any step. An `async` helper needs `await`, so only an async step or hook can call it, and a step that calls one has to be async itself.
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+func addCukes(_ count: Int) {
+    basket.add(count, to: "basket")
+}
+#Given("I have {int} cukes in my basket") { (count: Int) in
+    addCukes(count)
+}
+#When("I add {int} more cukes") { (count: Int) in
+    addCukes(count)
+}
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+func addCukes(_ count: Int) {
+    basket.add(count, to: "basket")
+}
+Given("I have {int} cukes in my basket") { match, _ in
+    addCukes(try match.first(\.int))
+}
+When("I add {int} more cukes") { match, _ in
+    addCukes(try match.first(\.int))
+}
+```
+}
+}
+
+> Deprecation Warning: `ExecuteFirstStep(matching:)` is deprecated and will be removed in a future major version.
+>
+> Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
 
 With the Swift DSL, pass an async function or closure rather than a call:
 
@@ -395,8 +429,18 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 > Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"), but a Swift package's target in the Swift 5 language mode needs it set: see <doc:Running-Tests-With-Swift-Package-Manager>. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 ## Step definitions for undefined steps
-For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target, in a step definition function as below, or in a macro if you use the step definition macros (see <doc:Matching-Steps#Step-definition-macros>). Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
+For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition you can paste in, and attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code is a Cucumber expression, which works on every deployment target, in a step definition macro when your tests link the step definition macros and in a function otherwise, such as with Carthage (see <doc:Matching-Steps#Step-definition-macros>). Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#Then("the display shows {string}") { (string: String) in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 Then("the display shows {string}") { match, _ in
@@ -404,12 +448,24 @@ Then("the display shows {string}") { match, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 ```
+}
+}
 
 A parameter type that a step uses more than once is read by position, such as `match[\.int, index: 1]`. Characters that mean something in a Cucumber expression, such as `\`, `(`, `{` and `/`, are escaped, and so is a `^` at the start of the step. A step that ends in `$` gets a regular expression instead, such as `Then("^I owe (\\d+)\\$$")`, because a pattern that ends in `$` is always read as one (see <doc:Matching-Steps#How-a-string-pattern-is-read>). Its parameters are text, read with `match[\.anonymous, index: 0]`.
 
 ### Generate regex literals instead
 Earlier versions generated regex literals. To have them again, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`, or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. When both are set, the static variable wins (see <doc:Settings>). The Swift Testing runner reads the same two settings.
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#Then(#/^the display shows \"(.*?)\"$/#) { (string: Substring) in
+    XCTFail("Step not implemented: replace this line with your test code")
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
@@ -417,18 +473,13 @@ Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
     XCTFail("Step not implemented: replace this line with your test code")
 }
 ```
+}
+}
 
 They are written as `#/…/#`, which compiles in any test target. Return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle` to get `/…/` instead; it has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target, which CucumberSwift can't read, so check it in your own code: see <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions>. Regex literals need iOS 16, macOS 13 or tvOS 16.
 
 ### Step definition macros
-If your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), CucumberSwift suggests macros instead, as Convert to Gherkin Macros writes them:
-
-<!-- swift-example: steps -->
-```swift
-#Then("the display shows {string}") { (string: String) in
-    XCTFail("Step not implemented: replace this line with your test code")
-}
-```
+If your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), CucumberSwift suggests macros instead, as Convert to Gherkin Macros writes them and as the Swift Package Manager tabs above show.
 
 It suggests macros when the test target links `CucumberSwiftMacros`, or `CucumberSwiftTestingMacros` with the Swift Testing runner, built with the `Macros` trait, and functions otherwise, such as with Carthage. To choose for yourself, set `Cucumber.generateMacros` in `setupSteps()` to `false` for functions or `true` for macros, or set the environment variable `CUCUMBER_GENERATE_MACROS` to `NO` or `YES`. When both are set, the static variable wins. The Swift Testing runner reads the same two settings.
 
