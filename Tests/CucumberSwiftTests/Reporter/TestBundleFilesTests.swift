@@ -55,6 +55,15 @@ final class TestBundleFilesTests: XCTestCase {
         XCTAssertEqual(TestBundleFiles.resultsFileName(forBundleAt: bundleURL), "CucumberTestResultsForTests.json")
     }
 
+    /// `FeaturesPath` in the test bundle's Info.plist names its folder of feature files, relative to the bundle.
+    func testFeaturesPathNamesTheFeaturesFolder() throws {
+        let bundleURL = try makeTestBundle(with: ["Checkout.feature"])
+        let bundle = try XCTUnwrap(Bundle(url: bundleURL))
+
+        XCTAssertEqual(TestBundleFiles.featuresFolder(in: bundle, featuresPath: "specs/features"),
+                       bundle.bundleURL.appendingPathComponent("specs/features"))
+    }
+
     /// The copy of the report that testBundleDidFinish makes replaces the one an earlier run left (#463).
     func testTheCopyOfTheReportReplacesAnEarlierOne() throws {
         let report = folder.appendingPathComponent("report.json")

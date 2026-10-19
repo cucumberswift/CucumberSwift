@@ -15,7 +15,12 @@ enum TestBundleFiles {
     /// The test bundle's folder of feature files: the `FeaturesPath` in its Info.plist, relative to the
     /// bundle, else its `Features` resource, else `Features` in the bundle.
     static func featuresFolder(in bundle: Bundle) -> URL {
-        if let relativePath = bundle.infoDictionary?["FeaturesPath"] as? String {
+        featuresFolder(in: bundle, featuresPath: bundle.infoDictionary?["FeaturesPath"] as? String)
+    }
+
+    /// The test bundle's folder of feature files, with `featuresPath`, its Info.plist's `FeaturesPath`, given.
+    static func featuresFolder(in bundle: Bundle, featuresPath: String?) -> URL {
+        if let relativePath = featuresPath {
             return bundle.bundleURL.appendingPathComponent(relativePath)
         } else if let featuresPath = bundle.url(forResource: "Features", withExtension: nil) {
             return featuresPath
