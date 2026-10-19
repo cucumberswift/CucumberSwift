@@ -137,6 +137,56 @@ final class FeatureFileTests: XCTestCase {
         XCTAssertEqual(feature.scenarios.first?.steps.map(\.text), ["the feature's background", "the rule's background", "a step"])
     }
 
+    // A Rule's tags come after the feature's and before the scenario's, on every scenario in the Rule,
+    // and a Scenario Outline in a Rule has its examples, after both Backgrounds (#468).
+    func testARulesScenariosAndOutlinesHaveItsTagsAndBackground() throws {
+        let feature = try parse("""
+        @feature
+        Feature: F
+          Background:
+            Given the feature's background
+
+          @rule
+          Rule: R
+            Background:
+              Given the rule's background
+
+            @first
+            Scenario: S1
+              Then a step
+
+            Scenario: S2
+              Then another step
+
+            @outline
+            Scenario Outline: Eat <eat>
+              When I eat <eat> cucumbers
+
+              @small
+              Examples:
+                | eat |
+                | 1   |
+                | 2   |
+
+          Rule: Untagged
+            Scenario: S3
+              Then a third step
+        """)
+        XCTAssertEqual(feature.scenarios.map(\.title), ["S1", "S2", "Eat <eat>", "S3"])
+        XCTAssertEqual(feature.scenarios.map(\.tags), [
+            ["feature", "rule", "first"],
+            ["feature", "rule"],
+            ["feature", "rule", "outline"],
+            ["feature"],
+        ])
+        XCTAssertEqual(feature.scenarios[1].steps.map(\.text), ["the feature's background", "the rule's background", "another step"])
+        let examples = try XCTUnwrap(feature.scenarios[2].examples)
+        XCTAssertEqual(examples.map(\.title), ["Eat 1 (example 1)", "Eat 2 (example 2)"])
+        XCTAssertEqual(examples.map(\.tags), [["feature", "rule", "outline", "small"], ["feature", "rule", "outline", "small"]])
+        XCTAssertEqual(examples[1].steps.map(\.text), ["the feature's background", "the rule's background", "I eat 2 cucumbers"])
+        XCTAssertEqual(feature.scenarios[3].steps.map(\.text), ["the feature's background", "a third step"])
+    }
+
     func testALocalizedFeatureFileIsReadInItsLanguage() throws {
         let feature = try parse("""
         # language: es

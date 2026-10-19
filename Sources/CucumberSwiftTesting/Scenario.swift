@@ -43,7 +43,7 @@ public final class Feature {
 /// A scenario, or one example of a Scenario Outline, as hooks and step definitions see it.
 public final class Scenario {
     public let title: String
-    /// The feature's tags, then the scenario's.
+    /// The feature's tags, then its Rule's, then the scenario's.
     public let tags: [String]
     /// The Background's steps, then the scenario's.
     public private(set) var steps = [Step]()

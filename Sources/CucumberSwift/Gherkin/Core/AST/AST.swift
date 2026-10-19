@@ -15,6 +15,7 @@ class AST {
                                .then(.createNewNode)
                                .then(.appendTags))
         .ruleFor(.rule(), Rule.createNewNode
+                            .then(.appendTags)
                             .then(.addToNearestParent))
         .ruleFor(.background(), Rule.createNewNode
                                   .then(.addToNearestParent))
