@@ -8,7 +8,8 @@ import Foundation
 import Testing
 
 /// `LocalizedStepTypes.swift` declares each localized step type of CucumberSwift's `Generated/I18n.swift`,
-/// such as `ES_Dado` for `GivenStep`, which the localized macros, such as `#ES_Dado`, expand to. These
+/// such as `ES_Dado` for `GivenStep`, which the localized macros, such as `#ES_Dado`, expand to, and each
+/// localized type of the Swift DSL, such as `ES_Característica` for `Feature`. These
 /// tests build the file from `I18n.swift` and fail when they differ. To rewrite it, run:
 ///
 ///     CUCUMBERSWIFT_WRITE_LOCALIZED_STEP_TYPES=1 swift test --filter LocalizedStepTypeTests
@@ -26,13 +27,14 @@ import Testing
         "//  Generated from CucumberSwift's Generated/I18n.swift by LocalizedStepTypeTests.",
         "//  Do not edit: change I18n.swift, then rewrite this file as that test describes.",
         "//",
-        "//  The step types only: the runner has no Swift DSL for features and scenarios.",
+        "//  The step types, and the types of the Swift DSL, such as `ES_Característica` for `Feature`.",
         "//"
     ]
 
-    /// The file's contents: each step typealias of I18n.swift, under its language's name.
+    /// The file's contents: each step typealias of I18n.swift, and each typealias of the Swift DSL's types, under
+    /// its language's name.
     static func declarations(from i18n: String) throws -> String {
-        let typealiasPattern = try NSRegularExpression(pattern: #"^public typealias \S+ = (GivenStep|WhenStep|ThenStep|AndStep|ButStep)$"#)
+        let typealiasPattern = try NSRegularExpression(pattern: #"^public typealias \S+ = (GivenStep|WhenStep|ThenStep|AndStep|ButStep|Feature|Background|Rule|Scenario|ScenarioOutline)$"#)
         var lines = header
         var language = ""
         var languageOfLastStep = ""
@@ -72,7 +74,8 @@ import Testing
             Range(match.range(at: 1), in: macros).map { String(macros[$0]) }
         })
         let stepTypes = try String(contentsOf: Self.stepTypes, encoding: .utf8)
-        let typePattern = try NSRegularExpression(pattern: #"^public typealias (\S+) = "#, options: .anchorsMatchLines)
+        let typePattern = try NSRegularExpression(pattern: #"^public typealias (\S+) = (GivenStep|WhenStep|ThenStep|AndStep|ButStep)$"#,
+                                                  options: .anchorsMatchLines)
         let typeNames = Set(typePattern.matches(in: stepTypes, range: NSRange(stepTypes.startIndex..., in: stepTypes)).compactMap { match in
             Range(match.range(at: 1), in: stepTypes).map { String(stepTypes[$0]) }
         })

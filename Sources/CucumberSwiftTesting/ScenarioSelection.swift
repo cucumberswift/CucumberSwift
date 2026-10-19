@@ -23,7 +23,8 @@ extension Cucumber {
     }
 
     static func key(of scenario: GherkinScenario) -> String {
-        "\(scenario.file):\(scenario.line):\(scenario.column)"
+        // The examples of a `ScenarioOutline` in the Swift DSL share a line, so its scenarios add their `dslID`.
+        "\(scenario.file):\(scenario.line):\(scenario.column)" + (scenario.dslID.map { "#\($0)" } ?? "")
     }
 
     /// Whether the scenario runs: `CUCUMBER_TAGS` decides when it is set, and otherwise

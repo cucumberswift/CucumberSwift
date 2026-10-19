@@ -93,6 +93,9 @@ public struct GherkinScenario: Sendable {
     public let column: Int
     /// The Background's steps, then the scenario's.
     public let steps: [GherkinStep]
+    /// Which scenario of the Swift DSL this is, or `nil` for one from a feature file. The examples of a
+    /// `ScenarioOutline` in the DSL share a line, so this tells them apart.
+    var dslID: Int?
 
     public init(
         featureTitle: String,

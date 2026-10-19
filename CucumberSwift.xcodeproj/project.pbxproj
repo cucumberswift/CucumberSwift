@@ -88,6 +88,7 @@
 		79F283AFD904F44B71ADB6FE /* MightEqualOperatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C81A88E41DDD343049CA6970 /* MightEqualOperatorTests.swift */; };
 		7A8947F876323F92020B9311 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DC264A5553551E1D8FBB53B /* XCTest.framework */; };
 		7BF61FF266DC5416E9191807 /* ItemCountWait.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0CEE856EF1D2E84192E70F3 /* ItemCountWait.swift */; };
+		7C132BDC985BBA2631A17914 /* StepText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B22A6B503401C370A23E08D /* StepText.swift */; };
 		7CE534F756C528287DA119F7 /* StepBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AEA7D8F25DD9C78B1F89FE0 /* StepBuilder.swift */; };
 		7DC7A14420D12A4C297CCDDF /* WaitFailures.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC620A0BDB9A5BF397977D3D /* WaitFailures.swift */; };
 		821A0D266658C11825710BDC /* Position.swift in Sources */ = {isa = PBXBuildFile; fileRef = F90EB9C3F250AE6A89F8A5DF /* Position.swift */; };
@@ -288,6 +289,7 @@
 		4830673F37C3B443E5F8FC86 /* ReportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFile.swift; sourceTree = "<group>"; };
 		4A8C960840BE8048AD7B7BD2 /* CucumberSwiftConsumerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CucumberSwiftConsumerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B04A56526A3E64CD604A788 /* I18n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = I18n.swift; sourceTree = "<group>"; };
+		4B22A6B503401C370A23E08D /* StepText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepText.swift; sourceTree = "<group>"; };
 		5052E15E3DD22CE884AE1A0D /* ParallelTestingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParallelTestingTests.swift; sourceTree = "<group>"; };
 		56EC378FDDAC46CB59F3B9BB /* ScenarioDSL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioDSL.swift; sourceTree = "<group>"; };
 		57AB3A7392FB1651B0C69F5F /* WaitUntil.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaitUntil.swift; sourceTree = "<group>"; };
@@ -764,6 +766,7 @@
 				56EC378FDDAC46CB59F3B9BB /* ScenarioDSL.swift */,
 				6AEA7D8F25DD9C78B1F89FE0 /* StepBuilder.swift */,
 				D833E9E9B18E8C450136D037 /* StepDSL.swift */,
+				4B22A6B503401C370A23E08D /* StepText.swift */,
 			);
 			path = DSL;
 			sourceTree = "<group>";
@@ -1183,6 +1186,7 @@
 				EC0DF9CB6029AF124A97BD4D /* ScenarioDSL.swift in Sources */,
 				7CE534F756C528287DA119F7 /* StepBuilder.swift in Sources */,
 				72F65C1B575C909F1A7A48AA /* StepDSL.swift in Sources */,
+				7C132BDC985BBA2631A17914 /* StepText.swift in Sources */,
 				A3CCF1AC635CC82B3FECE3B1 /* I18n.swift in Sources */,
 				9111784EA7237ADD1B044334 /* AST.swift in Sources */,
 				4478234AEB779053C0878FA4 /* ASTRule.swift in Sources */,

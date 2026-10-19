@@ -61,6 +61,15 @@ public class StepDSL {
     /// The keyword a step needs for this step definition to match it. Empty for `MatchAll`.
     class var keyword: Step.Keyword { [] }
 
+    /// The step, when this is a step of a feature written in the Swift DSL, such as `Given(I: logIn())`, rather
+    /// than a step definition.
+    var dslStep: DSLStep?
+
+    /// A step of a feature written in the Swift DSL. It registers no step definition: the runner runs `body`.
+    init(dslText text: String?, line: UInt, column: UInt, file: StaticString, body: @escaping @MainActor () async throws -> Void) {
+        dslStep = DSLStep(keyword: Self.keyword, text: text ?? "", line: Int(line), column: Int(column), file: "\(file)", body: body)
+    }
+
     /// Registers a step definition that decides for itself whether a step's text matches. The initializers
     /// that take an expression, a regex literal or a regular expression string all end here.
     init(matching match: @escaping @MainActor (String) -> (@MainActor (Step) async throws -> Void)?,

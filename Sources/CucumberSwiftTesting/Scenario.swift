@@ -43,6 +43,10 @@ public final class Scenario {
     public let feature: Feature?
     public let location: Location
     let internalState = ScenarioState()
+    /// What a scenario written in the Swift DSL runs, until its feature hands it to the runner.
+    var dslSteps = [DSLStep]()
+    /// A scenario's description in the Swift DSL.
+    var dslDescription = ""
 
     /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
     ///   that observers see one object for a feature.
@@ -52,6 +56,12 @@ public final class Scenario {
         self.feature = feature ?? Feature(scenario)
         location = Location(line: scenario.line, column: scenario.column)
         steps = scenario.steps.map { Step($0, in: self) }
+    }
+
+    /// Puts a Background's steps before a scenario's own, in the Swift DSL.
+    func prependDSLSteps(_ background: [DSLStep]) {
+        dslSteps.insert(contentsOf: background, at: 0)
+        steps = DSLStep.gherkinSteps(dslSteps).map { Step($0, in: self) }
     }
 
     /// The running scenario's own value of type `Value`, such as the basket its steps fill in: call it from

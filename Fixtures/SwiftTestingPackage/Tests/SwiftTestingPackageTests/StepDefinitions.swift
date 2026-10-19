@@ -78,6 +78,7 @@ extension Cucumber: @retroactive StepImplementation {
         localizedSteps()
         hookSteps()
         hookMacros()
+        swiftDSLFeatures()
     }
 
     /// The step definition macros: typed closure parameters, checked against the expression when the

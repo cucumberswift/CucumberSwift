@@ -84,6 +84,12 @@ public final class Cucumber {
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
     var approvedScenarios = Set<String>()
     private var startedScenarios = [String: ScenarioProgress]()
+    /// The scenarios of the features written in the Swift DSL, in the order they were declared.
+    var dslScenarios = [GherkinScenario]()
+    /// What each step of a scenario of the Swift DSL runs, by the scenario's `dslID`.
+    var dslSteps = [Int: [DSLStep]]()
+    /// The key of the last scenario of each feature of the Swift DSL that runs, after which the feature ends.
+    var lastDSLScenarios = Set<String>()
 
     /// Whether the scenario's later steps are skipped once a step has recorded an issue, such as a failed
     /// `#expect`, as CucumberSwift skips them once a step has failed. Tests turn it off to see the other.
@@ -157,6 +163,14 @@ public final class Cucumber {
             await runNextStep(of: progress)
         }
         await end(progress)
+        await endDSLFeatureIfLast(progress)
+    }
+
+    /// Finishes a feature of the Swift DSL after its last scenario that runs, as CucumberSwift does. They are all
+    /// one test, so no feature's suite says where it ends.
+    private func endDSLFeatureIfLast(_ progress: ScenarioProgress) async {
+        guard progress.gherkin.dslID != nil, lastDSLScenarios.contains(Self.key(of: progress.gherkin)) else { return }
+        await finish(progress.featureRun)
     }
 
     /// Runs one case of a scenario's test: the whole scenario, or one step. The cases of a scenario run in
@@ -194,6 +208,7 @@ public final class Cucumber {
             }
             if index == gherkinScenario.steps.count - 1 {
                 await end(progress)
+                await endDSLFeatureIfLast(progress)
             }
         }
         if skipped { try skipStep() }
@@ -230,7 +245,8 @@ public final class Cucumber {
     private func runNextStep(of progress: ScenarioProgress) async {
         let step = progress.scenario.steps[progress.nextStep]
         progress.nextStep += 1
-        let outcome = await run(step, in: progress.gherkin.file)
+        let dslStep = progress.gherkin.dslID.flatMap { dslSteps[$0] }?[progress.nextStep - 1]
+        let outcome = await run(step, in: progress.gherkin.file, dslStep: dslStep)
         // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
         // step that is current when the hook fails.
         if outcome.isStepFailed { progress.isFailed = true }
@@ -383,7 +399,9 @@ public final class Cucumber {
 
     /// Runs one step, and tells the observers. Returns how it ended, and whether the scenario's later steps
     /// run: not after a step that is undefined, ambiguous, threw or recorded an issue, such as a failed `#expect`.
-    private func run(_ step: Step, in file: String) async -> StepOutcome {
+    private func run(_ step: Step, in featureFile: String, dslStep: DSLStep?) async -> StepOutcome {
+        // A step of the Swift DSL is where it is written, which can be another file than its feature's.
+        let file = dslStep?.file ?? featureFile
         let location = Self.sourceLocation(file, step.location)
         let startDate = Date()
         reporters.forEach { $0.didStart(step: step, at: startDate) }
@@ -397,12 +415,15 @@ public final class Cucumber {
             guard step.keyword.isSuperset(of: definition.keyword), let body = definition.body(step.match) else { return nil }
             return (definition, body)
         }
-        guard let match = matches.first else {
+        // A step of the Swift DSL runs what it was written with, unless a step definition matches its text,
+        // which then runs instead, as in CucumberSwift: `attachClosureToSteps` replaces the step's own closure.
+        let dslBody: (@MainActor (Step) async throws -> Void)? = matches.isEmpty ? dslStep.map { dsl in { _ in try await dsl.body() } } : nil
+        guard let body = dslBody ?? matches.first?.body else {
             let message = Self.missingStepDefinitionMessage(suggestion: suggestion(for: step))
             Issue.record(Comment(rawValue: message), sourceLocation: location)
             return finish(.failed(message))
         }
-        guard matches.count == 1 else {
+        guard matches.count <= 1 else {
             let message = Self.ambiguousStepMessage(step: "\(step.keywordName) \(step.match)", definitions: matches.map(\.definition))
             Issue.record(Comment(rawValue: message), sourceLocation: location)
             return finish(.ambiguous)
@@ -417,7 +438,7 @@ public final class Cucumber {
         if failure == nil {
             do {
                 try await RunningLocation.$current.withValue(.init(location: location, step: ran, record: record, scenario: step.scenario)) {
-                    try await runWithTimeout(record: record) { try await match.body(step) }
+                    try await runWithTimeout(record: record, continuesAfterFailure: dslStep?.continuesAfterFailure) { try await body(step) }
                 }
             } catch {
                 Issue.record(error, Comment(rawValue: ran), sourceLocation: location)

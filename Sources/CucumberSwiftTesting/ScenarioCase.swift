@@ -27,7 +27,8 @@ public struct ScenarioCase: Sendable, CustomTestStringConvertible, CustomTestArg
     /// renames it or a value in an example's row changes.
     public func encodeTestArgument(to encoder: some Encoder) throws {
         var container = encoder.singleValueContainer()
-        try container.encode("\(scenario.line):\(stepIndex ?? -1)")
+        // The Swift DSL's scenarios are all in one test, from any number of files, so they add their `dslID`.
+        try container.encode((scenario.dslID.map { "dsl\($0):" } ?? "") + "\(scenario.line):\(stepIndex ?? -1)")
     }
 }
 

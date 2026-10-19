@@ -2,7 +2,8 @@ import Foundation
 import PackagePlugin
 
 /// Generates a Swift Testing test for each scenario in the target's `.feature` files, on every build
-/// that changes one. The tests run the scenarios with CucumberSwiftTesting.
+/// that changes one, and one for the features written in the Swift DSL. The tests run the scenarios with
+/// CucumberSwiftTesting.
 @main
 struct CucumberSwiftTestingPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
@@ -28,10 +29,9 @@ extension CucumberSwiftTestingPlugin: XcodeBuildToolPlugin {
 #endif
 
 /// One command, which writes the tests for every `.feature` file in or under `paths`. A target
-/// without feature files gets none.
+/// without feature files still gets the test that runs the features it writes in the Swift DSL.
 private func generateCommands(tool: URL, workDirectory: URL, targetName: String, paths: [String]) -> [Command] {
     let features = Set(paths.flatMap(expand).filter { $0.hasSuffix(".feature") }).sorted()
-    guard !features.isEmpty else { return [] }
     let output = workDirectory.appendingPathComponent("CucumberFeatures.swift")
     return [
         .buildCommand(displayName: "Generating Swift Testing tests for the feature files in \(targetName)",
