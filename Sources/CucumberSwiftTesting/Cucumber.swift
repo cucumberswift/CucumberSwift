@@ -84,12 +84,8 @@ public final class Cucumber {
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
     var approvedScenarios = Set<String>()
     private var startedScenarios = [String: ScenarioProgress]()
-    /// The scenarios of the features written in the Swift DSL, in the order they were declared.
-    var dslScenarios = [GherkinScenario]()
-    /// What each step of a scenario of the Swift DSL runs, by the scenario's `dslID`.
-    var dslSteps = [Int: [DSLStep]]()
-    /// The key of the last scenario of each feature of the Swift DSL that runs, after which the feature ends.
-    var lastDSLScenarios = Set<String>()
+    /// The features written in the Swift DSL.
+    var dsl = DSLFeatures()
 
     /// Whether the scenario's later steps are skipped once a step has recorded an issue, such as a failed
     /// `#expect`, as CucumberSwift skips them once a step has failed. Tests turn it off to see the other.
@@ -166,13 +162,6 @@ public final class Cucumber {
         await endDSLFeatureIfLast(progress)
     }
 
-    /// Finishes a feature of the Swift DSL after its last scenario that runs, as CucumberSwift does. They are all
-    /// one test, so no feature's suite says where it ends.
-    private func endDSLFeatureIfLast(_ progress: ScenarioProgress) async {
-        guard progress.gherkin.dslID != nil, lastDSLScenarios.contains(Self.key(of: progress.gherkin)) else { return }
-        await finish(progress.featureRun)
-    }
-
     /// Runs one case of a scenario's test: the whole scenario, or one step. The cases of a scenario run in
     /// order, so the first runs `BeforeScenario` hooks and the last the `AfterScenario` hooks, and a case
     /// run alone first runs the steps before it. Once a step has failed, the cases after it don't run its
@@ -245,7 +234,7 @@ public final class Cucumber {
     private func runNextStep(of progress: ScenarioProgress) async {
         let step = progress.scenario.steps[progress.nextStep]
         progress.nextStep += 1
-        let dslStep = progress.gherkin.dslID.flatMap { dslSteps[$0] }?[progress.nextStep - 1]
+        let dslStep = progress.gherkin.dslID.flatMap { dsl.steps[$0] }?[progress.nextStep - 1]
         let outcome = await run(step, in: progress.gherkin.file, dslStep: dslStep)
         // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
         // step that is current when the hook fails.
@@ -483,5 +472,15 @@ public final class Cucumber {
             }
         }
         return failure
+    }
+}
+
+// In this file, for the runner's private types; outside the class, which is long enough.
+extension Cucumber {
+    /// Finishes a feature of the Swift DSL after its last scenario that runs, as CucumberSwift does. They are all
+    /// one test, so no feature's suite says where it ends.
+    private func endDSLFeatureIfLast(_ progress: ScenarioProgress) async {
+        guard progress.gherkin.dslID != nil, dsl.lastScenarios.contains(Self.key(of: progress.gherkin)) else { return }
+        await finish(progress.featureRun)
     }
 }

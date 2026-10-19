@@ -59,10 +59,10 @@ extension CucumberTests {
                     printAStatement())
             }
         }
-        let steps = Cucumber.shared.dslScenarios.first?.steps
+        let steps = Cucumber.shared.dsl.scenarios.first?.steps
         #expect(steps?.map(\.text) == ["I: printAStatement()", "a:printAStatement()"])
         #expect(steps?.map(\.keyword) == [.given, .when])
-        #expect(Cucumber.shared.dslScenarios.first?.file == #filePath)
+        #expect(Cucumber.shared.dsl.scenarios.first?.file == #filePath)
     }
 
     @Test func theCasesAreNamedAfterTheFeatureTheScenarioAndTheStep() {

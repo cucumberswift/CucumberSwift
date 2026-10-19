@@ -10,6 +10,16 @@
 import Foundation
 import Testing
 
+/// The scenarios of the features written in the Swift DSL, and what their steps run.
+struct DSLFeatures {
+    /// The scenarios, in the order they were declared.
+    var scenarios = [GherkinScenario]()
+    /// What each step of a scenario runs, by the scenario's `dslID`.
+    var steps = [Int: [DSLStep]]()
+    /// The key of the last scenario of each feature that runs, after which the feature ends.
+    var lastScenarios = Set<String>()
+}
+
 extension Cucumber {
     /// Hands a feature of the Swift DSL to the runner: each scenario becomes a `GherkinScenario` of the feature,
     /// and its steps' bodies are kept for when it runs.
@@ -25,10 +35,10 @@ extension Cucumber {
                                           line: scenario.location.line,
                                           column: scenario.location.column,
                                           steps: DSLStep.gherkinSteps(scenario.dslSteps))
-            let id = dslScenarios.count
+            let id = dsl.scenarios.count
             gherkin.dslID = id
-            dslScenarios.append(gherkin)
-            dslSteps[id] = scenario.dslSteps
+            dsl.scenarios.append(gherkin)
+            dsl.steps[id] = scenario.dslSteps
         }
     }
 
@@ -39,7 +49,7 @@ extension Cucumber {
         loadStepDefinitions()
         let readable = CucumberSettings.isReadableTestNames(environment: environment)
         let delimiter = readable ? TestNames.readableDelimiter : "_"
-        let running = dslScenarios.filter(shouldRun)
+        let running = dsl.scenarios.filter(shouldRun)
         var lastOfFeature = [String: String]()
         var names = Set<String>()
         var cases = [ScenarioCase]()
@@ -56,7 +66,7 @@ extension Cucumber {
             names.insert(label)
             cases += self.cases(of: scenario, label: label)
         }
-        lastDSLScenarios = Set(lastOfFeature.values)
+        dsl.lastScenarios = Set(lastOfFeature.values)
         return cases
     }
 }
