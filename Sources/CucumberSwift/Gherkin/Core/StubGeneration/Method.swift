@@ -8,6 +8,14 @@
 
 import Foundation
 class Method {
+    /// A parameter of the step: its variable's type name, the Swift code that reads it in a step definition
+    /// function, and its Swift type as a step definition macro's closure argument.
+    struct Capture {
+        let type: String
+        let value: String
+        let swiftType: String
+    }
+
     /// What makes an XCTest step definition fail until it is filled in.
     static let xcTestFailure = "XCTFail(\"Step not implemented: replace this line with your test code\")"
 
@@ -19,15 +27,19 @@ class Method {
     /// A regular expression for the step, to find the implemented steps this step definition would also match.
     private(set) var regex = ""
     private(set) var matchesParameter = ""
-    /// Each parameter, in the order of the step: its variable's type name and the Swift code that reads it.
-    private(set) var captures: [(type: String, value: String)] = []
+    /// Each parameter, in the order of the step.
+    private(set) var captures: [Capture] = []
     private(set) var variables: [(type: String, count: Int)] = []
+    /// Whether it is a step definition macro, such as `#Given("I have {int} cukes") { (int: Int) in`, whose
+    /// closure takes one typed argument per parameter, and the step last when it reads a data table or doc string.
+    private(set) var isMacro = false
     init(keyword: Step.Keyword,
          pattern: String,
          regex: String,
          matchesParameter: String,
-         captures: [(type: String, value: String)],
-         variables: [(type: String, count: Int)]) {
+         captures: [Capture],
+         variables: [(type: String, count: Int)],
+         isMacro: Bool = false) {
         self.keyword = keyword
         self.keywords = [keyword]
         self.pattern = pattern
@@ -35,6 +47,7 @@ class Method {
         self.matchesParameter = matchesParameter
         self.captures = captures
         self.variables = variables
+        self.isMacro = isMacro
     }
 
     /// `string`, `stringTwo`, `stringThree`, …
@@ -71,12 +84,23 @@ class Method {
             // swiftlint:disable:next empty_count
             let variablesOnStepObject = variables.filter { $0.type == "dataTable" || $0.type == "docString" }.filter { $0.count > 0 }
             let stepParameter = (!variablesOnStepObject.isEmpty) ? "step" : "_"
-            var methodString = "\(keywordString.capitalizingFirstLetter())(\(pattern)) { \(matchesParameter), \(stepParameter) in\n"
             var countByType = [String: Int]()
-            for capture in captures {
+            let names = captures.map { capture -> String in
                 let count = countByType[capture.type, default: 0] + 1
                 countByType[capture.type] = count
-                methodString += "    let \(Self.variableName(type: capture.type, number: count)) = \(capture.value)\n"
+                return Self.variableName(type: capture.type, number: count)
+            }
+            var methodString: String
+            if isMacro {
+                let arguments = zip(names, captures).map { "\($0): \($1.swiftType)" }
+                    + (variablesOnStepObject.isEmpty ? [] : ["step: Step"])
+                let signature = arguments.isEmpty ? "" : " (\(arguments.joined(separator: ", "))) in"
+                methodString = "#\(keywordString.capitalizingFirstLetter())(\(pattern)) {\(signature)\n"
+            } else {
+                methodString = "\(keywordString.capitalizingFirstLetter())(\(pattern)) { \(matchesParameter), \(stepParameter) in\n"
+                for (name, capture) in zip(names, captures) {
+                    methodString += "    let \(name) = \(capture.value)\n"
+                }
             }
             for variable in variablesOnStepObject {
                 methodString += "    let \(Self.variableName(type: variable.type, number: 1)) = step.\(variable.type)\n"

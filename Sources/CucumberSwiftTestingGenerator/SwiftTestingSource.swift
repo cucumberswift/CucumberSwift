@@ -214,6 +214,12 @@ enum SwiftTestingSource {
         // For `Cucumber.generateRegexLiterals`, which the runner reads when a step is undefined.
         arguments.append("regexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: false)))")
         arguments.append("bareSlashRegexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: true)))")
+        // For `Cucumber.generateMacros`.
+        arguments.append("macroSuggestion: \(literal(step.suggestedStepDefinition(failure: failure, macro: true)))")
+        arguments.append("regexLiteralMacroSuggestion: "
+                         + literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: false, macro: true)))
+        arguments.append("bareSlashRegexLiteralMacroSuggestion: "
+                         + literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: true, macro: true)))
         return "CucumberSwiftTesting.GherkinStep(\n"
             + arguments.map { pad + "    " + $0 }.joined(separator: ",\n")
             + ")"

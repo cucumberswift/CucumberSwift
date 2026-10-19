@@ -27,6 +27,10 @@ public struct GherkinStep: Sendable {
     public let regexLiteralSuggestion: String?
     /// The same step definition with a bare slash regex literal, for ``RegexLiteralStyle/bareSlash``.
     public let bareSlashRegexLiteralSuggestion: String?
+    /// The three as step definition macros, for ``Cucumber/generateMacros``.
+    public let macroSuggestion: String?
+    public let regexLiteralMacroSuggestion: String?
+    public let bareSlashRegexLiteralMacroSuggestion: String?
 
     public init(
         keyword: Step.Keyword,
@@ -39,7 +43,10 @@ public struct GherkinStep: Sendable {
         dataTable: [[String]]? = nil,
         suggestion: String,
         regexLiteralSuggestion: String? = nil,
-        bareSlashRegexLiteralSuggestion: String? = nil
+        bareSlashRegexLiteralSuggestion: String? = nil,
+        macroSuggestion: String? = nil,
+        regexLiteralMacroSuggestion: String? = nil,
+        bareSlashRegexLiteralMacroSuggestion: String? = nil
     ) {
         self.keyword = keyword
         self.keywordName = keywordName
@@ -52,6 +59,9 @@ public struct GherkinStep: Sendable {
         self.suggestion = suggestion
         self.regexLiteralSuggestion = regexLiteralSuggestion
         self.bareSlashRegexLiteralSuggestion = bareSlashRegexLiteralSuggestion
+        self.macroSuggestion = macroSuggestion
+        self.regexLiteralMacroSuggestion = regexLiteralMacroSuggestion
+        self.bareSlashRegexLiteralMacroSuggestion = bareSlashRegexLiteralMacroSuggestion
     }
 }
 

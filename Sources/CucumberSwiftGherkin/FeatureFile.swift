@@ -249,22 +249,24 @@ extension FeatureFile {
 extension FeatureFile.Step {
     /// The step definition CucumberSwift suggests for this step when no step definition matches it,
     /// with a Cucumber Expression. `failure` is its last line, which fails the step until it is filled in.
-    public func suggestedStepDefinition(failure: String) -> String {
-        suggestedStepDefinition(failure: failure, style: .cucumberExpression)
+    /// With `macro`, it is a step definition macro, such as `#Given("I have {int} cukes") { (int: Int) in`.
+    public func suggestedStepDefinition(failure: String, macro: Bool = false) -> String {
+        suggestedStepDefinition(failure: failure, style: .cucumberExpression, macro: macro)
     }
 
     /// The same step definition with a regex literal, written `#/…/#`, or `/…/` with `bareSlash`.
-    public func suggestedRegexLiteralStepDefinition(failure: String, bareSlash: Bool) -> String {
-        suggestedStepDefinition(failure: failure, style: .regexLiteral(bareSlash ? .bareSlash : .extendedDelimiter))
+    public func suggestedRegexLiteralStepDefinition(failure: String, bareSlash: Bool, macro: Bool = false) -> String {
+        suggestedStepDefinition(failure: failure, style: .regexLiteral(bareSlash ? .bareSlash : .extendedDelimiter), macro: macro)
     }
 
-    private func suggestedStepDefinition(failure: String, style: StubGenerator.Style) -> String {
+    private func suggestedStepDefinition(failure: String, style: StubGenerator.Style, macro: Bool) -> String {
         let keyword = keywords.reduce(into: Step.Keyword()) { $0.insert(Step.Keyword($1)) }
         return StubGenerator.method(for: text,
                                     keyword: keyword,
                                     hasDataTable: dataTable != nil,
                                     hasDocString: docString != nil,
-                                    style: style)
+                                    style: style,
+                                    macro: macro)
             .generateSwift(failure: failure)
     }
 }

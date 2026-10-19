@@ -50,6 +50,7 @@ final class CucumberTests {
         Cucumber.verboseOutput = false
         ImplementationSettings.reset()
         Cucumber.generateRegexLiterals = nil
+        Cucumber.generateMacros = nil
         cucumber.skipsLaterStepsAfterRecordedIssue = true
     }
 
