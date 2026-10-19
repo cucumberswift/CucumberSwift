@@ -91,12 +91,40 @@ let projectReleaseSettings: SettingsDictionary = [
 
 let lintScript = TargetScript.post(
     script: """
-    export PATH="$PATH:/opt/homebrew/bin"
+    export PATH="$PATH:/opt/homebrew/bin:$HOME/.local/bin"
 
-    if which swiftlint > /dev/null; then
-      swiftlint --config .swiftlint.yml
+    # The SwiftLint that .mise.lint.toml pins, as CI's Workflow checks job runs it, once
+    # `MISE_ENV=lint mise install` has installed it. Otherwise, whichever swiftlint is on the PATH.
+    # An error from a version that isn't the pinned one can be a rule that version gets wrong
+    # (Homebrew's 0.59.1 flags `count > 0` on an Int), so that run reports its errors as warnings
+    # and can't fail the build. CI runs the pinned version and is the gate.
+    swiftlint=""
+    demote=""
+    if command -v mise > /dev/null; then
+      swiftlint=$(MISE_ENV=lint mise which swiftlint 2> /dev/null)
+    fi
+    if [ -z "$swiftlint" ] && command -v swiftlint > /dev/null; then
+      swiftlint=$(command -v swiftlint)
+      pinned=$(grep realm/SwiftLint .mise.lint.toml | cut -d '"' -f 4)
+      if [ "$("$swiftlint" version)" != "$pinned" ]; then
+        demote=1
+        echo "warning: SwiftLint $("$swiftlint" version) at $swiftlint isn't the $pinned that .mise.lint.toml pins, so its errors are warnings. Install the pin: MISE_ENV=lint mise install"
+      fi
+    fi
+    if [ -z "$swiftlint" ]; then
+      echo "warning: SwiftLint not installed. Install the version .mise.lint.toml pins with: MISE_ENV=lint mise install"
+    elif [ -n "$demote" ]; then
+      # SwiftLint exits 2 when it finds errors and 1 when it can't lint at all (an unreadable config, say).
+      status=0
+      report=$("$swiftlint" --config .swiftlint.yml) || status=$?
+      echo "$report" | sed 's/: error: /: warning: /'
+      if [ "$status" -ne 0 ] && [ "$status" -ne 2 ]; then
+        echo "warning: SwiftLint $("$swiftlint" version) failed with status $status before it finished linting, so nothing was checked."
+      fi
+      exit 0
     else
-      echo "warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint"
+      echo "SwiftLint $("$swiftlint" version) at $swiftlint"
+      "$swiftlint" --config .swiftlint.yml
     fi
     """,
     name: "Lint",

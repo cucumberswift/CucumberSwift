@@ -42,6 +42,9 @@ final class SwiftTestingSourceTests: XCTestCase {
     private let cucumberParallelTesting = false
     #endif
 
+    /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
+    private final class CucumberFeaturesBundle {}
+
     private func cucumberGherkinProblems() {
     }
 
@@ -53,6 +56,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         title: "Eat an apple",
         tags: ["fruit"],
         file: "/Features/Test.feature",
+        testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),
         line: 3,
         column: 3,
         steps: [
@@ -65,7 +69,10 @@ final class SwiftTestingSourceTests: XCTestCase {
                 column: 5,
                 suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
                 regexLiteralSuggestion: "Given(#/^an apple$/#) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
-                bareSlashRegexLiteralSuggestion: "Given(/^an apple$/) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
+                bareSlashRegexLiteralSuggestion: "Given(/^an apple$/) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                macroSuggestion: "#Given(\"an apple\") {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                regexLiteralMacroSuggestion: "#Given(#/^an apple$/#) {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                bareSlashRegexLiteralMacroSuggestion: "#Given(/^an apple$/) {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
         ])
 
     """#

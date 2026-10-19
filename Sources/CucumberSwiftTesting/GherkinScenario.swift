@@ -27,6 +27,10 @@ public struct GherkinStep: Sendable {
     public let regexLiteralSuggestion: String?
     /// The same step definition with a bare slash regex literal, for ``RegexLiteralStyle/bareSlash``.
     public let bareSlashRegexLiteralSuggestion: String?
+    /// The three as step definition macros, for ``Cucumber/generateMacros``.
+    public let macroSuggestion: String?
+    public let regexLiteralMacroSuggestion: String?
+    public let bareSlashRegexLiteralMacroSuggestion: String?
 
     public init(
         keyword: Step.Keyword,
@@ -39,7 +43,10 @@ public struct GherkinStep: Sendable {
         dataTable: [[String]]? = nil,
         suggestion: String,
         regexLiteralSuggestion: String? = nil,
-        bareSlashRegexLiteralSuggestion: String? = nil
+        bareSlashRegexLiteralSuggestion: String? = nil,
+        macroSuggestion: String? = nil,
+        regexLiteralMacroSuggestion: String? = nil,
+        bareSlashRegexLiteralMacroSuggestion: String? = nil
     ) {
         self.keyword = keyword
         self.keywordName = keywordName
@@ -52,6 +59,9 @@ public struct GherkinStep: Sendable {
         self.suggestion = suggestion
         self.regexLiteralSuggestion = regexLiteralSuggestion
         self.bareSlashRegexLiteralSuggestion = bareSlashRegexLiteralSuggestion
+        self.macroSuggestion = macroSuggestion
+        self.regexLiteralMacroSuggestion = regexLiteralMacroSuggestion
+        self.bareSlashRegexLiteralMacroSuggestion = bareSlashRegexLiteralMacroSuggestion
     }
 }
 
@@ -89,6 +99,9 @@ public struct GherkinScenario: Sendable {
     public let tags: [String]
     /// The feature file's path on the Mac that built the tests.
     public let file: String
+    /// The test bundle the scenario's test is in, whose copy of the feature file names it in the report and
+    /// in ``Feature/uri``, as with CucumberSwift. The generated tests set it.
+    public let testBundle: URL?
     public let line: Int
     public let column: Int
     /// The Background's steps, then the scenario's.
@@ -102,6 +115,7 @@ public struct GherkinScenario: Sendable {
         title: String,
         tags: [String],
         file: String,
+        testBundle: URL? = nil,
         line: Int,
         column: Int,
         steps: [GherkinStep]
@@ -113,6 +127,7 @@ public struct GherkinScenario: Sendable {
         self.title = title
         self.tags = tags
         self.file = file
+        self.testBundle = testBundle
         self.line = line
         self.column = column
         self.steps = steps

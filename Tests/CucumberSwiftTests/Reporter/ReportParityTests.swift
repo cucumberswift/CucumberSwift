@@ -3,9 +3,10 @@
 //  CucumberSwiftTests
 //
 //  CucumberSwift and CucumberSwiftTesting write one Cucumber JSON report for the same feature files (#420).
-//  This is CucumberSwift's side: it writes ParityReport.json's report for ParityFeature below. The
-//  Swift Testing runner's tests (CucumberSwiftTestingTests/ReportTests.swift) check that the runner writes
-//  the same report for the same feature, from the same file.
+//  This is CucumberSwift's side: it writes ParityReport.json's report for ParityFeature below, read from a
+//  test bundle's Features folder. The Swift Testing runner's tests (CucumberSwiftTestingTests/ReportParityTests.swift)
+//  check that the runner writes the same report for the same feature, from the same file, with the same
+//  `uri`: the feature file's URL in the test bundle (#463).
 //
 
 import Foundation
@@ -40,15 +41,15 @@ final class ReportParityTests: XCTestCase {
           | 10     |
     """
 
-    static let uri = "file:///Features/Checkout.feature"
-
     private var folder: URL!
 
-    /// The report with each duration replaced by 0, as text with its keys in order: durations differ
-    /// from one run to the next.
+    /// The report with each duration replaced by 0, and the folder that holds the test bundle left out of
+    /// each `uri`, as text with its keys in order: durations and the temporary folder differ from one run to
+    /// the next.
     static func withoutDurations(_ data: Data) throws -> String {
         let text = try XCTUnwrap(String(data: data, encoding: .utf8))
         return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
+            .replacingOccurrences(of: #""uri" : "file:[^"]*?\\/Tests\.bundle\\/"#, with: #""uri" : "file:\\/\\/\\/Tests.bundle\\/"#, options: .regularExpression)
     }
 
     override func setUpWithError() throws {
@@ -67,7 +68,13 @@ final class ReportParityTests: XCTestCase {
         Cucumber.reportPath = path.path
         addTeardownBlock { Cucumber.reportPath = nil }
         let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-        Cucumber.shared.parseIntoFeatures(Self.feature, uri: Self.uri)
+        // A test bundle with the feature file in its Features folder, as Xcode copies it. Not `.xctest`, which
+        // tests that look for their own test bundle among `Bundle.allBundles` would find instead.
+        let bundleURL = folder.appendingPathComponent("Tests.bundle")
+        let features = bundleURL.appendingPathComponent("Features")
+        try FileManager.default.createDirectory(at: features, withIntermediateDirectories: true)
+        try Self.feature.write(to: features.appendingPathComponent("Checkout.feature"), atomically: true, encoding: .utf8)
+        Cucumber.shared.readFromFeaturesFolder(in: try XCTUnwrap(Bundle(url: bundleURL)))
         Given("a basket") { _, _ in }
         When("I pay by card") { _, _ in }
         When("I pay {int}") { _, _ in }

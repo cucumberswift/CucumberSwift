@@ -39,6 +39,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Running-Tests-In-Xcode#Test-names> | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On | XCTest and Swift Testing | — |
 | <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest and Swift Testing | — |
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13 or tvOS 16 to run the regex literals it generates |
+| <doc:Matching-Steps#Step-definition-macros> | `Cucumber.generateMacros` | `CUCUMBER_GENERATE_MACROS` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | — |
 | <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | Off | XCTest and Swift Testing | XCTest: per platform, see the article |
 | <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest and Swift Testing | Parallel testing on |
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest and Swift Testing | — |
@@ -49,7 +50,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Hooks> | `StepImplementation.reverseOrderForAfterHooks` | — | Off | XCTest and Swift Testing | — |
 | <doc:Matching-Steps#Async-steps> | `StepImplementation.asyncStepTimeout` | — | 60 seconds | XCTest and Swift Testing | — |
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `StepImplementation.regexLiteralStyle` | — | `#/…/#` | XCTest and Swift Testing | — |
-| <doc:Settings#Where-the-feature-files-are> | Info.plist `FeaturesPath` | — | `Features` | XCTest, in an Xcode test target | — |
+| <doc:Settings#Where-the-feature-files-are> | Info.plist `FeaturesPath` | — | `Features` | XCTest and Swift Testing, in an Xcode test target | — |
 | <doc:Settings#Test-name-delimiter> | Info.plist `FeatureScenarioDelimiter` | — | ` › `, or `\|` with readable test names off | XCTest, in an Xcode test target | — |
 
 "Requires" lists what a setting needs beyond the Xcode that CucumberSwift supports, which <doc:Supported-Platforms> gives. The Swift Testing runner reads the settings marked "Swift Testing" and ignores the others. Where it differs, <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options> says how. See <doc:Running-Feature-Files-With-Swift-Testing>.
@@ -107,7 +108,7 @@ Either way, once a step fails, the rest of its scenario's steps don't run, and X
 
 ### Where the feature files are
 
-`FeaturesPath` is the path of your feature files, relative to the test bundle. Without it, CucumberSwift reads the bundle's `Features` folder. Add it to the Info.plist of an Xcode test target whose folder has another name, such as `specs/features`.
+`FeaturesPath` is the path of your feature files, relative to the test bundle. Without it, CucumberSwift reads the bundle's `Features` folder. Add it to the Info.plist of an Xcode test target whose folder has another name, such as `specs/features`. The Swift Testing runner reads the feature files when the tests build, and uses `FeaturesPath` only to name them in the JSON report, as CucumberSwift does.
 
 ### Test name delimiter
 

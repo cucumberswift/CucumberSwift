@@ -38,7 +38,7 @@ extension Cucumber {
         if environment["CUCUMBER_TAGS"] != nil {
             runs = CucumberTags.shouldRun(gherkinScenario.tags, environment: environment)
         } else if let implementation = self as Any as? StepImplementation {
-            runs = implementation.shouldRunWith(scenario: Scenario(gherkinScenario, feature: Feature(gherkinScenario)), tags: gherkinScenario.tags)
+            runs = implementation.shouldRunWith(scenario: Scenario(gherkinScenario, feature: feature(of: gherkinScenario)), tags: gherkinScenario.tags)
         } else {
             runs = true
         }
@@ -55,11 +55,18 @@ extension Cucumber {
 
     /// The step definition to suggest for an undefined step: with a regex literal when
     /// ``Cucumber/generateRegexLiterals`` or `CUCUMBER_GENERATE_REGEX_LITERALS` asks for one, written as
-    /// ``StepImplementation/regexLiteralStyle`` says, and otherwise with a Cucumber Expression.
+    /// ``StepImplementation/regexLiteralStyle`` says, and otherwise with a Cucumber Expression. A step
+    /// definition macro when the test target links the macros, or ``Cucumber/generateMacros`` or
+    /// `CUCUMBER_GENERATE_MACROS` asks for one, and the generated code has it.
     func suggestion(for step: Step) -> String {
-        guard CucumberSettings.generatesRegexLiterals(environment: environment) else { return step.suggestion }
-        let style = (self as Any as? StepImplementation)?.regexLiteralStyle ?? .extendedDelimiter
-        return (style == .bareSlash ? step.bareSlashRegexLiteralSuggestion : step.regexLiteralSuggestion) ?? step.suggestion
+        let macro = CucumberSettings.generatesMacros(environment: environment)
+        guard CucumberSettings.generatesRegexLiterals(environment: environment) else {
+            return (macro ? step.macroSuggestion : nil) ?? step.suggestion
+        }
+        let bareSlash = (self as Any as? StepImplementation)?.regexLiteralStyle == .bareSlash
+        let macroSuggestion = bareSlash ? step.bareSlashRegexLiteralMacroSuggestion : step.regexLiteralMacroSuggestion
+        let functionSuggestion = bareSlash ? step.bareSlashRegexLiteralSuggestion : step.regexLiteralSuggestion
+        return (macro ? macroSuggestion : nil) ?? functionSuggestion ?? step.suggestion
     }
 
     /// Tells the observers that a step failed without running, because a hook before it did.

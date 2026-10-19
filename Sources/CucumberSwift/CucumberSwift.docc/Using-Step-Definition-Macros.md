@@ -348,6 +348,10 @@ What it leaves for you to do:
 - **Trust the macros** the first time you build the converted code (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>).
 - **Review and build.** Check the changes with your version control, and build your tests: a macro reports a mistake the original only found when the tests ran.
 
+## Step definitions for undefined steps
+
+Once a test target links the macros, CucumberSwift suggests a macro for each step that has no step definition, with either runner, rather than a function. See <doc:Matching-Steps#Step-definition-macros>.
+
 ## Troubleshooting
 
 ### Xcode asks you to trust the macros

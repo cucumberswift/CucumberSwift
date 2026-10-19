@@ -19,6 +19,9 @@ Each test target links one runner and has its own feature files and step definit
 both. If the macros stop compiling for either runner, or the trait stops reaching CucumberSwift through
 the local package, or either runner stops working beside the other, this fixture fails.
 
+`BasketUnitTests` also checks that the Swift Testing runner can tell that the target links the macros, so
+that it suggests macros for undefined steps.
+
 Runs on the iOS simulator in `xcodebuild-destination`, with the Tuist version pinned in `.mise.toml`. Run
 every fixture with `mise run test-fixtures`.
 

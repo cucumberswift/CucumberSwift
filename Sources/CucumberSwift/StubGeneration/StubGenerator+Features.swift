@@ -21,8 +21,9 @@ extension StubGenerator {
     /// that also has a data table or doc string when this step does, so the definition binds `step` to read it.
     static func stub(for step: Step,
                      in features: [Feature],
-                     style: Style = implementorStyle) -> String? {
-        let stubs = getStubs(for: features, style: style)
+                     style: Style = implementorStyle,
+                     macro: Bool = FeatureFlags.isGenerateMacros) -> String? {
+        let stubs = getStubs(for: features, style: style, macro: macro)
         if let own = stubs.first(where: { $0.step === step }) {
             return own.generatedSwift
         }
@@ -30,7 +31,10 @@ extension StubGenerator {
         let keyword = step.keyword.primaryKeywords.toString().capitalizingFirstLetter()
         let samePattern = stubs.filter { stub in
             regexForTokens(Lexer(stub.step.match).lex()) == regex
-                && stub.generatedSwift.components(separatedBy: "\n").contains { $0.hasPrefix("\(keyword)(") || $0.hasPrefix("MatchAll(") }
+                && stub.generatedSwift.components(separatedBy: "\n").contains {
+                    let line = macro && $0.hasPrefix("#") ? String($0.dropFirst()) : $0
+                    return line.hasPrefix("\(keyword)(") || line.hasPrefix("MatchAll(")
+                }
         }
         let sameShape = samePattern.first {
             ($0.step.dataTable != nil) == (step.dataTable != nil) && ($0.step.docString != nil) == (step.docString != nil)
@@ -38,8 +42,10 @@ extension StubGenerator {
         return (sameShape ?? samePattern.first)?.generatedSwift
     }
 
+    /// With `macro`, each one is a step definition macro, such as `#Given("I have {int} cukes") { (int: Int) in`.
     static func getStubs(for features: [Feature],
-                         style: Style = implementorStyle) -> [(step: Step, generatedSwift: String)] {
+                         style: Style = implementorStyle,
+                         macro: Bool = FeatureFlags.isGenerateMacros) -> [(step: Step, generatedSwift: String)] {
         var lookup = [String: Method]()
         let executableSteps = features
             .taggedElements(askImplementor: false)
@@ -57,7 +63,8 @@ extension StubGenerator {
                                                   keyword: $1.keyword,
                                                   hasDataTable: $1.dataTable != nil,
                                                   hasDocString: $1.docString != nil,
-                                                  style: style)
+                                                  style: style,
+                                                  macro: macro)
 
                 // Steps with the same pattern share a step definition. As Cucumber Expressions, steps that
                 // differ only in a number, such as `5` and `-5`, do; regular expressions keep the `-`.
