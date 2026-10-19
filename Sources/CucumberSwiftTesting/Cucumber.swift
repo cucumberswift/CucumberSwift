@@ -371,25 +371,6 @@ public final class Cucumber {
         (self as Any as? StepImplementation)?.setupSteps()
     }
 
-    /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
-    /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
-    /// in time, the scenarios run one at a time and this says so once, without failing the run.
-    private func reportParallelTestingSetTooLate(at location: SourceLocation) {
-        guard !hasReportedParallelTestingTooLate, CucumberSettings.staticParallelTesting == true,
-              CucumberSettings.isSuiteSerialized else { return }
-        hasReportedParallelTestingTooLate = true
-        let message = """
-            Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decided that before \
-            setupSteps() ran. Set the environment variable CUCUMBER_PARALLEL_TESTING to YES in your scheme, or on the \
-            command line, or define CUCUMBER_PARALLEL_TESTING as a compilation condition in the test target.
-            """
-        #if compiler(>=6.3)
-        Issue.record(Comment(rawValue: message), severity: .warning, sourceLocation: location)
-        #else
-        FileHandle.standardError.write(Data((message + "\n").utf8))
-        #endif
-    }
-
     /// Without step definitions, fails at the first scenario in its feature file.
     private func reportMissingImplementationIfNeeded(at location: SourceLocation) {
         guard !hasReportedMissingImplementation, !(self is any StepImplementation) else { return }
@@ -489,6 +470,25 @@ public final class Cucumber {
 
 // In this file, for the runner's private types; outside the class, which is long enough.
 extension Cucumber {
+    /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
+    /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
+    /// in time, the scenarios run one at a time and this says so once, without failing the run.
+    private func reportParallelTestingSetTooLate(at location: SourceLocation) {
+        guard !hasReportedParallelTestingTooLate, CucumberSettings.staticParallelTesting == true,
+              CucumberSettings.isSuiteSerialized else { return }
+        hasReportedParallelTestingTooLate = true
+        let message = """
+            Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decided that before \
+            setupSteps() ran. Set the environment variable CUCUMBER_PARALLEL_TESTING to YES in your scheme, or on the \
+            command line, or define CUCUMBER_PARALLEL_TESTING as a compilation condition in the test target.
+            """
+        #if compiler(>=6.3)
+        Issue.record(Comment(rawValue: message), severity: .warning, sourceLocation: location)
+        #else
+        FileHandle.standardError.write(Data((message + "\n").utf8))
+        #endif
+    }
+
     /// Finishes a feature of the Swift DSL after its last scenario that runs, as CucumberSwift does. They are all
     /// one test, so no feature's suite says where it ends.
     private func endDSLFeatureIfLast(_ progress: ScenarioProgress) async {

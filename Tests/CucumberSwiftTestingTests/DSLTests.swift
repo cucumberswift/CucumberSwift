@@ -276,6 +276,24 @@ extension CucumberTests {
         #expect(ran == ["slow", "quick"])
     }
 
+    @Test func aDSLFeatureIsNamedByItsSwiftFileInItsTestBundle() async throws {
+        resetNames()
+        var uris = [String]()
+        BeforeFeature { feature in uris.append(feature.uri) }
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        let cases = Cucumber.shared.dslCasesToRun(testBundle: Bundle.main.bundleURL)
+        #expect(cases.allSatisfy { $0.scenario.testBundle == Bundle.main.bundleURL })
+        for testCase in cases {
+            try await Cucumber.shared.run(testCase)
+        }
+        // As CucumberSwift names a feature of its DSL: by the Swift file's path, not a copy in the test bundle.
+        #expect(uris == [#filePath])
+    }
+
     @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
         Feature("F") {
             Scenario("S") {

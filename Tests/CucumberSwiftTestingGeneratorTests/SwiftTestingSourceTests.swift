@@ -193,7 +193,8 @@ final class SwiftTestingSourceTests: XCTestCase {
         let test = #"""
                 func gherkin() { cucumberGherkinProblems() }
 
-                @Test("Swift DSL features", arguments: await CucumberSwiftTesting.Cucumber.shared.dslCasesToRun(parallelCompiled: cucumberParallelTesting))
+                @Test("Swift DSL features", arguments: await CucumberSwiftTesting.Cucumber.shared.dslCasesToRun(parallelCompiled: cucumberParallelTesting, \#
+            testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self)))
                 func swiftDSL(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
             }
             """#

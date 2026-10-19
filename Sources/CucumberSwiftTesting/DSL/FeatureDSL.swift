@@ -211,10 +211,12 @@ extension Feature {
                                                file: StaticString = #filePath,
                                                @ScenarioBuilder _ content: () -> [ScenarioDSL]) {
         let all = content()
+        // As CucumberSwift's DSL names its feature: by the Swift file's path, which is also where issues are reported.
         self.init(title: title,
                   desc: all.compactMap { ($0 as? Description)?.title }.joined(separator: "\n"),
                   tags: tags,
                   uri: "\(file)",
+                  sourcePath: "\(file)",
                   location: Location(line: Int(line), column: Int(column)))
         Cucumber.shared.addDSLFeature(self, scenarios: all.flatMap(\.scenarios))
     }
@@ -226,7 +228,7 @@ extension Feature {
                                                column: UInt = #column,
                                                file: StaticString = #filePath,
                                                @ScenarioBuilder _ content: () -> ScenarioDSL) {
-        self.init(title: title, tags: tags, uri: "\(file)", location: Location(line: Int(line), column: Int(column)))
+        self.init(title: title, tags: tags, uri: "\(file)", sourcePath: "\(file)", location: Location(line: Int(line), column: Int(column)))
         Cucumber.shared.addDSLFeature(self, scenarios: content().scenarios)
     }
 }

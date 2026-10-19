@@ -46,7 +46,10 @@ extension Cucumber {
     /// A scenario's feature, named after its feature file's copy in the scenario's test bundle, as
     /// CucumberSwift names it.
     func feature(of scenario: GherkinScenario) -> Feature {
-        Feature(scenario, uri: testBundle(of: scenario)?.uri(ofFeatureFileAt: scenario.file))
+        let bundle = testBundle(of: scenario)
+        // A feature of the Swift DSL has no feature file: CucumberSwift names it by its Swift file's path.
+        guard scenario.dslID == nil else { return Feature(scenario, uri: scenario.file) }
+        return Feature(scenario, uri: bundle?.uri(ofFeatureFileAt: scenario.file))
     }
 
     /// The scenario's test bundle, read once, which is then the one whose report `endSuite()` copies.

@@ -43,7 +43,7 @@ extension Cucumber {
                                           featureLine: feature.location.line,
                                           title: scenario.title,
                                           tags: feature.tags + scenario.tags,
-                                          file: feature.uri,
+                                          file: feature.sourcePath,
                                           line: scenario.location.line,
                                           column: scenario.location.column,
                                           steps: DSLStep.gherkinSteps(scenario.dslSteps))
@@ -58,9 +58,13 @@ extension Cucumber {
     /// runs, as ``shouldRun(_:)`` decides, named after its feature and itself, in the order they were declared.
     /// With parallel testing, which `parallelCompiled` says the compilation condition turns on, as for the
     /// generated suite, each scenario is one case, so that scenarios run at the same time, as XCTest runs them,
-    /// and a scenario's steps still run in order.
-    public func dslCasesToRun(parallelCompiled: Bool = false) -> [ScenarioCase] {
+    /// and a scenario's steps still run in order. `testBundle` is the test bundle the generated test is in, whose
+    /// report copy names it, as for the scenarios of feature files.
+    public func dslCasesToRun(parallelCompiled: Bool = false, testBundle: URL? = nil) -> [ScenarioCase] {
         loadStepDefinitions()
+        if let testBundle {
+            dsl.scenarios = dsl.scenarios.map { $0.inTestBundle(testBundle) }
+        }
         let readable = CucumberSettings.isReadableTestNames(environment: environment)
         let delimiter = readable ? TestNames.readableDelimiter : "_"
         dsl.casesRequested = true
@@ -110,5 +114,24 @@ extension Cucumber {
         }
         dsl.lastInFeature[key] = task
         await task.value
+    }
+}
+
+extension GherkinScenario {
+    /// The scenario, in the test bundle that the generated "Swift DSL features" test is in.
+    func inTestBundle(_ testBundle: URL) -> GherkinScenario {
+        var scenario = GherkinScenario(featureTitle: featureTitle,
+                                       featureTags: featureTags,
+                                       featureDescription: featureDescription,
+                                       featureLine: featureLine,
+                                       title: title,
+                                       tags: tags,
+                                       file: file,
+                                       testBundle: testBundle,
+                                       line: line,
+                                       column: column,
+                                       steps: steps)
+        scenario.dslID = dslID
+        return scenario
     }
 }
