@@ -79,13 +79,13 @@ env:
   # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (556 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 645
+  # run today (567 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 656
   # The fewest Swift Testing tests the root package's `swift test` may run, in
   # SwiftPM tests. A test process that ends early still exits 0 (#442), so that
   # step fails below this. It is what the step's Swift 6.1 runs today, 11 fewer
   # than Swift 6.2 compiles: raise it when you add tests.
-  MIN_SWIFT_TESTING_TESTS: 115
+  MIN_SWIFT_TESTING_TESTS: 118
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs

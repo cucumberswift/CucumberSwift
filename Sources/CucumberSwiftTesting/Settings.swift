@@ -179,10 +179,29 @@ enum CucumberSettings {
         set { storage.generateRegexLiterals = newValue }
     }
 
+    /// ``Cucumber/generateMacros``.
+    static var staticGenerateMacros: Bool? {
+        get { storage.flag("generateMacros") }
+        set { storage.setFlag("generateMacros", newValue) }
+    }
+
+    /// Whether the test target links `CucumberSwiftTestingMacros` built with the `Macros` trait, which
+    /// declares this class.
+    static var linksMacros: Bool {
+        NSClassFromString("CucumberSwiftTestingMacrosMarker") != nil
+    }
+
     /// Whether the step definitions the runner suggests use regex literals: the static variable, then
     /// `CUCUMBER_GENERATE_REGEX_LITERALS`, then no. The value is read as CucumberSwift's `FeatureFlags` read it: see `FeatureFlagValue`.
     static func generatesRegexLiterals(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         staticGenerateRegexLiterals ?? FeatureFlagValue.bool(environment[generateRegexLiteralsEnvironmentKey]) ?? false
+    }
+
+    /// Whether the step definitions the runner suggests are step definition macros: the static variable,
+    /// then `CUCUMBER_GENERATE_MACROS`, as CucumberSwift's `FeatureFlags` read it, then whether the test
+    /// target links the macros.
+    static func generatesMacros(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticGenerateMacros ?? FeatureFlagValue.bool(environment["CUCUMBER_GENERATE_MACROS"]) ?? linksMacros
     }
 
     /// Whether generated tests are named with the Gherkin text as written: the static variable, then
@@ -298,5 +317,18 @@ extension Cucumber {
     nonisolated public static var generateRegexLiterals: Bool? {
         get { CucumberSettings.staticGenerateRegexLiterals }
         set { CucumberSettings.staticGenerateRegexLiterals = newValue }
+    }
+
+    /// Whether the step definitions the runner suggests for undefined steps are step definition macros, such
+    /// as `#Then("I see {int} messages") { (int: Int) in`, rather than functions, such as
+    /// `Then("I see {int} messages") { match, _ in`. By default they are macros when the test target links
+    /// the `CucumberSwiftTestingMacros` product with the `Macros` package trait on, and functions otherwise.
+    /// Set this to `false`, or the environment variable `CUCUMBER_GENERATE_MACROS` to `NO`, for functions
+    /// anyway, or to `true` or `YES` for macros. With ``generateRegexLiterals`` the macros take regex
+    /// literals. This variable, when set, wins over the environment variable. Set it in your
+    /// `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var generateMacros: Bool? {
+        get { CucumberSettings.staticGenerateMacros }
+        set { CucumberSettings.staticGenerateMacros = newValue }
     }
 }
