@@ -18,9 +18,19 @@ public struct CucumberParallelScenariosTrait: SuiteTrait, TestTrait {
 
 /// Tells the runner that the test suite has started and finished, around all of its features.
 public struct CucumberSuiteTrait: SuiteTrait, TestScoping {
+    /// The test bundle the generated tests are in, which the report and its copy are named after.
+    let testBundleURL: URL?
+
     public var isRecursive: Bool { false }
 
-    public init() {}
+    public init() {
+        testBundleURL = nil
+    }
+
+    /// For the suite whose tests are compiled into the same test bundle as `type`.
+    public init(bundleOf type: AnyClass) {
+        testBundleURL = Bundle(for: type).bundleURL
+    }
 
     /// Wraps the suite once, not each test case in it.
     public func scopeProvider(for test: Test, testCase: Test.Case?) -> CucumberSuiteTrait? {
@@ -28,7 +38,7 @@ public struct CucumberSuiteTrait: SuiteTrait, TestScoping {
     }
 
     public func provideScope(for _: Test, testCase _: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
-        await Cucumber.shared.beginSuite()
+        await Cucumber.shared.beginSuite(testBundleURL: testBundleURL)
         do {
             try await function()
         } catch {
@@ -71,6 +81,10 @@ public struct CucumberFeatureTrait: SuiteTrait, TestScoping {
 extension Trait where Self == CucumberSuiteTrait {
     /// Reports the test suite's start and finish to the runner's observers.
     public static var observedByCucumber: Self { Self() }
+
+    /// Reports the test suite's start and finish to the runner's observers, and names the report's feature
+    /// files and its copy after the test bundle that `type` is in, as CucumberSwift does.
+    public static func observedByCucumber(bundleOf type: AnyClass) -> Self { Self(bundleOf: type) }
 }
 
 extension Trait where Self == CucumberFeatureTrait {

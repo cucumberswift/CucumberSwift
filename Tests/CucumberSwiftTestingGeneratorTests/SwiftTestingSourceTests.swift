@@ -20,7 +20,7 @@ final class SwiftTestingSourceTests: XCTestCase {
     import Testing
 
     @MainActor
-    @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber)
+    @Suite("Features", CucumberSwiftTesting.cucumberScenarioOrder(compiled: cucumberParallelTesting), .reportedInFeatureFiles, .observedByCucumber(bundleOf: CucumberFeaturesBundle.self))
     struct CucumberFeatures {
         @Test("Feature files are valid Gherkin")
         func gherkin() { cucumberGherkinProblems() }
@@ -41,6 +41,9 @@ final class SwiftTestingSourceTests: XCTestCase {
     #else
     private let cucumberParallelTesting = false
     #endif
+
+    /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
+    private final class CucumberFeaturesBundle {}
 
     private func cucumberGherkinProblems() {
     }

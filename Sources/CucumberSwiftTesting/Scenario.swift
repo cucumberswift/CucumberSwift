@@ -15,21 +15,26 @@ public final class Feature {
     /// The feature file's path on the Mac that built the tests.
     public let uri: String
     public let location: Location
+    /// The feature file's URI in the JSON report, the `file://` URL of its copy in the test bundle, as
+    /// CucumberSwift writes it. `nil` when the runner doesn't know the test bundle.
+    let reportURI: String?
 
-    init(title: String, desc: String = "", tags: [String], uri: String, location: Location = Location(line: 1, column: 1)) {
+    init(title: String, desc: String = "", tags: [String], uri: String, location: Location = Location(line: 1, column: 1), reportURI: String? = nil) {
         self.title = title
         self.desc = desc
         self.tags = tags
         self.uri = uri
         self.location = location
+        self.reportURI = reportURI
     }
 
-    convenience init(_ scenario: GherkinScenario) {
+    convenience init(_ scenario: GherkinScenario, reportURI: String? = nil) {
         self.init(title: scenario.featureTitle,
                   desc: scenario.featureDescription,
                   tags: scenario.featureTags,
                   uri: scenario.file,
-                  location: Location(line: scenario.featureLine, column: 1))
+                  location: Location(line: scenario.featureLine, column: 1),
+                  reportURI: reportURI)
     }
 }
 

@@ -80,6 +80,11 @@ public final class Cucumber {
     /// The feature that started last and hasn't finished, for runs that don't say where a feature ends.
     private var openFeature: FeatureRun?
     private var isSuiteStarted = false
+    /// The test bundle the generated tests are in, from the suite's trait. `nil` for scenarios run without
+    /// the generated tests' traits.
+    var testBundle: TestBundle?
+    /// Where `endSuite()` copies the report: the documents folder unless set. Tests set it.
+    var resultsFolder: URL?
     var hasReportedParallelTestingTooLate = false
     /// The scenarios `shouldRun` has let through, so that `run` doesn't ask `shouldRunWith` a second time.
     var approvedScenarios = Set<String>()
@@ -260,14 +265,18 @@ public final class Cucumber {
         featureRuns.removeAll()
         openFeature = nil
         isSuiteStarted = false
+        testBundle = nil
+        resultsFolder = nil
         approvedScenarios.removeAll()
         startedScenarios.removeAll()
     }
 
-    /// Starts the test suite for the observers, once. `CucumberSuiteTrait` calls it before the first test.
-    func beginSuite() {
+    /// Starts the test suite for the observers, once. `CucumberSuiteTrait` calls it before the first test,
+    /// with the test bundle the generated tests are in.
+    func beginSuite(testBundleURL: URL? = nil) {
         guard !isSuiteStarted else { return }
         isSuiteStarted = true
+        testBundle = testBundleURL.flatMap(TestBundle.init(url:))
         featureRuns.removeAll()
         openFeature = nil
         // The step definitions can set `Cucumber.reportPath`, which the report is written to.
@@ -275,8 +284,9 @@ public final class Cucumber {
         reporters.forEach { $0.testSuiteStarted(at: Date()) }
     }
 
-    /// Finishes the features that are still open, and the test suite. `CucumberSuiteTrait` calls it after
-    /// the last test.
+    /// Finishes the features that are still open, and the test suite, and then copies the report to
+    /// `CucumberTestResultsFor<test bundle>.json` in the documents folder, as CucumberSwift does when the test
+    /// bundle finishes. `CucumberSuiteTrait` calls it after the last test.
     func endSuite() async {
         guard isSuiteStarted else { return }
         isSuiteStarted = false
@@ -291,6 +301,7 @@ public final class Cucumber {
             await finish(run)
         }
         reporters.forEach { $0.testSuiteFinished(at: Date()) }
+        testBundle?.copyReport(into: resultsFolder)
     }
 
     /// Finishes a feature, once all of its scenarios have run. `CucumberFeatureTrait` calls it after the
@@ -303,7 +314,7 @@ public final class Cucumber {
     /// The feature a scenario belongs to, started on its first scenario.
     private func startFeature(of scenario: GherkinScenario) -> FeatureRun {
         let key = Self.key(file: scenario.file, title: scenario.featureTitle, line: scenario.featureLine)
-        let run = featureRuns[key] ?? FeatureRun(Feature(scenario))
+        let run = featureRuns[key] ?? FeatureRun(Feature(scenario, reportURI: testBundle?.reportURI(ofFeatureFileAt: scenario.file)))
         featureRuns[key] = run
         guard run.startDate == nil else { return run }
         // Scenarios run without the generated tests' traits have nothing to say where a feature ends: it
