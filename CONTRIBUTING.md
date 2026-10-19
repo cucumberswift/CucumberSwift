@@ -60,7 +60,7 @@ Finding an existing attempt doesn't automatically mean stop. If it's gone stale,
 1. Fork the repository and clone your fork.
 2. Create a branch for your change. Don't work on your fork's `main` branch. Keeping it as a clean copy of ours makes it easy to stay in sync and to work on more than one change at a time.
 3. Open `CucumberSwift.xcodeproj` in Xcode.
-4. Install [SwiftLint](https://github.com/realm/SwiftLint) (for example `brew install swiftlint`). The Xcode build runs it with the repository's `.swiftlint.yml`.
+4. Install [SwiftLint](https://github.com/realm/SwiftLint) at the version `.mise.lint.toml` pins: with [mise](https://mise.jdx.dev) set up as in [The Xcode project](#setting-up-1), `MISE_ENV=lint mise install`. The Xcode build runs it with the repository's `.swiftlint.yml`, and fails on its errors. Without the pinned version, the build uses any `swiftlint` on your `PATH`, such as Homebrew's, and reports its errors as warnings, so they can't fail the build: another version can report errors that the pinned one, and CI, don't.
 5. Only if you'll add, remove or rename files, or change targets or settings, set up Tuist as described in [The Xcode project](#the-xcode-project). Most changes don't need it.
 6. Optionally, turn on the [checks before each commit](#checks-before-each-commit).
 
@@ -76,7 +76,7 @@ The first commit installs the tools they run, at the versions `.mise.lint.toml` 
 
 Before each commit, on what the commit changes:
 
-- [Trunk](https://trunk.io)'s `trunk check` runs actionlint (with ShellCheck) on the workflows, SwiftLint on Swift files, and `.github/scripts/check_lockfiles.py` when a manifest or lockfile changes. Only new problems in what you changed count, and SwiftLint warnings don't stop a commit, just as they don't fail the Xcode build.
+- [Trunk](https://trunk.io)'s `trunk check` runs actionlint (with ShellCheck) on the workflows, SwiftLint on Swift files, and `.github/scripts/check_lockfiles.py` when a manifest or lockfile changes. Only new problems in what you changed count, and SwiftLint warnings don't stop a commit, just as they don't fail the Xcode build. CI's `Workflow checks` job runs the same SwiftLint on every Swift file, so an error the hook missed, such as a type body that grew past its limit without its first line changing, still fails CI.
 - `mise run check-project`, when the commit could change the Xcode project (see [Regenerating](#regenerating)).
 - The Python script tests, when a script in `.github/scripts` changes.
 
