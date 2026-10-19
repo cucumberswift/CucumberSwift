@@ -32,6 +32,25 @@ class DSLRuleTests: XCTestCase {
         XCTAssertEqual(step?.match, "I: print(\"S1\")")
     }
 
+    func testARulesTagsComeBeforeItsScenariosTags() {
+        let feature =
+        Feature("F1") {
+            Rule("R1", tags: ["rule"]) {
+                Scenario("SC1", tags: ["scenario"]) {
+                    Given(I: print("S1"))
+                }
+            }
+            Rule("R2", tags: ["other"]) {
+                Scenario("SC2") {
+                    Given(I: print("S2"))
+                }
+            }
+        }
+
+        XCTAssertEqual(feature.scenarios.map(\.tags), [["rule", "scenario"], ["other"]])
+        XCTAssert(feature.scenarios.first?.containsTags(["rule"]) ?? false)
+    }
+
     func testSingleRuleWithMultipleScenariosAndNoBackground() {
         let feature =
         Feature("F1") {

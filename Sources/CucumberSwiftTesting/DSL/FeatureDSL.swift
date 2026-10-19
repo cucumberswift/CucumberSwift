@@ -55,25 +55,27 @@ public struct Background: ScenarioDSL {
     }
 }
 
-/// A group of scenarios, in the Swift DSL. As in CucumberSwift, its scenarios belong to the feature, and its
-/// title, tags and position are not used.
+/// A group of scenarios, in the Swift DSL. As in CucumberSwift, its scenarios belong to the feature, and have the
+/// rule's tags before their own; its title and position are not used, as with a rule in a feature file.
 public struct Rule: ScenarioDSL {
     public let scenarios: [Scenario]
     @MainActor
     public init(_: String,
-                tags _: [String] = [],
+                tags: [String] = [],
                 line _: UInt = #line,
                 column _: UInt = #column,
                 @ScenarioBuilder _ content: () -> [ScenarioDSL]) {
         scenarios = content().flatMap(\.scenarios)
+        scenarios.forEach { $0.tags = tags + $0.tags }
     }
     @MainActor
     public init(_: String,
-                tags _: [String] = [],
+                tags: [String] = [],
                 line _: UInt = #line,
                 column _: UInt = #column,
                 @ScenarioBuilder _ content: () -> ScenarioDSL) {
         scenarios = content().scenarios
+        scenarios.forEach { $0.tags = tags + $0.tags }
     }
 }
 

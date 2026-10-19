@@ -149,6 +149,26 @@ class DSLStepTests: XCTestCase {
         XCTAssertEqual(step?.location.column, 25)
     }
 
+    func testTheMacroFormHasTheTextAndPositionItIsGiven() {
+        func start() {}
+        func signIn() async {}
+
+        let feature =
+        Feature("") {
+            Scenario("") {
+                Given(_macroStep: start(), stepText: "I: start()", line: 3, column: 9, file: "/Steps.swift")
+                When(_macroStep: signIn, stepText: "I: signIn", line: 4, column: 8, file: "/Steps.swift")
+            }
+        }
+
+        let steps = feature.scenarios.first?.steps ?? []
+        XCTAssertEqual(steps.map(\.match), ["I: start()", "I: signIn"])
+        XCTAssertEqual(steps.map(\.keyword), [.given, .when])
+        XCTAssertEqual(steps.map(\.location.line), [3, 4])
+        XCTAssertEqual(steps.map(\.location.column), [9, 8])
+        XCTAssert(steps.allSatisfy(\.canExecute))
+    }
+
     func testStepCanBeModifiedToNotContinueAfterFailure() {
         func printAStatement(_ str: String) { print(str) }
 

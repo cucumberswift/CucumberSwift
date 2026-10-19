@@ -54,7 +54,7 @@ extension StepDSL {
 // are written into the expansion when the tests compile, rather than read from the Swift file when they run.
 // Write the macro rather than calling these.
 extension StepDSL {
-    @discardableResult public convenience init(_macroStep handler: @escaping @autoclosure () -> Void,
+    @discardableResult public convenience init(_macroStep handler: @escaping @autoclosure @MainActor () -> Void,
                                                stepText: String,
                                                line: UInt,
                                                column: UInt,

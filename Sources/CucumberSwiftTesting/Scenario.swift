@@ -37,7 +37,7 @@ public final class Feature {
 public final class Scenario {
     public let title: String
     /// The feature's tags, then the scenario's.
-    public let tags: [String]
+    public internal(set) var tags: [String]
     /// The Background's steps, then the scenario's.
     public private(set) var steps = [Step]()
     public let feature: Feature?

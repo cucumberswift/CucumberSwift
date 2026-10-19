@@ -105,6 +105,24 @@ extension CucumberTests {
         #expect(ran == ["kept"])
     }
 
+    @Test func aRulesTagsComeBeforeItsScenariosTagsAndSelectThem() async throws {
+        resetNames()
+        Feature("F", tags: ["f"]) {
+            Rule("R", tags: ["rule"]) {
+                Scenario("In the rule", tags: ["s"]) {
+                    Given(_macroStep: self.ran.append("in"), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+                }
+            }
+            Scenario("Outside") {
+                Given(_macroStep: self.ran.append("out"), stepText: "I: start()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.map(\.tags) == [["f", "rule", "s"], ["f"]])
+        Cucumber.shared.environment = ["CUCUMBER_TAGS": "rule"]
+        try await runAll()
+        #expect(ran == ["in"])
+    }
+
     @Test func aStepDefinitionThatMatchesTheTextRunsInsteadAndTwoMakeItAmbiguous() async throws {
         resetNames()
         // Not `I: start()`: in a Cucumber expression, `()` is optional text.
