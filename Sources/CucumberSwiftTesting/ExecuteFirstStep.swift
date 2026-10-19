@@ -23,6 +23,7 @@ enum ScenarioContext {
 ///
 /// CucumberSwift's synchronous `ExecuteFirstStep(matching:)` has no counterpart: this runner's steps are
 /// all `async`, so `await` this one.
+@available(*, deprecated, message: "Move the code both steps need into a function, and call it from each step definition, instead of running one step from another.")
 @MainActor
 public func ExecuteFirstStep(keyword: Step.Keyword? = nil, matching: String) async {
     await Cucumber.shared.executeFirstStep(keyword: keyword, matching: matching)
