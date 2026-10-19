@@ -58,12 +58,6 @@ public final class Scenario {
         steps = scenario.steps.map { Step($0, in: self) }
     }
 
-    /// Puts a Background's steps before a scenario's own, in the Swift DSL.
-    func prependDSLSteps(_ background: [DSLStep]) {
-        dslSteps.insert(contentsOf: background, at: 0)
-        steps = DSLStep.gherkinSteps(dslSteps).map { Step($0, in: self) }
-    }
-
     /// The running scenario's own value of type `Value`, such as the basket its steps fill in: call it from
     /// any step or scenario hook, with no scenario to pass. `make` runs the first time any step or hook of
     /// this scenario asks for a `Value`, and every later call, from any step or hook of this scenario,
@@ -90,5 +84,11 @@ public final class Scenario {
             return make()
         }
         return scenario.internalState.value(make)
+    }
+
+    /// Puts a Background's steps before a scenario's own, in the Swift DSL.
+    func prependDSLSteps(_ background: [DSLStep]) {
+        dslSteps.insert(contentsOf: background, at: 0)
+        steps = DSLStep.gherkinSteps(dslSteps).map { Step($0, in: self) }
     }
 }

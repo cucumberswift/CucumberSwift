@@ -7,6 +7,13 @@
 import Foundation
 import Testing
 
+/// How Swift Testing identifies a case, for comparing two.
+private struct EncodedCase: Encodable {
+    let testCase: ScenarioCase
+    init(_ testCase: ScenarioCase) { self.testCase = testCase }
+    func encode(to encoder: any Encoder) throws { try testCase.encodeTestArgument(to: encoder) }
+}
+
 /// Features written in the Swift DSL: the cases of the generated "Swift DSL features" test, and how they run.
 /// This target has no macros, so the macro form is written as its expansion, `Given(_macroStep:…)`.
 extension CucumberTests {
@@ -65,6 +72,7 @@ extension CucumberTests {
                 Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
                 And(_macroStep: (), stepText: "I: add.()", line: 2, column: 1, file: "/B.swift")
             }
+            // swiftlint:disable:next multiline_arguments
             ScenarioOutline("Count", headers: Int.self, steps: { _ in
                 Then(_macroStep: (), stepText: "I: count()", line: 3, column: 1, file: "/B.swift")
             }, examples: { [1, 2] })
@@ -85,6 +93,7 @@ extension CucumberTests {
     @Test func anOutlinesExamplesAreCasesOfTheirOwn() throws {
         resetNames()
         Feature("F") {
+            // swiftlint:disable:next multiline_arguments
             ScenarioOutline({ "Count \($0)" }, headers: Int.self, steps: { count in
                 Then(_macroStep: self.ran.append("\(count)"), stepText: "I: count()", line: 3, column: 1, file: "/B.swift")
             }, examples: { [1, 2] })
@@ -92,7 +101,7 @@ extension CucumberTests {
         let cases = Cucumber.shared.dslCasesToRun()
         let keys = cases.map(\.scenario).map(Cucumber.key(of:))
         #expect(Set(keys).count == 2)
-        let encoded = try cases.map { String(decoding: try JSONEncoder().encode(EncodedCase($0)), as: UTF8.self) }
+        let encoded = try cases.map { String(bytes: try JSONEncoder().encode(EncodedCase($0)), encoding: .utf8) }
         #expect(Set(encoded).count == 2)
     }
 
@@ -188,6 +197,7 @@ extension CucumberTests {
         resetNames()
         Feature("F") {
             Scenario("S") {
+                // swiftlint:disable:next multiline_arguments
                 Given(_macroStep: {
                     #expect(Bool(false), "deliberately")
                     try await Task.sleep(nanoseconds: 5_000_000_000)
@@ -203,11 +213,4 @@ extension CucumberTests {
         #expect(ran.isEmpty)
     }
     #endif
-}
-
-/// How Swift Testing identifies a case, for comparing two.
-private struct EncodedCase: Encodable {
-    let testCase: ScenarioCase
-    init(_ testCase: ScenarioCase) { self.testCase = testCase }
-    func encode(to encoder: any Encoder) throws { try testCase.encodeTestArgument(to: encoder) }
 }

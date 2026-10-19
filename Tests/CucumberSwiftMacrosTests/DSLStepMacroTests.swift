@@ -106,7 +106,8 @@ final class DSLStepMacroTests: XCTestCase {
             expandedSource: "#Given(I: first(), second())",
             diagnostics: [
                 DiagnosticSpec(message: "A step takes one argument: what it runs, such as `#Given(I: logIn())`, an async function, or a closure.",
-                               line: 1, column: 1)
+                               line: 1,
+                               column: 1)
             ],
             macros: macros)
     }

@@ -5,7 +5,6 @@
 //  Created by thompsty on 7/23/20.
 //  Copyright © 2020 Tyler Thompson. All rights reserved.
 //
-// swiftlint:disable file_types_order
 
 import Foundation
 import XCTest

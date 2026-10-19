@@ -2,6 +2,7 @@
 //  FeatureDSL.swift
 //  CucumberSwiftTesting
 //
+// swiftlint:disable file_types_order
 // Features written in Swift rather than in feature files, named and shaped as in CucumberSwift's DSL:
 //
 //     Feature("Sign in") {

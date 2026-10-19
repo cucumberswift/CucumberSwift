@@ -61,7 +61,7 @@ enum DSLStepText {
                             closeCount: closeCount)
                 }
             }
-            if (char == ")" && !matchedQuote) { closeCount += 1 }
+            if char == ")" && !matchedQuote { closeCount += 1 }
             if openCount > 0 && openCount == closeCount {
                 return (match: match,
                         openCount: openCount,

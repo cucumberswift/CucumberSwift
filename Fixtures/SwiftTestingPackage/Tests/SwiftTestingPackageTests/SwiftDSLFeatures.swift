@@ -51,6 +51,7 @@ extension Cucumber {
                 })
             }
 
+            // swiftlint:disable:next multiline_arguments
             ScenarioOutline({ "Buy \($0) cukes" }, headers: Int.self, steps: { count in
                 #When(I: addCukes(count))
                 Then(the: #expect(World.cukes == count))

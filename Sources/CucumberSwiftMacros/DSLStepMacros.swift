@@ -2,6 +2,7 @@
 //  DSLStepMacros.swift
 //  CucumberSwiftMacros
 //
+// swiftlint:disable file_length
 
 // The steps of the Swift DSL, with their text captured when the tests compile: `#Given(I: logIn())` is
 // `Given(I: logIn())` whose text, `I: logIn()`, is written into the macro's expansion rather than read from the

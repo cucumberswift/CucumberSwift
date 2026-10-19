@@ -10,6 +10,21 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
+/// What the DSL step macros report.
+enum DSLStepMessage: String, DiagnosticMessage {
+    case oneArgument
+
+    var message: String {
+        switch self {
+            case .oneArgument:
+                "A step takes one argument: what it runs, such as `#Given(I: logIn())`, an async function, or a closure."
+        }
+    }
+
+    var diagnosticID: MessageID { MessageID(domain: "CucumberSwiftMacros", id: rawValue) }
+    var severity: DiagnosticSeverity { .error }
+}
+
 /// A step of a feature written in the Swift DSL, with its text captured when it compiles: `#Given(I: logIn())`
 /// expands to `Given(_macroStep: logIn(), stepText: "I: logIn()", line: …, column: …, file: …)`. The function
 /// form, `Given(I: logIn())`, reads the same text from the Swift file when the tests run, which fails on a
@@ -55,17 +70,4 @@ public struct DSLStepMacro: ExpressionMacro {
     }
 }
 
-enum DSLStepMessage: String, DiagnosticMessage {
-    case oneArgument
-
-    var message: String {
-        switch self {
-            case .oneArgument:
-                "A step takes one argument: what it runs, such as `#Given(I: logIn())`, an async function, or a closure."
-        }
-    }
-
-    var diagnosticID: MessageID { MessageID(domain: "CucumberSwiftMacros", id: rawValue) }
-    var severity: DiagnosticSeverity { .error }
-}
 #endif
