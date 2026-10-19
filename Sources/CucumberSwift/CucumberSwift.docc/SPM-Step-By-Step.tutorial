@@ -14,9 +14,9 @@
 
         @Steps {
             @Step {
-                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. When Xcode asks which target to add the CucumberSwift library to, choose your unit test target, not your app. Before you add the package, turn on its `Macros` trait in the package dependency's settings, and add the swift-syntax package to the project as well: see <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project>. For the target, choose the `CucumberSwiftMacros` library rather than `CucumberSwift`.
+                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. The sheet has no setting for package traits, so turn on the package's `Macros` trait afterwards, add the swift-syntax package to the project as well, and add the `CucumberSwiftMacros` library to your unit test target, not your app: <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> gives each step.
 
-                @Image(source: "SPM-Add-Package.png", alt: "Xcode's Add Package Dependencies sheet, with the CucumberSwift package found from its URL, the dependency rule Up to Next Major Version from 6.3.0, and the Calculator project selected.")
+                @Image(source: "SPM-Add-Package.png", alt: "Xcode's Add Package Dependencies sheet, with the CucumberSwift package found from its URL, the dependency rule Up to Next Major Version from 6.6.0 to 7.0.0, and the Calculator project selected.")
             }
         }
     }
@@ -84,7 +84,7 @@
             @Step {
                 Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
 
-                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
+                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition, a `#Given` macro with an `Int` argument.")
             }
 
             @Step {
