@@ -2,7 +2,7 @@
     @Intro(title: "Using CucumberSwift with Swift Package Manager") {
         Add CucumberSwift to a unit test target in an Xcode project with Swift Package Manager, write a first feature file, and let CucumberSwift suggest its step definitions.
 
-        You end up with the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample: a macOS unit test target, a `Features` folder, and step definitions written with the step definition macros and Cucumber Expressions.
+        You end up with a setup like the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample: a macOS unit test target, a `Features` folder, and step definitions that use Cucumber Expressions. The sample writes them as functions; this tutorial writes them with the step definition macros, the recommended style, as the [StepDefinitionMacros](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/StepDefinitionMacros) sample does.
     }
 
     @Section(title: "Add CucumberSwift to your test target") {

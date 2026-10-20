@@ -38,7 +38,7 @@ Before 6.0.0, a string that started with `^` or ended with `$` was read as a Cuc
 Most step definitions need no change. Step definitions whose closure takes `[String]` are not affected at all: they already read the string as a regular expression. For the rest, check any pattern that starts with `^` or ends with `$` but was meant *literally*, such as a price written as `"I owe 5$"`.
 
 #### Anchored patterns
-These step definitions all match the step `the app is at the Main Menu`. From 6.0.0 the second one, which the older versions read as a Cucumber expression and so never matched, is a regular expression and matches as written:
+These step definitions all match the step `the app is at the Main Menu`. From 6.0.0 the second one, which the older versions read as a Cucumber expression and so never matched, is a regular expression and matches as written. They are alternatives: use one, because registering more than one for the same step makes the step ambiguous (see <doc:Matching-Steps#When-more-than-one-step-definition-matches-a-step>):
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -50,7 +50,7 @@ These step definitions all match the step `the app is at the Main Menu`. From 6.
 // a regular expression in a string
 #Given("^the app is at the Main Menu$") { }
 
-// a regex literal, which compiles in any target
+// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
 #Given(#/^the app is at the Main Menu$/#) { }
 ```
 }
@@ -63,13 +63,13 @@ Given("the app is at the Main Menu") { _, _ in }
 // a regular expression in a string
 Given("^the app is at the Main Menu$") { _, _ in }
 
-// a regex literal, which compiles in any target
+// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
 Given(#/^the app is at the Main Menu$/#) { _, _ in }
 ```
 }
 }
 
-A regex literal without the `#` delimiters, `/^…$/`, matches the same step. It needs iOS 16, macOS 13 or tvOS 16 at run time, and your target must allow bare regex literals: the Swift 6 language mode does, as does the `BareSlashRegexLiterals` feature (see <doc:Matching-Steps#Matching-with-Regular-Expressions>):
+A regex literal without the `#` delimiters, `/^…$/`, is one more alternative for the same step. It needs iOS 16, macOS 13 or tvOS 16 at run time, and your target must allow bare regex literals: the Swift 6 language mode does, as does the `BareSlashRegexLiterals` feature (see <doc:Matching-Steps#Matching-with-Regular-Expressions>):
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -112,7 +112,7 @@ Given("I owe 5$") { _, _ in }
 
 - If it is not a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
 
-To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. These all match the step `I owe 5$`, and work on every platform and deployment target except where noted:
+To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. These are alternatives for the step `I owe 5$`: use one, because several for the same step make it ambiguous. The regular expression in a string runs on every deployment target, and a regex literal needs iOS 16, macOS 13 or tvOS 16:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -121,7 +121,7 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 // a regular expression in a string
 #Given("^I owe 5\\$$") { }
 
-// a regex literal, which compiles in any target
+// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
 #Given(#/^I owe 5\$$/#) { }
 ```
 }
@@ -131,13 +131,13 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 // a regular expression in a string
 Given("^I owe 5\\$$") { _, _ in }
 
-// a regex literal, which compiles in any target
+// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
 Given(#/^I owe 5\$$/#) { _, _ in }
 ```
 }
 }
 
-The bare form, `/^I owe 5\$$/`, needs iOS 16, macOS 13 or tvOS 16 and a target that allows bare regex literals, as above:
+Both regex literals need iOS 16, macOS 13 or tvOS 16. The bare form, `/^I owe 5\$$/`, also needs a target that allows bare regex literals, as above:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -154,7 +154,7 @@ Given(/^I owe 5\$$/) { _, _ in }
 }
 }
 
-To read the amount instead of matching one price, capture it. A regular expression gives the closure text, which it converts itself: a `String` for a regular expression in a string, a `Substring` for a regex literal.
+To read the amount instead of matching one price, capture it, again as alternatives to choose from. A regular expression gives the closure text, which it converts itself: a `String` for a regular expression in a string, a `Substring` for a regex literal.
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
