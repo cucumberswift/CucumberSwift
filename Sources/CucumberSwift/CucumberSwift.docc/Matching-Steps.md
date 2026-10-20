@@ -289,8 +289,24 @@ When("I add {int} more cukes") { match, _ in
 >
 > Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
 
-With the Swift DSL, pass an async function or closure rather than a call:
+With the Swift DSL, pass an async function or closure rather than a call. With the Macros trait, write each step with a DSL step macro, such as `#Given(I: signIn)`, which captures the step's text when the tests compile. Without it, as with Carthage, the step functions read the text from the Swift file when the tests run:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+@MainActor func signIn() async throws { /* ... */ }
+
+Feature("Sign in") {
+    Scenario("A returning user") {
+        #Given(I: signIn)                                 // an async function
+        #When(I: { try await open(.settings) })           // a closure
+        #Then(the: settingsAreShown())                    // a synchronous call, as before
+    }
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 @MainActor func signIn() async throws { /* ... */ }
@@ -303,6 +319,8 @@ Feature("Sign in") {
     }
 }
 ```
+}
+}
 
 ### Swift 6 language mode
 In a test target that builds in Swift 6 language mode, mark the conformance `@retroactive`, because both `Cucumber` and `StepImplementation` come from CucumberSwift:
