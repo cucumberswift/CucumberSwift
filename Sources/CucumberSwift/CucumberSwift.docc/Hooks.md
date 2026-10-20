@@ -2,10 +2,56 @@
 
 Hooks are used to tie into CucumberSwift's runtime. They are great for setting up preconditions before a feature, or cleaning up after it is completed.
 
+The examples on this page come in two tabs: **Swift Package Manager**, written with the hook macros, and **Carthage**, written with the hook functions. See <doc:Hooks#Hook-macros> for the difference.
+
 ## Types of Hooks
 CucumberSwift comes with 6 hooks, Before/After Feature Before/After Scenario and Before/After step, use them like so
 
 NOTE: Hooks can be setup in more than 1 place however each hook will only be called once
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+```swift
+import Foundation
+import XCTest
+import CucumberSwiftMacros
+
+extension Cucumber: StepImplementation {
+    public var bundle: Bundle {
+        class ThisBundle { }
+        return Bundle(for: ThisBundle.self)
+    }
+
+    public func setupSteps() {
+        #BeforeFeature { feature in
+            //called once before the feature, but can be setup in more than 1 file.
+        }
+        
+        #AfterFeature { feature in
+            
+        }
+        
+        #BeforeScenario { scenario in
+            
+        }
+
+        #AfterScenario { scenario in
+            
+        }
+
+        #BeforeStep { step in
+            
+        }
+
+        #AfterStep { step in
+            
+        }
+    }
+}
+```
+}
+
+@Tab("Carthage") {
 ```swift
 import Foundation
 import XCTest
@@ -44,32 +90,36 @@ extension Cucumber: StepImplementation {
     }
 }
 ```
+}
+}
 
 ### Hook macros
 
-Each hook also has a macro, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, and the macros are the preferred way to write hooks. The compiler checks the closure where you write it: it takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and anything else is an error that says what the hook passes, with a fix. They also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does:
+Each hook also has a macro, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, and the macros are the preferred way to write hooks. The compiler checks the closure where you write it: it takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and anything else is an error that says what the hook passes, with a fix. They also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
 
-<!-- swift-example: steps -->
-```swift
-#BeforeScenario {
-    try await server.reset()
-}
-#AfterStep(priority: 1) { (step: Step) in
-    print("Ran \(step.match)")
-}
-```
-
-The functions keep working, so existing hooks need no change, and they are the way to write hooks where the macros aren't available: they need CucumberSwift's `Macros` package trait, which downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros along with your step definitions. The examples on this page use the functions. Tagged hooks have no macro.
+The functions keep working, so existing hooks need no change, and they are the way to write hooks where the macros aren't available: they need CucumberSwift's `Macros` package trait, which downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros along with your step definitions. The examples on this page come in two tabs: Swift Package Manager, with the macros, and Carthage, with the functions. Tagged hooks have no macro.
 
 ### Async hooks
 A hook can be `async` and `throws`. Write `await` in its closure:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#BeforeScenario { (scenario: Scenario) in
+    try await server.reset()
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 BeforeScenario { scenario in
     try await server.reset()
 }
 ```
+}
+}
 
 An async hook's closure runs on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
 
@@ -83,6 +133,19 @@ Set `lifetime` to `.keepAlways`, because Xcode deletes an attachment when the te
 
 **In a UI test target**, attach a screenshot of the screen:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+#AfterScenario { (scenario: Scenario) in
+    let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+    screenshot.name = scenario.title
+    screenshot.lifetime = .keepAlways
+    Attach(screenshot)
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: steps -->
 ```swift
 AfterScenario { scenario in
@@ -92,11 +155,33 @@ AfterScenario { scenario in
     Attach(screenshot)
 }
 ```
+}
+}
 
 `XCUIScreen` only works in a UI test target. In a unit test bundle, `screenshot()` fails the test with "Not authorized for performing UI testing actions".
 
 **In a unit test bundle** (for example with UIUTest), attach a view you render yourself, or text or data:
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: fragment: uses UIKit, which a macOS build doesn't have -->
+```swift
+#AfterScenario { (scenario: Scenario) in
+    let image = UIGraphicsImageRenderer(bounds: view.bounds).image { context in
+        view.layer.render(in: context.cgContext)
+    }
+    let snapshot = XCTAttachment(image: image)
+    snapshot.name = scenario.title
+    snapshot.lifetime = .keepAlways
+    Attach(snapshot)
+}
+
+#AfterStep { (step: Step) in
+    Attach(XCTAttachment(string: "Ran: \(step.match)"))
+}
+```
+}
+@Tab("Carthage") {
 <!-- swift-example: fragment: uses UIKit, which a macOS build doesn't have -->
 ```swift
 AfterScenario { scenario in
@@ -113,6 +198,8 @@ AfterStep { step in
     Attach(XCTAttachment(string: "Ran: \(step.match)"))
 }
 ```
+}
+}
 
 #### Where to find an attachment
 An attachment is added to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step, so its attachment is on that last step's test. An `AfterStep` attachment is on its own step.
@@ -127,6 +214,37 @@ Option `reverseOrderForAfterHooks` can be overriden for `StepImplementation` and
 
 NOTE: If you do *not* specify an order hooks with no priority will execute *after* hooks with a priority
 
+@TabNavigator {
+@Tab("Swift Package Manager") {
+```swift
+import Foundation
+import XCTest
+import CucumberSwiftMacros
+
+extension Cucumber: StepImplementation {
+    public var bundle: Bundle {
+        class ThisBundle { }
+        return Bundle(for: ThisBundle.self)
+    }
+
+    // Uncomment if you want reverse order of 'after' hooks execution
+    // public var reverseOrderForAfterHooks: Bool { true }
+
+    public func setupSteps() {
+        // This hook will execute last, because it uses UInt.max as a priority
+        #BeforeFeature(priority: .max) { (feature: Feature) in
+            //called once before the feature, but can be setup in more than 1 file.
+        }
+        
+        // This hook executes first, even though it is declared second
+        #BeforeFeature(priority: 1) { (feature: Feature) in
+            //called once before the feature, but can be setup in more than 1 file.
+        }
+    }
+}
+```
+}
+@Tab("Carthage") {
 ```swift
 import Foundation
 import XCTest
@@ -154,3 +272,5 @@ extension Cucumber: StepImplementation {
     }
 }
 ```
+}
+}
