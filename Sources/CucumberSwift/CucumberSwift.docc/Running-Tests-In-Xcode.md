@@ -287,7 +287,7 @@ When I sign in as the admin user
 
 <!-- swift-example: steps -->
 ```swift
-When("I sign in as the admin user") { _, _ in
+#When("I sign in as the admin user") {
     let password = ProcessInfo.processInfo.environment["ADMIN_PASSWORD"] ?? ""
     // Sign in with the password
 }
@@ -347,7 +347,7 @@ To skip a scenario, for example when a service it needs is unavailable, throw `X
 
 <!-- swift-example: steps -->
 ```swift
-Given("the card terminal is offline") { _, _ in
+#Given("the card terminal is offline") {
     throw XCTSkip("The card terminal is offline")
 }
 ```
