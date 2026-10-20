@@ -228,4 +228,68 @@ class RuleTests: XCTestCase {
         let steps = elements[2]["steps"] as? [[AnyHashable: Any]]
         XCTAssertEqual(steps?.compactMap { $0["name"] as? String }, ["fb", "ab", "I eat 2 cukes"])
     }
+
+    // Before #468, tags above a Rule waited for the next Scenario, so a Rule without one gave its
+    // tags to the first scenario of the Rule after it.
+    func testATaggedRuleWithoutScenariosGivesItsTagsToNoOtherScenario() {
+        let cucumber = Cucumber(withString: """
+        Feature: F
+
+        @empty
+        Rule: A
+
+        Rule: B
+          Scenario: S
+            Given b
+        """)
+        XCTAssertEqual(cucumber.features.first?.scenarios.map(\.tags), [[]])
+        XCTAssert(Gherkin.errors.snapshot.isEmpty, "\(Gherkin.errors.snapshot)")
+    }
+
+    // An outline's examples are named the same inside a Rule as outside one, so their test classes and
+    // JSON report IDs are too.
+    func testARulesOutlineExamplesAreNamedAsTheSameOutlineOutsideARule() {
+        let outline = """
+          Scenario Outline: Eat <n>
+            Given I eat <n> cukes
+            Examples:
+              | n |
+              | 1 |
+              | 2 |
+        """
+        let topLevel = Cucumber(withString: "Feature: F\n" + outline)
+        let inRule = Cucumber(withString: "Feature: F\nRule: R\n" + outline)
+        XCTAssertEqual(inRule.features.first?.scenarios.map(\.title), ["Eat 1 (example 1)", "Eat 2 (example 2)"])
+        XCTAssertEqual(inRule.features.first?.scenarios.map(\.title), topLevel.features.first?.scenarios.map(\.title))
+    }
+
+    func testOutlinesInTwoRulesHaveUniqueIDsInTheJSONReport() throws {
+        let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
+        Cucumber.shared.features.removeAll()
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: F
+        Rule: A
+          Scenario Outline: Eat <n>
+            Given I eat <n> cukes
+            Examples:
+              | n |
+              | 1 |
+              | 2 |
+        Rule: B
+          Scenario Outline: Eat <n> later
+            Given I eat <n> cukes
+            Examples:
+              | n |
+              | 1 |
+              | 2 |
+        """)
+        MatchAll("^(.*)$") { _, _ in }
+        reporter.testSuiteStarted(at: Date())
+
+        Cucumber.shared.executeFeatures()
+
+        let report = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(reporter.features)) as? [[AnyHashable: Any]])
+        let ids = try XCTUnwrap(report.first?["elements"] as? [[AnyHashable: Any]]).compactMap { $0["id"] as? String }
+        XCTAssertEqual(ids, ["eat-1-(example-1)", "eat-2-(example-2)", "eat-1-later-(example-1)", "eat-2-later-(example-2)"])
+    }
 }
