@@ -2,21 +2,21 @@
     @Intro(title: "Using CucumberSwift with Swift Package Manager") {
         Add CucumberSwift to a unit test target in an Xcode project with Swift Package Manager, write a first feature file, and let CucumberSwift suggest its step definitions.
 
-        You end up with the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample: a macOS unit test target, a `Features` folder, and step definitions that use Cucumber Expressions.
+        You end up with a setup like the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample: a macOS unit test target, a `Features` folder, and step definitions that use Cucumber Expressions. The sample writes them as functions; this tutorial writes them with the step definition macros, the recommended style, as the [StepDefinitionMacros](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/StepDefinitionMacros) sample does.
     }
 
     @Section(title: "Add CucumberSwift to your test target") {
         @ContentAndMedia {
-            You need Xcode 16.0 or later and an Xcode project with a unit test target. This tutorial uses a macOS unit test target, like the sample. The steps are the same for an iOS or tvOS app's unit test target.
+            You need Xcode 26.4 or later, because the step definition macros need a package trait that earlier Xcode versions can't turn on in a project (see <doc:Using-Step-Definition-Macros#Before-Xcode-264> for earlier versions), and an Xcode project with a unit test target. This tutorial uses a macOS unit test target, like the sample. The steps are the same for an iOS or tvOS app's unit test target.
 
             If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
         }
 
         @Steps {
             @Step {
-                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. When Xcode asks which target to add the CucumberSwift library to, choose your unit test target, not your app.
+                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package. The sheet has no setting for package traits, so turn on the package's `Macros` trait afterwards, add the swift-syntax package to the project as well, and add the `CucumberSwiftMacros` library to your unit test target, not your app: <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> gives each step.
 
-                @Image(source: "SPM-Add-Package.png", alt: "Xcode's Add Package Dependencies sheet, with the CucumberSwift package found from its URL, the dependency rule Up to Next Major Version from 6.3.0, and the Calculator project selected.")
+                @Image(source: "SPM-Add-Package.png", alt: "Xcode's Add Package Dependencies sheet, with the CucumberSwift package found from its URL, the dependency rule Up to Next Major Version from 6.6.0 to 7.0.0, and the Calculator project selected.")
             }
         }
     }
@@ -68,9 +68,9 @@
             @Step {
                 Replace the test file Xcode created in your test target with this one. `bundle` returns the bundle that holds the `Features` folder: your test bundle.
 
-                The extension adds a conformance to a type and a protocol that both come from CucumberSwift. `@retroactive` says you mean it. Without it, Xcode warns about the conformance, in Swift 5 and Swift 6 language modes alike.
+                The file imports `CucumberSwiftMacros`, which also imports CucumberSwift. The extension adds a conformance to a type and a protocol that both come from CucumberSwift. `@retroactive` says you mean it. Without it, Xcode warns about the conformance, in Swift 5 and Swift 6 language modes alike.
 
-                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Empty.swift")
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Macros-Empty.swift")
             }
 
             @Step {
@@ -84,7 +84,7 @@
             @Step {
                 Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
 
-                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
+                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition, a `#Given` macro with an `Int` argument.")
             }
 
             @Step {
@@ -94,22 +94,22 @@
             }
 
             @Step {
-                Paste the suggested definitions into `setupSteps()`. Each one matches its step with a Cucumber Expression: `{int}` matches a whole number, and `match.first(\.int)` reads it back as an `Int`. Each step fails until you replace its `XCTFail` line with your test code.
+                Paste the suggested definitions into `setupSteps()`. Each one is a step definition macro, `#Given`, `#When` or `#Then`, that matches its step with a Cucumber Expression: `{int}` matches a whole number, and the closure receives it as an `Int` argument. CucumberSwift suggests macros because your test target links `CucumberSwiftMacros`: see <doc:Matching-Steps#Step-definition-macros>. Each step fails until you replace its `XCTFail` line with your test code.
 
                 > Note: To have regular expression literals suggested instead, turn on `Cucumber.generateRegexLiterals`: see <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
 
-                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Generated.swift")
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Macros-Generated.swift")
             }
 
             @Step {
-                Replace each `XCTFail` line with your test code. Run the tests again. They pass.
+                Replace each `XCTFail` line with your test code, and add what each step does. Run the tests again. They pass. To convert definitions you already have, see <doc:Using-Step-Definition-Macros#Convert-existing-step-definitions>.
 
                 See <doc:Matching-Steps> for every way to match a step.
 
-                @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
+                @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Macros.swift")
             }
 
-            Your test target now has the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) show more setups, such as how your scenarios read in Xcode's test navigator. Next, <doc:Running-Tests-In-Xcode> sets up the rest of Xcode for CucumberSwift, and its plugins: checking feature files while you build, fixing their keywords and converting step definitions to macros.
+            Your test target now has a setup like the one in the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample), a working, tested project that you can compare with yours. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) show more setups, such as how your scenarios read in Xcode's test navigator. Next, <doc:Running-Tests-In-Xcode> sets up the rest of Xcode for CucumberSwift, and its plugins: checking feature files while you build, fixing their keywords and converting step definitions to macros.
 
             This tutorial adds CucumberSwift to a test target in an Xcode project. For a test target in a `Package.swift` that you run with `swift test`, see <doc:Running-Tests-With-Swift-Package-Manager>.
 
