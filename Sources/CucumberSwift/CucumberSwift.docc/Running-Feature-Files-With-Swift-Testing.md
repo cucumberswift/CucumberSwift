@@ -24,6 +24,7 @@ Step definitions are written as for CucumberSwift: `extension Cucumber: StepImpl
 - **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin. <doc:Running-Tests-In-Xcode#CucumberSwiftTestingPlugin> covers the plugin alongside CucumberSwift's others.
 - **Unit test targets only.** Xcode doesn't allow Swift Testing in UI test targets. UI tests keep running their feature files with CucumberSwift and XCTest.
 - **`#expect` and `#require`, not `XCTAssert`.** Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass. Step definitions that this runner runs must use Swift Testing's expectations.
+- **Swift 6.3 or later for Xcode to show a skipped scenario as skipped.** Before Swift 6.3, a step that throws `XCTSkip` still stops its scenario, the hooks still run and the report is the same, but Xcode shows the scenario's tests as passed. `Test.cancel` needs Swift 6.3. See <doc:#Skip-a-scenario>.
 - **One runner per test target.** Link either `CucumberSwift` or `CucumberSwiftTesting` to a test target, not both. They have their own `Cucumber`, `Given` and the rest, with the same names, so a file can't import both. In a target that links both, each runner runs every scenario with its own step definitions, and CucumberSwift fails the test run if it isn't set up too. A project can use both, in different targets: see <doc:#Move-unit-tests-to-Swift-Testing>.
 
 ## Set up a Swift package
@@ -276,6 +277,28 @@ Swift Testing records a failed `#expect` or `Issue.record` without telling the s
 - **`try #require`, or any error a step throws, stops the step at once.** Use it where the next line can't make sense after this one failed.
 
 This needs Swift 6.2 or later. With Swift 6.1 the runner can't see a failed `#expect`: the step is reported as passed and the scenario goes on, so use `try #require` where a step must stop the scenario.
+
+### Skip a scenario
+
+To skip the rest of a scenario, for example when a service it needs is unavailable, throw `XCTSkip` from a step definition, as with CucumberSwift:
+
+```swift
+import CucumberSwiftTestingMacros
+import Testing
+import XCTest
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        #Given("the card terminal is offline") {
+            throw XCTSkip("The card terminal is offline")
+        }
+    }
+}
+```
+
+With Swift 6.3 or later, `try Test.cancel("The card terminal is offline")` does the same.
+
+The scenario's later steps don't run. Xcode shows the step's test as skipped with your reason, and each later step's test as skipped with "Skipped:" and your reason. With one test per scenario, the scenario's test is skipped. The step's `AfterStep` hooks and the scenario's `AfterScenario` hooks still run. In the JSON report the step is `skipped`, and the steps after it aren't listed, as with CucumberSwift. A step that has already failed an `#expect` stays failed. Before Swift 6.3, Xcode shows these tests as passed: see <doc:#Requirements>.
 
 ## Step and hook options
 
