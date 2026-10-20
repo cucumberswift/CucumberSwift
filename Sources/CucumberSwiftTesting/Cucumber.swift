@@ -462,8 +462,8 @@ public final class Cucumber {
         // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the records. A step that
         // failed an `#expect` and then skipped stays failed, as in CucumberSwift.
         let messages = beforeRecord.messages + record.messages
-        let reported: Reporter.Result = failure.map { .failed($0) }
-            ?? (messages.isEmpty ? (skipReason == nil ? .passed : .skipped) : .failed(messages.joined(separator: "\n")))
+        let unfailed: Reporter.Result = skipReason == nil ? .passed : .skipped
+        let reported: Reporter.Result = failure.map { .failed($0) } ?? (messages.isEmpty ? unfailed : .failed(messages.joined(separator: "\n")))
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(step: step, result: reported, duration: duration) }
         let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: afterRecord, reversed: reversesAfterHooks)
