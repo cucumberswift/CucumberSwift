@@ -1,6 +1,7 @@
 @testable import CucumberSwiftTesting
 import Foundation
 import Testing
+import XCTest
 
 struct Broken: Error, CustomStringConvertible { var description: String { "the card was declined" } }
 
@@ -235,7 +236,8 @@ extension CucumberTests {
         return [
             scenario("Pay by card", tags: ["shop", "fast"], line: 8, [basket, step(.when, "When", "I pay by card", line: 10), paid(11)]),
             scenario("Pay 5 (example 1)", tags: ["shop"], line: 19, [basket, step(.when, "When", "I pay 5", line: 14), paid(15)]),
-            scenario("Pay 10 (example 2)", tags: ["shop"], line: 20, [basket, step(.when, "When", "I pay 10", line: 14), paid(15)])
+            scenario("Pay 10 (example 2)", tags: ["shop"], line: 20, [basket, step(.when, "When", "I pay 10", line: 14), paid(15)]),
+            scenario("Pay by voucher", tags: ["shop"], line: 22, [basket, step(.when, "When", "I pay by voucher", line: 23), paid(24)])
         ]
     }
 
@@ -244,6 +246,8 @@ extension CucumberTests {
         When("I pay by card") { _, _ in }
         When("I pay {int}") { _, _ in }
         Then("the order is paid") { _, _ in }
+        // Skips the rest of its scenario, as with CucumberSwift (#470).
+        When("I pay by voucher") { _, _ in throw XCTSkip("The voucher service is down") }
     }
 
     /// The report is sorted and rewritten whole each time, so it is written where a scenario finishes, not for

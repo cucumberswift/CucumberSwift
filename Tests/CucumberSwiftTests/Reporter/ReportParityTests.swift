@@ -39,6 +39,10 @@ final class ReportParityTests: XCTestCase {
           | amount |
           | 5      |
           | 10     |
+
+      Scenario: Pay by voucher
+        When I pay by voucher
+        Then the order is paid
     """
 
     private var folder: URL!
@@ -79,6 +83,8 @@ final class ReportParityTests: XCTestCase {
         When("I pay by card") { _, _ in }
         When("I pay {int}") { _, _ in }
         Then("the order is paid") { _, _ in }
+        // Skips the rest of its scenario: the step is skipped, and the steps after it aren't in the report (#470).
+        When("I pay by voucher") { _, _ in throw XCTSkip("The voucher service is down") }
 
         reporter.testSuiteStarted(at: Date())
         Cucumber.shared.executeFeatures()
