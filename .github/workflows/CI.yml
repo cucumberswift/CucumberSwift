@@ -85,7 +85,7 @@ env:
   # SwiftPM tests. A test process that ends early still exits 0 (#442), so that
   # step fails below this. It is what the step's Swift 6.1 runs today, 11 fewer
   # than Swift 6.2 compiles: raise it when you add tests.
-  MIN_SWIFT_TESTING_TESTS: 118
+  MIN_SWIFT_TESTING_TESTS: 122
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs
