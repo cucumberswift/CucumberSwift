@@ -14,6 +14,23 @@ final class StepDefinitionCheckTests: LintTestCase {
         XCTAssertEqual(messages, ["4:5 Undefined step: no step definition matches \"nothing matches this\""])
     }
 
+    // A tagged Rule's Scenario Outline is checked with each row's values, like any other (#468).
+    func testAStepOfAnOutlineInATaggedRuleIsCheckedWithEachRow() throws {
+        let messages = try lint("""
+        Feature: F
+          @rule
+          Rule: R
+            @outline
+            Scenario Outline: O
+              Given I have <count> cukes
+              Then nothing matches <count>
+              Examples:
+                | count |
+                | 42    |
+        """, steps: #"Given("I have {int} cukes") { _, _ in }"#)
+        XCTAssertEqual(messages, ["7:7 Undefined step: no step definition matches \"nothing matches 42\""])
+    }
+
     func testEachKindOfLiteralPatternIsMatched() throws {
         let messages = try lint("""
         Feature: F

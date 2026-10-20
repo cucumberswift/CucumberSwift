@@ -161,6 +161,46 @@
           }
         ],
         "type" : "scenario"
+      },
+      {
+        "description" : "",
+        "id" : "pay-by-voucher",
+        "keyword" : "Scenario",
+        "line" : 22,
+        "name" : "Pay by voucher",
+        "steps" : [
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "Given",
+            "line" : 6,
+            "name" : "a basket",
+            "result" : {
+              "duration" : 0,
+              "status" : "passed"
+            }
+          },
+          {
+            "arguments" : [
+
+            ],
+            "keyword" : "When",
+            "line" : 23,
+            "name" : "I pay by voucher",
+            "result" : {
+              "duration" : 0,
+              "status" : "skipped"
+            }
+          }
+        ],
+        "tags" : [
+          {
+            "line" : 1,
+            "name" : "shop"
+          }
+        ],
+        "type" : "scenario"
       }
     ],
     "id" : "checkout",

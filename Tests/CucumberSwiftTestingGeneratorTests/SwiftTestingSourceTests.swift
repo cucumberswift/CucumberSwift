@@ -118,6 +118,37 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains("line: 10,"), source)
     }
 
+    // A Rule's Scenario Outline is a parameterized test like any other, and its examples have the
+    // feature's tags, then the Rule's, then their own (#468).
+    func testARulesScenarioOutlineIsATestWithTheRulesTags() {
+        let source = generate("""
+        @feature
+        Feature: Cukes
+          Background:
+            Given a feature background
+
+          @rule
+          Rule: R
+            Background:
+              Given a rule background
+
+            @outline
+            Scenario Outline: Eat <eaten>
+              When I eat <eaten> cukes
+
+              Examples:
+                | eaten |
+                | 5     |
+                | 6     |
+        """)
+        XCTAssertTrue(source.contains(#"@Test("Eat <eaten>", .serialized, arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberExamples1))"#), source)
+        XCTAssertEqual(source.components(separatedBy: "CucumberSwiftTesting.GherkinExample(\n").count - 1, 2)
+        XCTAssertEqual(source.components(separatedBy: #"tags: ["feature", "rule", "outline"],"#).count - 1, 2, source)
+        XCTAssertTrue(source.contains(#"text: "a feature background","#), source)
+        XCTAssertTrue(source.contains(#"text: "a rule background","#), source)
+        XCTAssertTrue(source.contains(#"text: "I eat 6 cukes","#), source)
+    }
+
     func testEditingAFeatureFileMovesNoTest() {
         func tests(_ source: String) -> Substring {
             source[..<(source.range(of: "// MARK: - What the tests run")?.lowerBound ?? source.endIndex)]

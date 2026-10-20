@@ -45,7 +45,7 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest and Swift Testing | — |
 | <doc:Generating-Reports#Choose-where-the-report-is-written> | `Cucumber.reportPath` | `CUCUMBER_REPORT_PATH` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | — |
 | <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | — | All scenarios | XCTest and Swift Testing | — |
-| <doc:Running-Tests-In-Xcode#Choose-scenarios-with-a-test-plan> | — | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | — |
+| <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> | — | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | — |
 | <doc:Settings#Continue-after-a-failed-assertion> | `StepImplementation.continueTestingAfterFailure` | — | On | XCTest and Swift Testing | — |
 | <doc:Hooks> | `StepImplementation.reverseOrderForAfterHooks` | — | Off | XCTest and Swift Testing | — |
 | <doc:Matching-Steps#Async-steps> | `StepImplementation.asyncStepTimeout` | — | 60 seconds | XCTest and Swift Testing | — |
@@ -79,7 +79,7 @@ extension Cucumber: StepImplementation {
 
 **Info.plist keys apply only to Xcode test targets.** A Swift package generates its test bundle's `Info.plist` itself, so with Swift Package Manager the keys aren't available.
 
-**`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions, matched without regard to case, and a scenario runs when any of its tags, or its feature's, matches any of them. Don't put spaces around the commas: they are part of the expression. See <doc:Running-Tests-In-Xcode#Choose-scenarios-with-a-test-plan>.
+**`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions, matched without regard to case, and a scenario runs when any of its tags, its Rule's or its feature's, matches any of them. Don't put spaces around the commas: they are part of the expression. See <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan>.
 
 **With Swift Testing, some settings work differently.** The Swift Testing runner does the same as the XCTest runner for every setting marked "Swift Testing" above, with these exceptions:
 
@@ -89,16 +89,69 @@ extension Cucumber: StepImplementation {
 
 ### Choose scenarios in code
 
-Implement `shouldRunWith(scenario:tags:)` in your `StepImplementation` to decide in code which scenarios run. CucumberSwift asks it for each scenario, with the scenario's tags, and runs the scenario when it returns `true`:
+Implement `shouldRunWith(scenario:tags:)` in your `StepImplementation` to decide in code which scenarios run. CucumberSwift asks it for each scenario, with the scenario's tags (its feature's, then its Rule's, then its own), and runs the scenario when it returns `true`. To skip every scenario tagged `@wip`, including those in a Rule tagged `@wip`:
 
+```gherkin
+Feature: Checkout
+
+  @wip
+  Rule: Gift cards
+    Scenario: Pay with a gift card
+      Given I have a gift card
+```
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
 ```swift
 extension Cucumber: StepImplementation {
     public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
         !tags.contains("wip")
     }
-    // bundle and setupSteps() as usual
+
+    public func setupSteps() {
+        #Given("I have a gift card") {
+            // Doesn't run: its scenario is skipped.
+        }
+    }
+    // bundle as usual
 }
 ```
+}
+@Tab("Carthage") {
+```swift
+extension Cucumber: StepImplementation {
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+        !tags.contains("wip")
+    }
+
+    public func setupSteps() {
+        Given("I have a gift card") { _, _ in
+            // Doesn't run: its scenario is skipped.
+        }
+    }
+    // bundle as usual
+}
+```
+}
+@Tab("Swift Testing") {
+```swift
+import CucumberSwiftTestingMacros
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+        !tags.contains("wip")
+    }
+
+    public func setupSteps() {
+        #Given("I have a gift card") {
+            // Doesn't run: Xcode shows its scenario as skipped.
+        }
+    }
+}
+```
+}
+}
 
 `CUCUMBER_TAGS` takes over when it is set: CucumberSwift then doesn't ask `shouldRunWith`. The Swift Testing runner asks it too, and shows a scenario it leaves out as skipped: see <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options>.
 

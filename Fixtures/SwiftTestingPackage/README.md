@@ -4,7 +4,8 @@ Runs feature files with Swift Testing from a Swift package, as "Running Feature 
 Testing" describes: the `CucumberSwiftTestingPlugin` build tool plugin on a unit test target, and the
 `CucumberSwiftTestingMacros` product with CucumberSwift's `Macros` package trait turned on, in the
 Swift 6 language mode. The features use a Background, a Scenario Outline with two Examples blocks, a
-doc string, a data table, tags and a feature file in Spanish; the step definitions use the macros, with
+Rule with its own Background, a Scenario Outline and tags, a doc string, a data table, other tags and a feature
+file in Spanish; the step definitions use the macros, with
 expressions and regex literals, the plain DSL, the localized macros such as `#ES_Dado`, hooks, and the hook macros, such as `#BeforeScenario`, in each
 closure form and with priorities.
 
