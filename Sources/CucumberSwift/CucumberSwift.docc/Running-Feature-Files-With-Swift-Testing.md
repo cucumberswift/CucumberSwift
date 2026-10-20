@@ -481,7 +481,7 @@ CucumberSwift has full functional parity in both XCTest and Swift Testing modes,
 
    The container is safe to use from any task of the step. The value you keep in it is not made safe for you: steps run on the main actor, so a plain class works, and if you pass it to other tasks, make it `Sendable`, for example an `actor`.
 
-5. **The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter`.** They aren't read yet ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)). The plugin finds the feature files in the test target's folder.
+5. **The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter`.** The plugin finds the feature files in the test target's folder, whatever `FeaturesPath` says: the runner reads `FeaturesPath` only to map them to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Honouring both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
 <doc:Settings#Settings-that-work-differently> has more on the settings. The Swift version limits are under <doc:#Requirements>.
 
@@ -489,7 +489,7 @@ CucumberSwift has full functional parity in both XCTest and Swift Testing modes,
 
 `Cucumber.expectation(description:)` and `wait(for:timeout:)` work in this runner as they do with CucumberSwift. In a step definition you write for this runner, Swift Testing has its own tools for the same job, which you can use instead. Make the step `async`:
 
-- To wait for a callback, `await` the API's `async` version, or wrap the callback in `withCheckedContinuation`.
+- To wait for something, `await` an `async` API. A callback wrapped in `withCheckedContinuation` doesn't stop waiting when the step is cancelled, so if the callback never comes, the run waits for it, even with `asyncStepTimeout`.
 - To check that something happens, and how many times, use `confirmation(_:expectedCount:)`. It fails the step if the confirmation is confirmed a different number of times before its closure returns.
 
 <!-- swift-example: file swift6 -->
@@ -503,11 +503,9 @@ final class Checkout {
     static let shared = Checkout()
     var onOrderPlaced: (() -> Void)?
 
-    func placeOrder(completion: @escaping @MainActor (Bool) -> Void) {
-        Task { @MainActor in
-            self.onOrderPlaced?()
-            completion(true)
-        }
+    func placeOrder() async -> Bool {
+        onOrderPlaced?()
+        return true
     }
 }
 
@@ -517,9 +515,7 @@ extension Cucumber: @retroactive StepImplementation {
         #When("I place the order") { () async in
             await confirmation("the order is placed") { orderPlaced in
                 Checkout.shared.onOrderPlaced = { orderPlaced() }
-                let succeeded = await withCheckedContinuation { continuation in
-                    Checkout.shared.placeOrder { continuation.resume(returning: $0) }
-                }
+                let succeeded = await Checkout.shared.placeOrder()
                 #expect(succeeded)
             }
         }
@@ -527,6 +523,6 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-A step or a hook that suspends for longer than `asyncStepTimeout` is cancelled and fails on its line in the feature file, so a callback that never comes doesn't hold up the run: see <doc:#Step-and-hook-options>.
+A step or a hook that suspends for longer than `asyncStepTimeout` is cancelled and fails on its line in the feature file, as long as what it awaits ends when it is cancelled: see <doc:#Step-and-hook-options>.
 
 Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals, and step definition macros when the target links `CucumberSwiftTestingMacros`.

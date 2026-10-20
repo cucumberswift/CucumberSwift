@@ -85,7 +85,7 @@ extension Cucumber: StepImplementation {
 
 - `continueTestingAfterFailure` is the setting for fail-fast mode. By default, the value is `true`, and a step runs to its end after a failed assertion. Set to `false`, it stops a step at its first failed assertion with XCTest; a failed `#expect` doesn't stop a step with Swift Testing, so use `try #require` for the checks that must: see <doc:Running-Feature-Files-With-Swift-Testing#After-a-failed-assertion>.
 - `parallelTesting`: XCTest runs parallel tests in separate processes, so their state is isolated, whereas Swift Testing runs them in one process. Use `Scenario.state(_:)` to share state between steps and to isolate it between scenarios: see <doc:Running-Feature-Files-With-Swift-Testing#Sharing-state-between-steps-in-a-scenario>.
-- The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter` aren't read yet ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)). The plugin finds the feature files in the test target's folder.
+- The plugin finds the feature files in the test target's folder, whatever the Info.plist key `FeaturesPath` says: the runner reads `FeaturesPath` only to map them to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Honouring both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
 ### Choose scenarios in code
 
