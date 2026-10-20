@@ -53,11 +53,17 @@ CUCUMBER_ONE_TEST_PER_SCENARIO=YES swift test
 | <doc:Settings#Where-the-feature-files-are> | Info.plist `FeaturesPath` | — | `Features` | XCTest and Swift Testing, in an Xcode test target | — |
 | <doc:Settings#Test-name-delimiter> | Info.plist `FeatureScenarioDelimiter` | — | ` › `, or `\|` with readable test names off | XCTest, in an Xcode test target | — |
 
-"Requires" lists what a setting needs beyond the Xcode that CucumberSwift supports, which <doc:Supported-Platforms> gives. The Swift Testing runner reads the settings marked "Swift Testing" and ignores the others. Where it differs, <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options> says how. See <doc:Running-Feature-Files-With-Swift-Testing>.
+"Requires" lists what a setting needs beyond the Xcode that CucumberSwift supports, which <doc:Supported-Platforms> gives. The Swift Testing runner reads the settings marked "Swift Testing" and ignores the others; <doc:Settings#Settings-that-work-differently> lists where it differs. See <doc:Running-Feature-Files-With-Swift-Testing>.
 
 ### Settings that work differently
 
-**Verbose output has three switches, and any one of them turns it on.** `Cucumber.verboseOutput` is a `Bool`, not an optional, so it has no way to say "off" that could win over the others: the static variable doesn't beat the environment variable here, and `false` means only that this switch is off. `StepImplementation.verbose` is the second switch. `CUCUMBER_VERBOSE` is the third, and it takes only `1` or `true`, in any case: `YES` and `NO` do nothing. See <doc:Verbose-Output>.
+**Verbose output has three switches, and any one of them turns it on.** The static variable doesn't beat the environment variable here, as it does for other settings.
+
+1. `Cucumber.verboseOutput` is a `Bool`. `true` turns verbose output on. `false` only means this switch is off, so it can't turn off what the other two turn on.
+2. `StepImplementation.verbose` is a `Bool` that you declare next to `setupSteps()`. `true` turns verbose output on.
+3. `CUCUMBER_VERBOSE` is an environment variable. `1` or `true`, in any case, turns verbose output on. `YES` and `NO` do nothing.
+
+See <doc:Verbose-Output>.
 
 **`Cucumber.parallelTestingUnit` takes `.scenario` or `.feature`, not on or off.** Its environment variable, `CUCUMBER_PARALLEL_TESTING_UNIT`, takes `scenario` or `feature`, in any case, with spaces or tabs around the value ignored. Any other value is ignored, as if the variable weren't set. The static variable wins when it is set, then the environment variable, then `.scenario`. See <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out>.
 
@@ -74,6 +80,12 @@ extension Cucumber: StepImplementation {
 **Info.plist keys apply only to Xcode test targets.** A Swift package generates its test bundle's `Info.plist` itself, so with Swift Package Manager the keys aren't available.
 
 **`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions, matched without regard to case, and a scenario runs when any of its tags, its Rule's or its feature's, matches any of them. Don't put spaces around the commas: they are part of the expression. See <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan>.
+
+**With Swift Testing, some settings work differently.** The Swift Testing runner does the same as the XCTest runner for every setting marked "Swift Testing" above, with these exceptions:
+
+- `continueTestingAfterFailure` is the setting for fail-fast mode. By default, the value is `true`, and a step runs to its end after a failed assertion. Set to `false`, it stops a step at its first failed assertion with XCTest; a failed `#expect` doesn't stop a step with Swift Testing, so use `try #require` for the checks that must: see <doc:Running-Feature-Files-With-Swift-Testing#After-a-failed-assertion>.
+- `parallelTesting`: XCTest runs parallel tests in separate processes, so their state is isolated, whereas Swift Testing runs them in one process. Use `Scenario.state(_:)` to share state between steps and to isolate it between scenarios: see <doc:Running-Feature-Files-With-Swift-Testing#Sharing-state-between-steps-in-a-scenario>.
+- The plugin finds the feature files in the test target's folder, whatever the Info.plist key `FeaturesPath` says: the runner reads `FeaturesPath` only to map them to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Honouring both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
 ### Choose scenarios in code
 
