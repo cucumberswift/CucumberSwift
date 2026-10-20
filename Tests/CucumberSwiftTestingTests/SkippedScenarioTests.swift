@@ -55,10 +55,15 @@ extension CucumberTests {
         Then("the order is paid") { [self] _, _ in ran.append("paid") }
     }
 
+    /// Only `XCTSkip` and what `Test.cancel` throws skip: any other error fails the step, a cancellation or a
+    /// timeout included, as does `Test.cancel`'s error if Swift Testing ever renames its type.
     @Test func anErrorThatIsNotASkipHasNoSkipReason() {
         struct Failure: Error {}
+        struct SkipInfo: Error {}
         #expect(Cucumber.skipReason(of: Failure()) == nil)
         #expect(Cucumber.skipReason(of: CancellationError()) == nil)
+        #expect(Cucumber.skipReason(of: StepTimeoutError(timeout: 1)) == nil)
+        #expect(Cucumber.skipReason(of: SkipInfo()) == nil)
     }
 
     #if canImport(XCTest)
@@ -136,21 +141,33 @@ extension CucumberTests {
     #endif
 
     #if compiler(>=6.3)
-    /// `Test.cancel` cancels the test case's task. The hooks after it still run, and one that waits isn't
-    /// cut short, as its timeout would be in a cancelled task.
+    /// `Test.cancel` cancels the test case's task. The hooks after it still run on the main actor, in order and
+    /// once each, AfterStep before AfterScenario, and one that waits isn't cut short, as its timeout would be in
+    /// a cancelled task. The scenario ends only once they have.
     @Test func aStepThatCallsTestCancelSkipsTheRestOfItsScenarioAndTheAfterHooksStillRun() async {
         useOneTestPerScenario(true)
         let observer = RecordingObserver()
         Cucumber.shared.reporters = [observer]
         registerCheckout { try Test.cancel("The card terminal is offline") }
+        AfterStep { [self] step in
+            try await Task.sleep(nanoseconds: 1_000_000)
+            MainActor.assertIsolated()
+            ran.append("after waiting \(step.match)")
+        }
         AfterScenario { [self] _ in
             try await Task.sleep(nanoseconds: 1_000_000)
+            MainActor.assertIsolated()
             ran.append("after waiting")
         }
 
         let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
 
-        #expect(ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario", "after waiting"])
+        #expect(ran == [
+            "basket", "after a basket", "after waiting a basket",
+            "card", "after I pay by card", "after waiting I pay by card",
+            "after scenario", "after waiting"
+        ])
+        #expect(observer.log.last == "scenario passed S")
         #expect(reasons == ["The card terminal is offline"])
         #expect(observer.log.contains("step skipped"))
         #expect(observer.log.contains("scenario passed S"))
