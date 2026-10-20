@@ -63,7 +63,7 @@ extension CucumberTests {
         // In an order of their own: Swift Testing doesn't promise the order of the tests in a suite.
         let scenarios = parityScenarios(in: bundleURL)
         Cucumber.shared.beginSuite()
-        for scenario in [scenarios[2], scenarios[0], scenarios[1]] {
+        for scenario in [scenarios[2], scenarios[0], scenarios[3], scenarios[1]] {
             await Cucumber.shared.run(scenario)
         }
         await Cucumber.shared.endFeature(file: scenarios[0].file, title: "Checkout", line: 1)

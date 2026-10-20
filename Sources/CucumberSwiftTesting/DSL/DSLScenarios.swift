@@ -102,7 +102,7 @@ extension Cucumber {
 
     /// Runs `body`, a scenario of the Swift DSL, after the scenario of its feature that started before it, with
     /// parallel testing by feature, as CucumberSwift hands a whole feature to one worker. Otherwise it runs it.
-    func inFeatureOrder(_ scenario: GherkinScenario, _ body: @escaping @MainActor () async -> Void) async {
+    func inFeatureOrder<Result: Sendable>(_ scenario: GherkinScenario, _ body: @escaping @MainActor () async -> Result) async -> Result {
         guard dsl.runsInParallel, CucumberSettings.parallelTestingUnit(environment: environment) == .feature else {
             return await body()
         }
@@ -110,10 +110,10 @@ extension Cucumber {
         let previous = dsl.lastInFeature[key]
         let task = Task { @MainActor in
             await previous?.value
-            await body()
+            return await body()
         }
-        dsl.lastInFeature[key] = task
-        await task.value
+        dsl.lastInFeature[key] = Task { _ = await task.value }
+        return await task.value
     }
 }
 

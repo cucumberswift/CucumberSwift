@@ -5,6 +5,10 @@
 
 import Foundation
 import Testing
+#if canImport(XCTest)
+// For `XCTSkip`, which skips the rest of a scenario as in CucumberSwift.
+import XCTest
+#endif
 
 /// Holds the step definitions and hooks, and runs the scenarios the generated tests pass it.
 @MainActor
@@ -17,12 +21,13 @@ public final class Cucumber {
         let body: @MainActor (String) -> (@MainActor (Step) async throws -> Void)?
     }
 
-    /// How a step ended: its result, whether the scenario's later steps run, and whether the step itself
-    /// failed, rather than only one of its hooks.
+    /// How a step ended: its result, whether the scenario's later steps run, whether the step itself
+    /// failed, rather than only one of its hooks, and why it skipped its scenario, if it did.
     private struct StepOutcome {
         let result: Reporter.Result
         let canContinue: Bool
         let isStepFailed: Bool
+        var skipReason: String?
     }
 
     /// A feature the runner has seen a scenario of, and where it is.
@@ -53,8 +58,10 @@ public final class Cucumber {
         let record = IssueRecord()
         var nextStep = 0
         var isFailed = false
-        /// Whether a step or a hook failed, so that the later steps don't run.
+        /// Whether a step or a hook failed, or a step skipped the scenario, so that the later steps don't run.
         var isStopped = false
+        /// Why a step skipped the scenario, by throwing `XCTSkip` or calling `Test.cancel`.
+        var skipReason: String?
         init(_ gherkin: GherkinScenario, scenario: Scenario, featureRun: FeatureRun) {
             self.gherkin = gherkin
             self.scenario = scenario
@@ -153,33 +160,43 @@ public final class Cucumber {
     /// Tells the observers what happens: the feature when its first scenario starts, then the scenario
     /// and each of its steps as they start and finish.
     public func run(_ gherkinScenario: GherkinScenario) async {
-        loadStepDefinitions()
-        reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
-        guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
-        await inFeatureOrder(gherkinScenario) { await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await self.perform(gherkinScenario) } }
+        _ = await runWhole(gherkinScenario)
     }
 
-    private func perform(_ gherkinScenario: GherkinScenario) async {
+    /// Runs the whole scenario, and returns why a step skipped it, when one did and the scenario didn't fail.
+    private func runWhole(_ gherkinScenario: GherkinScenario) async -> String? {
+        loadStepDefinitions()
+        reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
+        guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return nil }
+        return await inFeatureOrder(gherkinScenario) { await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) { await self.perform(gherkinScenario) } }
+    }
+
+    private func perform(_ gherkinScenario: GherkinScenario) async -> String? {
         let progress = await begin(gherkinScenario)
         while !progress.isStopped, progress.nextStep < progress.scenario.steps.count {
             await runNextStep(of: progress)
         }
-        await end(progress)
+        let isFailed = await end(progress)
         await endDSLFeatureIfLast(progress)
+        return isFailed ? nil : progress.skipReason
     }
 
     /// Runs one case of a scenario's test: the whole scenario, or one step. The cases of a scenario run in
     /// order, so the first runs `BeforeScenario` hooks and the last the `AfterScenario` hooks, and a case
-    /// run alone first runs the steps before it. Once a step has failed, the cases after it don't run its
-    /// steps; Swift 6.3 reports them as cancelled, and before it they pass.
+    /// run alone first runs the steps before it. Once a step has failed, or skipped its scenario by throwing
+    /// `XCTSkip` or calling `Test.cancel`, the cases after it don't run their steps; Swift 6.3 reports them as
+    /// skipped, as it does the step that skipped, and a scenario that is one case. Before it they pass.
     public func run(_ testCase: ScenarioCase) async throws {
-        guard let index = testCase.stepIndex else { return await run(testCase.scenario) }
+        guard let index = testCase.stepIndex else {
+            if let reason = await runWhole(testCase.scenario) { try cancelCase(reason) }
+            return
+        }
         let gherkinScenario = testCase.scenario
         loadStepDefinitions()
         reportParallelTestingSetTooLate(at: Self.sourceLocation(gherkinScenario.file, Location(line: gherkinScenario.line, column: gherkinScenario.column)))
         guard approvedScenarios.contains(Self.key(of: gherkinScenario)) || shouldRun(gherkinScenario) else { return }
         let key = Self.key(of: gherkinScenario)
-        var skipped = false
+        var skipComment: String?
         await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) {
             var started = startedScenarios[key]
             if let previous = started, previous.nextStep > index {
@@ -197,22 +214,19 @@ public final class Cucumber {
                 await runNextStep(of: progress)
             }
             if progress.isStopped {
-                skipped = true
+                // As CucumberSwift says why it skipped a step's test.
+                skipComment = progress.skipReason.map { "Skipped: \($0)" } ?? "Skipped: an earlier step in this scenario failed."
             } else {
                 await runNextStep(of: progress)
+                // The step that skipped its scenario is skipped too, with its reason, unless it failed.
+                if let reason = progress.skipReason, !progress.isFailed { skipComment = reason }
             }
             if index == gherkinScenario.steps.count - 1 {
                 await end(progress)
                 await endDSLFeatureIfLast(progress)
             }
         }
-        if skipped { try skipStep() }
-    }
-
-    private func skipStep() throws {
-        #if compiler(>=6.3)
-        try Test.cancel("Skipped: an earlier step in this scenario failed.")
-        #endif
+        if let skipComment { try cancelCase(skipComment) }
     }
 
     /// Starts a scenario: its feature if it is the first, the observers, and the `BeforeScenario` hooks. A hook
@@ -246,10 +260,12 @@ public final class Cucumber {
         // step that is current when the hook fails.
         if outcome.isStepFailed { progress.isFailed = true }
         if !outcome.canContinue { progress.isStopped = true }
+        if let reason = outcome.skipReason { progress.skipReason = reason }
     }
 
-    /// Finishes a scenario: the `AfterScenario` hooks and the observers.
-    private func end(_ progress: ScenarioProgress) async {
+    /// Finishes a scenario: the `AfterScenario` hooks and the observers. Returns whether the scenario failed.
+    @discardableResult
+    private func end(_ progress: ScenarioProgress) async -> Bool {
         startedScenarios[Self.key(of: progress.gherkin)] = nil
         let (scenario, file) = (progress.scenario, progress.gherkin.file)
         var isFailed = progress.isFailed
@@ -262,6 +278,7 @@ public final class Cucumber {
         if isFailed { progress.featureRun.isFailed = true }
         let duration = Measurement(value: Date().timeIntervalSince(progress.startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(scenario: scenario, result: isFailed ? .failed : .passed, duration: duration) }
+        return isFailed
     }
 
     // MARK: Suite and feature events
@@ -417,11 +434,16 @@ public final class Cucumber {
         // As with CucumberSwift, a step's AfterStep hooks run even when a BeforeStep hook failed, which
         // skips the step itself.
         var failure = await runHooks(beforeStepHooks, with: step, at: step.location, in: file, step: ran, record: beforeRecord)
+        var skipReason: String?
         if failure == nil {
             do {
                 try await RunningLocation.$current.withValue(.init(location: location, step: ran, record: record, scenario: step.scenario)) {
                     try await runWithTimeout(record: record, continuesAfterFailure: dslStep?.continuesAfterFailure) { try await body(step) }
                 }
+            } catch let error where Self.skipReason(of: error) != nil {
+                // A step that throws `XCTSkip` or calls `Test.cancel` skips the rest of its scenario, as
+                // `XCTSkip` does in CucumberSwift, and doesn't fail.
+                skipReason = Self.skipReason(of: error)
             } catch {
                 Issue.record(error, Comment(rawValue: ran), sourceLocation: location)
                 failure = Self.describe(error)
@@ -429,21 +451,50 @@ public final class Cucumber {
         }
         // The step's result goes to the observers before its AfterStep hooks run, as in XCTest: a failure in
         // those fails the scenario and its feature, and skips the later steps, but the step was reported.
-        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the records.
+        // A failed `#expect` doesn't throw: Swift Testing 6.2's issue handling tells the records. A step that
+        // failed an `#expect` and then skipped stays failed, as in CucumberSwift.
         let messages = beforeRecord.messages + record.messages
-        let reported: Reporter.Result = failure.map { .failed($0) } ?? (messages.isEmpty ? .passed : .failed(messages.joined(separator: "\n")))
+        let unfailed: Reporter.Result = skipReason == nil ? .passed : .skipped
+        let reported: Reporter.Result = failure.map { .failed($0) } ?? (messages.isEmpty ? unfailed : .failed(messages.joined(separator: "\n")))
         let duration = Measurement(value: Date().timeIntervalSince(startDate), unit: UnitDuration.seconds)
         reporters.forEach { $0.didFinish(step: step, result: reported, duration: duration) }
         let afterFailure = await runHooks(afterStepHooks, with: step, at: step.location, in: file, step: ran, record: afterRecord, reversed: reversesAfterHooks)
         let recordedIssue = !messages.isEmpty || !afterRecord.messages.isEmpty
         let isStepFailed = failure != nil || afterFailure != nil || recordedIssue
         // The later steps are skipped after a thrown error, and after an issue, as in CucumberSwift: see `skipsLaterStepsAfterRecordedIssue`.
-        let canContinue = failure == nil && afterFailure == nil && !(skipsLaterStepsAfterRecordedIssue && recordedIssue)
-        return StepOutcome(result: reported, canContinue: canContinue, isStepFailed: isStepFailed)
+        let canContinue = failure == nil && skipReason == nil && afterFailure == nil && !(skipsLaterStepsAfterRecordedIssue && recordedIssue)
+        return StepOutcome(result: reported, canContinue: canContinue, isStepFailed: isStepFailed, skipReason: skipReason)
+    }
+}
+
+// MARK: Skips and hooks
+
+extension Cucumber {
+    /// Why a step skipped its scenario, when the error is a skip: an `XCTSkip`, as in CucumberSwift, or what
+    /// `Test.cancel` throws. That type isn't public, so it is known by its name, and its comment is the reason.
+    static func skipReason(of error: any Error) -> String? {
+        #if canImport(XCTest)
+        if let skip = error as? XCTSkip { return skip.message ?? "Skipped" }
+        #endif
+        guard String(reflecting: type(of: error)) == "Testing.SkipInfo" else { return nil }
+        let comment = Mirror(reflecting: error).children.first { $0.label == "comment" }?.value as? Comment
+        return comment?.rawValue ?? "Skipped"
+    }
+
+    /// Reports the running test case as skipped, with the reason. A step's `Test.cancel` has already
+    /// cancelled it, but the runner caught what it threw, so this says it again once the case is over.
+    private func cancelCase(_ comment: String) throws {
+        #if compiler(>=6.3)
+        try Test.cancel(Comment(rawValue: comment))
+        #endif
     }
 
     /// Runs each hook in order, as CucumberSwift does: one that throws doesn't stop the ones after it.
     /// Returns why the first that threw did, or `nil` when none did.
+    ///
+    /// A step's `Test.cancel` cancels its test case's task, in which the hooks would see the cancellation:
+    /// their timeout would end at once, and whatever they await would throw. So they then run in a task of
+    /// their own, as they would after an `XCTSkip` in CucumberSwift.
     private func runHooks<Argument>(
         _ hooks: [Hook<Argument>],
         with argument: Argument,
@@ -453,6 +504,12 @@ public final class Cucumber {
         record: IssueRecord,
         reversed: Bool = false
     ) async -> String? {
+        guard !Task.isCancelled || hooks.isEmpty else {
+            let task = Task { @MainActor [self] in
+                await runHooks(hooks, with: argument, at: location, in: file, step: step, record: record, reversed: reversed)
+            }
+            return await task.value
+        }
         var failure: String?
         for hook in hooks.inPriorityOrder(reversed: reversed) {
             do {
