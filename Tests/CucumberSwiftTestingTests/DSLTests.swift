@@ -282,10 +282,12 @@ extension CucumberTests {
     #endif
 
     /// A feature whose first scenario takes a while and whose second doesn't.
-    private func slowAndQuickFeature() {
+    /// `onSlowStart` runs when the slow scenario's step starts, once it has its place in its feature's order.
+    private func slowAndQuickFeature(onSlowStart: @escaping @MainActor () -> Void = {}) {
         Feature("F") {
             Scenario("Slow") {
                 Given(_macroStep: {
+                          onSlowStart()
                           try await Task.sleep(nanoseconds: 50_000_000)
                           self.ran.append("slow")
                       },
@@ -323,15 +325,16 @@ extension CucumberTests {
 
     @Test func withParallelTestingByFeatureAFeaturesScenariosRunOneAtATime() async throws {
         resetNames()
-        slowAndQuickFeature()
+        var slowStarted = false
+        slowAndQuickFeature { slowStarted = true }
         Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES", "CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]
         let cases = Cucumber.shared.dslCasesToRun()
+        try #require(cases.count == 2)
         await withTaskGroup(of: Void.self) { group in
-            for testCase in cases {
-                group.addTask { try? await Cucumber.shared.run(testCase) }
-                // So that the slow scenario starts first.
-                await Task.yield()
-            }
+            group.addTask { try? await Cucumber.shared.run(cases[0]) }
+            // The quick scenario starts only once the slow one is running, so it can only wait for it.
+            while !slowStarted { await Task.yield() }
+            group.addTask { try? await Cucumber.shared.run(cases[1]) }
         }
         #expect(ran == ["slow", "quick"])
     }
