@@ -123,6 +123,7 @@ lint:
         - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
         - Sources/CucumberSwiftTesting/DSL/StepText.swift
         - Sources/CucumberSwiftTesting/LocalizedStepTypes.swift
+        - Sources/CucumberSwiftTestingMacros/DSLContainerMacros.swift
         - Sources/CucumberSwiftTestingMacros/DSLStepMacros.swift
         - Sources/CucumberSwiftTestingMacros/HookMacros.swift
         - Sources/CucumberSwiftTestingMacros/LocalizedDSLStepMacros.swift

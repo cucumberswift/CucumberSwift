@@ -5,13 +5,91 @@
 //  Generated from CucumberSwift's Generated/I18n.swift by LocalizedDSLStepMacroTests.
 //  Do not edit: change I18n.swift, then rewrite this file as that test describes.
 //
-//  The DSL step macros in each language, such as `#ES_Dado(I: abrirLaTienda())`, as DSLStepMacros.swift
-//  declares them in English. CucumberSwiftTestingMacros compiles this file too, through a symlink.
+//  The DSL step macros in each language, such as `#ES_Dado(I: abrirLaTienda())`, and the container macros,
+//  such as `#ES_Característica`, as DSLStepMacros.swift and DSLContainerMacros.swift declare them in English.
+//  CucumberSwiftTestingMacros compiles this file too, through a symlink.
 //
 
 #if Macros
 
 // MARK: Afrikaans
+
+/// `#Feature` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Funksie(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_BesigheidBehoefte(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Vermoë(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Voorbeeld(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Situasie(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_SituasieUiteensetting<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AF_SituasieUiteensetting<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Agtergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Afrikaans, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AF_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Afrikaans, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -194,6 +272,75 @@ public macro AF_Maar<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Armenian
+
+/// `#Feature` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Ֆունկցիոնալություն(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Հատկություն(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Օրինակ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Սցենար(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_ՍցենարիԿառուցվացքը<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AM_ՍցենարիԿառուցվացքը<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Կոնտեքստ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Armenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Armenian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -412,6 +559,67 @@ public macro AM_Բայց<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Aragonese
+
+/// `#Feature` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_Caracteristica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_Eixemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_Caso(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_EsquemaDelCaso<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AN_EsquemaDelCaso<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_Antecedents(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Aragonese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Aragonese, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -811,6 +1019,67 @@ public macro AN_Pero<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Arabic
 
+/// `#Feature` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_خاصية(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_مثال(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_سيناريو(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_سيناريومخطط<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AR_سيناريومخطط<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_الخلفية(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Arabic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Arabic, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -1064,6 +1333,67 @@ public macro AR_لكن<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Asturian
+
+/// `#Feature` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_Carauterística(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_Casu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_EsbozuDelCasu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AST_EsbozuDelCasu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_Antecedentes(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Asturian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AST_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Asturian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -1391,6 +1721,73 @@ public macro AST_Peru<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Azerbaijani
 
+/// `#Feature` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Özəllik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Nümunələr(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Ssenari(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_SsenarininStrukturu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro AZ_SsenarininStrukturu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Keçmiş(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Azerbaijani, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro AZ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Azerbaijani, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -1717,6 +2114,67 @@ public macro AZ_Ancaq<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Bulgarian
 
+/// `#Feature` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_РамкаНаСценарий<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BG_РамкаНаСценарий<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_Предистория(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Bulgarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BG_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Bulgarian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -1898,6 +2356,139 @@ public macro BG_Но<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Malay
+
+/// `#Feature` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_Fungsi(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_Senario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_Situasi(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_Keadaan(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaSenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaSenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaSituasi<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaSituasi<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaKeadaan<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BM_KerangkaKeadaan<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_GarisPanduanSenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BM_GarisPanduanSenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_LatarBelakang(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Malay, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Malay, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -2189,6 +2780,97 @@ public macro BM_Tapi<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Bosnian
 
+/// `#Feature` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Karakteristika(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Primjer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Scenariju(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_ScenarijuObris<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BS_ScenarijuObris<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_ScenarioOutline<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro BS_ScenarioOutline<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Bosnian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro BS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Bosnian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -2406,6 +3088,81 @@ public macro BS_Ali<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Catalan
+
+/// `#Feature` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Funcionalitat(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Exemple(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Escenari(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_EsquemaDeLEscenari<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro CA_EsquemaDeLEscenari<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Rerefons(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Antecedents(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Catalan, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Catalan, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -2733,6 +3490,94 @@ public macro CA_Però<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Czech
 
+/// `#Feature` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Požadavek(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Příklad(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Scénář(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_NáčrtScénáře<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro CS_NáčrtScénáře<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_OsnovaScénáře<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro CS_OsnovaScénáře<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Pozadí(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Kontext(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Czech, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Czech, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -2987,6 +3832,67 @@ public macro CS_Ale<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Welsh
 
+/// `#Feature` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_Arwedd(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_Enghraifft(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_ScenarioAmlinellol<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_ScenarioAmlinellol<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_Cefndir(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Welsh, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro CY_GB_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Welsh, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -3169,6 +4075,67 @@ public macro CY_GB_Ond<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Danish
 
+/// `#Feature` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_Egenskab(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_Eksempel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_Scenarie(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro DA_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_Baggrund(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Danish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Danish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -3350,6 +4317,67 @@ public macro DA_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: German
+
+/// `#Feature` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Funktionalität(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Beispiel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Szenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Szenariogrundriss<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro DE_Szenariogrundriss<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Grundlage(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in German, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro DE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in German, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -3605,6 +4633,96 @@ public macro DE_Aber<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Greek
 
+/// `#Feature` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Δυνατότητα(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Λειτουργία(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Παράδειγμα(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Σενάριο(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_ΠεριγραφήΣεναρίου<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EL_ΠεριγραφήΣεναρίου<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_ΠερίγραμμαΣεναρίου<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EL_ΠερίγραμμαΣεναρίου<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Υπόβαθρο(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Greek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Greek, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -3787,6 +4905,67 @@ public macro EL_Αλλά<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Emoji
 
+/// `#Feature` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_📚(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_🥒(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_📕(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_📖<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EM_📖<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_💤(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Emoji, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Emoji, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -3968,6 +5147,58 @@ public macro EM_😔<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Scouse
+
+/// `#Feature` in Scouse, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_Feature(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Scouse, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_TheThingOfItIs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Scouse, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_WharrimeanIs<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_WharrimeanIs<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Scouse, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_DisIsWhatWentDown(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Scouse, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_SCOUSE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Scouse, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -4259,6 +5490,58 @@ public macro EN_SCOUSE_Buh<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Australian
 
+/// `#Feature` in Australian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_PrettyMuch(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Australian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_AwwwLookMate(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Australian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_ReckonItSLike<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_ReckonItSLike<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Australian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_FirstOff(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Australian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_AU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Australian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -4441,6 +5724,58 @@ public macro EN_AU_YeahNah<Handler>(the handler: Handler) -> ButStep
 
 // MARK: LOLCAT
 
+/// `#Feature` in LOLCAT, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_OhHai(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in LOLCAT, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_Mishun(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in LOLCAT, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_MishunSrsly<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_MishunSrsly<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in LOLCAT, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_B4(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in LOLCAT, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_LOL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in LOLCAT, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -4622,6 +5957,93 @@ public macro EN_LOL_But<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Old English
+
+/// `#Feature` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Hwaet(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Hwæt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Swa(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_SwaHwaerSwa<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_SwaHwaerSwa<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_SwaHwærSwa<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_SwaHwærSwa<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Aer(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Ær(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Old English, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_OLD_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Old English, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -5057,6 +6479,58 @@ public macro EN_OLD_Ac<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Pirate
 
+/// `#Feature` in Pirate, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_AhoyMatey(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Pirate, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_HeaveTo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Pirate, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_ShiverMeTimbers<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_ShiverMeTimbers<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Pirate, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_YoHoHo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Pirate, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EN_PIRATE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Pirate, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -5238,6 +6712,118 @@ public macro EN_PIRATE_Avast<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Esperanto
+
+/// `#Feature` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Trajto(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Ekzemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Scenaro(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Kazo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_KonturoDeLaScenaro<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EO_KonturoDeLaScenaro<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Skizo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EO_Skizo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_KazoSkizo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro EO_KazoSkizo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Fono(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Esperanto, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro EO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Esperanto, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -5456,6 +7042,67 @@ public macro EO_Sed<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Spanish
+
+/// `#Feature` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_Ejemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_Escenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_EsquemaDelEscenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ES_EsquemaDelEscenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_Antecedentes(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Spanish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ES_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Spanish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -5783,6 +7430,88 @@ public macro ES_Pero<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Estonian
 
+/// `#Feature` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Omadus(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Juhtum(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Stsenaarium(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Raamstjuhtum<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ET_Raamstjuhtum<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Raamstsenaarium<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ET_Raamstsenaarium<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Taust(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Estonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ET_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Estonian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -5964,6 +7693,67 @@ public macro ET_Kuid<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Persian
+
+/// `#Feature` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_وِیژگی(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_مثال(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_سناریو(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_الگویسناریو<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro FA_الگویسناریو<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_زمینه(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Persian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Persian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -6147,6 +7937,58 @@ public macro FA_اما<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Finnish
 
+/// `#Feature` in Finnish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FI_Ominaisuus(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Finnish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FI_Tapaus(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Finnish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FI_Tapausaihio<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro FI_Tapausaihio<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Finnish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FI_Tausta(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Finnish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Finnish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -6328,6 +8170,67 @@ public macro FI_Mutta<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: French
+
+/// `#Feature` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_Fonctionnalité(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_Exemple(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_Scénario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_PlanDuScénario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro FR_PlanDuScénario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_Contexte(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in French, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro FR_Règle(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in French, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -7159,6 +9062,67 @@ public macro FR_Mais<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Irish
 
+/// `#Feature` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_Gné(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_Sampla(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_Cás(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_CásAchomair<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro GA_CásAchomair<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_Cúlra(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Irish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Irish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -7557,6 +9521,104 @@ public macro GA_Ach<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Gujarati
 
+/// `#Feature` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_લક્ષણ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_વ્યાપારજરૂર(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_ક્ષમતા(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_ઉદાહરણ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_સ્થિતિ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_પરિદ્દશ્યરૂપરેખા<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro GJ_પરિદ્દશ્યરૂપરેખા<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_પરિદ્દશ્યઢાંચો<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro GJ_પરિદ્દશ્યઢાંચો<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_બેકગ્રાઉન્ડ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Gujarati, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GJ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Gujarati, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -7738,6 +9800,67 @@ public macro GJ_પણ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Galician
+
+/// `#Feature` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_Escenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_EsbozoDoEscenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro GL_EsbozoDoEscenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_Contexto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Galician, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro GL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Galician, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -8101,6 +10224,67 @@ public macro GL_Pero<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Hebrew
 
+/// `#Feature` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_תכונה(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_דוגמא(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_תרחיש(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_תבניתתרחיש<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HE_תבניתתרחיש<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_רקע(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Hebrew, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Hebrew, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -8318,6 +10502,58 @@ public macro HE_אבל<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Hindi
+
+/// `#Feature` in Hindi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HI_रूपलेख(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Hindi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HI_परिदृश्य(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Hindi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HI_परिदृश्यरूपरेखा<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HI_परिदृश्यरूपरेखा<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Hindi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HI_पृष्ठभूमि(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Hindi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Hindi, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -8753,6 +10989,104 @@ public macro HI_किन्तु<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Croatian
 
+/// `#Feature` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Osobina(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Mogućnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Mogucnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Primjer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Scenarij(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HR_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HR_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Croatian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Croatian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -9042,6 +11376,122 @@ public macro HR_Ali<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Creole
+
+/// `#Feature` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Karakteristik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Mak(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Fonksyonalite(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Senaryo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_PlanSenaryo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HT_PlanSenaryo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_SenaryoDeskripsyon<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HT_SenaryoDeskripsyon<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_DyagramSenaryo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HT_DyagramSenaryo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Kontèks(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Istorik(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Creole, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Creole, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -9405,6 +11855,67 @@ public macro HT_Men<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Hungarian
 
+/// `#Feature` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_Jellemző(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_Példa(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_Forgatókönyv(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_ForgatókönyvVázlat<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro HU_ForgatókönyvVázlat<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_Háttér(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Hungarian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro HU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Hungarian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -9695,6 +12206,58 @@ public macro HU_De<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Indonesian
 
+/// `#Feature` in Indonesian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ID_Fitur(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Indonesian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ID_Skenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Indonesian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ID_SkenarioKonsep<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ID_SkenarioKonsep<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Indonesian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ID_Dasar(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Indonesian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ID_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Indonesian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -9877,6 +12440,79 @@ public macro ID_Tapi<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Icelandic
 
+/// `#Feature` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_Eiginleiki(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_Atburðarás(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_LýsingAtburðarásar<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro IS_LýsingAtburðarásar<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_LýsingDæma<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro IS_LýsingDæma<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_Bakgrunnur(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Icelandic, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Icelandic, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -10058,6 +12694,67 @@ public macro IS_En<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Italian
+
+/// `#Feature` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_Funzionalità(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_Esempio(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_SchemaDelloScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro IT_SchemaDelloScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_Contesto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Italian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro IT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Italian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -10349,6 +13046,129 @@ public macro IT_Ma<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Japanese
 
+/// `#Feature` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_フィーチャ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_機能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオアウトライン<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオアウトライン<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオテンプレート<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオテンプレート<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_テンプレ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro JA_テンプレ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオテンプレ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro JA_シナリオテンプレ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Japanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Japanese, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -10602,6 +13422,58 @@ public macro JA_ただし<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Javanese
+
+/// `#Feature` in Javanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JV_Fitur(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Javanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JV_Skenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Javanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JV_KonsepSkenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro JV_KonsepSkenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Javanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JV_Dasar(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Javanese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro JV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Javanese, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -10965,6 +13837,67 @@ public macro JV_Ananging<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Georgian
 
+/// `#Feature` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_Თვისება(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_Მაგალითად(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_Სცენარის(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_ᲡცენარისᲜიმუში<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro KA_ᲡცენარისᲜიმუში<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_Კონტექსტი(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Georgian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Georgian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -11147,6 +14080,67 @@ public macro KA_Მაგ­რამ<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Kannada
 
+/// `#Feature` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_ಹೆಚ್ಚಳ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_ಉದಾಹರಣೆ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_ಕಥಾಸಾರಾಂಶ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_ವಿವರಣೆ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro KN_ವಿವರಣೆ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_ಹಿನ್ನೆಲೆ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Kannada, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Kannada, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -11328,6 +14322,58 @@ public macro KN_ಆದರೆ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Korean
+
+/// `#Feature` in Korean, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KO_기능(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Korean, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KO_시나리오(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Korean, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KO_시나리오개요<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro KO_시나리오개요<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Korean, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KO_배경(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Korean, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro KO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Korean, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -11619,6 +14665,67 @@ public macro KO_단<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Lithuanian
 
+/// `#Feature` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_Savybė(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_Pavyzdys(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_Scenarijus(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_ScenarijausŠablonas<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro LT_ScenarijausŠablonas<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_Kontekstas(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Lithuanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Lithuanian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -11800,6 +14907,67 @@ public macro LT_Bet<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Luxemburgish
+
+/// `#Feature` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_Funktionalitéit(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_Beispill(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_Szenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_PlangVumSzenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro LU_PlangVumSzenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_Hannergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Luxemburgish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Luxemburgish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -12055,6 +15223,81 @@ public macro LU_Mä<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Latvian
 
+/// `#Feature` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Funkcionalitāte(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Fīča(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Piemērs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Scenārijs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_ScenārijsPēcParauga<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro LV_ScenārijsPēcParauga<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Konteksts(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Situācija(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Latvian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro LV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Latvian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -12236,6 +15479,140 @@ public macro LV_Bet<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Macedonian
+
+/// `#Feature` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_БизнисПотреба(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Можност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Сценарио(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_НаПример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_ПрегледНаСценарија<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_ПрегледНаСценарија<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Скица<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Скица<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Концепт<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Концепт<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Содржина(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Macedonian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_CYRL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Macedonian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -12455,6 +15832,131 @@ public macro MK_CYRL_Но<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Macedonian (Latin)
 
+/// `#Feature` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_BiznisPotreba(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Mozhnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_NaPrimer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_PregledNaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_PregledNaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Sodrzhina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Macedonian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MK_LATN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Macedonian (Latin), a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -12672,6 +16174,66 @@ public macro MK_LATN_No<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Mongolian
+
+/// `#Feature` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_Функц(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_Сценар(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_СценарынТөлөвлөгөө<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro MN_СценарынТөлөвлөгөө<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_Агуулга(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Mongolian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro MN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Mongolian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -12999,6 +16561,67 @@ public macro MN_Харин<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Dutch
 
+/// `#Feature` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_Functionaliteit(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_Voorbeeld(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_AbstractScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro NL_AbstractScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_Achtergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Dutch, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Dutch, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -13253,6 +16876,88 @@ public macro NL_Maar<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Norwegian
 
+/// `#Feature` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Egenskap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Eksempel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Scenariomal<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro NO_Scenariomal<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro NO_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Bakgrunn(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Norwegian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro NO_Regel(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Norwegian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -13434,6 +17139,104 @@ public macro NO_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Panjabi
+
+/// `#Feature` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਖਾਸੀਅਤ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਮੁਹਾਂਦਰਾ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਨਕਸ਼ਨੁਹਾਰ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਉਦਾਹਰਨ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਟਕਥਾ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਟਕਥਾਢਾਂਚਾ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਟਕਥਾਢਾਂਚਾ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਟਕਥਾਰੂਪਰੇਖਾ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਟਕਥਾਰੂਪਰੇਖਾ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_ਪਿਛੋਕੜ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Panjabi, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Panjabi, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -13652,6 +17455,91 @@ public macro PA_ਪਰ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Polish
+
+/// `#Feature` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Właściwość(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Funkcja(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Aspekt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_PotrzebaBiznesowa(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Przykład(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Scenariusz(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_SzablonScenariusza<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PL_SzablonScenariusza<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Założenia(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Polish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Polish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -14051,6 +17939,173 @@ public macro PL_Ale<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Portuguese
 
+/// `#Feature` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Funcionalidade(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Caracteristica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Cenário(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Cenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_EsquemaDoCenário<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PT_EsquemaDoCenário<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_EsquemaDoCenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PT_EsquemaDoCenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_DelineaçãoDoCenário<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PT_DelineaçãoDoCenário<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_DelineacaoDoCenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro PT_DelineacaoDoCenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Contexto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_CenárioDeFundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_CenarioDeFundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Fundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Portuguese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro PT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Portuguese, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -14376,6 +18431,104 @@ public macro PT_Mas<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Romanian
+
+/// `#Feature` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Functionalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Funcționalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Funcţionalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Exemplu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Scenariu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_StructuraScenariu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro RO_StructuraScenariu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_StructurăScenariu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro RO_StructurăScenariu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Context(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Romanian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Romanian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -14846,6 +18999,97 @@ public macro RO_Dar<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Russian
+
+/// `#Feature` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Функция(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Функциональность(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Свойство(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_СтруктураСценария<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro RU_СтруктураСценария<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Предыстория(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Russian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro RU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Russian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -15353,6 +19597,125 @@ public macro RU_Иначе<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Slovak
 
+/// `#Feature` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Požiadavka(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Funkcia(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Vlastnosť(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Príklad(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Scenár(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_NáčrtScenáru<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SK_NáčrtScenáru<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_NáčrtScenára<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SK_NáčrtScenára<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_OsnovaScenára<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SK_OsnovaScenára<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Pozadie(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Slovak, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SK_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Slovak, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -15750,6 +20113,203 @@ public macro SK_Ale<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Slovenian
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Funkcija(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Možnosti(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Moznosti(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Lastnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Značilnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Primer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Scenarij(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_StrukturaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SL_StrukturaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SL_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SL_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_OrisScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SL_OrisScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Osnutek<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SL_Osnutek<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Osnova(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Ozadje(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Slovenian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Slovenian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -16329,6 +20889,137 @@ public macro SL_Vendar<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Serbian
 
+/// `#Feature` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Могућност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Особина(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Сценарио(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_СтруктураСценарија<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_СтруктураСценарија<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Скица<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Скица<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Концепт<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Концепт<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Основа(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Позадина(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Serbian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_CYRL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Serbian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -16618,6 +21309,145 @@ public macro SR_CYRL_Али<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Serbian (Latin)
+
+/// `#Feature` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Mogućnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Mogucnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Osobina(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Primer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_StrukturaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_StrukturaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Osnova(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Background` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Serbian (Latin), a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SR_LATN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Serbian (Latin), a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -16909,6 +21739,79 @@ public macro SR_LATN_Ali<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Swedish
 
+/// `#Feature` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_Egenskap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SV_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_Scenariomall<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro SV_Scenariomall<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_Bakgrund(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Swedish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro SV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Swedish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -17090,6 +21993,104 @@ public macro SV_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Tamil
+
+/// `#Feature` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_அம்சம்(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_வணிகதேவை(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_திறன்(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_உதாரணமாக(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_காட்சி(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_காட்சிசுருக்கம்<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TA_காட்சிசுருக்கம்<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_காட்சிவார்ப்புரு<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TA_காட்சிவார்ப்புரு<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_பின்னணி(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Tamil, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Tamil, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -17309,6 +22310,95 @@ public macro TA_ஆனால்<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Thai
 
+/// `#Feature` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_โครงหลัก(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_ความต้องการทางธุรกิจ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_ความสามารถ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_เหตุการณ์(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_สรุปเหตุการณ์<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TH_สรุปเหตุการณ์<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_โครงสร้างของเหตุการณ์<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TH_โครงสร้างของเหตุการณ์<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_แนวคิด(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Thai, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TH_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Thai, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -17491,6 +22581,67 @@ public macro TH_แต่<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Telugu
 
+/// `#Feature` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_గుణము(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_ఉదాహరణ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_సన్నివేశం(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_కథనం<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TL_కథనం<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_నేపథ్యం(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Telugu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Telugu, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -17672,6 +22823,90 @@ public macro TL_కాని<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Klingon
+
+/// `#Feature` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_Qap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_QuMeHUt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_Perbogh(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_PoQboghMalja(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_LaH(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_Lut(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_LutChovnatlh<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TLH_LutChovnatlh<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_Mo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Klingon, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TLH_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Klingon, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -17963,6 +23198,67 @@ public macro TLH__A<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Turkish
 
+/// `#Feature` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_Özellik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_Örnek(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_Senaryo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_SenaryoTaslağı<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TR_SenaryoTaslağı<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_Geçmiş(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Turkish, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Turkish, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -18180,6 +23476,66 @@ public macro TR_Ama<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Tatar
+
+/// `#Feature` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_Мөмкинлек(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_Үзенчәлеклелек(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_СценарийныңТөзелеше<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro TT_СценарийныңТөзелеше<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_Кереш(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Tatar, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro TT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Tatar, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -18434,6 +23790,67 @@ public macro TT_Әмма<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Ukrainian
+
+/// `#Feature` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_Функціонал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_Приклад(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_Сценарій(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_СтруктураСценарію<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro UK_СтруктураСценарію<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_Передумова(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Ukrainian, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UK_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Ukrainian, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -18869,6 +24286,74 @@ public macro UK_Але<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Urdu
 
+/// `#Feature` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_صلاحیت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_کاروبارکیضرورت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Feature` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_خصوصیت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_منظرنامہ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_منظرنامےکاخاکہ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro UR_منظرنامےکاخاکہ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_پسمنظر(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Urdu, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Urdu, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -19159,6 +24644,58 @@ public macro UR_لیکن<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Uzbek
 
+/// `#Feature` in Uzbek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UZ_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Uzbek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UZ_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Uzbek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UZ_СценарийСтруктураси<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro UZ_СценарийСтруктураси<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Uzbek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UZ_Тарих(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Uzbek, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro UZ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Uzbek, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -19377,6 +24914,88 @@ public macro UZ_Аммо<Handler>(the handler: Handler) -> ButStep
 
 // MARK: Vietnamese
 
+/// `#Feature` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_TínhNăng(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_TìnhHuống(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_KịchBản(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_KhungTìnhHuống<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro VI_KhungTìnhHuống<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_KhungKịchBản<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro VI_KhungKịchBản<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_BốiCảnh(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Vietnamese, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro VI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
 /// `#Given(I:)` in Vietnamese, a step of a feature written in the Swift DSL.
 @freestanding(expression)
 @discardableResult
@@ -19594,6 +25213,88 @@ public macro VI_Nhưng<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Chinese simplified
+
+/// `#Feature` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_功能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_场景(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_剧本(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_场景大纲<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_场景大纲<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_剧本大纲<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_剧本大纲<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Chinese simplified, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_CN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Chinese simplified, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -19920,6 +25621,88 @@ public macro ZH_CN_但是<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
 
 // MARK: Chinese traditional
+
+/// `#Feature` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_功能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+/// `#Scenario` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_場景(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Scenario` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_劇本(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_場景大綱<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_場景大綱<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#ScenarioOutline` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_劇本大綱<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_劇本大綱<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+/// `#Background` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+/// `#Rule` in Chinese traditional, a part of a feature written in the Swift DSL.
+@freestanding(expression)
+@discardableResult
+public macro ZH_TW_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 /// `#Given(I:)` in Chinese traditional, a step of a feature written in the Swift DSL.
 @freestanding(expression)
@@ -20249,6 +26032,84 @@ public macro ZH_TW_但是<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Funksie(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_BesigheidBehoefte(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Vermoë(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Voorbeeld(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Situasie(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_SituasieUiteensetting<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_SituasieUiteensetting<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Agtergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AF_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AF_Gegewe<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -20456,6 +26317,76 @@ public macro AF_Maar<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AF_Maar<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Ֆունկցիոնալություն(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Հատկություն(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Օրինակ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Սցենար(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_ՍցենարիԿառուցվացքը<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_ՍցենարիԿառուցվացքը<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Կոնտեքստ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -20708,6 +26639,68 @@ public macro AM_Բայց<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AM_Բայց<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_Caracteristica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_Eixemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_Caso(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_EsquemaDelCaso<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_EsquemaDelCaso<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_Antecedents(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -21173,6 +27166,68 @@ public macro AN_Pero<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_خاصية(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_مثال(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_سيناريو(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_سيناريومخطط<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_سيناريومخطط<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_الخلفية(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AR_بفرض<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -21464,6 +27519,68 @@ public macro AR_لكن<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AR_لكن<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_Carauterística(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_Casu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_EsbozuDelCasu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_EsbozuDelCasu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_Antecedentes(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AST_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -21845,6 +27962,74 @@ public macro AST_Peru<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Özəllik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Nümunələr(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Ssenari(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_SsenarininStrukturu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_SsenarininStrukturu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Keçmiş(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro AZ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro AZ_TutaqKi<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -22223,6 +28408,68 @@ public macro AZ_Ancaq<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_РамкаНаСценарий<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_РамкаНаСценарий<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_Предистория(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BG_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro BG_Дадено<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -22430,6 +28677,143 @@ public macro BG_Но<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro BG_Но<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_Fungsi(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_Senario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_Situasi(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_Keadaan(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaSenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaSenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaSituasi<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaSituasi<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaKeadaan<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_KerangkaKeadaan<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_GarisPanduanSenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_GarisPanduanSenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_LatarBelakang(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -22769,6 +29153,99 @@ public macro BM_Tapi<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Karakteristika(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Primjer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Scenariju(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_ScenarijuObris<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_ScenarijuObris<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_ScenarioOutline<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_ScenarioOutline<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro BS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro BS_Dato<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -23018,6 +29495,82 @@ public macro BS_Ali<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro BS_Ali<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Funcionalitat(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Exemple(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Escenari(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_EsquemaDeLEscenari<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_EsquemaDeLEscenari<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Rerefons(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Antecedents(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -23399,6 +29952,96 @@ public macro CA_Però<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Požadavek(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Příklad(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Scénář(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_NáčrtScénáře<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_NáčrtScénáře<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_OsnovaScénáře<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_OsnovaScénáře<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Pozadí(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Kontext(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro CS_Pokud<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -23693,6 +30336,68 @@ public macro CS_Ale<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_Arwedd(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_Enghraifft(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_ScenarioAmlinellol<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_ScenarioAmlinellol<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_Cefndir(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro CY_GB_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro CY_GB_AnrhegedigA<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -23903,6 +30608,68 @@ public macro CY_GB_Ond<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_Egenskab(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_Eksempel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_Scenarie(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_Baggrund(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro DA_Givet<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -24110,6 +30877,68 @@ public macro DA_Men<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro DA_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Funktionalität(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Beispiel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Szenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Szenariogrundriss<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Szenariogrundriss<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Grundlage(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro DE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -24407,6 +31236,98 @@ public macro DE_Aber<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Δυνατότητα(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Λειτουργία(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Παράδειγμα(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Σενάριο(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_ΠεριγραφήΣεναρίου<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_ΠεριγραφήΣεναρίου<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_ΠερίγραμμαΣεναρίου<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_ΠερίγραμμαΣεναρίου<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Υπόβαθρο(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EL_Δεδομένου<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -24617,6 +31538,68 @@ public macro EL_Αλλά<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_📚(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_🥒(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_📕(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_📖<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_📖<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_💤(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EM_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EM_😐<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -24824,6 +31807,59 @@ public macro EM_😔<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EM_😔<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_Feature(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_TheThingOfItIs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_WharrimeanIs<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_WharrimeanIs<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_DisIsWhatWentDown(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_SCOUSE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -25163,6 +32199,59 @@ public macro EN_SCOUSE_Buh<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_PrettyMuch(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_AwwwLookMate(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_ReckonItSLike<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_ReckonItSLike<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_FirstOff(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_AU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EN_AU_YKnow<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -25373,6 +32462,59 @@ public macro EN_AU_YeahNah<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_OhHai(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_Mishun(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_MishunSrsly<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_MishunSrsly<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_B4(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_LOL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EN_LOL_ICanHaz<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -25580,6 +32722,95 @@ public macro EN_LOL_But<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EN_LOL_But<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Hwaet(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Hwæt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Swa(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_SwaHwaerSwa<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_SwaHwaerSwa<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_SwaHwærSwa<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_SwaHwærSwa<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Aer(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Ær(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_OLD_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -26087,6 +33318,59 @@ public macro EN_OLD_Ac<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_AhoyMatey(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_HeaveTo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_ShiverMeTimbers<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_ShiverMeTimbers<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_YoHoHo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EN_PIRATE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EN_PIRATE_Gangway<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -26294,6 +33578,121 @@ public macro EN_PIRATE_Avast<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EN_PIRATE_Avast<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Trajto(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Ekzemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Scenaro(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Kazo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_KonturoDeLaScenaro<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_KonturoDeLaScenaro<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Skizo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Skizo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_KazoSkizo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_KazoSkizo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Fono(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro EO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -26546,6 +33945,68 @@ public macro EO_Sed<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro EO_Sed<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_Ejemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_Escenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_EsquemaDelEscenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_EsquemaDelEscenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_Antecedentes(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ES_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -26927,6 +34388,90 @@ public macro ES_Pero<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Omadus(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Juhtum(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Stsenaarium(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Raamstjuhtum<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Raamstjuhtum<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Raamstsenaarium<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Raamstsenaarium<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Taust(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ET_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro ET_Eeldades<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -27134,6 +34679,68 @@ public macro ET_Kuid<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro ET_Kuid<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_وِیژگی(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_مثال(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_سناریو(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_الگویسناریو<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_الگویسناریو<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_زمینه(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -27347,6 +34954,59 @@ public macro FA_اما<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Ominaisuus(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Tapaus(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Tapausaihio<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Tapausaihio<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Tausta(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro FI_Oletetaan<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -27554,6 +35214,68 @@ public macro FI_Mutta<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro FI_Mutta<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_Fonctionnalité(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_Exemple(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_Scénario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_PlanDuScénario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_PlanDuScénario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_Contexte(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro FR_Règle(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -28523,6 +36245,68 @@ public macro FR_Mais<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_Gné(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_Sampla(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_Cás(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_CásAchomair<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_CásAchomair<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_Cúlra(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro GA_CuirIGcásGo<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -28985,6 +36769,106 @@ public macro GA_Ach<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_લક્ષણ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_વ્યાપારજરૂર(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_ક્ષમતા(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_ઉદાહરણ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_સ્થિતિ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_પરિદ્દશ્યરૂપરેખા<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_પરિદ્દશ્યરૂપરેખા<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_પરિદ્દશ્યઢાંચો<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_પરિદ્દશ્યઢાંચો<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_બેકગ્રાઉન્ડ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GJ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro GJ_આપેલછે<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -29192,6 +37076,68 @@ public macro GJ_પણ<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro GJ_પણ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_Escenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_EsbozoDoEscenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_EsbozoDoEscenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_Contexto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro GL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -29615,6 +37561,68 @@ public macro GL_Pero<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_תכונה(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_דוגמא(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_תרחיש(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_תבניתתרחיש<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_תבניתתרחיש<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_רקע(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HE_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro HE_בהינתן<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -29864,6 +37872,59 @@ public macro HE_אבל<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro HE_אבל<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_रूपलेख(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_परिदृश्य(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_परिदृश्यरूपरेखा<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_परिदृश्यरूपरेखा<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_पृष्ठभूमि(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -30371,6 +38432,106 @@ public macro HI_किन्तु<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Osobina(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Mogućnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Mogucnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Primjer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Scenarij(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro HR_Zadan<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -30704,6 +38865,125 @@ public macro HR_Ali<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro HR_Ali<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Karakteristik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Mak(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Fonksyonalite(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Senaryo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_PlanSenaryo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_PlanSenaryo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_SenaryoDeskripsyon<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_SenaryoDeskripsyon<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_DyagramSenaryo<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_DyagramSenaryo<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Kontèks(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Istorik(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -31127,6 +39407,68 @@ public macro HT_Men<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_Jellemző(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_Példa(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_Forgatókönyv(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_ForgatókönyvVázlat<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_ForgatókönyvVázlat<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_Háttér(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro HU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro HU_Amennyiben<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -31463,6 +39805,59 @@ public macro HU_De<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_Fitur(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_Skenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_SkenarioKonsep<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_SkenarioKonsep<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_Dasar(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ID_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro ID_Dengan<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -31673,6 +40068,81 @@ public macro ID_Tapi<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_Eiginleiki(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_Atburðarás(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_LýsingAtburðarásar<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_LýsingAtburðarásar<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_LýsingDæma<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_LýsingDæma<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_Bakgrunnur(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IS_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro IS_Ef<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -31880,6 +40350,68 @@ public macro IS_En<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro IS_En<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_Funzionalità(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_Esempio(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_SchemaDelloScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_SchemaDelloScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_Contesto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro IT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -32219,6 +40751,133 @@ public macro IT_Ma<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_フィーチャ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_機能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオアウトライン<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオアウトライン<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオテンプレート<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオテンプレート<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_テンプレ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_テンプレ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオテンプレ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_シナリオテンプレ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro JA_前提<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -32510,6 +41169,59 @@ public macro JA_ただし<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro JA_ただし<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_Fitur(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_Skenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_KonsepSkenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_KonsepSkenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_Dasar(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro JV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -32933,6 +41645,68 @@ public macro JV_Ananging<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_Თვისება(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_Მაგალითად(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_Სცენარის(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_ᲡცენარისᲜიმუში<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_ᲡცენარისᲜიმუში<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_Კონტექსტი(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro KA_Მოცემული<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -33143,6 +41917,68 @@ public macro KA_Მაგ­რამ<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ಹೆಚ್ಚಳ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ಉದಾಹರಣೆ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ಕಥಾಸಾರಾಂಶ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ವಿವರಣೆ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ವಿವರಣೆ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_ಹಿನ್ನೆಲೆ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro KN_ನೀಡಿದ<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -33350,6 +42186,59 @@ public macro KN_ಆದರೆ<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro KN_ಆದರೆ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_기능(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_시나리오(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_시나리오개요<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_시나리오개요<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_배경(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro KO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -33689,6 +42578,68 @@ public macro KO_단<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_Savybė(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_Pavyzdys(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_Scenarijus(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_ScenarijausŠablonas<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_ScenarijausŠablonas<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_Kontekstas(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro LT_Duota<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -33896,6 +42847,68 @@ public macro LT_Bet<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro LT_Bet<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_Funktionalitéit(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_Beispill(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_Szenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_PlangVumSzenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_PlangVumSzenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_Hannergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -34193,6 +43206,82 @@ public macro LU_Mä<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Funkcionalitāte(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Fīča(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Piemērs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Scenārijs(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_ScenārijsPēcParauga<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_ScenārijsPēcParauga<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Konteksts(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Situācija(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro LV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro LV_Kad<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -34400,6 +43489,143 @@ public macro LV_Bet<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro LV_Bet<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_БизнисПотреба(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Можност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Сценарио(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_НаПример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_ПрегледНаСценарија<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_ПрегледНаСценарија<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Скица<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Скица<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Концепт<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Концепт<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Содржина(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_CYRL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -34655,6 +43881,134 @@ public macro MK_CYRL_Но<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_BiznisPotreba(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Mozhnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_NaPrimer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_PregledNaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_PregledNaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Sodrzhina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MK_LATN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro MK_LATN_Dadeno<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -34904,6 +44258,67 @@ public macro MK_LATN_No<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro MK_LATN_No<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_Функц(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_Сценар(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_СценарынТөлөвлөгөө<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_СценарынТөлөвлөгөө<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_Агуулга(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro MN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -35285,6 +44700,68 @@ public macro MN_Харин<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_Functionaliteit(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_Voorbeeld(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_AbstractScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_AbstractScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_Achtergrond(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro NL_Gegeven<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -35579,6 +45056,90 @@ public macro NL_Maar<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Egenskap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Eksempel(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Scenariomal<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Scenariomal<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Bakgrunn(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro NO_Regel(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro NO_Gitt<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -35786,6 +45347,106 @@ public macro NO_Men<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro NO_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਖਾਸੀਅਤ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਮੁਹਾਂਦਰਾ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਨਕਸ਼ਨੁਹਾਰ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਉਦਾਹਰਨ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਟਕਥਾ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਟਕਥਾਢਾਂਚਾ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਟਕਥਾਢਾਂਚਾ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਟਕਥਾਰੂਪਰੇਖਾ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਟਕਥਾਰੂਪਰੇਖਾ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_ਪਿਛੋਕੜ(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -36038,6 +45699,92 @@ public macro PA_ਪਰ<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro PA_ਪਰ<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Właściwość(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Funkcja(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Aspekt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_PotrzebaBiznesowa(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Przykład(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Scenariusz(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_SzablonScenariusza<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_SzablonScenariusza<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Założenia(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -36503,6 +46250,177 @@ public macro PL_Ale<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Funcionalidade(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Característica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Caracteristica(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Exemplo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Cenário(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Cenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_EsquemaDoCenário<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_EsquemaDoCenário<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_EsquemaDoCenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_EsquemaDoCenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_DelineaçãoDoCenário<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_DelineaçãoDoCenário<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_DelineacaoDoCenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_DelineacaoDoCenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Contexto(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_CenárioDeFundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_CenarioDeFundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Fundo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro PT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro PT_Dado<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -36878,6 +46796,106 @@ public macro PT_Mas<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro PT_Mas<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Functionalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Funcționalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Funcţionalitate(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Exemplu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Scenariu(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_StructuraScenariu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_StructuraScenariu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_StructurăScenariu<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_StructurăScenariu<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Context(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RO_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -37424,6 +47442,98 @@ public macro RO_Dar<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro RO_Dar<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Функция(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Функциональность(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Свойство(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_СтруктураСценария<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_СтруктураСценария<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Предыстория(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro RU_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -38015,6 +48125,128 @@ public macro RU_Иначе<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Požiadavka(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Funkcia(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Vlastnosť(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Príklad(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Scenár(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_NáčrtScenáru<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_NáčrtScenáru<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_NáčrtScenára<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_NáčrtScenára<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_OsnovaScenára<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_OsnovaScenára<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Pozadie(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SK_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SK_Pokiaľ<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -38474,6 +48706,208 @@ public macro SK_Ale<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SK_Ale<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Funkcija(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Možnosti(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Moznosti(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Lastnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Značilnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Primer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Scenarij(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_StrukturaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_StrukturaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_OrisScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_OrisScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Osnutek<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Osnutek<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Osnova(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Ozadje(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -39149,6 +49583,140 @@ public macro SL_Vendar<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Функционалност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Могућност(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Особина(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Пример(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Сценарио(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_СтруктураСценарија<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_СтруктураСценарија<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Скица<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Скица<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Концепт<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Концепт<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Контекст(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Основа(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Позадина(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_CYRL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SR_CYRL_ЗаДато<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -39482,6 +50050,148 @@ public macro SR_CYRL_Али<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SR_CYRL_Али<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Funkcionalnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Mogućnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Mogucnost(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Osobina(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Primer(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_StrukturaScenarija<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_StrukturaScenarija<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Skica<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Skica<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Koncept<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Koncept<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Kontekst(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Osnova(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Pozadina(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SR_LATN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -39821,6 +50531,81 @@ public macro SR_LATN_Ali<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Egenskap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Scenario(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_AbstraktScenario<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_AbstraktScenario<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Scenariomall<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Scenariomall<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Bakgrund(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro SV_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SV_Givet<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -40028,6 +50813,106 @@ public macro SV_Men<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro SV_Men<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_அம்சம்(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_வணிகதேவை(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_திறன்(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_உதாரணமாக(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_காட்சி(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_காட்சிசுருக்கம்<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_காட்சிசுருக்கம்<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_காட்சிவார்ப்புரு<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_காட்சிவார்ப்புரு<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_பின்னணி(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TA_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -40283,6 +51168,97 @@ public macro TA_ஆனால்<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_โครงหลัก(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_ความต้องการทางธุรกิจ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_ความสามารถ(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_เหตุการณ์(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_สรุปเหตุการณ์<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_สรุปเหตุการณ์<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_โครงสร้างของเหตุการณ์<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_โครงสร้างของเหตุการณ์<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_แนวคิด(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TH_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TH_กำหนดให้<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -40493,6 +51469,68 @@ public macro TH_แต่<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_గుణము(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_ఉదాహరణ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_సన్నివేశం(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_కథనం<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_కథనం<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_నేపథ్యం(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TL_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TL_చెప్పబడినది<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -40700,6 +51738,91 @@ public macro TL_కాని<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TL_కాని<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_Qap(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_QuMeHUt(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_Perbogh(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_PoQboghMalja(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_LaH(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_Lut(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_LutChovnatlh<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_LutChovnatlh<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_Mo(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TLH_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -41039,6 +52162,68 @@ public macro TLH__A<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_Özellik(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_Örnek(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_Senaryo(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_SenaryoTaslağı<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_SenaryoTaslağı<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_Geçmiş(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TR_DiyelimKi<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -41288,6 +52473,67 @@ public macro TR_Ama<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TR_Ama<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_Мөмкинлек(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_Үзенчәлеклелек(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_СценарийныңТөзелеше<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_СценарийныңТөзелеше<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_Кереш(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro TT_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -41582,6 +52828,68 @@ public macro TT_Әмма<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro TT_Әмма<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_Функціонал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_Приклад(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_Сценарій(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_СтруктураСценарію<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_СтруктураСценарію<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_Передумова(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UK_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -42089,6 +53397,75 @@ public macro UK_Але<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_صلاحیت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_کاروبارکیضرورت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_خصوصیت(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_منظرنامہ(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_منظرنامےکاخاکہ<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_منظرنامےکاخاکہ<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_پسمنظر(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UR_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro UR_اگر<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -42425,6 +53802,59 @@ public macro UR_لیکن<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_Функционал(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_Сценарий(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_СценарийСтруктураси<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_СценарийСтруктураси<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_Тарих(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro UZ_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro UZ_Агар<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -42677,6 +54107,90 @@ public macro UZ_Аммо<Handler>(the handler: Handler) -> ButStep
 
 @freestanding(expression)
 @discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_TínhNăng(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_TìnhHuống(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_KịchBản(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_KhungTìnhHuống<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_KhungTìnhHuống<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_KhungKịchBản<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_KhungKịchBản<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_BốiCảnh(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro VI_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro VI_Biết<Handler>(_ handler: Handler) -> GivenStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
@@ -42926,6 +54440,90 @@ public macro VI_Nhưng<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro VI_Nhưng<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_功能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_场景(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_剧本(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_场景大纲<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_场景大纲<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_剧本大纲<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_剧本大纲<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_CN_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult
@@ -43304,6 +54902,90 @@ public macro ZH_CN_但是<Handler>(a handler: Handler) -> ButStep
 @available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL step macros. In an Xcode project, that needs Xcode 26.4 or later.")
 public macro ZH_CN_但是<Handler>(the handler: Handler) -> ButStep
     = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLStepMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_功能(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Feature
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLFeatureMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_場景(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_劇本(_ title: String,
+    description: String = "",
+    tags: [String] = [],
+    @StepBuilder _ content: () -> [StepDSL]) -> Scenario
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_場景大綱<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_場景大綱<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_劇本大綱<T>(_ title: String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_劇本大綱<T>(_ title: (T) -> String,
+    tags: [String] = [],
+    description: String = "",
+    headers: T.Type,
+    @StepBuilder steps: (T) -> [StepDSL],
+    examples: () -> [T]) -> ScenarioOutline
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_背景(@StepBuilder _ content: () -> [StepDSL]) -> Background
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLPartMacro")
+
+@freestanding(expression)
+@discardableResult
+@available(*, unavailable, message: "Turn on CucumberSwift's Macros package trait to use the DSL macros. In an Xcode project, that needs Xcode 26.4 or later.")
+public macro ZH_TW_Rule(_ title: String,
+    tags: [String] = [],
+    @ScenarioBuilder _ content: () -> [ScenarioDSL]) -> Rule
+    = #externalMacro(module: "CucumberSwiftMacrosPlugin", type: "DSLScenarioMacro")
 
 @freestanding(expression)
 @discardableResult

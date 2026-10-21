@@ -83,6 +83,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Sources/CucumberSwiftTestingMacros/HookMacros.swift
   - Sources/CucumberSwiftTestingMacros/LocalizedStepDefinitionMacros.swift
   - Sources/CucumberSwiftTestingMacros/DSLStepMacros.swift
+  - Sources/CucumberSwiftTestingMacros/DSLContainerMacros.swift
   - Sources/CucumberSwiftTestingMacros/LocalizedDSLStepMacros.swift
   - Sources/CucumberSwiftTesting/DSL/StepText.swift
   - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift

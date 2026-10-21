@@ -245,7 +245,9 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"ES_Característica("Caja") {"#))
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"EN_PIRATE_Ahoymatey("Arr") {"#))
         XCTAssertFalse(SwiftTestingSource.writesDSLFeatures(#"#Given("I have {int} cukes") { (count: Int) in }"#))
-        XCTAssertFalse(SwiftTestingSource.writesDSLFeatures(#"#ES_Dado("tengo {int} pepinos") { (count: Int) in }"#))
+        XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(##"#Feature("Checkout") {"##))
+        XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(##"#ES_Característica("Caja") {"##))
+        XCTAssertFalse(SwiftTestingSource.writesDSLFeatures("#BeforeFeature { feature in }"))
         XCTAssertFalse(SwiftTestingSource.writesDSLFeatures("BeforeFeature { feature in }"))
         XCTAssertFalse(SwiftTestingSource.writesDSLFeatures("let feature = makeFeature()"))
     }

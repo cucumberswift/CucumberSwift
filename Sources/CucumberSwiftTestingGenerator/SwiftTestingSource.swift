@@ -61,11 +61,11 @@ enum SwiftTestingSource {
 
         """
 
-    /// What a Swift file looks like when it writes a feature in the Swift DSL: a call of `Feature`, or of a name
-    /// such as `ES_Característica`, a localized type of the DSL, which this can't tell from a localized step
-    /// definition such as `ES_Dado("…")`. A step definition only adds the test with no cases, which Swift Testing
+    /// What a Swift file looks like when it writes a feature in the Swift DSL: a call of `Feature` or `#Feature`, or
+    /// of a name such as `ES_Característica`, a localized type of the DSL, or its macro, which this can't tell from a
+    /// localized step definition such as `ES_Dado("…")` or `#ES_Dado("…")`. A step definition only adds the test with no cases, which Swift Testing
     /// shows as skipped; a feature this missed would not run, which the runner reports when the suite ends.
-    private static let dslFeaturePattern = try? NSRegularExpression(pattern: ##"(?<![\w#])(?:Feature|[A-Z][A-Z0-9]*(?:[_-][A-Z0-9]+)*_[^\s(){}\[\]"#.,:;]+)(?:\.init)?\s*\("##)
+    private static let dslFeaturePattern = try? NSRegularExpression(pattern: ##"(?<![\w#])#?(?:Feature|[A-Z][A-Z0-9]*(?:[_-][A-Z0-9]+)*_[^\s(){}\[\]"#.,:;]+)(?:\.init)?\s*\("##)
 
     /// Whether a Swift file's text writes a feature in the Swift DSL, by ``dslFeaturePattern``.
     static func writesDSLFeatures(_ text: String) -> Bool {

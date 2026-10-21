@@ -30,8 +30,8 @@ extension Cucumber {
             guard step.scenario?.feature?.title == "Swift DSL step macros" else { return }
             stepTexts.append(step.match)
         }
-        Feature("Swift DSL step macros") {
-            Scenario("A basket filled and emptied") {
+        #Feature("Swift DSL step macros") {
+            #Scenario("A basket filled and emptied") {
                 #Given(I: fillTheBasket(with: 3))
                 #When(I: emptyTheBasket)
                 #Then(the: {
