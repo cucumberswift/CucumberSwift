@@ -880,6 +880,11 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+      # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
+      # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
+      # cancelled, which hides whether it passed (#480).
+      - name: Run the root package's Swift Testing tests with Swift 6.3
+        run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:

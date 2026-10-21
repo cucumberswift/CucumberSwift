@@ -90,27 +90,32 @@ extension CucumberTests {
         #expect(ran == ["basket", "cuke", "total"])
     }
 
-    @Test func aFailedStepStopsTheLaterCasesAndTheAfterHooksStillRun() async throws {
-        resetSettings()
-        struct Failure: Error {}
-        AfterScenario { [self] _ in ran.append("after") }
-        Given("a basket") { _, _ in throw Failure() }
-        And("a cuke.") { [self] _, _ in ran.append("cuke") }
-        Then("the total is 99") { [self] _, _ in ran.append("total") }
-        let cases = Cucumber.shared.casesToRun(threeSteps)
-        try await withKnownIssue {
-            try await Cucumber.shared.run(cases[0])
-        } matching: { $0.sourceLocation?.line == 3 }
+    @Test(.serialized, arguments: SkippingCase.allCases)
+    func aFailedStepStopsTheLaterCasesAndTheAfterHooksStillRun(_ testCase: SkippingCase) async throws {
+        let seen = try await inSkippingCase(testCase) {
+            resetSettings()
+            struct Failure: Error {}
+            AfterScenario { [self] _ in ran.append("after") }
+            Given("a basket") { _, _ in throw Failure() }
+            And("a cuke.") { [self] _, _ in ran.append("cuke") }
+            Then("the total is 99") { [self] _, _ in ran.append("total") }
+            let cases = Cucumber.shared.casesToRun(threeSteps)
+            try await withKnownIssue {
+                try await Cucumber.shared.run(cases[0])
+            } matching: { $0.sourceLocation?.line == 3 }
+            let skips = await skipReasons(of: Array(cases.dropFirst()))
+            return (ran: ran, skips: skips)
+        }
+        guard let seen else { return }
+        #expect(seen.ran == ["after"])
         #if compiler(>=6.3)
-        // Swift 6.3 reports a skipped step as cancelled, which throws.
-        _ = try? await Cucumber.shared.run(cases[1])
-        _ = try? await Cucumber.shared.run(cases[2])
+        // Swift 6.3 reports the cases after the failed step as skipped, saying why, as CucumberSwift does.
+        let reason = "Skipped: an earlier step in this scenario failed."
+        #expect(seen.skips == [reason, reason])
         #else
         // Before it a case can't skip itself, so it passes without running its step.
-        try await Cucumber.shared.run(cases[1])
-        try await Cucumber.shared.run(cases[2])
+        #expect(seen.skips == [nil, nil])
         #endif
-        #expect(ran == ["after"])
     }
 
     @Test func oneCaseRunsTheWholeScenario() async throws {
