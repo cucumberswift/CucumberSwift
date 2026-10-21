@@ -10,6 +10,10 @@ hook macros, such as `#BeforeScenario`, run in each closure form and with priori
 
 If a macro's expansion stops compiling, or stops matching its steps, this fixture fails.
 
+`GeneratedMacroStepDefinitions.swift` holds the step definition macros CucumberSwift suggests for undefined
+steps with `Cucumber.generateMacros`, as Cucumber expressions and as both kinds of regex literal, so that
+they compile. CucumberSwiftTests' `GeneratedStepDefinitionTests` checks that they match the generator.
+
 It also uses CucumberSwift's other features together, as a project does: the `CucumberSwiftLint`
 plugin, plain step definitions next to the macros (`ES_Dado` and regex literals too), a commented-out
 step definition, and feature files in English and Spanish with tables, doc strings and Scenario

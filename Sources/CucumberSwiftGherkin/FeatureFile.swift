@@ -42,21 +42,21 @@ extension FeatureFile {
         public let tags: [String]
         public let line: Int
         public let column: Int
-        /// The scenarios in the order they are written, a Rule's in its place. CucumberSwift does
-        /// not run a Scenario Outline that is inside a Rule, so it is not here either.
+        /// The scenarios in the order they are written, a Rule's Scenarios and Scenario Outlines in its
+        /// place.
         public let scenarios: [Scenario]
     }
 
     public struct Scenario: Equatable, Sendable {
         public let title: String
         public let description: String
-        /// The feature's tags, then the scenario's. For a Scenario Outline, each of its ``examples``
-        /// also has its own Examples block's tags.
+        /// The feature's tags, then its Rule's, then the scenario's. For a Scenario Outline, each of its
+        /// ``examples`` also has its own Examples block's tags.
         public let tags: [String]
         public let line: Int
         public let column: Int
-        /// The Background's steps, then the scenario's. Empty for a Scenario Outline: each of its
-        /// ``examples`` has its own.
+        /// The feature's Background steps, then its Rule's, then the scenario's. Empty for a Scenario
+        /// Outline: each of its ``examples`` has its own.
         public let steps: [Step]
         /// A Scenario Outline's examples, one for each row of its Examples tables. `nil` for a Scenario.
         public let examples: [Example]?
@@ -67,13 +67,13 @@ extension FeatureFile {
         /// The outline's title with the row's values, as CucumberSwift names the scenario. Unique
         /// within the outline.
         public let title: String
-        /// The feature's and the outline's tags, then those of the row's own Examples block.
+        /// The feature's, the Rule's and the outline's tags, then those of the row's own Examples block.
         public let tags: [String]
         /// The row's line.
         public let line: Int
         public let column: Int
-        /// The Background's steps, then the outline's, with the row's values in place of the
-        /// `<placeholders>`.
+        /// The feature's and the Rule's Background steps, then the outline's, with the row's values in
+        /// place of the `<placeholders>`.
         public let steps: [Step]
     }
 
@@ -143,23 +143,23 @@ extension FeatureFile.Feature {
         let featureTags = header.tags
         scenarios = node.scenarioContents(featureTags: featureTags, uri: uri).map { content in
             switch content {
-                case let .scenario(scenarioNode, backgroundStepNodes):
+                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes):
                     let scenarioHeader = NodeHeader(scenarioNode.tokens)
                     let stepNodes = backgroundStepNodes + scenarioNode.children.compactMap { $0 as? AST.StepNode }
                     return FeatureFile.Scenario(
                         title: scenarioHeader.title,
                         description: scenarioHeader.description,
-                        tags: featureTags + scenarioHeader.tags,
+                        tags: inheritedTags + scenarioHeader.tags,
                         position: scenarioNode.tokens.first?.position ?? .start,
                         steps: .init(stepNodes),
                         examples: nil)
-                case let .outline(outlineNode, examples):
+                case let .outline(outlineNode, inheritedTags, examples):
                     let outlineStepNodes = outlineNode.children.compactMap { $0 as? AST.StepNode }
                     let description = ScenarioOutlineParser.extractOutlineDescription(outlineNode, stepNodes: outlineStepNodes)
                     return FeatureFile.Scenario(
                         title: outlineTitle(outlineNode),
                         description: description,
-                        tags: ScenarioOutlineParser.tags(of: outlineNode, featureTags: featureTags),
+                        tags: ScenarioOutlineParser.tags(of: outlineNode, featureTags: inheritedTags),
                         position: outlineNode.tokens.first?.position ?? .start,
                         steps: [],
                         examples: examples.map(FeatureFile.Example.init))
@@ -249,22 +249,24 @@ extension FeatureFile {
 extension FeatureFile.Step {
     /// The step definition CucumberSwift suggests for this step when no step definition matches it,
     /// with a Cucumber Expression. `failure` is its last line, which fails the step until it is filled in.
-    public func suggestedStepDefinition(failure: String) -> String {
-        suggestedStepDefinition(failure: failure, style: .cucumberExpression)
+    /// With `macro`, it is a step definition macro, such as `#Given("I have {int} cukes") { (int: Int) in`.
+    public func suggestedStepDefinition(failure: String, macro: Bool = false) -> String {
+        suggestedStepDefinition(failure: failure, style: .cucumberExpression, macro: macro)
     }
 
     /// The same step definition with a regex literal, written `#/…/#`, or `/…/` with `bareSlash`.
-    public func suggestedRegexLiteralStepDefinition(failure: String, bareSlash: Bool) -> String {
-        suggestedStepDefinition(failure: failure, style: .regexLiteral(bareSlash ? .bareSlash : .extendedDelimiter))
+    public func suggestedRegexLiteralStepDefinition(failure: String, bareSlash: Bool, macro: Bool = false) -> String {
+        suggestedStepDefinition(failure: failure, style: .regexLiteral(bareSlash ? .bareSlash : .extendedDelimiter), macro: macro)
     }
 
-    private func suggestedStepDefinition(failure: String, style: StubGenerator.Style) -> String {
+    private func suggestedStepDefinition(failure: String, style: StubGenerator.Style, macro: Bool) -> String {
         let keyword = keywords.reduce(into: Step.Keyword()) { $0.insert(Step.Keyword($1)) }
         return StubGenerator.method(for: text,
                                     keyword: keyword,
                                     hasDataTable: dataTable != nil,
                                     hasDocString: docString != nil,
-                                    style: style)
+                                    style: style,
+                                    macro: macro)
             .generateSwift(failure: failure)
     }
 }

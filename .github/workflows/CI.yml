@@ -79,13 +79,13 @@ env:
   # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (556 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 645
+  # run today (567 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 656
   # The fewest Swift Testing tests the root package's `swift test` may run, in
   # SwiftPM tests. A test process that ends early still exits 0 (#442), so that
   # step fails below this. It is what the step's Swift 6.1 runs today, 11 fewer
   # than Swift 6.2 compiles: raise it when you add tests.
-  MIN_SWIFT_TESTING_TESTS: 115
+  MIN_SWIFT_TESTING_TESTS: 122
 
 # Job names are the check names that pull requests and rulesets show: short, in
 # sentence case, "<what> tests" for a job that runs tests. A variant that runs
@@ -352,22 +352,23 @@ jobs:
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
 
-  # The pre-commit hook runs actionlint too, but a commit can skip it. The versions
-  # are the ones .mise.lint.toml pins. Each download is checked against the digest
-  # GitHub publishes for it, as mise does.
+  # The pre-commit hook runs actionlint and SwiftLint too, but a commit can skip it,
+  # and it only reports SwiftLint's problems on the lines a commit changes. The
+  # versions are the ones .mise.lint.toml pins. Each download is checked against the
+  # digest GitHub publishes for it, as mise does.
   workflow_checks:
     name: Workflow checks
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Download the pinned actionlint and ShellCheck
+      - name: Download the pinned actionlint, ShellCheck and SwiftLint
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -377,20 +378,58 @@ jobs:
             gh release download "$2" --repo "$1" --pattern "$3" --dir "$RUNNER_TEMP"
             digest=$(gh api "repos/$1/releases/tags/$2" --jq ".assets[] | select(.name == \"$3\") | .digest")
             echo "${digest#sha256:}  $RUNNER_TEMP/$3" | sha256sum --check
-            tar -xf "$RUNNER_TEMP/$3" -C "$RUNNER_TEMP/bin"
+            case "$3" in
+              *.zip) unzip -q "$RUNNER_TEMP/$3" -d "$RUNNER_TEMP/unzipped" ;;
+              *) tar -xf "$RUNNER_TEMP/$3" -C "$RUNNER_TEMP/bin" ;;
+            esac
           }
           mkdir "$RUNNER_TEMP/bin"
           actionlint=$(pinned rhysd/actionlint)
           shellcheck=$(pinned koalaman/shellcheck)
+          swiftlint=$(pinned realm/SwiftLint)
           download rhysd/actionlint "v$actionlint" "actionlint_${actionlint}_linux_amd64.tar.gz"
           download koalaman/shellcheck "v$shellcheck" "shellcheck-v$shellcheck.linux.x86_64.tar.xz"
+          download realm/SwiftLint "$swiftlint" swiftlint_linux_amd64.zip
           mv "$RUNNER_TEMP/bin/shellcheck-v$shellcheck/shellcheck" "$RUNNER_TEMP/bin/"
+          find "$RUNNER_TEMP/unzipped" -type f -name swiftlint -exec mv {} "$RUNNER_TEMP/bin/" \;
+          chmod +x "$RUNNER_TEMP/bin/swiftlint"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Check the workflows
         run: |
           actionlint --version
           shellcheck --version
           actionlint
+      # The Xcode build's Lint phase runs SwiftLint only where it is installed, and CI's
+      # macOS images don't have it, so this is the check that holds every Swift file to
+      # .swiftlint.yml. Errors fail it and warnings don't, as in the Xcode build and the
+      # pre-commit hook. It must check what macOS checks, so it fails rather than check less:
+      #   - a type body longer than .swiftlint.yml allows must fail first;
+      #   - SwiftLint skips the rules that need SourceKit where it can't load SourceKit,
+      #     which comes with the image's Swift, so a skipped rule fails the step.
+      - name: Lint the Swift code
+        run: |
+          swiftlint version
+          canary=Tests/LintCanary/Canary.swift
+          mkdir -p "$(dirname "$canary")"
+          { echo "struct Canary {"; seq 1 400 | sed 's/.*/    let value& = &/'; echo "}"; } > "$canary"
+          # SwiftLint exits 2 on the canary's error, so its status says nothing here.
+          report=$(swiftlint lint --quiet --config .swiftlint.yml "$canary" || true)
+          if grep -q '(type_body_length)' <<<"$report"; then
+            echo "SwiftLint reports the canary's type body length."
+          else
+            echo "::error::SwiftLint didn't report the canary's type body length, so it isn't running its rules."
+            exit 1
+          fi
+          rm -r Tests/LintCanary
+          status=0
+          swiftlint lint --quiet --config .swiftlint.yml --reporter github-actions-logging \
+            2> "$RUNNER_TEMP/swiftlint.log" || status=$?
+          cat "$RUNNER_TEMP/swiftlint.log" >&2
+          if grep -q 'Skipping enabled rule' "$RUNNER_TEMP/swiftlint.log"; then
+            echo "::error::SwiftLint skipped rules that need SourceKit, so it didn't check what the Xcode build checks."
+            exit 1
+          fi
+          exit "$status"
 
   # Carthage builds CucumberSwift from the committed Xcode project and its shared
   # CucumberSwift scheme, with no chance to run a generator first. Nothing else in

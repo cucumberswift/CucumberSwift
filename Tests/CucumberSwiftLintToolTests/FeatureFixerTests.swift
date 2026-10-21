@@ -188,6 +188,30 @@ final class FeatureFixerTests: LintTestCase {
 
     // MARK: What is left alone
 
+    // Tags above a Rule, and a Scenario Outline inside it, are left as they are (#468).
+    func testATaggedRuleWithAnOutlineIsLeftAlone() throws {
+        let feature = """
+        @feature
+        Feature: F
+          @rule
+          Rule: R
+            Background:
+              Given a background step
+
+            @outline
+            Scenario Outline: Eat <n> cukes
+              Given I have <n> cukes
+
+              @small
+              Examples:
+                | n |
+                | 3 |
+        """
+        let result = try fix(feature)
+        XCTAssertEqual(result.changes, [])
+        XCTAssertEqual(result.text, feature)
+    }
+
     func testAFileWithNothingToFixIsNotWritten() throws {
         let file = directory.appendingPathComponent("Test.feature")
         // A byte order mark, Windows line endings, and warnings that have no fix.

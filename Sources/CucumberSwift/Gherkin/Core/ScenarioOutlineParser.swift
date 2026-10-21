@@ -114,7 +114,8 @@ enum ScenarioOutlineParser {
             .flatMap { parseExample($0, of: outline, usedTitles: &usedTitles) }
     }
 
-    /// The feature's tags, then the outline's. Each example also has its own Examples block's tags.
+    /// The feature's tags (and its Rule's, for an outline in a Rule), then the outline's. Each example
+    /// also has its own Examples block's tags.
     static func tags(of scenarioOutlineNode: AST.ScenarioOutlineNode, featureTags: [String]) -> [String] {
         // The parser puts a node's tags before its other tokens, and an Examples block's later on.
         var tags = featureTags

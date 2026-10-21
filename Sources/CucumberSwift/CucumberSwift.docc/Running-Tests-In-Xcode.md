@@ -287,7 +287,7 @@ When I sign in as the admin user
 
 <!-- swift-example: steps -->
 ```swift
-When("I sign in as the admin user") { _, _ in
+#When("I sign in as the admin user") {
     let password = ProcessInfo.processInfo.environment["ADMIN_PASSWORD"] ?? ""
     // Sign in with the password
 }
@@ -295,7 +295,7 @@ When("I sign in as the admin user") { _, _ in
 
 Shared schemes and test plans are usually committed, so a secret set in one ends up in your repository too. A configuration file that isn't committed, or the Keychain, works as well.
 
-### Choose scenarios with a test plan
+### Run specific scenarios using a test plan
 
 To run some scenarios rather than all of them, tag them in your feature files:
 
@@ -325,7 +325,7 @@ xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 1
 
 Use a test plan for each set of tags rather than a configuration for each in one test plan. A test plan runs all of its configurations, and Xcode's test navigator shows a scenario as not run unless it ran in every one of them.
 
-A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular expression, without regard to case, so `Smoke` also matches `@SmokeTest`. Don't put spaces around the commas: they would be part of the expression. A feature tag applies to every scenario in the feature.
+A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular expression, without regard to case, so `Smoke` also matches `@SmokeTest`. Don't put spaces around the commas: they would be part of the expression. A feature tag applies to every scenario in the feature, and a Rule's tag to every scenario and Scenario Outline example in the Rule.
 
 ### Run one scenario
 
@@ -347,7 +347,7 @@ To skip a scenario, for example when a service it needs is unavailable, throw `X
 
 <!-- swift-example: steps -->
 ```swift
-Given("the card terminal is offline") { _, _ in
+#Given("the card terminal is offline") {
     throw XCTSkip("The card terminal is offline")
 }
 ```

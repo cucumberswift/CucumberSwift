@@ -27,9 +27,9 @@ public class Feature: Taggable, Positionable {
         tags = header.tags
         for content in node.scenarioContents(featureTags: tags, uri: uri) {
             switch content {
-                case let .scenario(scenarioNode, backgroundStepNodes):
-                    scenarios.append(Scenario(with: scenarioNode, tags: tags, stepNodes: backgroundStepNodes))
-                case let .outline(_, examples):
+                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes):
+                    scenarios.append(Scenario(with: scenarioNode, tags: inheritedTags, stepNodes: backgroundStepNodes))
+                case let .outline(_, _, examples):
                     scenarios.append(contentsOf: examples.map { Scenario(example: $0) })
             }
         }

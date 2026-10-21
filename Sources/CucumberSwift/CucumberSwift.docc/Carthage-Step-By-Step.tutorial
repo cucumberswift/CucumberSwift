@@ -126,6 +126,8 @@
 
                 See <doc:Matching-Steps> for every way to match a step.
 
+                > Note: A Carthage install writes step definitions as functions, as here, because Carthage builds CucumberSwift from its Xcode project, which can't deliver the step definition macros. The macros are the recommended style where you can use them: see <doc:SPM-Step-By-Step> and <doc:Using-Step-Definition-Macros>.
+
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
             }
 

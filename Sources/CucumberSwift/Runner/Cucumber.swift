@@ -37,7 +37,7 @@ import XCTest
     let parallelWorkerObserver = ParallelWorkerObserver()
     /// The test XCTest is running, so a failure can be recorded on it with a location of our choosing.
     var runningTestCase: XCTestCase? { runningTestCaseObserver.testCase }
-    var reportName: String = "CucumberTestResultsFor"
+    var reportName: String = TestBundleFiles.resultsName
     var environment: [String: String] = ProcessInfo.processInfo.environment
 
     private var reverseOrderForAfterHooks: Bool {
@@ -146,31 +146,11 @@ import XCTest
     }
 
     func readFromFeaturesFolder(in testBundle: Bundle) {
-        let featuresURL = { () -> URL in
-            if let relativePath = (testBundle.infoDictionary?["FeaturesPath"] as? String) {
-                return testBundle.bundleURL.appendingPathComponent(relativePath)
-            } else if let featuresPath = testBundle.url(forResource: "Features", withExtension: nil) {
-                return featuresPath
-            } else {
-                return testBundle.bundleURL.appendingPathComponent("Features")
-            }
-        }()
-        featureFiles(at: featuresURL).forEach { url in
+        TestBundleFiles.featureFiles(at: TestBundleFiles.featuresFolder(in: testBundle)).forEach { url in
             if let string = try? String(contentsOf: url, encoding: .utf8) {
                 Cucumber.shared.parseIntoFeatures(string, uri: url.absoluteString)
             }
         }
-    }
-
-    private func featureFiles(at featuresURL: URL) -> [URL] {
-        let enumerator: FileManager.DirectoryEnumerator? = FileManager.default.enumerator(at: featuresURL, includingPropertiesForKeys: nil)
-        var fileList = [URL]()
-        while let url = enumerator?.nextObject() as? URL {
-            if url.pathExtension == "feature" {
-                fileList.append(url)
-            }
-        }
-        return fileList.sorted { $0.absoluteString < $1.absoluteString }
     }
 
     func setupBeforeHooksFor(_ step: Step) {

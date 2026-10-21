@@ -55,6 +55,9 @@ enum SwiftTestingSource {
         private let cucumberParallelTesting = false
         #endif
 
+        /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
+        private final class CucumberFeaturesBundle {}
+
 
         """
 
@@ -164,6 +167,7 @@ enum SwiftTestingSource {
             + pad + "    title: \(literal(parts.title)),\n"
             + pad + "    tags: \(array(parts.tags)),\n"
             + pad + "    file: \(literal(path)),\n"
+            + pad + "    testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),\n"
             + pad + "    line: \(parts.line),\n"
             + pad + "    column: \(parts.column),\n"
             + pad + "    steps: [\n"
@@ -194,6 +198,12 @@ enum SwiftTestingSource {
         // For `Cucumber.generateRegexLiterals`, which the runner reads when a step is undefined.
         arguments.append("regexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: false)))")
         arguments.append("bareSlashRegexLiteralSuggestion: \(literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: true)))")
+        // For `Cucumber.generateMacros`.
+        arguments.append("macroSuggestion: \(literal(step.suggestedStepDefinition(failure: failure, macro: true)))")
+        arguments.append("regexLiteralMacroSuggestion: "
+                         + literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: false, macro: true)))
+        arguments.append("bareSlashRegexLiteralMacroSuggestion: "
+                         + literal(step.suggestedRegexLiteralStepDefinition(failure: failure, bareSlash: true, macro: true)))
         return "CucumberSwiftTesting.GherkinStep(\n"
             + arguments.map { pad + "    " + $0 }.joined(separator: ",\n")
             + ")"

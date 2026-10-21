@@ -1,7 +1,7 @@
 @testable import CucumberSwiftTesting
 import Foundation
-import JSONSchema
 import Testing
+import XCTest
 
 struct Broken: Error, CustomStringConvertible { var description: String { "the card was declined" } }
 
@@ -23,7 +23,11 @@ final class RecordingObserver: CucumberTestObserver {
 
     func testSuiteStarted(at _: Date) { log.append("suite started") }
     func testSuiteFinished(at _: Date) { log.append("suite finished") }
-    func didStart(feature: Feature, at _: Date) { log.append("feature started \(feature.title)") }
+    var onFeature: (Feature) -> Void = { _ in }
+    func didStart(feature: Feature, at _: Date) {
+        onFeature(feature)
+        log.append("feature started \(feature.title)")
+    }
     func didStart(scenario: Scenario, at _: Date) { log.append("scenario started \(scenario.title)") }
     func didStart(step: Step, at _: Date) { log.append("step started \(step.keywordName) \(step.match)") }
     func didFinish(feature: Feature, result: Reporter.Result, duration _: Measurement<UnitDuration>) {
@@ -51,12 +55,6 @@ extension CucumberTests {
     func readReport(_ url: URL) throws -> [[String: Any]] {
         let data = try Data(contentsOf: url)
         return try #require(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
-    }
-
-    /// The report's text with each duration replaced by 0, which differs from one run to the next.
-    func withoutDurations(_ data: Data) throws -> String {
-        let text = try #require(String(data: data, encoding: .utf8))
-        return text.replacingOccurrences(of: #""duration" : [0-9.e+-]+"#, with: #""duration" : 0"#, options: .regularExpression)
     }
 
     @Test func observersSeeTheSuiteTheFeatureTheScenarioAndEachStepInOrder() async {
@@ -213,8 +211,9 @@ extension CucumberTests {
         #expect(CucumberSettings.reportPath(environment: [:]) == "/tmp/static.json")
     }
 
-    /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them.
-    func parityScenarios() -> [GherkinScenario] {
+    /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them,
+    /// with their test bundle when given.
+    func parityScenarios(in testBundle: URL? = nil) -> [GherkinScenario] {
         func step(_ keyword: Step.Keyword, _ name: String, _ text: String, line: Int) -> GherkinStep {
             GherkinStep(keyword: keyword, keywordName: name, text: text, line: line, column: 5, suggestion: "")
         }
@@ -227,6 +226,7 @@ extension CucumberTests {
                 title: title,
                 tags: tags,
                 file: "/Features/Checkout.feature",
+                testBundle: testBundle,
                 line: line,
                 column: 3,
                 steps: steps)
@@ -236,49 +236,18 @@ extension CucumberTests {
         return [
             scenario("Pay by card", tags: ["shop", "fast"], line: 8, [basket, step(.when, "When", "I pay by card", line: 10), paid(11)]),
             scenario("Pay 5 (example 1)", tags: ["shop"], line: 19, [basket, step(.when, "When", "I pay 5", line: 14), paid(15)]),
-            scenario("Pay 10 (example 2)", tags: ["shop"], line: 20, [basket, step(.when, "When", "I pay 10", line: 14), paid(15)])
+            scenario("Pay 10 (example 2)", tags: ["shop"], line: 20, [basket, step(.when, "When", "I pay 10", line: 14), paid(15)]),
+            scenario("Pay by voucher", tags: ["shop"], line: 22, [basket, step(.when, "When", "I pay by voucher", line: 23), paid(24)])
         ]
     }
 
-    private func registerParityStepDefinitions() {
+    func registerParityStepDefinitions() {
         Given("a basket") { _, _ in }
         When("I pay by card") { _, _ in }
         When("I pay {int}") { _, _ in }
         Then("the order is paid") { _, _ in }
-    }
-
-    private func directoryOfCucumberSwiftTests(file: String = #filePath) -> URL {
-        URL(fileURLWithPath: file)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("CucumberSwiftTests/Reporter")
-    }
-
-    @Test func theReportIsTheOneCucumberSwiftWritesForTheSameFeatureFile() async throws {
-        let url = reportURL()
-        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        Cucumber.reportPath = url.path
-        let reporter = try #require(CucumberJSONReporter())
-        Cucumber.shared.reporters = [reporter]
-        registerParityStepDefinitions()
-
-        // In an order of their own: Swift Testing doesn't promise the order of the tests in a suite.
-        let scenarios = parityScenarios()
-        Cucumber.shared.beginSuite()
-        for scenario in [scenarios[2], scenarios[0], scenarios[1]] {
-            await Cucumber.shared.run(scenario)
-        }
-        await Cucumber.shared.endFeature(file: "/Features/Checkout.feature", title: "Checkout", line: 1)
-        await Cucumber.shared.endSuite()
-
-        let written = try Data(contentsOf: url)
-        let expected = try Data(contentsOf: directoryOfCucumberSwiftTests().appendingPathComponent("ParityReport.json"))
-        #expect(try withoutDurations(written) == withoutDurations(expected))
-
-        let schemaData = try Data(contentsOf: directoryOfCucumberSwiftTests().appendingPathComponent("Schema.json"))
-        let schema = try #require(JSONSerialization.jsonObject(with: schemaData) as? [String: Any])
-        let result = try JSONSchema.validate(JSONSerialization.jsonObject(with: written), schema: schema)
-        #expect(result.errors?.count ?? 0 == 0, "\(String(describing: result.errors))")
+        // Skips the rest of its scenario, as with CucumberSwift (#470).
+        When("I pay by voucher") { _, _ in throw XCTSkip("The voucher service is down") }
     }
 
     /// The report is sorted and rewritten whole each time, so it is written where a scenario finishes, not for

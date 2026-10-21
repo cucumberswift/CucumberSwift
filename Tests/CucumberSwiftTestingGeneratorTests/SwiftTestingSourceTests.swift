@@ -42,6 +42,9 @@ final class SwiftTestingSourceTests: XCTestCase {
     private let cucumberParallelTesting = false
     #endif
 
+    /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
+    private final class CucumberFeaturesBundle {}
+
     private func cucumberGherkinProblems() {
     }
 
@@ -53,6 +56,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         title: "Eat an apple",
         tags: ["fruit"],
         file: "/Features/Test.feature",
+        testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),
         line: 3,
         column: 3,
         steps: [
@@ -65,7 +69,10 @@ final class SwiftTestingSourceTests: XCTestCase {
                 column: 5,
                 suggestion: "Given(\"an apple\") { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
                 regexLiteralSuggestion: "Given(#/^an apple$/#) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
-                bareSlashRegexLiteralSuggestion: "Given(/^an apple$/) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
+                bareSlashRegexLiteralSuggestion: "Given(/^an apple$/) { _, _ in\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                macroSuggestion: "#Given(\"an apple\") {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                regexLiteralMacroSuggestion: "#Given(#/^an apple$/#) {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}",
+                bareSlashRegexLiteralMacroSuggestion: "#Given(/^an apple$/) {\n    Issue.record(\"Step not implemented: replace this line with your test code\")\n}")
         ])
 
     """#
@@ -109,6 +116,37 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(#"dataTable: [["left"], ["15"]],"#), source)
         XCTAssertTrue(source.contains("line: 9,"), source)
         XCTAssertTrue(source.contains("line: 10,"), source)
+    }
+
+    // A Rule's Scenario Outline is a parameterized test like any other, and its examples have the
+    // feature's tags, then the Rule's, then their own (#468).
+    func testARulesScenarioOutlineIsATestWithTheRulesTags() {
+        let source = generate("""
+        @feature
+        Feature: Cukes
+          Background:
+            Given a feature background
+
+          @rule
+          Rule: R
+            Background:
+              Given a rule background
+
+            @outline
+            Scenario Outline: Eat <eaten>
+              When I eat <eaten> cukes
+
+              Examples:
+                | eaten |
+                | 5     |
+                | 6     |
+        """)
+        XCTAssertTrue(source.contains(#"@Test("Eat <eaten>", .serialized, arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(cucumberExamples1))"#), source)
+        XCTAssertEqual(source.components(separatedBy: "CucumberSwiftTesting.GherkinExample(\n").count - 1, 2)
+        XCTAssertEqual(source.components(separatedBy: #"tags: ["feature", "rule", "outline"],"#).count - 1, 2, source)
+        XCTAssertTrue(source.contains(#"text: "a feature background","#), source)
+        XCTAssertTrue(source.contains(#"text: "a rule background","#), source)
+        XCTAssertTrue(source.contains(#"text: "I eat 6 cukes","#), source)
     }
 
     func testEditingAFeatureFileMovesNoTest() {
