@@ -29,25 +29,25 @@ struct DSLStep {
 // function says to write the macro instead.
 extension StepDSL {
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(_ handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(_: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(I handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(I _: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(it handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(it _: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(my handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(my _: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(some handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(some _: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(a handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(a _: Handler) { fatalError("unavailable") }
 
     @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(the handler: Handler) { fatalError("unavailable") }
+    public convenience init<Handler>(the _: Handler) { fatalError("unavailable") }
 }
 
 // What the DSL step macros, such as `#Given(I: logIn())`, expand to: the step's text, line, column and file
