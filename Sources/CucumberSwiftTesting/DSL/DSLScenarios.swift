@@ -49,7 +49,8 @@ extension Cucumber {
                                           steps: DSLStep.gherkinSteps(scenario.dslSteps))
             let id = dsl.scenarios.count
             gherkin.dslID = id
-            let position = "\(URL(fileURLWithPath: gherkin.file).lastPathComponent):\(gherkin.line):\(gherkin.column)"
+            // The file's whole path, so that two files with the same name in different folders are told apart.
+            let position = "\(gherkin.file):\(gherkin.line):\(gherkin.column)"
             let examplesBefore = dsl.scenarios.filter { $0.dslIdentity?.hasPrefix(position + "#") ?? false }.count
             gherkin.dslIdentity = "\(position)#\(examplesBefore)"
             dsl.scenarios.append(gherkin)

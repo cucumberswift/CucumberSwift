@@ -354,6 +354,33 @@ extension CucumberTests {
         #expect(uris == [#filePath])
     }
 
+    @Test func scenariosAtTheSamePlaceInSameNamedFilesKeepTheirOwnIdentities() throws {
+        resetNames()
+        func identities() throws -> [String: String] {
+            Dictionary(uniqueKeysWithValues: try Cucumber.shared.dslCasesToRun().map { testCase in
+                (testCase.testDescription, String(bytes: try JSONEncoder().encode(EncodedCase(testCase)), encoding: .utf8) ?? "")
+            })
+        }
+        func declare(_ title: String, in file: StaticString) {
+            Feature(title, file: file) {
+                Scenario("S", line: 5, column: 9) {
+                    Given(_macroStep: (), stepText: "I: start()", line: 6, column: 18, file: file)
+                }
+            }
+        }
+        declare("A", in: "/Tests/A/Steps.swift")
+        let alone = try identities()
+        Cucumber.shared.dsl = DSLFeatures()
+        // A same-named file at the same line and column, declared first, doesn't change A's identity.
+        declare("B", in: "/Tests/B/Steps.swift")
+        declare("A", in: "/Tests/A/Steps.swift")
+        let both = try identities()
+        let caseOfA = "A › S › 1 › Given I: start()"
+        #expect(alone[caseOfA] != nil)
+        #expect(both[caseOfA] == alone[caseOfA])
+        #expect(both["B › S › 1 › Given I: start()"] != both[caseOfA])
+    }
+
     @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
         Feature("F") {
             Scenario("S") {
