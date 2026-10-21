@@ -23,7 +23,14 @@ bazel_dep(name = "cucumberswift", version = "6.7.0")
 git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.7.0")
 ```
 
-Change the version and the tag together. A `git_override` applies only in the root module, your project's `MODULE.bazel`.
+Change the version and the tag together. If the release needs a CucumberSwiftExpressions version that isn't in the registry either, add `cucumberswift_expressions` the same way, at the version CucumberSwift's `MODULE.bazel` names:
+
+```starlark
+bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
+git_override(module_name = "cucumberswift_expressions", remote = "https://github.com/cucumberswift/CucumberSwiftExpressions.git", tag = "1.4.2")
+```
+
+A `git_override` applies only in the root module, your project's `MODULE.bazel`.
 
 Your tests also need `rules_apple` and `rules_swift`. These are the versions CucumberSwift is tested with:
 
