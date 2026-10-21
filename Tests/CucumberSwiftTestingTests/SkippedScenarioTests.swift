@@ -30,7 +30,7 @@ extension CucumberTests {
 
     /// Runs each case, and returns why each was skipped, or `nil` for one that wasn't. Swift 6.3 skips a case
     /// by cancelling it, which throws; before it nothing can, and no case throws.
-    private func skipReasons(of cases: [ScenarioCase]) async -> [String?] {
+    func skipReasons(of cases: [ScenarioCase]) async -> [String?] {
         var reasons = [String?]()
         for testCase in cases {
             do {
@@ -87,34 +87,42 @@ extension CucumberTests {
         ])
     }
 
-    @Test func eachCaseAfterAStepThatThrowsXCTSkipIsSkippedWithItsReason() async {
-        useOneTestPerScenario(false)
-        registerCheckout { throw XCTSkip("The card terminal is offline") }
+    @Test(.serialized, arguments: SkippingCase.allCases)
+    func eachCaseAfterAStepThatThrowsXCTSkipIsSkippedWithItsReason(_ testCase: SkippingCase) async throws {
+        let seen = try await inSkippingCase(testCase) {
+            useOneTestPerScenario(false)
+            registerCheckout { throw XCTSkip("The card terminal is offline") }
+            let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
+            return (ran: ran, reasons: reasons)
+        }
+        guard let seen else { return }
 
-        let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
-
-        #expect(ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
+        #expect(seen.ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
         #if compiler(>=6.3)
         // As CucumberSwift skips the tests: the step's with its reason, the later ones saying why.
-        #expect(reasons == [nil, "The card terminal is offline", "Skipped: The card terminal is offline"])
+        #expect(seen.reasons == [nil, "The card terminal is offline", "Skipped: The card terminal is offline"])
         #else
-        #expect(reasons == [nil, nil, nil])
+        #expect(seen.reasons == [nil, nil, nil])
         #endif
     }
 
-    @Test func aScenarioThatIsOneTestIsSkippedWhenAStepThrowsXCTSkip() async {
-        useOneTestPerScenario(true)
-        registerCheckout { throw XCTSkip("The card terminal is offline") }
+    @Test(.serialized, arguments: SkippingCase.allCases)
+    func aScenarioThatIsOneTestIsSkippedWhenAStepThrowsXCTSkip(_ testCase: SkippingCase) async throws {
+        let seen = try await inSkippingCase(testCase) {
+            useOneTestPerScenario(true)
+            registerCheckout { throw XCTSkip("The card terminal is offline") }
+            let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
+            useOneTestPerScenario(false)
+            return (ran: ran, reasons: reasons)
+        }
+        guard let seen else { return }
 
-        let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
-
-        #expect(ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
+        #expect(seen.ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
         #if compiler(>=6.3)
-        #expect(reasons == ["The card terminal is offline"])
+        #expect(seen.reasons == ["The card terminal is offline"])
         #else
-        #expect(reasons == [nil])
+        #expect(seen.reasons == [nil])
         #endif
-        useOneTestPerScenario(false)
     }
 
     #if compiler(>=6.2)
@@ -144,44 +152,52 @@ extension CucumberTests {
     /// `Test.cancel` cancels the test case's task. The hooks after it still run on the main actor, in order and
     /// once each, AfterStep before AfterScenario, and one that waits isn't cut short, as its timeout would be in
     /// a cancelled task. The scenario ends only once they have.
-    @Test func aStepThatCallsTestCancelSkipsTheRestOfItsScenarioAndTheAfterHooksStillRun() async {
-        useOneTestPerScenario(true)
-        let observer = RecordingObserver()
-        Cucumber.shared.reporters = [observer]
-        registerCheckout { try Test.cancel("The card terminal is offline") }
-        AfterStep { [self] step in
-            try await Task.sleep(nanoseconds: 1_000_000)
-            MainActor.assertIsolated()
-            ran.append("after waiting \(step.match)")
+    @Test(.serialized, arguments: SkippingCase.allCases)
+    func aStepThatCallsTestCancelSkipsTheRestOfItsScenarioAndTheAfterHooksStillRun(_ testCase: SkippingCase) async throws {
+        let seen = try await inSkippingCase(testCase) {
+            useOneTestPerScenario(true)
+            let observer = RecordingObserver()
+            Cucumber.shared.reporters = [observer]
+            registerCheckout { try Test.cancel("The card terminal is offline") }
+            AfterStep { [self] step in
+                try await Task.sleep(nanoseconds: 1_000_000)
+                MainActor.assertIsolated()
+                ran.append("after waiting \(step.match)")
+            }
+            AfterScenario { [self] _ in
+                try await Task.sleep(nanoseconds: 1_000_000)
+                MainActor.assertIsolated()
+                ran.append("after waiting")
+            }
+            let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
+            useOneTestPerScenario(false)
+            return (ran: ran, reasons: reasons, log: observer.log)
         }
-        AfterScenario { [self] _ in
-            try await Task.sleep(nanoseconds: 1_000_000)
-            MainActor.assertIsolated()
-            ran.append("after waiting")
-        }
+        guard let seen else { return }
 
-        let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
-
-        #expect(ran == [
+        #expect(seen.ran == [
             "basket", "after a basket", "after waiting a basket",
             "card", "after I pay by card", "after waiting I pay by card",
             "after scenario", "after waiting"
         ])
-        #expect(observer.log.last == "scenario passed S")
-        #expect(reasons == ["The card terminal is offline"])
-        #expect(observer.log.contains("step skipped"))
-        #expect(observer.log.contains("scenario passed S"))
-        useOneTestPerScenario(false)
+        #expect(seen.log.last == "scenario passed S")
+        #expect(seen.reasons == ["The card terminal is offline"])
+        #expect(seen.log.contains("step skipped"))
+        #expect(seen.log.contains("scenario passed S"))
     }
 
-    @Test func eachCaseAfterAStepThatCallsTestCancelIsSkippedWithItsReason() async {
-        useOneTestPerScenario(false)
-        registerCheckout { try Test.cancel("The card terminal is offline") }
+    @Test(.serialized, arguments: SkippingCase.allCases)
+    func eachCaseAfterAStepThatCallsTestCancelIsSkippedWithItsReason(_ testCase: SkippingCase) async throws {
+        let seen = try await inSkippingCase(testCase) {
+            useOneTestPerScenario(false)
+            registerCheckout { try Test.cancel("The card terminal is offline") }
+            let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
+            return (ran: ran, reasons: reasons)
+        }
+        guard let seen else { return }
 
-        let reasons = await skipReasons(of: Cucumber.shared.casesToRun(checkout))
-
-        #expect(ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
-        #expect(reasons == [nil, "The card terminal is offline", "Skipped: The card terminal is offline"])
+        #expect(seen.ran == ["basket", "after a basket", "card", "after I pay by card", "after scenario"])
+        #expect(seen.reasons == [nil, "The card terminal is offline", "Skipped: The card terminal is offline"])
     }
     #endif
 }
