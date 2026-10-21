@@ -332,8 +332,13 @@ extension CucumberTests {
         try #require(cases.count == 2)
         await withTaskGroup(of: Void.self) { group in
             group.addTask { try? await Cucumber.shared.run(cases[0]) }
-            // The quick scenario starts only once the slow one is running, so it can only wait for it.
-            while !slowStarted { await Task.yield() }
+            // The quick scenario starts only once the slow one is running, so it can only wait for it. The wait is
+            // bounded, so that a slow scenario that never starts fails the test rather than hanging it.
+            let deadline = Date().addingTimeInterval(5)
+            while !slowStarted, Date() < deadline {
+                try? await Task.sleep(nanoseconds: 1_000_000)
+            }
+            #expect(slowStarted, "The slow scenario's step didn't start.")
             group.addTask { try? await Cucumber.shared.run(cases[1]) }
         }
         #expect(ran == ["slow", "quick"])
