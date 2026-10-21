@@ -404,8 +404,17 @@ A step with no step definition finishes `.failed`, with the message the runner r
 
 ## Write features in Swift
 
-Instead of a feature file, a feature can be written in Swift, with CucumberSwift's DSL: `Feature`, `Scenario`, `ScenarioOutline`, `Background`, `Rule` and `Description`, declared in `setupSteps()`. Write each step with a DSL step macro, such as `#Given(I: openTheShop())`: the compiler writes the step's text into the test, so it is the same wherever the tests run, on a device or from an archived test bundle as well as on your Mac.
+> Note: Prefer feature files whenever you can. Product owners, testers and developers can all read and write them, and the plugin reads them when the tests build. Use the DSL only where a feature is better written in code, as an imperative take on Gherkin.
 
+A feature can be written in Swift with CucumberSwift's DSL: `Feature`, `Scenario`, `ScenarioOutline`, `Background`, `Rule` and `Description`, declared in `setupSteps()`.
+
+Write it in one of two styles, and keep to one style in a test target. Mixing them works, but is harder to read.
+
+- The DSL macros, such as `#Feature`, `#Scenario` and `#Given(I: openTheShop())`, which need the Macros trait and `CucumberSwiftTestingMacros`. The compiler writes each step's text into the test, so it is the same wherever the tests run. Use them whenever you can.
+- The functions, such as `Feature`, `Scenario` and `Given(I: openTheShop())`, as in CucumberSwift. Each step's text is read from the Swift file when the tests run, so on a device, or from an archived test bundle, the steps have no text.
+
+@TabNavigator {
+@Tab("DSL macros") {
 ```swift
 import CucumberSwiftTestingMacros
 import Testing
@@ -416,11 +425,11 @@ func payAtTheTill() async throws {}
 
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
-        Feature("Checkout") {
-            Background {
+        #Feature("Checkout") {
+            #Background {
                 #Given(I: openTheShop())
             }
-            Scenario("Buy cukes") {
+            #Scenario("Buy cukes") {
                 #When(I: addCukes(2))
                 #Then(I: payAtTheTill)
                 #And(the: { #expect(Basket.shared.count == 2) })
@@ -429,12 +438,37 @@ extension Cucumber: @retroactive StepImplementation {
     }
 }
 ```
+}
+@Tab("DSL functions") {
+```swift
+import CucumberSwiftTesting
+import Testing
 
-A step takes a call, such as `addCukes(2)`, an async function, such as `payAtTheTill`, or a closure, and the label, `I:`, `it:`, `my:`, `some:`, `a:` or `the:`, is up to you. The step's text is the label and what follows it, as written, `I: addCukes(2)`, with each line break in a step written over several lines read as a space. Hooks, tags, `CUCUMBER_TAGS`, `shouldRunWith(scenario:tags:)`, the report and verbose output treat these scenarios as they treat a feature file's, and each feature ends after its last scenario. A step definition that matches a step's text runs instead of the step, as with CucumberSwift. `continueAfterFailure(false)` on a step, such as `#Then(the: check).continueAfterFailure(false)`, cancels an async step at its first failed expectation.
+func openTheShop() {}
+@MainActor func addCukes(_ count: Int) { Basket.shared.add(count) }
+func payAtTheTill() async throws {}
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        Feature("Checkout") {
+            Background {
+                Given(I: openTheShop())
+            }
+            Scenario("Buy cukes") {
+                When(I: addCukes(2))
+                Then(I: payAtTheTill)
+                And(the: { #expect(Basket.shared.count == 2) })
+            }
+        }
+    }
+}
+```
+}
+}
+
+A step takes a call, such as `addCukes(2)`, an async function, such as `payAtTheTill`, or a closure, and the label, `I:`, `it:`, `my:`, `some:`, `a:` or `the:`, is up to you. The step's text is the label and what follows it, as written, `I: addCukes(2)`. A macro reads each line break in a step written over several lines as a space. Hooks, tags, `CUCUMBER_TAGS`, `shouldRunWith(scenario:tags:)`, the report and verbose output treat these scenarios as they treat a feature file's, and each feature ends after its last scenario. A step definition that matches a step's text runs instead of the step, as with CucumberSwift. `continueAfterFailure(false)` on a step, such as `#Then(the: check).continueAfterFailure(false)`, cancels an async step at its first failed expectation.
 
 The plugin can't read these features when the tests build, so they run as one test of the generated suite, **Swift DSL features**, with a case for each step, or for each scenario with `Cucumber.oneTestPerScenario`, named after the feature, the scenario and the step: `Checkout › Buy cukes › 2 › When I: addCukes(2)`. The plugin adds that test when one of the test target's Swift files calls `Feature`; if `setupSteps()` writes features that the test doesn't run, such as features from another module, the run fails and says so. With parallel testing on, each scenario is one case, and scenarios run at the same time, as feature files' scenarios do, or one feature at a time with `Cucumber.parallelTestingUnit` set to `.feature`. A failure is reported in the Swift file, at the step's line, as CucumberSwift reports it.
-
-This runner has only the macros. CucumberSwift's step functions, such as `Given(I: openTheShop())`, read the step's text from the Swift file when the tests run, so on a device, or from an archived test bundle, their steps have no text. Here, calling one says to write the macro instead, and without the Macros trait the macros say to turn it on.
 
 ## Move unit tests to Swift Testing
 
@@ -448,7 +482,7 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 One scheme can test both targets. To move a unit test target:
 
 1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are, and so do features written in the Swift DSL, once their steps are macros. Declare `shouldRunWith(scenario:tags:)` if you filter scenarios in code: this runner asks only that one, so an older `shouldRunWith(tags:)` is ignored and every scenario runs.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are, and so do features written in the Swift DSL. Declare `shouldRunWith(scenario:tags:)` if you filter scenarios in code: this runner asks only that one, so an older `shouldRunWith(tags:)` is ignored and every scenario runs.
 3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once: a failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
 4. Check <doc:#Differences-from-the-XCTest-runner> and <doc:Settings#Settings-that-work-differently> for what differs.
 
