@@ -49,6 +49,9 @@ extension Cucumber {
                                           steps: DSLStep.gherkinSteps(scenario.dslSteps))
             let id = dsl.scenarios.count
             gherkin.dslID = id
+            let position = "\(URL(fileURLWithPath: gherkin.file).lastPathComponent):\(gherkin.line):\(gherkin.column)"
+            let examplesBefore = dsl.scenarios.filter { $0.dslIdentity?.hasPrefix(position + "#") ?? false }.count
+            gherkin.dslIdentity = "\(position)#\(examplesBefore)"
             dsl.scenarios.append(gherkin)
             dsl.steps[id] = scenario.dslSteps
         }
@@ -132,6 +135,7 @@ extension GherkinScenario {
                                        column: column,
                                        steps: steps)
         scenario.dslID = dslID
+        scenario.dslIdentity = dslIdentity
         return scenario
     }
 }

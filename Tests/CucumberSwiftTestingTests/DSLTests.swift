@@ -148,6 +148,10 @@ extension CucumberTests {
     @Test func aStepThatThrowsFailsAndTheScenarioStops() async throws {
         struct Failure: Error {}
         resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        // One case for the scenario: a case for each step would cancel this test at the step the failure skips.
+        Cucumber.shared.environment = ["CUCUMBER_ONE_TEST_PER_SCENARIO": "YES"]
         Feature("F") {
             Scenario("S") {
                 Given(_macroStep: { throw Failure() }, stepText: "I: fail()", line: 7, column: 9, file: "/B.swift")
@@ -161,6 +165,40 @@ extension CucumberTests {
             issue.sourceLocation?.fileName == "B.swift" && issue.sourceLocation?.line == 7 && issue.sourceLocation?.column == 9
         }
         #expect(ran.isEmpty)
+        // Reported as failed, with its error, and so is its scenario: the later step doesn't run at all.
+        #expect(observer.log == [
+            "feature started F", "scenario started S",
+            "step started Given I: fail()", "step failed: Failure()",
+            "scenario failed S", "feature failed F"
+        ])
+    }
+
+    @Test func aCaseKeepsItsIdentityWhenAScenarioIsDeclaredBeforeIt() throws {
+        resetNames()
+        func identities() throws -> [String: String] {
+            Dictionary(uniqueKeysWithValues: try Cucumber.shared.dslCasesToRun().map { testCase in
+                (testCase.testDescription, String(bytes: try JSONEncoder().encode(EncodedCase(testCase)), encoding: .utf8) ?? "")
+            })
+        }
+        Feature("F") {
+            Scenario("Kept", line: 20, column: 13) {
+                Given(_macroStep: (), stepText: "I: keep()", line: 21, column: 22, file: "/B.swift")
+            }
+        }
+        let before = try identities()
+        Cucumber.shared.dsl = DSLFeatures()
+        Feature("F") {
+            Scenario("Added", line: 10, column: 13) {
+                Given(_macroStep: (), stepText: "I: add()", line: 11, column: 22, file: "/B.swift")
+            }
+            Scenario("Kept", line: 20, column: 13) {
+                Given(_macroStep: (), stepText: "I: keep()", line: 21, column: 22, file: "/B.swift")
+            }
+        }
+        let after = try identities()
+        let kept = "F › Kept › 1 › Given I: keep()"
+        #expect(before[kept] != nil)
+        #expect(after[kept] == before[kept])
     }
 
     @Test func eachFeatureEndsAfterItsLastScenarioAndRulesAndDescriptionsAreItsOwn() async throws {

@@ -239,6 +239,8 @@ final class SwiftTestingSourceTests: XCTestCase {
 
     func testASwiftFileWritesDSLFeaturesWhenItCallsFeatureOrALocalizedType() {
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"Feature("Checkout") {"#))
+        XCTAssertTrue(SwiftTestingSource.writesDSLFeatures("Feature\n(\"Checkout\") {"))
+        XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"Feature.init("Checkout") {"#))
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures("CucumberSwiftTesting.Feature (\"A\") {"))
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"ES_Característica("Caja") {"#))
         XCTAssertTrue(SwiftTestingSource.writesDSLFeatures(#"EN_PIRATE_Ahoymatey("Arr") {"#))
