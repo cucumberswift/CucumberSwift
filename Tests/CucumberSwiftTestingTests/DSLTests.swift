@@ -50,6 +50,28 @@ extension CucumberTests {
         ])
     }
 
+    /// The step functions, without the macros: each step's text is read from this file when it runs, as
+    /// CucumberSwift reads it.
+    @Test func theStepFunctionsReadTheirTextFromTheSwiftFileAndRun() async throws {
+        resetNames()
+        func openTheShop() { ran.append("open") }
+        func payAtTheTill() async throws { ran.append("paid") }
+        Feature("F") {
+            Scenario("S") {
+                Given(I: openTheShop())
+                When(a:
+                    openTheShop())
+                Then(I: payAtTheTill)
+            }
+        }
+        let steps = Cucumber.shared.dsl.scenarios.first?.steps
+        #expect(steps?.map(\.text) == ["I: openTheShop()", "a:openTheShop()", "I: payAtTheTill"])
+        #expect(steps?.map(\.keyword) == [.given, .when, .then])
+        #expect(Cucumber.shared.dsl.scenarios.first?.file == #filePath)
+        try await runAll()
+        #expect(ran == ["open", "open", "paid"])
+    }
+
     @Test func theCasesAreNamedAfterTheFeatureTheScenarioAndTheStep() {
         resetNames()
         Feature("Basket", tags: ["basket"]) {

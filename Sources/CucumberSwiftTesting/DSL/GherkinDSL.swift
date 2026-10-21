@@ -2,9 +2,9 @@
 //  GherkinDSL.swift
 //  CucumberSwiftTesting
 //
-// The steps of a feature written in the Swift DSL, written with the DSL step macros, as with CucumberSwift:
+// The steps of a feature written in the Swift DSL, named and shaped as in CucumberSwift: the DSL step macros,
 // `#Given(I: logIn())`, `#When(I: signIn)` for an async function, or `#Then(the: { try await check() })` for a
-// closure. The macros expand to the `_macroStep` form.
+// closure, which expand to the `_macroStep` form, or the step functions, `Given(I: logIn())` and the rest.
 
 import Foundation
 
@@ -23,31 +23,114 @@ struct DSLStep {
     var continuesAfterFailure: Bool?
 }
 
-// This runner has the DSL step macros, such as `#Given(I: logIn())`, which capture each step's text when the
-// tests compile, and not CucumberSwift's step functions, such as `Given(I: logIn())`, which read it from the
-// Swift file when the tests run, and so find nothing on a device or from an archived test bundle. Calling a
-// function says to write the macro instead.
+// The step functions, as in CucumberSwift: the text is read from the Swift file when the tests run, from the
+// opening parenthesis of the call on, as CucumberSwift reads it: `I: logIn()`. That needs the file, so a step
+// has no text on a device or from an archived test bundle; the DSL step macros, such as `#Given(I: logIn())`,
+// capture it when the tests compile, so prefer them where the Macros trait is on.
 extension StepDSL {
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(_: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(_ handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(I _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(I handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(it _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(it handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(my _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(my handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(some _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(some handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(a _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(a handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
 
-    @available(*, unavailable, message: "Write the DSL step macro, such as #Given(I: logIn()), from CucumberSwiftTestingMacros: this runner has no step functions.")
-    public convenience init<Handler>(the _: Handler) { fatalError("unavailable") }
+    @discardableResult public convenience init(the handler: @escaping @autoclosure @MainActor () -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file) { handler() }
+    }
+}
+
+// Async steps take a closure or a function rather than an autoclosure, which cannot be async here:
+// `Given(I: signIn)` or `Given(I: { try await signIn(as: .testUser) })`. A closure runs on the main actor;
+// a function keeps its own isolation. The next step starts only once it has finished, and a thrown error
+// fails the step.
+extension StepDSL {
+    @discardableResult public convenience init(_ handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(I handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(it handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(my handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(some handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(a handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
+
+    @discardableResult public convenience init(the handler: @escaping @MainActor () async throws -> Void,
+                                               line: UInt = #line,
+                                               column: UInt = #column,
+                                               file: StaticString = #filePath) {
+        self.init(dslText: DSLStepText.read(line: line, column: column, file: file), line: line, column: column, file: file, body: handler)
+    }
 }
 
 // What the DSL step macros, such as `#Given(I: logIn())`, expand to: the step's text, line, column and file
