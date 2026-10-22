@@ -1,0 +1,1 @@
+../CucumberSwiftLintTool/LocalizedStepDefinitionNames.swift

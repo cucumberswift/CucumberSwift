@@ -116,12 +116,19 @@ lint:
         - Plugins/CucumberSwiftTestingPlugin/ExpandFolders.swift
         - Sources/CucumberSwift/CucumberSwift.docc/**
         - Sources/CucumberSwift/Generated/**
+        - Sources/CucumberSwiftLintTool/LocalizedDSLContainerNames.swift
         - Sources/CucumberSwiftLintTool/LocalizedStepDefinitionNames.swift
+        - Sources/CucumberSwiftMacrosPlugin/LocalizedStepDefinitionNames.swift
         - Sources/CucumberSwiftMacroConverterTool/LocalizedStepDefinitionNames.swift
         - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
+        - Sources/CucumberSwiftMacros/LocalizedDSLStepMacros.swift
         - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
+        - Sources/CucumberSwiftTesting/DSL/StepText.swift
         - Sources/CucumberSwiftTesting/LocalizedStepTypes.swift
+        - Sources/CucumberSwiftTestingMacros/DSLContainerMacros.swift
+        - Sources/CucumberSwiftTestingMacros/DSLStepMacros.swift
         - Sources/CucumberSwiftTestingMacros/HookMacros.swift
+        - Sources/CucumberSwiftTestingMacros/LocalizedDSLStepMacros.swift
         - Sources/CucumberSwiftTestingMacros/LocalizedStepDefinitionMacros.swift
         - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
 

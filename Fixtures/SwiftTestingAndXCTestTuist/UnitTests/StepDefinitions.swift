@@ -17,6 +17,7 @@ enum World {
 
 extension Cucumber: @retroactive StepImplementation {
     public func setupSteps() {
+        swiftDSLFeature()
         Given("an empty basket") { _, _ in
             World.basket = Basket()
         }

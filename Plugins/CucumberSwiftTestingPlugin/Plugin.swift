@@ -2,7 +2,8 @@ import Foundation
 import PackagePlugin
 
 /// Generates a Swift Testing test for each scenario in the target's `.feature` files, on every build
-/// that changes one. The tests run the scenarios with CucumberSwiftTesting.
+/// that changes one, and one for the features written in the Swift DSL. The tests run the scenarios with
+/// CucumberSwiftTesting.
 @main
 struct CucumberSwiftTestingPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
@@ -27,17 +28,19 @@ extension CucumberSwiftTestingPlugin: XcodeBuildToolPlugin {
 }
 #endif
 
-/// One command, which writes the tests for every `.feature` file in or under `paths`. A target
-/// without feature files gets none.
+/// One command, which writes the tests for every `.feature` file in or under `paths`, and the test for the
+/// features the target's Swift files write in the Swift DSL, if they write any. A target with neither gets none.
 private func generateCommands(tool: URL, workDirectory: URL, targetName: String, paths: [String]) -> [Command] {
-    let features = Set(paths.flatMap(expand).filter { $0.hasSuffix(".feature") }).sorted()
-    guard !features.isEmpty else { return [] }
+    let files = Set(paths.flatMap(expand))
+    let features = files.filter { $0.hasSuffix(".feature") }.sorted()
+    let swiftFiles = files.filter { $0.hasSuffix(".swift") }.sorted()
+    guard !features.isEmpty || !swiftFiles.isEmpty else { return [] }
     let output = workDirectory.appendingPathComponent("CucumberFeatures.swift")
     return [
         .buildCommand(displayName: "Generating Swift Testing tests for the feature files in \(targetName)",
                       executable: tool,
-                      arguments: ["--output", output.path] + features,
-                      inputFiles: features.map { URL(fileURLWithPath: $0) },
+                      arguments: ["--output", output.path] + features + swiftFiles.flatMap { ["--swift", $0] },
+                      inputFiles: (features + swiftFiles).map { URL(fileURLWithPath: $0) },
                       outputFiles: [output])
     ]
 }

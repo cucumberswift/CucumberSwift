@@ -3,7 +3,8 @@ import Foundation
 // Run by the CucumberSwiftLint build tool plugin:
 //   CucumberSwiftLintTool --stamp <file> --features <file>… --step-definitions <file>…
 // Prints each problem as `file:line:column: warning: message`, which Xcode and SwiftPM show as a
-// warning on that line. Always exits 0, so a problem never fails the build.
+// warning on that line, and exits 0, so a warning never fails the build. A step of the Swift DSL written where a
+// step definition belongs, or the other way round, is an `error:`, and the tool then exits 1, which fails it.
 //
 // Run by the Fix Feature Files command plugin:
 //   CucumberSwiftLintTool --fix <file or folder>…
@@ -24,5 +25,8 @@ if arguments.fix {
     }
     if let stamp = arguments.stamp {
         FileManager.default.createFile(atPath: stamp, contents: Data("\(diagnostics.count)\n".utf8))
+    }
+    if diagnostics.contains(where: { $0.severity == .error }) {
+        exit(1)
     }
 }

@@ -9,4 +9,4 @@
 : converted ES_Dado("una nota en la cesta:")
 : converted Given(#/^the till holds (\d+) coins from (?<city>\w+)( today)?$/#)
 : converted Then(/^the till has (\d+) coins? left$/)
-Converted 6 step definitions and 1 hook in 1 of 2 Swift files. Left 1 unchanged, 1 marked with #warning.
+Converted 6 step definitions and 1 hook in 1 of 3 Swift files. Left 1 unchanged, 1 marked with #warning.

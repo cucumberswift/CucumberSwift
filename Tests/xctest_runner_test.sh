@@ -9,13 +9,14 @@ template="$1"
 work="$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/runner_test.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-# A stand-in for xcrun: records its arguments and PROBE, prints the summary
+# A stand-in for xcrun: records its arguments, PROBE and DEVELOPER_DIR, prints the summary
 # line xctest would print for FAKE_COUNT tests, and exits with FAKE_STATUS.
 mkdir -p "$work/bin"
 cat > "$work/bin/xcrun" <<'EOF'
 #!/bin/bash
 printf '%s\n' "$@" > "$FAKE_ARGS"
 printf '%s' "${PROBE-unset}" > "$FAKE_PROBE"
+printf '%s' "${DEVELOPER_DIR-unset}" > "$FAKE_DEVELOPER_DIR"
 printf "\t Executed %s tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds\n" "$FAKE_COUNT"
 exit "$FAKE_STATUS"
 EOF
@@ -46,7 +47,7 @@ run() {
     "$template" > "$work/runner.sh"
   status=0
   env -u TEST_PREMATURE_EXIT_FILE -u TESTBRIDGE_TEST_ONLY \
-    PATH="$work/bin:$PATH" FAKE_ARGS="$work/args" FAKE_PROBE="$work/probe" \
+    PATH="$work/bin:$PATH" FAKE_ARGS="$work/args" FAKE_PROBE="$work/probe" FAKE_DEVELOPER_DIR="$work/developer_dir" \
     FAKE_COUNT=3 FAKE_STATUS=0 "$@" \
     bash "$work/runner.sh" > "$work/out" 2> "$work/err" || status=$?
 }
@@ -69,6 +70,11 @@ copied="$(sed -n 2p "$work/args")"
 # An environment value keeps its commas.
 run "" PROBE="a,b=c,d"
 [[ "$(cat "$work/probe")" == "a,b=c,d" ]] || fail "PROBE reached xctest as '$(cat "$work/probe")'"
+
+# The log names the Xcode Bazel selected, and xctest gets it in DEVELOPER_DIR.
+run "" DEVELOPER_DIR="/Selected/Xcode.app/Contents/Developer"
+grep -qx "Running xctest from /Selected/Xcode.app/Contents/Developer" "$work/out" || fail "the log doesn't name the selected Xcode: $(cat "$work/out")"
+[[ "$(cat "$work/developer_dir")" == "/Selected/Xcode.app/Contents/Developer" ]] || fail "DEVELOPER_DIR reached xctest as '$(cat "$work/developer_dir")'"
 
 # xctest's failure is the runner's failure.
 run "" FAKE_STATUS=1

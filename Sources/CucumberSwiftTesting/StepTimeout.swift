@@ -55,7 +55,11 @@ extension Cucumber {
     /// Runs a step's or a hook's body, and throws what it threw, or ``StepTimeoutError`` when it runs past
     /// `asyncStepTimeout`. When `continueTestingAfterFailure` is off, an issue added to `record` while it
     /// runs cancels the body's task, and the cancellation it throws on the way out is not reported.
-    func runWithTimeout(record: IssueRecord?, _ body: @escaping @MainActor () async throws -> Void) async throws {
+    /// - Parameter continuesAfterFailure: Whether the body goes on after an issue, for a step of the Swift DSL marked
+    ///   with `continueAfterFailure(_:)`; ``StepImplementation/continueTestingAfterFailure`` when it is `nil`.
+    func runWithTimeout(record: IssueRecord?,
+                        continuesAfterFailure: Bool? = nil,
+                        _ body: @escaping @MainActor () async throws -> Void) async throws {
         let timeout = stepTimeout
         // A body that blocks the main actor can't be interrupted, and the timeout fires while it runs. It has
         // finished by the time this resumes, and is not failed: CucumberSwift's timeout covers only a step or
@@ -65,7 +69,7 @@ extension Cucumber {
             defer { finished.value = true }
             return try await body()
         }
-        let cancelsOnIssue = !continuesTestingAfterFailure
+        let cancelsOnIssue = !(continuesAfterFailure ?? continuesTestingAfterFailure)
         if cancelsOnIssue { record?.onIssue = { task.cancel() } }
         defer { if cancelsOnIssue { record?.onIssue = nil } }
 

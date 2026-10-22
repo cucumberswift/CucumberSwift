@@ -957,6 +957,9 @@ jobs:
       - name: Check every feature ran
         working-directory: Tests
         run: |
+          # The macOS runner logs the Xcode Bazel selected; show it beside xcode-select's.
+          echo "xcode-select: $(xcode-select -p)"
+          grep -h -m1 'Running xctest from' bazel-testlogs/*/test.log || echo "::warning::No macOS test log names its Xcode."
           status=0
           for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
             name=${suite%%:*}; min=${suite##*:}

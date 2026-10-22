@@ -33,7 +33,7 @@ extension Scenario {
                             line: UInt = #line,
                             column: UInt = #column,
                             @StepBuilder _ content: () -> [StepDSL]) {
-        self.init(with: content(),
+        self.init(with: MisplacedStepDefinition.take(content()),
                   title: title,
                   description: description,
                   tags: tags,
@@ -45,7 +45,7 @@ extension Scenario {
                             line: UInt = #line,
                             column: UInt = #column,
                             @StepBuilder _ content: () -> StepDSL) {
-        self.init(with: [content()],
+        self.init(with: MisplacedStepDefinition.take([content()]),
                   title: title,
                   description: description,
                   tags: tags,

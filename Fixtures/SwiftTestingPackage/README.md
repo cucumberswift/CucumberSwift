@@ -7,7 +7,8 @@ Swift 6 language mode. The features use a Background, a Scenario Outline with tw
 Rule with its own Background, a Scenario Outline and tags, a doc string, a data table, other tags and a feature
 file in Spanish; the step definitions use the macros, with
 expressions and regex literals, the plain DSL, the localized macros such as `#ES_Dado`, hooks, and the hook macros, such as `#BeforeScenario`, in each
-closure form and with priorities.
+closure form and with priorities. A feature written in the Swift DSL, with the DSL step macros such as
+`#Given(I: openTheShop())`, runs as the generated "Swift DSL features" test.
 
 If the generated tests stop compiling, or a scenario stops matching its step definitions, this fixture
 fails.

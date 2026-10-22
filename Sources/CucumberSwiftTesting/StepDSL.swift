@@ -61,11 +61,26 @@ public class StepDSL {
     /// The keyword a step needs for this step definition to match it. Empty for `MatchAll`.
     class var keyword: Step.Keyword { [] }
 
+    /// The step, when this is a step of a feature written in the Swift DSL, such as `Given(I: logIn())`, rather
+    /// than a step definition.
+    var dslStep: DSLStep?
+    /// Where this step definition is written, when it is one, so that one written among a scenario's steps is
+    /// reported there.
+    var definitionSite: (file: String, line: Int)?
+
+    /// A step of a feature written in the Swift DSL. It registers no step definition: the runner runs `body`.
+    init(dslText text: String?, line: UInt, column: UInt, file: StaticString, body: @escaping @MainActor () async throws -> Void) {
+        dslStep = DSLStep(keyword: Self.keyword, text: text ?? "", line: Int(line), column: Int(column), file: "\(file)", body: body)
+        // Reported when the suite ends unless a scenario takes it.
+        Cucumber.shared.dsl.unplacedSteps[ObjectIdentifier(self)] = self
+    }
+
     /// Registers a step definition that decides for itself whether a step's text matches. The initializers
     /// that take an expression, a regex literal or a regular expression string all end here.
     init(matching match: @escaping @MainActor (String) -> (@MainActor (Step) async throws -> Void)?,
          line: Int,
          file: StaticString) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line, body: match)
     }
 
@@ -77,6 +92,7 @@ public class StepDSL {
                 callback: @escaping @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void,
                 line: Int = #line,
                 file: StaticString = #file) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line) { text in
             guard let match = expression.match(in: text) else { return nil }
             return { step in try await callback(match, step) }
@@ -91,6 +107,7 @@ public class StepDSL {
                         callback: @escaping @MainActor (Regex<Output>.Match, Step) async throws -> Void,
                         line: Int = #line,
                         file: StaticString = #file) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line) { text in
             guard let match = try? regex.wholeMatch(in: text) else { return nil }
             return { step in try await callback(match, step) }

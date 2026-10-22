@@ -82,6 +82,10 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Sources/CucumberSwiftTestingMacros/StepDefinitionMacros.swift
   - Sources/CucumberSwiftTestingMacros/HookMacros.swift
   - Sources/CucumberSwiftTestingMacros/LocalizedStepDefinitionMacros.swift
+  - Sources/CucumberSwiftTestingMacros/DSLStepMacros.swift
+  - Sources/CucumberSwiftTestingMacros/DSLContainerMacros.swift
+  - Sources/CucumberSwiftTestingMacros/LocalizedDSLStepMacros.swift
+  - Sources/CucumberSwiftTesting/DSL/StepText.swift
   - Sources/CucumberSwiftMacroConverterTool/StepPattern.swift
   - Sources/CucumberSwiftMacroConverterTool/LocalizedStepDefinitionNames.swift
   - Plugins/CucumberSwiftTestingPlugin/ExpandFolders.swift
@@ -107,8 +111,13 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Sources/CucumberSwiftTesting/LocalizedStepTypes.swift
   # Generated from I18n.swift by LocalizedStepDefinitionMacroTests.
   - Sources/CucumberSwiftMacros/LocalizedStepDefinitionMacros.swift
+  # Generated from I18n.swift by LocalizedDSLStepMacroTests.
+  - Sources/CucumberSwiftMacros/LocalizedDSLStepMacros.swift
   # Generated from I18n.swift by LocalizedStepDefinitionNameTests.
   - Sources/CucumberSwiftLintTool/LocalizedStepDefinitionNames.swift
+  # Generated from I18n.swift by LocalizedDSLContainerNameTests.
+  - Sources/CucumberSwiftLintTool/LocalizedDSLContainerNames.swift
+  - Sources/CucumberSwiftMacrosPlugin/LocalizedStepDefinitionNames.swift
   - Sources/CucumberSwift/CucumberSwift.docc
 
 line_length:

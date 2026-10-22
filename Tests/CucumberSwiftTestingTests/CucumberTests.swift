@@ -41,6 +41,7 @@ final class CucumberTests {
         cucumber.afterStepHooks = []
         cucumber.beforeFeatureHooks = []
         cucumber.afterFeatureHooks = []
+        cucumber.dsl = DSLFeatures()
         // No reporters, so that these tests write no report; the reporting tests add their own.
         cucumber.reporters = []
         cucumber.environment = [:]
