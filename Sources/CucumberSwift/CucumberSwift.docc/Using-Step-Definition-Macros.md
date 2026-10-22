@@ -293,7 +293,7 @@ Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. A macro with a rege
 
 ### Custom parameter types
 
-A custom parameter type, such as `{airport}`, needs no extra declaration. The macro reads it as `\.airport` on `Match`, through the extension you already write for it (see <doc:Matching-Steps#Matching-with-Cucumber-Expressions>), and the argument's type is the parameter's output:
+A custom parameter type, such as `{airport}`, needs no extra declaration. The macro reads it as `\.airport` on `Match`, through the extension you already write for it (see <doc:Matching-Steps#Matching-with-Cucumber-expressions>), and the argument's type is the parameter's output:
 
 <!-- swift-example: steps -->
 ```swift

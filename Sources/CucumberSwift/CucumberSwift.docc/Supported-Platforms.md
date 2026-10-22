@@ -34,7 +34,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. CI chec
 | <doc:Using-Step-Definition-Macros> in an Xcode or Tuist project | Xcode 26.4 | Xcode 26.4 |
 | <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Running-Scenarios-In-Parallel> (experimental) | The article lists what has been tried on each platform | The versions its CI jobs run |
-| Regex literals in step definitions (<doc:Matching-Steps#Matching-with-Regular-Expressions>) | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
+| Regex literals in step definitions (<doc:Matching-Steps#Matching-with-regular-expressions>) | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
 
 The article for each of these features shows its requirement as a badge at the top of the page, such as Xcode 16.3, and explains it in a "Requirements" section. A setting that needs more than the oldest supported Xcode says so in its documentation and in the "Requires" column of <doc:Settings>. An OS requirement shows as Swift's `@available` on the API.
 
