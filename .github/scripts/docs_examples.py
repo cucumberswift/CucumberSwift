@@ -97,6 +97,10 @@ FRAGMENTS = [
      "taps with XCUIElement.tap(), which a macOS build doesn't have"),
     ("Matching-Steps.md",
      "taps with XCUIElement.tap(), which a macOS build doesn't have"),
+    ("Checking-Feature-Files.md",
+     "a compile error, on purpose: a step definition inside a scenario"),
+    ("Checking-Feature-Files.md",
+     "a compile error, on purpose: a DSL step outside a scenario"),
 ]
 
 KINDS = ("file", "steps", "members", "manifest", "package-target", "target-arguments", "fragment")
