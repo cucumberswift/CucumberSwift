@@ -1,8 +1,8 @@
-# Generating Reports
+# Generating reports
 
 Write a Cucumber JSON report of each run, or receive the runner's events in your own code.
 
-## Automatic Reports
+## Automatic reports
 
 CucumberSwift writes a JSON report while your tests run. On a Simulator, the report is inside the Simulator's sandbox. To copy it into your project, add this script as a post-action of the Test action in your Xcode scheme. The script uses Xcode's build variables to find the device you ran on. On a physical device, it downloads the report with the [ios-deploy](https://github.com/ios-control/ios-deploy) tool.
 
@@ -58,7 +58,7 @@ The Swift Testing runner writes the same report to the same `Cucumber.reportPath
 
 To print each feature, scenario and step to the test log as it runs, see <doc:Verbose-Output>.
 
-## Custom Reporters
+## Custom reporters
 
 To receive the runner's events in your own code, write a test observer and add it to Cucumber's observers.
 

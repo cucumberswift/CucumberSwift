@@ -1,4 +1,4 @@
-# Checking Feature Files While You Build
+# Checking feature files while you build
 
 See mistakes in your feature files as warnings in Xcode, before you run a single test.
 
@@ -52,7 +52,7 @@ Nobody can answer Xcode on a CI machine, so pass `-skipPackagePluginValidation` 
 
 ### Keep it on in CI
 
-Leave the plugin on for every build, on your Mac and in CI. The plugin's warnings never fail a build, so a CI build that compiles your tests also checks every feature file. The build log lists each problem as `file:line:column: warning: …`. Xcode Cloud and most CI services show these lines with the build's other warnings. On a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild`, as described above.
+Leave the plugin on for every build, on your Mac and in CI. The plugin's warnings never fail a build, so a CI build that compiles your tests also checks every feature file. The build log lists each problem as `file:line:column: warning: …`. Xcode Cloud and most CI services show these lines with the build's other warnings. On a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild` (see <doc:Checking-Feature-Files#Trust-the-plugin>).
 
 ### What it checks
 
