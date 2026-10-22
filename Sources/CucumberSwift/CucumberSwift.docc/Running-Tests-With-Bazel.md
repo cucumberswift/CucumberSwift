@@ -8,16 +8,29 @@ CucumberSwift is a Bazel module. Its library builds with [rules_swift](https://g
 
 ### Add the module
 
-CucumberSwift is a Bazel module named `cucumberswift`, and it depends on CucumberSwiftExpressions, a module named `cucumberswift_expressions`. Add both to your `MODULE.bazel`, each with a `git_override` that fetches its release tag from GitHub:
+CucumberSwift is in the [Bazel Central Registry](https://registry.bazel.build/modules/cucumberswift) as a module named `cucumberswift`. Add it to your `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "cucumberswift", version = "6.4.0")
-git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.4.0")
-bazel_dep(name = "cucumberswift_expressions", version = "1.4.1")
-git_override(module_name = "cucumberswift_expressions", remote = "https://github.com/cucumberswift/CucumberSwiftExpressions.git", tag = "1.4.1")
+bazel_dep(name = "cucumberswift", version = "6.7.0")
 ```
 
-To move to a later release, change the version and the tag together. A `git_override` applies only in the root module, your project's `MODULE.bazel`.
+Bazel adds CucumberSwiftExpressions, the module `cucumberswift_expressions`, for you. The registry lists every version you can use.
+
+If a release isn't in the registry yet, fetch it from GitHub with a `git_override` on its release tag:
+
+```starlark
+bazel_dep(name = "cucumberswift", version = "6.7.0")
+git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.7.0")
+```
+
+Change the version and the tag together. If the release needs a CucumberSwiftExpressions version that isn't in the registry either, add `cucumberswift_expressions` the same way, at the version CucumberSwift's `MODULE.bazel` names:
+
+```starlark
+bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
+git_override(module_name = "cucumberswift_expressions", remote = "https://github.com/cucumberswift/CucumberSwiftExpressions.git", tag = "1.4.2")
+```
+
+A `git_override` applies only in the root module, your project's `MODULE.bazel`.
 
 Your tests also need `rules_apple` and `rules_swift`. These are the versions CucumberSwift is tested with:
 
