@@ -1,4 +1,4 @@
-# Supported Platforms
+# Supported platforms
 
 What CucumberSwift supports, sorted by what its CI checks.
 

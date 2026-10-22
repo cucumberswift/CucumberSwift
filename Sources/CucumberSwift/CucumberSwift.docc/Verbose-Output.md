@@ -1,4 +1,4 @@
-# Verbose Output
+# Verbose output
 
 See every feature, scenario and step as it runs, to find out why a test did or didn't do what you expected.
 

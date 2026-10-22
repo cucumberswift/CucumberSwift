@@ -1,4 +1,4 @@
-# Running Scenarios in Parallel
+# Running scenarios in parallel
 
 Spread your scenarios across Xcode's parallel test workers. Experimental, and off by default.
 

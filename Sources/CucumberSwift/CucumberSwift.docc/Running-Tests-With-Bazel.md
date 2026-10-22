@@ -1,4 +1,4 @@
-# Running Tests with Bazel
+# Running tests with Bazel
 
 Run your features with `bazel test`, from an `ios_unit_test` or `macos_unit_test` target.
 

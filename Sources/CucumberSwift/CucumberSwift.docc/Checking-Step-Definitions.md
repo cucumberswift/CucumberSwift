@@ -1,4 +1,4 @@
-# Checking Step Definitions When They Compile
+# Checking step definitions when they compile
 
 @Metadata {
     @Available(Xcode, introduced: "16.3")
