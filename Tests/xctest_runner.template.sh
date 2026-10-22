@@ -57,6 +57,10 @@ if [[ -n "$filter" ]]; then
   args+=(-XCTest "$filter")
 fi
 
+# Bazel sets DEVELOPER_DIR to the Xcode it selected (see xctest_runner.bzl), and
+# xcrun runs that Xcode's xctest. Say which, for anyone reading the test log.
+echo "Running xctest from ${DEVELOPER_DIR:-$(xcode-select -p)}"
+
 log="$test_dir/test.log"
 status=0
 xcrun xctest "${args[@]+"${args[@]}"}" "$test_dir/$bundle_name.xctest" 2>&1 | tee "$log" || status=$?
