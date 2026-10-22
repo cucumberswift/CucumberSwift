@@ -229,6 +229,7 @@ open class CucumberTest: XCTestCase {
 
         Self.reportInvalidRegularExpressions(RegularExpression.errors.snapshot) { [self] in failStep($0) }
         Self.reportInvalidRegularExpressions(DuplicateStepDefinition.errors) { [self] in failStep($0) }
+        Self.reportInvalidRegularExpressions(MisplacedStepDefinition.errors) { [self] in failStep($0) }
         // A step that no step definition matches fails in its own test, or its scenario's, not here.
     }
 

@@ -12,6 +12,9 @@ import Testing
 
 /// The scenarios of the features written in the Swift DSL, and what their steps run.
 struct DSLFeatures {
+    static let misplacedStepDefinitionMessage = "A step definition belongs in setupSteps(), outside a feature written in the Swift DSL. "
+        + "Inside a scenario, write a DSL step, such as Given(I: doSomething())."
+
     /// The scenarios, in the order they were declared.
     var scenarios = [GherkinScenario]()
     /// What each step of a scenario runs, by the scenario's `dslID`.
@@ -26,6 +29,8 @@ struct DSLFeatures {
     var runsInParallel = false
     /// Whether the generated "Swift DSL features" test asked for its cases.
     var casesRequested = false
+    /// Where each step definition written among a scenario's steps is, which the suite's end reports.
+    var misplacedStepDefinitions = [(file: String, line: Int)]()
 
     static func featureKey(of scenario: GherkinScenario) -> String {
         "\(scenario.file):\(scenario.featureLine):\(scenario.featureTitle)"
@@ -96,6 +101,11 @@ extension Cucumber {
     /// features" test to run them: CucumberSwiftTestingPlugin adds it when one of the target's Swift files calls
     /// `Feature(…)`, and these were written somewhere else, such as in another module.
     func reportDSLFeaturesNotRun() {
+        for site in dsl.misplacedStepDefinitions {
+            let name = URL(fileURLWithPath: site.file).lastPathComponent
+            Issue.record(Comment(rawValue: DSLFeatures.misplacedStepDefinitionMessage),
+                         sourceLocation: SourceLocation(fileID: "DSL/\(name)", filePath: site.file, line: max(site.line, 1), column: 1))
+        }
         guard !dsl.scenarios.isEmpty, !dsl.casesRequested else { return }
         Issue.record("""
             setupSteps() wrote features in the Swift DSL, but none of them ran: CucumberSwiftTestingPlugin adds the test \

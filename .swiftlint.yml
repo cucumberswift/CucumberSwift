@@ -115,6 +115,9 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Sources/CucumberSwiftMacros/LocalizedDSLStepMacros.swift
   # Generated from I18n.swift by LocalizedStepDefinitionNameTests.
   - Sources/CucumberSwiftLintTool/LocalizedStepDefinitionNames.swift
+  # Generated from I18n.swift by LocalizedDSLContainerNameTests.
+  - Sources/CucumberSwiftLintTool/LocalizedDSLContainerNames.swift
+  - Sources/CucumberSwiftMacrosPlugin/LocalizedStepDefinitionNames.swift
   - Sources/CucumberSwift/CucumberSwift.docc
 
 line_length:

@@ -389,6 +389,26 @@ extension CucumberTests {
         #expect(both["B › S › 1 › Given I: start()"] != both[caseOfA])
     }
 
+    @Test func aStepDefinitionInAScenarioIsLeftOutAndReportedAtItsLineWhenTheSuiteEnds() async {
+        resetNames()
+        let definitionLine = #line + 3
+        Feature("F") {
+            Scenario("S") {
+                Given("I do X") { _, _ in }
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.first?.steps.map(\.text) == ["I: start()"])
+        Cucumber.shared.beginSuite()
+        _ = Cucumber.shared.dslCasesToRun()
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue == DSLFeatures.misplacedStepDefinitionMessage }
+                && issue.sourceLocation?.line == definitionLine && issue.sourceLocation?.fileName == "DSLTests.swift"
+        }
+    }
+
     @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
         Feature("F") {
             Scenario("S") {

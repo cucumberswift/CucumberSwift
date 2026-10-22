@@ -22,6 +22,7 @@ enum DSLContainer {
                           in context: some MacroExpansionContext,
                           withFile: Bool,
                           withPosition: Bool = true) -> ExprSyntax {
+        DSLPlacement.reportStepDefinitions(in: node, context: context)
         var arguments = Array(node.arguments)
         if withPosition {
             let anchor = node.leftParen.map { Syntax($0) } ?? Syntax(node)

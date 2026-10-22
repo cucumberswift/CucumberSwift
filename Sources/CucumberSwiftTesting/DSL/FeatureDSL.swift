@@ -142,8 +142,15 @@ public struct ScenarioOutline: ScenarioDSL {
 
 @resultBuilder
 public enum StepBuilder {
+    /// The steps, without any step definition written among them, which the runner reports instead when the suite
+    /// ends: a DSL step runs its own code, and a step definition belongs outside the feature, in `setupSteps()`.
+    @MainActor
     public static func buildBlock(_ items: StepDSL?...) -> [StepDSL] {
-        items.compactMap { $0 }
+        let steps = items.compactMap { $0 }
+        for step in steps where step.dslStep == nil {
+            Cucumber.shared.dsl.misplacedStepDefinitions.append(step.definitionSite ?? (file: "", line: 0))
+        }
+        return steps.filter { $0.dslStep != nil }
     }
 }
 

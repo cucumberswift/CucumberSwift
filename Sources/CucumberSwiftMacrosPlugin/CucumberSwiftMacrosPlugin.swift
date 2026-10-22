@@ -12,6 +12,9 @@ enum CucumberSwiftMacrosPluginWithoutMacros {
         // Nothing to do: the compiler never runs this plugin without the Macros trait.
     }
 }
+
+/// What LocalizedStepDefinitionNames.swift, which this target shares with the lint tool, extends.
+struct StepDefinition {}
 #else
 import SwiftCompilerPlugin
 import SwiftSyntaxMacros

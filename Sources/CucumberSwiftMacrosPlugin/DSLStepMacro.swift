@@ -35,6 +35,7 @@ public struct DSLStepMacro: ExpressionMacro {
         guard let argument = node.arguments.first, node.arguments.count == 1, node.trailingClosure == nil else {
             throw DiagnosticsError(diagnostics: [Diagnostic(node: Syntax(node), message: DSLStepMessage.oneArgument)])
         }
+        DSLPlacement.reportStepOutsideScenario(node, context: context)
         let expression = argument.expression.trimmed
         // As the function form's text: the label and what is after it, such as `I: logIn()`.
         let stepText = (argument.label.map { "\($0.text): " } ?? "") + text(of: expression)

@@ -136,6 +136,7 @@
 		BD977F78ED925D21D1996626 /* StepGenerationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */; };
 		BED4FB179E9F0997A5F2EAB5 /* VerboseReporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6649D7E0697DDC105796B27 /* VerboseReporterTests.swift */; };
 		BFA71F06006D0CEF92462A14 /* Token.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1315103968D34E5C76974A82 /* Token.swift */; };
+		C1FD21A013C3058B92CA4AE3 /* MisplacedStepDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50D39CAA6DB98C72AEAC8D9 /* MisplacedStepDefinition.swift */; };
 		C59DCAC025791D6D58D74C78 /* PositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 618CE2935247590BDCA6D74A /* PositionTests.swift */; };
 		C6E7524091376BABF6A80500 /* Schema.json in Resources */ = {isa = PBXBuildFile; fileRef = A1468289F8DC67FAA8D3E667 /* Schema.json */; };
 		C717EC91644F28B6887F9230 /* RegexLiteralStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6663579B15CBD0ECE8118D4 /* RegexLiteralStyle.swift */; };
@@ -170,6 +171,7 @@
 		F5A27EFDC19DC976FA7F8721 /* StepTestCaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2F0AEDB5AA6F5EA32A169B /* StepTestCaseTests.swift */; };
 		F643D5DA5361ECBD8BFC53D0 /* Features in Resources */ = {isa = PBXBuildFile; fileRef = D479A7518B1E5990DFC8BEAE /* Features */; };
 		F8C577FA77914C2FA5B8911E /* Nodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86949B12F415FBCBC5D340FC /* Nodes.swift */; };
+		FA9F368968681DCB182FC433 /* DSLPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DD41CECBE77637650A951E5 /* DSLPlacementTests.swift */; };
 		FF285E2D3D7F6E9C72F35FE2 /* Step.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885A533EDAA54BB3AE5BB05B /* Step.swift */; };
 /* End PBXBuildFile section */
 
@@ -279,6 +281,7 @@
 		3A8F18A5D95CDAB66A8F6DB9 /* StepGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepGenerationTests.swift; sourceTree = "<group>"; };
 		3B358E843B88FBF1B8E4B885 /* RunWithLineNumberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWithLineNumberTests.swift; sourceTree = "<group>"; };
 		3D1D0F0F67BFAAC899912FC0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3DD41CECBE77637650A951E5 /* DSLPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSLPlacementTests.swift; sourceTree = "<group>"; };
 		3EDD9A3CBACE4E1979CCEED8 /* CucumberExpressionStepGenerationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberExpressionStepGenerationTests.swift; sourceTree = "<group>"; };
 		3F368C619C3415BF2C0784EC /* StepHook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepHook.swift; sourceTree = "<group>"; };
 		3F50683FEE6A06157BE7644F /* CucumberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CucumberTests.swift; sourceTree = "<group>"; };
@@ -354,6 +357,7 @@
 		9E52601980C7745174D2DEF3 /* ReadableTestNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadableTestNameTests.swift; sourceTree = "<group>"; };
 		A1468289F8DC67FAA8D3E667 /* Schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Schema.json; sourceTree = "<group>"; };
 		A1E962B0C9F7773DEDD0D479 /* ScenarioHook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioHook.swift; sourceTree = "<group>"; };
+		A50D39CAA6DB98C72AEAC8D9 /* MisplacedStepDefinition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MisplacedStepDefinition.swift; sourceTree = "<group>"; };
 		A5E2A0F5A3377FF046984D39 /* TestObservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestObservation.swift; sourceTree = "<group>"; };
 		A888E4CDEBB411990843A3F3 /* SequenceExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceExtensions.swift; sourceTree = "<group>"; };
 		A999381D8399BAF2CF7399AC /* ScenarioOutlineScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioOutlineScenarios.swift; sourceTree = "<group>"; };
@@ -662,6 +666,7 @@
 			children = (
 				1EDABCBC861D11AD3E422012 /* DSLBackgroundTests.swift */,
 				7B3AA4653DF4994CBD7591ED /* DSLFeatureTests.swift */,
+				3DD41CECBE77637650A951E5 /* DSLPlacementTests.swift */,
 				75BCE63E2E09648B990BC047 /* DSLRuleTests.swift */,
 				8F90CFE781710D2F441F1E96 /* DSLScenarioOutlineTests.swift */,
 				BBDC4212509FAA0191193789 /* DSLScenarioTests.swift */,
@@ -769,6 +774,7 @@
 				1A61873CC13CDA29724B585F /* FeatureDSL.swift */,
 				42462EC668D5385FB0E44F22 /* GherkinDSL.swift */,
 				18E60C513B3F372E67A9D4D5 /* Matcher.swift */,
+				A50D39CAA6DB98C72AEAC8D9 /* MisplacedStepDefinition.swift */,
 				CC62215E2D8AF7239062D9AC /* RuleDSL.swift */,
 				3A6074AD010F9652941ABA77 /* ScenarioBuilder.swift */,
 				56EC378FDDAC46CB59F3B9BB /* ScenarioDSL.swift */,
@@ -1123,6 +1129,7 @@
 				74887F8CCC6F73861079A9D9 /* CucumberTests.swift in Sources */,
 				A1CF5E5D5C87AC5F140986B8 /* DSLBackgroundTests.swift in Sources */,
 				6A0E62F57185B1D8E803EA2B /* DSLFeatureTests.swift in Sources */,
+				FA9F368968681DCB182FC433 /* DSLPlacementTests.swift in Sources */,
 				39D983B03D054D99F94D8ECF /* DSLRuleTests.swift in Sources */,
 				18A76F902E237D43C7802AB9 /* DSLScenarioOutlineTests.swift in Sources */,
 				32C4C84232F88EA5C33C0BFA /* DSLScenarioTests.swift in Sources */,
@@ -1192,6 +1199,7 @@
 				685500DDBBFC085E5BBAE26D /* FeatureDSL.swift in Sources */,
 				8CC4AB864C03448C8DF8FDE7 /* GherkinDSL.swift in Sources */,
 				720EA47F4DCE34AEE4B81805 /* Matcher.swift in Sources */,
+				C1FD21A013C3058B92CA4AE3 /* MisplacedStepDefinition.swift in Sources */,
 				4936D3123D913664DC1C08D6 /* RuleDSL.swift in Sources */,
 				61EE4FCFB61AA3EDDD08A23B /* ScenarioBuilder.swift in Sources */,
 				EC0DF9CB6029AF124A97BD4D /* ScenarioDSL.swift in Sources */,

@@ -22,66 +22,77 @@ final class DSLStepMacroTests: XCTestCase {
         "ES_Dado": DSLStepMacro.self
     ]
 
+    /// `source` as the contents of a scenario's closure, where a DSL step belongs: indented, a line down.
+    private func scenario(_ source: String) -> String {
+        "Scenario(\"S\") {\n" + source.split(separator: "\n", omittingEmptySubsequences: false).map { "    " + $0 }.joined(separator: "\n") + "\n}"
+    }
+
     func testTheTextIsTheLabelAndTheCallAsTheFunctionFormReadsIt() {
         assertMacroExpansion(
-            "#Given(I: printAStatement())",
-            expandedSource: #"Given(_macroStep: printAStatement(), stepText: "I: printAStatement()", line: 1, column: 7, file: "test.swift")"#,
+            scenario("#Given(I: printAStatement())"),
+            expandedSource: scenario(#"Given(_macroStep: printAStatement(), stepText: "I: printAStatement()", line: 2, column: 11, file: "test.swift")"#),
             macros: macros)
     }
 
     func testEveryLabelIsPartOfTheText() {
         for label in ["it", "my", "some", "a", "the"] {
             assertMacroExpansion(
-                "#Then(\(label): check())",
-                expandedSource: #"Then(_macroStep: check(), stepText: "\#(label): check()", line: 1, column: 6, file: "test.swift")"#,
+                scenario("#Then(\(label): check())"),
+                expandedSource: scenario(#"Then(_macroStep: check(), stepText: "\#(label): check()", line: 2, column: 10, file: "test.swift")"#),
                 macros: macros)
         }
     }
 
     func testAStepWithoutALabelIsTheCallAlone() {
         assertMacroExpansion(
-            "#When(addCukes(2))",
-            expandedSource: #"When(_macroStep: addCukes(2), stepText: "addCukes(2)", line: 1, column: 6, file: "test.swift")"#,
+            scenario("#When(addCukes(2))"),
+            expandedSource: scenario(#"When(_macroStep: addCukes(2), stepText: "addCukes(2)", line: 2, column: 10, file: "test.swift")"#),
             macros: macros)
     }
 
     func testACallOverSeveralLinesReadsAsOnOneLine() {
         assertMacroExpansion(
             """
-            #When(a:
-                printAStatement(
-                    "a",   // the first
-                    "b"
+            Scenario("S") {
+                #When(a:
+                    printAStatement(
+                        "a",   // the first
+                        "b"
+                    )
                 )
-            )
+            }
             """,
             expandedSource: """
-            When(_macroStep: printAStatement(
-                    "a",   // the first
-                    "b"
-                ), stepText: #"a: printAStatement("a", "b")"#, line: 1, column: 6, file: "test.swift")
+            Scenario("S") {
+                When(_macroStep: printAStatement(
+                            "a",   // the first
+                            "b"
+                        ), stepText: #"a: printAStatement("a", "b")"#, line: 2, column: 10, file: "test.swift")
+            }
             """,
             macros: macros)
     }
 
     func testParenthesesInAStringAreText() {
         assertMacroExpansion(
-            #"#And(my: printAStatement("))"))"#,
-            expandedSource: ##"And(_macroStep: printAStatement("))"), stepText: #"my: printAStatement("))")"#, line: 1, column: 5, file: "test.swift")"##,
+            scenario(#"#And(my: printAStatement("))"))"#),
+            expandedSource: scenario(##"And(_macroStep: printAStatement("))"), stepText: #"my: printAStatement("))")"#, line: 2, column: 9, file: "test.swift")"##),
             macros: macros)
     }
 
     func testAnAsyncFunctionOrClosureIsPassedOn() {
         assertMacroExpansion(
-            "#Given(I: signIn)",
-            expandedSource: #"Given(_macroStep: signIn, stepText: "I: signIn", line: 1, column: 7, file: "test.swift")"#,
+            scenario("#Given(I: signIn)"),
+            expandedSource: scenario(#"Given(_macroStep: signIn, stepText: "I: signIn", line: 2, column: 11, file: "test.swift")"#),
             macros: macros)
         assertMacroExpansion(
-            "#But(the: { try await open(.settings) })",
+            scenario("#But(the: { try await open(.settings) })"),
             expandedSource: """
-            But(_macroStep: {
-                    try await open(.settings)
-                }, stepText: "the: { try await open(.settings) }", line: 1, column: 5, file: "test.swift")
+            Scenario("S") {
+                But(_macroStep: {
+                        try await open(.settings)
+                    }, stepText: "the: { try await open(.settings) }", line: 2, column: 9, file: "test.swift")
+            }
             """,
             macros: macros)
     }
@@ -103,19 +114,52 @@ final class DSLStepMacroTests: XCTestCase {
 
     func testALocalizedStepExpandsToItsLocalizedType() {
         assertMacroExpansion(
-            "#ES_Dado(I: abrirLaTienda())",
-            expandedSource: #"ES_Dado(_macroStep: abrirLaTienda(), stepText: "I: abrirLaTienda()", line: 1, column: 9, file: "test.swift")"#,
+            scenario("#ES_Dado(I: abrirLaTienda())"),
+            expandedSource: scenario(#"ES_Dado(_macroStep: abrirLaTienda(), stepText: "I: abrirLaTienda()", line: 2, column: 13, file: "test.swift")"#),
+            macros: macros)
+    }
+
+    func testAStepOutsideAnyClosureIsAnError() {
+        assertMacroExpansion(
+            """
+            func setupSteps() {
+                #Given(I: logIn())
+            }
+            """,
+            expandedSource: """
+            func setupSteps() {
+                Given(_macroStep: logIn(), stepText: "I: logIn()", line: 2, column: 11, file: "test.swift")
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: DSLPlacementMessage.stepOutsideScenario.message, line: 2, column: 5)
+            ],
+            macros: macros)
+    }
+
+    func testAStepInAStepBuilderFunctionIsFine() {
+        assertMacroExpansion(
+            """
+            @StepBuilder func signInSteps() -> [StepDSL] {
+                #Given(I: logIn())
+            }
+            """,
+            expandedSource: """
+            @StepBuilder func signInSteps() -> [StepDSL] {
+                Given(_macroStep: logIn(), stepText: "I: logIn()", line: 2, column: 11, file: "test.swift")
+            }
+            """,
             macros: macros)
     }
 
     func testAStepTakesOneArgument() {
         assertMacroExpansion(
-            "#Given(I: first(), second())",
-            expandedSource: "#Given(I: first(), second())",
+            scenario("#Given(I: first(), second())"),
+            expandedSource: scenario("#Given(I: first(), second())"),
             diagnostics: [
                 DiagnosticSpec(message: "A step takes one argument: what it runs, such as `#Given(I: logIn())`, an async function, or a closure.",
-                               line: 1,
-                               column: 1)
+                               line: 2,
+                               column: 5)
             ],
             macros: macros)
     }

@@ -64,6 +64,9 @@ public class StepDSL {
     /// The step, when this is a step of a feature written in the Swift DSL, such as `Given(I: logIn())`, rather
     /// than a step definition.
     var dslStep: DSLStep?
+    /// Where this step definition is written, when it is one, so that one written among a scenario's steps is
+    /// reported there.
+    var definitionSite: (file: String, line: Int)?
 
     /// A step of a feature written in the Swift DSL. It registers no step definition: the runner runs `body`.
     init(dslText text: String?, line: UInt, column: UInt, file: StaticString, body: @escaping @MainActor () async throws -> Void) {
@@ -75,6 +78,7 @@ public class StepDSL {
     init(matching match: @escaping @MainActor (String) -> (@MainActor (Step) async throws -> Void)?,
          line: Int,
          file: StaticString) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line, body: match)
     }
 
@@ -86,6 +90,7 @@ public class StepDSL {
                 callback: @escaping @MainActor (CucumberSwiftExpressions.Match, Step) async throws -> Void,
                 line: Int = #line,
                 file: StaticString = #file) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line) { text in
             guard let match = expression.match(in: text) else { return nil }
             return { step in try await callback(match, step) }
@@ -100,6 +105,7 @@ public class StepDSL {
                         callback: @escaping @MainActor (Regex<Output>.Match, Step) async throws -> Void,
                         line: Int = #line,
                         file: StaticString = #file) {
+        definitionSite = ("\(file)", line)
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line) { text in
             guard let match = try? regex.wholeMatch(in: text) else { return nil }
             return { step in try await callback(match, step) }

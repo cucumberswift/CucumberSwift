@@ -104,6 +104,88 @@ final class DSLContainerMacroTests: XCTestCase {
             macros: macros)
     }
 
+    func testAStepDefinitionInAScenarioIsAnError() {
+        assertMacroExpansion(
+            """
+            #Scenario("S") {
+                #Given("I do X") { }
+            }
+            """,
+            expandedSource: """
+            Scenario("S", line: 1, column: 10) {
+                #Given("I do X") {
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: DSLPlacementMessage.stepDefinitionInFeature.message, line: 2, column: 5)
+            ],
+            macros: macros)
+    }
+
+    func testAStepDefinitionFunctionInsideAFeatureIsAnError() {
+        assertMacroExpansion(
+            """
+            #Feature("F") {
+                Scenario("S") {
+                    Given("I do {int} things") { _, _ in }
+                }
+            }
+            """,
+            expandedSource: """
+            Feature("F", line: 1, column: 9, file: "test.swift") {
+                Scenario("S") {
+                    Given("I do {int} things") { _, _ in
+                    }
+                }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: DSLPlacementMessage.stepDefinitionInFeature.message, line: 3, column: 9)
+            ],
+            macros: macros)
+    }
+
+    func testANestedContainerMacroReportsItsOwnStepDefinitionsOnce() {
+        assertMacroExpansion(
+            """
+            #Feature("F") {
+                #Background {
+                    Then(#/^done$/#) { _, _ in }
+                }
+            }
+            """,
+            expandedSource: """
+            Feature("F", line: 1, column: 9, file: "test.swift") {
+                Background() {
+                        Then(#/^done$/#) { _, _ in
+                        }
+                    }
+            }
+            """,
+            diagnostics: [
+                DiagnosticSpec(message: DSLPlacementMessage.stepDefinitionInFeature.message, line: 3, column: 9)
+            ],
+            macros: macros)
+    }
+
+    func testDSLStepsInAScenarioAreFine() {
+        assertMacroExpansion(
+            """
+            #Scenario("S") {
+                Given(I: doX())
+                When(doY())
+            }
+            """,
+            expandedSource: """
+            Scenario("S", line: 1, column: 10) {
+                Given(I: doX())
+                When(doY())
+            }
+            """,
+            macros: macros)
+    }
+
     func testALocalizedFeatureExpandsToItsLocalizedType() {
         assertMacroExpansion(
             #"#ES_Característica("Caja") { }"#,
