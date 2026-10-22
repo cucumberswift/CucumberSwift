@@ -47,15 +47,11 @@ public struct Background: ScenarioDSL {
 
     @MainActor
     public init(@StepBuilder _ content: () -> [StepDSL]) {
-        let content = content()
-        Cucumber.shared.dsl.place(content)
-        steps = content.compactMap(\.dslStep)
+        steps = Cucumber.shared.dsl.take(content())
     }
     @MainActor
     public init(@StepBuilder _ content: () -> StepDSL) {
-        let content = [content()]
-        Cucumber.shared.dsl.place(content)
-        steps = content.compactMap(\.dslStep)
+        steps = Cucumber.shared.dsl.take([content()])
     }
 }
 
@@ -146,15 +142,8 @@ public struct ScenarioOutline: ScenarioDSL {
 
 @resultBuilder
 public enum StepBuilder {
-    /// The steps, without any step definition written among them, which the runner reports instead when the suite
-    /// ends: a DSL step runs its own code, and a step definition belongs outside the feature, in `setupSteps()`.
-    @MainActor
     public static func buildBlock(_ items: StepDSL?...) -> [StepDSL] {
-        let steps = items.compactMap { $0 }
-        for step in steps where step.dslStep == nil {
-            Cucumber.shared.dsl.misplacedStepDefinitions.append(step.definitionSite ?? (file: "", line: 0))
-        }
-        return steps.filter { $0.dslStep != nil }
+        items.compactMap { $0 }
     }
 }
 
@@ -196,8 +185,7 @@ extension Scenario {
     /// A scenario of the Swift DSL, before its feature is known.
     @MainActor
     convenience init(dsl steps: [StepDSL], title: String, description: String, tags: [String], line: UInt, column: UInt) {
-        Cucumber.shared.dsl.place(steps)
-        let dslSteps = steps.compactMap(\.dslStep)
+        let dslSteps = Cucumber.shared.dsl.take(steps)
         let gherkin = GherkinScenario(featureTitle: "",
                                       featureTags: [],
                                       title: title,

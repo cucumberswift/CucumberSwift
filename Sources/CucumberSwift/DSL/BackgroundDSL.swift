@@ -14,10 +14,9 @@ public struct Background: ScenarioDSL {
     var steps: [StepDSL]
 
     public init(@StepBuilder _ content: () -> [StepDSL]) {
-        steps = content()
+        steps = MisplacedStepDefinition.take(content())
     }
     public init(@StepBuilder _ content: () -> StepDSL) {
-        steps = [content()]
-        MisplacedStepDefinition.placed(steps)
+        steps = MisplacedStepDefinition.take([content()])
     }
 }

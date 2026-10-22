@@ -409,6 +409,18 @@ extension CucumberTests {
         }
     }
 
+    @Test func aScenarioWhoseOnlyStepIsAStepDefinitionLeavesItOutAndRecordsItsLine() {
+        resetNames()
+        let definitionLine = #line + 3
+        Feature("F") {
+            Scenario("S") {
+                Given("I do X") { _, _ in }
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.first?.steps.isEmpty == true)
+        #expect(Cucumber.shared.dsl.misplacedStepDefinitions.map(\.line) == [definitionLine])
+    }
+
     @Test func aDSLStepThatNoScenarioTakesIsReportedAtItsLineWhenTheSuiteEnds() async {
         resetNames()
         // Written in a hook's closure, where it compiles but no scenario takes it.

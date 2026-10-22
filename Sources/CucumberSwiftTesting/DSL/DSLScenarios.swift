@@ -41,9 +41,21 @@ struct DSLFeatures {
         "\(scenario.file):\(scenario.featureLine):\(scenario.featureTitle)"
     }
 
-    /// A scenario or a background took these steps.
-    mutating func place(_ steps: [StepDSL]) {
-        steps.forEach { unplacedSteps[ObjectIdentifier($0)] = nil }
+    /// The DSL steps of what a scenario or a background takes, through any initializer: each step definition among
+    /// them is left out and recorded at its line, and only the steps a container takes count as placed, so a step
+    /// built and thrown away is still reported.
+    @MainActor
+    mutating func take(_ steps: [StepDSL]) -> [DSLStep] {
+        var taken = [DSLStep]()
+        for step in steps {
+            if let dslStep = step.dslStep {
+                unplacedSteps[ObjectIdentifier(step)] = nil
+                taken.append(dslStep)
+            } else {
+                misplacedStepDefinitions.append(step.definitionSite ?? (file: "", line: 0))
+            }
+        }
+        return taken
     }
 }
 

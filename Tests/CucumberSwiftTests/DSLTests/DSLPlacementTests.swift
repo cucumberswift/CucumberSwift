@@ -87,17 +87,41 @@ final class DSLPlacementTests: XCTestCase {
         let stepLine = #line + 1
         _ = Then(I: start())
 
+        // Only these steps' problems: put the bundle's other problems aside while testGherkin() runs.
+        let gherkinErrors = Gherkin.errors.snapshot
+        let regexErrors = RegularExpression.errors.snapshot
+        Gherkin.errors.removeAll()
+        RegularExpression.errors.removeAll()
+        DuplicateStepDefinition.reset()
+        defer {
+            Gherkin.errors.withLock { $0 = gherkinErrors }
+            RegularExpression.errors.withLock { $0 = regexErrors }
+        }
         let reporter = CapturingCucumberTest()
         capturing = true
         reporter.testGherkin()
         capturing = false
 
-        let placement = reporter.failures.filter {
-            [MisplacedStepDefinition.message, MisplacedStepDefinition.stepOutsideScenarioMessage].contains($0.compactDescription)
-        }
+        XCTAssertTrue(recordedIssues.isEmpty, "\(recordedIssues.map(\.compactDescription))")
+        let placement = reporter.failures
         XCTAssertEqual(placement.map(\.compactDescription), [MisplacedStepDefinition.message, MisplacedStepDefinition.stepOutsideScenarioMessage])
         XCTAssertEqual(placement.map { $0.sourceCodeContext.location?.lineNumber }, [definitionLine, stepLine])
         XCTAssertEqual(placement.map { $0.sourceCodeContext.location?.fileURL.lastPathComponent }, ["DSLPlacementTests.swift", "DSLPlacementTests.swift"])
+    }
+
+    func testTheStepsOfAHelperWhoseResultIsThrownAwayAreRecorded() throws {
+        func start() {}
+        let stepLine = #line + 3
+        @StepBuilder
+        func sharedSteps() -> [StepDSL] {
+            Given(I: start())
+        }
+        _ = sharedSteps()
+
+        let problem = try XCTUnwrap(MisplacedStepDefinition.errors.first)
+        XCTAssertEqual(MisplacedStepDefinition.errors.count, 1)
+        XCTAssertEqual(problem.message, MisplacedStepDefinition.stepOutsideScenarioMessage)
+        XCTAssertEqual(problem.line, stepLine)
     }
 
     func testDSLStepsAloneRecordNothing() {

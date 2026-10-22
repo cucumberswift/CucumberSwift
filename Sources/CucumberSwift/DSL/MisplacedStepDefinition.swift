@@ -4,8 +4,8 @@
 //
 // Steps written where the other kind belongs in the Swift DSL: a step definition, such as `Given("I do X") { _, _ in }`,
 // among a scenario's steps, and a DSL step, such as `Given(I: doX())`, that no scenario takes, such as one inside a
-// hook. A step definition and a DSL step are the same type, so the compiler can't tell them apart: `StepBuilder` leaves
-// the step definition out of the scenario, and `testGherkin()` fails at the line of each.
+// hook. A step definition and a DSL step are the same type, so the compiler can't tell them apart: each container leaves
+// the step definition out of what it takes, and `testGherkin()` fails at the line of each.
 
 import Foundation
 
@@ -36,19 +36,18 @@ enum MisplacedStepDefinition {
         unplaced.withLock { $0[ObjectIdentifier(step)] = step }
     }
 
-    /// The steps, which an outline takes without a builder.
-    static func placing(_ steps: [StepDSL]) -> [StepDSL] {
-        placed(steps)
-        return steps
-    }
-
-    /// A scenario, a background or an outline took these steps.
-    static func placed(_ steps: [StepDSL]) {
-        unplaced.withLock { unplaced in steps.forEach { unplaced[ObjectIdentifier($0)] = nil } }
-    }
-
-    static func record(file: StaticString?, line: Int?) {
-        state.withLock { $0.append(.init(message: message, file: file.map { String(describing: $0) }, line: line)) }
+    /// The steps a scenario, a background or an outline takes, with each step definition among them left out and
+    /// recorded at its line, and the DSL steps marked as placed. Only what a container takes counts as placed, so a
+    /// step built and thrown away is still reported.
+    static func take(_ steps: [StepDSL]) -> [StepDSL] {
+        for step in steps where !step.canExecute {
+            state.append(RegularExpression.Problem(message: message,
+                                                   file: step.sourceFile.map { String(describing: $0) },
+                                                   line: step.sourceLine))
+        }
+        let taken = steps.filter(\.canExecute)
+        unplaced.withLock { unplaced in taken.forEach { unplaced[ObjectIdentifier($0)] = nil } }
+        return taken
     }
 
     static func reset() {
