@@ -18,5 +18,6 @@ public struct Background: ScenarioDSL {
     }
     public init(@StepBuilder _ content: () -> StepDSL) {
         steps = [content()]
+        MisplacedStepDefinition.placed(steps)
     }
 }

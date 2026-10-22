@@ -23,8 +23,8 @@ enum DSLPlacementCheck {
         #"(?<![\w.])#?(?:"# + containerNames.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|") + #")\s*[({]"#)
     /// A function or property whose body builds a scenario's steps or a feature's scenarios.
     private static let builder = compile(#"@(?:StepBuilder|ScenarioBuilder)\b"#)
-    /// A step definition: a step's name, then a string or regex literal.
-    private static let stepDefinition = compile(#"(?<![\w.])#?(?:"# + names + #")\s*\(\s*(?:"|#/|/)"#)
+    /// A step definition: a step's name, then a string, raw string or regex literal.
+    private static let stepDefinition = compile(#"(?<![\w.])#?(?:"# + names + #")\s*\(\s*(?:#*"|#/|/)"#)
     /// A DSL step with a label: `Given(I:` and the rest.
     private static let dslStep = compile(#"(?<![\w.])#?(?:"# + names + #")\s*\(\s*(?:"# + labels.joined(separator: "|") + #")\s*:"#)
 
@@ -43,9 +43,9 @@ enum DSLPlacementCheck {
         }
         let lineStarts = source.lineStartOffsets
         func inRegion(_ offset: Int) -> Bool { regions.contains { $0.contains(offset) } }
-        // The definitions are found in the source, whose literals they start with, and the DSL steps in the code.
-        for match in stepDefinition.matches(in: source, range: NSRange(location: 0, length: source.utf16.count))
-            where inRegion(match.range.location) {
+        // Both are found in the code, whose literals keep their delimiters but not their contents, so that a step
+        // written in a string, such as a doc string's text, doesn't count.
+        for match in stepDefinition.matches(in: text, range: fullRange) where inRegion(match.range.location) {
             report(Diagnostic(file: file,
                               line: lineStarts.line(containing: match.range.location),
                               message: stepDefinitionInFeature,

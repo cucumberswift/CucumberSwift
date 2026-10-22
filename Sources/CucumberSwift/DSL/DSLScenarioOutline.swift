@@ -37,7 +37,7 @@ public struct ScenarioOutline: ScenarioDSL {
                                       @StepBuilder steps: (T) -> StepDSL,
                                       examples: () -> [T]) {
         scenarios = examples().map {
-            Scenario(with: [steps($0)],
+            Scenario(with: MisplacedStepDefinition.placing([steps($0)]),
                      title: title,
                      description: description,
                      tags: tags,
@@ -71,7 +71,7 @@ public struct ScenarioOutline: ScenarioDSL {
                                       @StepBuilder steps: (T) -> StepDSL,
                                       examples: () -> [T]) {
         scenarios = examples().map {
-            Scenario(with: [steps($0)],
+            Scenario(with: MisplacedStepDefinition.placing([steps($0)]),
                      title: title($0),
                      description: description,
                      tags: tags,

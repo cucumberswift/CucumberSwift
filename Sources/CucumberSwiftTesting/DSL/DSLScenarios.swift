@@ -14,6 +14,8 @@ import Testing
 struct DSLFeatures {
     static let misplacedStepDefinitionMessage = "A step definition belongs in setupSteps(), outside a feature written in the Swift DSL. "
         + "Inside a scenario, write a DSL step, such as Given(I: doSomething())."
+    static let stepOutsideScenarioMessage = "A DSL step belongs inside a Scenario, Background or ScenarioOutline. "
+        + "To match a step of a feature file, write a step definition, such as Given(\"I do something\") { _, _ in }."
 
     /// The scenarios, in the order they were declared.
     var scenarios = [GherkinScenario]()
@@ -31,9 +33,17 @@ struct DSLFeatures {
     var casesRequested = false
     /// Where each step definition written among a scenario's steps is, which the suite's end reports.
     var misplacedStepDefinitions = [(file: String, line: Int)]()
+    /// The DSL steps created and not yet taken by a scenario or a background, such as one written in a hook, which the
+    /// suite's end reports. Kept so that a step's identity isn't reused.
+    var unplacedSteps = [ObjectIdentifier: StepDSL]()
 
     static func featureKey(of scenario: GherkinScenario) -> String {
         "\(scenario.file):\(scenario.featureLine):\(scenario.featureTitle)"
+    }
+
+    /// A scenario or a background took these steps.
+    mutating func place(_ steps: [StepDSL]) {
+        steps.forEach { unplacedSteps[ObjectIdentifier($0)] = nil }
     }
 }
 
@@ -105,6 +115,12 @@ extension Cucumber {
             let name = URL(fileURLWithPath: site.file).lastPathComponent
             Issue.record(Comment(rawValue: DSLFeatures.misplacedStepDefinitionMessage),
                          sourceLocation: SourceLocation(fileID: "DSL/\(name)", filePath: site.file, line: max(site.line, 1), column: 1))
+        }
+        let leftOver = dsl.unplacedSteps.values.compactMap(\.dslStep).sorted { ($0.file, $0.line) < ($1.file, $1.line) }
+        for step in leftOver {
+            let name = URL(fileURLWithPath: step.file).lastPathComponent
+            Issue.record(Comment(rawValue: DSLFeatures.stepOutsideScenarioMessage),
+                         sourceLocation: SourceLocation(fileID: "DSL/\(name)", filePath: step.file, line: max(step.line, 1), column: max(step.column, 1)))
         }
         guard !dsl.scenarios.isEmpty, !dsl.casesRequested else { return }
         Issue.record("""

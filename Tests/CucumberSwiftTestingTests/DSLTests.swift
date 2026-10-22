@@ -409,6 +409,27 @@ extension CucumberTests {
         }
     }
 
+    @Test func aDSLStepThatNoScenarioTakesIsReportedAtItsLineWhenTheSuiteEnds() async {
+        resetNames()
+        // Written in a hook's closure, where it compiles but no scenario takes it.
+        BeforeScenario { _ in
+            _ = Given(_macroStep: (), stepText: "I: start()", line: 41, column: 18, file: "/Hooks.swift")
+        }
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.beginSuite()
+        try? await Cucumber.shared.run(Cucumber.shared.dslCasesToRun()[0])
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue == DSLFeatures.stepOutsideScenarioMessage }
+                && issue.sourceLocation?.fileName == "Hooks.swift" && issue.sourceLocation?.line == 41
+        }
+    }
+
     @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
         Feature("F") {
             Scenario("S") {

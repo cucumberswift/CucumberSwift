@@ -21,6 +21,7 @@ public class StepDSL: Step {
         super.init(with: { _, _ in handler() }, match: match, position: Lexer.Position(line: line, column: column))
         sourceLine = Int(line)
         sourceFile = file
+        MisplacedStepDefinition.created(self)
     }
 
     public func continueAfterFailure(_ val: Bool) -> StepDSL {

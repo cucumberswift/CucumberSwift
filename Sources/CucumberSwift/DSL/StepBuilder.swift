@@ -16,6 +16,8 @@ public enum StepBuilder {
         for step in steps where !step.canExecute {
             MisplacedStepDefinition.record(file: step.sourceFile, line: step.sourceLine)
         }
-        return steps.filter(\.canExecute)
+        let placed = steps.filter(\.canExecute)
+        MisplacedStepDefinition.placed(placed)
+        return placed
     }
 }

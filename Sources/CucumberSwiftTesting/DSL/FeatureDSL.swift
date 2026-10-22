@@ -47,11 +47,15 @@ public struct Background: ScenarioDSL {
 
     @MainActor
     public init(@StepBuilder _ content: () -> [StepDSL]) {
-        steps = content().compactMap(\.dslStep)
+        let content = content()
+        Cucumber.shared.dsl.place(content)
+        steps = content.compactMap(\.dslStep)
     }
     @MainActor
     public init(@StepBuilder _ content: () -> StepDSL) {
-        steps = [content()].compactMap(\.dslStep)
+        let content = [content()]
+        Cucumber.shared.dsl.place(content)
+        steps = content.compactMap(\.dslStep)
     }
 }
 
@@ -192,6 +196,7 @@ extension Scenario {
     /// A scenario of the Swift DSL, before its feature is known.
     @MainActor
     convenience init(dsl steps: [StepDSL], title: String, description: String, tags: [String], line: UInt, column: UInt) {
+        Cucumber.shared.dsl.place(steps)
         let dslSteps = steps.compactMap(\.dslStep)
         let gherkin = GherkinScenario(featureTitle: "",
                                       featureTags: [],

@@ -71,6 +71,8 @@ public class StepDSL {
     /// A step of a feature written in the Swift DSL. It registers no step definition: the runner runs `body`.
     init(dslText text: String?, line: UInt, column: UInt, file: StaticString, body: @escaping @MainActor () async throws -> Void) {
         dslStep = DSLStep(keyword: Self.keyword, text: text ?? "", line: Int(line), column: Int(column), file: "\(file)", body: body)
+        // Reported when the suite ends unless a scenario takes it.
+        Cucumber.shared.dsl.unplacedSteps[ObjectIdentifier(self)] = self
     }
 
     /// Registers a step definition that decides for itself whether a step's text matches. The initializers

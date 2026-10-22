@@ -42,6 +42,25 @@ final class DSLPlacementCheckTests: LintTestCase {
         """), ["3 \(DSLPlacementCheck.stepDefinitionInFeature)"])
     }
 
+    func testARawStringStepDefinitionInAScenarioIsAnError() throws {
+        XCTAssertEqual(try errors(##"""
+        Scenario("S") {
+            Given(#"I do "X""#) { _, _ in }
+        }
+        """##), ["2 \(DSLPlacementCheck.stepDefinitionInFeature)"])
+    }
+
+    func testAStepDefinitionInAStringIsNotOne() throws {
+        XCTAssertEqual(try errors(#"""
+        Scenario("S") {
+            Given(I: write("""
+                Given("I do X") { _, _ in }
+                """))
+            When(I: write("Then(\"done\") { _, _ in }"))
+        }
+        """#), [])
+    }
+
     func testADSLStepOutsideAScenarioIsAnError() throws {
         XCTAssertEqual(try errors("""
         func setupSteps() {

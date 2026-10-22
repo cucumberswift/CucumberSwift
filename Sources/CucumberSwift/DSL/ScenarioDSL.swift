@@ -45,7 +45,9 @@ extension Scenario {
                             line: UInt = #line,
                             column: UInt = #column,
                             @StepBuilder _ content: () -> StepDSL) {
-        self.init(with: [content()],
+        let step = content()
+        MisplacedStepDefinition.placed([step])
+        self.init(with: [step],
                   title: title,
                   description: description,
                   tags: tags,
