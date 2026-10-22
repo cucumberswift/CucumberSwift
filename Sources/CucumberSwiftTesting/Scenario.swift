@@ -43,13 +43,17 @@ public final class Feature {
 /// A scenario, or one example of a Scenario Outline, as hooks and step definitions see it.
 public final class Scenario {
     public let title: String
-    /// The feature's tags, then its Rule's, then the scenario's.
-    public let tags: [String]
+    /// The feature's tags, then its Rule's, then the scenario's. A `Rule` in the Swift DSL adds its own.
+    public internal(set) var tags: [String]
     /// The Background's steps, then the scenario's.
     public private(set) var steps = [Step]()
     public let feature: Feature?
     public let location: Location
     let internalState = ScenarioState()
+    /// What a scenario written in the Swift DSL runs, until its feature hands it to the runner.
+    var dslSteps = [DSLStep]()
+    /// A scenario's description in the Swift DSL.
+    var dslDescription = ""
 
     /// - Parameter feature: The scenario's feature, which the runner makes once for all its scenarios, so
     ///   that observers see one object for a feature.
@@ -87,5 +91,11 @@ public final class Scenario {
             return make()
         }
         return scenario.internalState.value(make)
+    }
+
+    /// Puts a Background's steps before a scenario's own, in the Swift DSL.
+    func prependDSLSteps(_ background: [DSLStep]) {
+        dslSteps.insert(contentsOf: background, at: 0)
+        steps = DSLStep.gherkinSteps(dslSteps).map { Step($0, in: self) }
     }
 }

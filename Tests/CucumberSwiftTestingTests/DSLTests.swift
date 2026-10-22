@@ -1,0 +1,458 @@
+//
+//  DSLTests.swift
+//  CucumberSwiftTestingTests
+//
+
+@testable import CucumberSwiftTesting
+import Foundation
+import Testing
+
+/// How Swift Testing identifies a case, for comparing two.
+private struct EncodedCase: Encodable {
+    let testCase: ScenarioCase
+    init(_ testCase: ScenarioCase) { self.testCase = testCase }
+    func encode(to encoder: any Encoder) throws { try testCase.encodeTestArgument(to: encoder) }
+}
+
+/// Features written in the Swift DSL: the cases of the generated "Swift DSL features" test, and how they run.
+/// This target has no macros, so the macro form is written as its expansion, `Given(_macroStep:…)`.
+extension CucumberTests {
+    private func runAll() async throws {
+        for testCase in Cucumber.shared.dslCasesToRun() {
+            try await Cucumber.shared.run(testCase)
+        }
+    }
+
+    private func resetNames() {
+        Cucumber.readableTestNames = nil
+        Cucumber.oneTestPerScenario = nil
+    }
+
+    @Test func aFeatureRunsItsScenariosStepsInOrderWithTheBackgroundFirst() async throws {
+        resetNames()
+        BeforeStep { [self] step in ran.append("before \(step.keywordName) \(step.match)") }
+        Feature("Basket") {
+            Background {
+                Given(_macroStep: self.ran.append("empty"), stepText: "an empty basket", line: 30, column: 18, file: "/Basket.swift")
+            }
+            Scenario("Add a cuke") {
+                When(_macroStep: self.ran.append("add"), stepText: "I: addACuke()", line: 33, column: 17, file: "/Basket.swift")
+                And(_macroStep: self.ran.append("again"), stepText: "I: addACuke()", line: 34, column: 17, file: "/Basket.swift")
+                Then(_macroStep: { self.ran.append("async") }, stepText: "the: total()", line: 35, column: 17, file: "/Basket.swift")
+            }
+        }
+        try await runAll()
+        #expect(ran == [
+            "before Given an empty basket", "empty",
+            "before When I: addACuke()", "add",
+            "before And I: addACuke()", "again",
+            "before Then the: total()", "async"
+        ])
+    }
+
+    /// The step functions, without the macros: each step's text is read from this file when it runs, as
+    /// CucumberSwift reads it.
+    @Test func theStepFunctionsReadTheirTextFromTheSwiftFileAndRun() async throws {
+        resetNames()
+        func openTheShop() { ran.append("open") }
+        func payAtTheTill() async throws { ran.append("paid") }
+        Feature("F") {
+            Scenario("S") {
+                Given(I: openTheShop())
+                When(a:
+                    openTheShop())
+                Then(I: payAtTheTill)
+            }
+        }
+        let steps = Cucumber.shared.dsl.scenarios.first?.steps
+        #expect(steps?.map(\.text) == ["I: openTheShop()", "a:openTheShop()", "I: payAtTheTill"])
+        #expect(steps?.map(\.keyword) == [.given, .when, .then])
+        #expect(Cucumber.shared.dsl.scenarios.first?.file == #filePath)
+        try await runAll()
+        #expect(ran == ["open", "open", "paid"])
+    }
+
+    @Test func theCasesAreNamedAfterTheFeatureTheScenarioAndTheStep() {
+        resetNames()
+        Feature("Basket", tags: ["basket"]) {
+            Scenario("Add") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+                And(_macroStep: (), stepText: "I: add.()", line: 2, column: 1, file: "/B.swift")
+            }
+            // swiftlint:disable:next multiline_arguments
+            ScenarioOutline("Count", headers: Int.self, steps: { _ in
+                Then(_macroStep: (), stepText: "I: count()", line: 3, column: 1, file: "/B.swift")
+            }, examples: { [1, 2] })
+        }
+        #expect(Cucumber.shared.dslCasesToRun().map(\.testDescription) == [
+            "Basket › Add › 1 › Given I: start()",
+            "Basket › Add › 2 › And I: add․()",
+            "Basket › Count › 1 › Then I: count()",
+            "Basket › Count 2 › 1 › Then I: count()"
+        ])
+        Cucumber.shared.environment = ["CUCUMBER_READABLE_TEST_NAMES": "NO"]
+        #expect(Cucumber.shared.dslCasesToRun().first?.testDescription == "Basket_Add_Step000_GivenIStart")
+        Cucumber.shared.environment = ["CUCUMBER_ONE_TEST_PER_SCENARIO": "YES"]
+        #expect(Cucumber.shared.dslCasesToRun().map(\.testDescription) == ["Basket › Add", "Basket › Count", "Basket › Count 2"])
+        resetNames()
+    }
+
+    @Test func anOutlinesExamplesAreCasesOfTheirOwn() throws {
+        resetNames()
+        Feature("F") {
+            // swiftlint:disable:next multiline_arguments
+            ScenarioOutline({ "Count \($0)" }, headers: Int.self, steps: { count in
+                Then(_macroStep: self.ran.append("\(count)"), stepText: "I: count()", line: 3, column: 1, file: "/B.swift")
+            }, examples: { [1, 2] })
+        }
+        let cases = Cucumber.shared.dslCasesToRun()
+        let keys = cases.map(\.scenario).map(Cucumber.key(of:))
+        #expect(Set(keys).count == 2)
+        let encoded = try cases.map { String(bytes: try JSONEncoder().encode(EncodedCase($0)), encoding: .utf8) }
+        #expect(Set(encoded).count == 2)
+    }
+
+    @Test func tagsDecideWhichScenariosRun() async throws {
+        resetNames()
+        Feature("F", tags: ["f"]) {
+            Scenario("Kept", tags: ["keep"]) {
+                Given(_macroStep: self.ran.append("kept"), stepText: "I: keep()", line: 1, column: 1, file: "/B.swift")
+            }
+            Scenario("Left out") {
+                Given(_macroStep: self.ran.append("left out"), stepText: "I: leaveOut()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.environment = ["CUCUMBER_TAGS": "keep"]
+        try await runAll()
+        #expect(ran == ["kept"])
+    }
+
+    @Test func aRulesTagsComeBeforeItsScenariosTagsAndSelectThem() async throws {
+        resetNames()
+        Feature("F", tags: ["f"]) {
+            Rule("R", tags: ["rule"]) {
+                Scenario("In the rule", tags: ["s"]) {
+                    Given(_macroStep: self.ran.append("in"), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+                }
+            }
+            Scenario("Outside") {
+                Given(_macroStep: self.ran.append("out"), stepText: "I: start()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.map(\.tags) == [["f", "rule", "s"], ["f"]])
+        Cucumber.shared.environment = ["CUCUMBER_TAGS": "rule"]
+        try await runAll()
+        #expect(ran == ["in"])
+    }
+
+    @Test func aStepDefinitionThatMatchesTheTextRunsInsteadAndTwoMakeItAmbiguous() async throws {
+        resetNames()
+        // Not `I: start()`: in a Cucumber expression, `()` is optional text.
+        Given("I: start") { [self] _, _ in ran.append("definition") }
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: self.ran.append("dsl"), stepText: "I: start", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        try await runAll()
+        #expect(ran == ["definition"])
+
+        ran = []
+        MatchAll("I: start") { [self] _, _ in ran.append("second") }
+        try await withKnownIssue {
+            try await runAll()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue.hasPrefix("Ambiguous step 'Given I: start'") }
+        }
+        #expect(ran.isEmpty)
+    }
+
+    @Test func aStepThatThrowsFailsAndTheScenarioStops() async throws {
+        struct Failure: Error {}
+        resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        // One case for the scenario: a case for each step would cancel this test at the step the failure skips.
+        Cucumber.shared.environment = ["CUCUMBER_ONE_TEST_PER_SCENARIO": "YES"]
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: { throw Failure() }, stepText: "I: fail()", line: 7, column: 9, file: "/B.swift")
+                Then(_macroStep: self.ran.append("then"), stepText: "I: goOn()", line: 8, column: 9, file: "/B.swift")
+            }
+        }
+        try await withKnownIssue {
+            try await runAll()
+        } matching: { issue in
+            // In the step's own file, which here isn't its feature's.
+            issue.sourceLocation?.fileName == "B.swift" && issue.sourceLocation?.line == 7 && issue.sourceLocation?.column == 9
+        }
+        #expect(ran.isEmpty)
+        // Reported as failed, with its error, and so is its scenario: the later step doesn't run at all.
+        #expect(observer.log == [
+            "feature started F", "scenario started S",
+            "step started Given I: fail()", "step failed: Failure()",
+            "scenario failed S", "feature failed F"
+        ])
+    }
+
+    @Test func aCaseKeepsItsIdentityWhenAScenarioIsDeclaredBeforeIt() throws {
+        resetNames()
+        func identities() throws -> [String: String] {
+            Dictionary(uniqueKeysWithValues: try Cucumber.shared.dslCasesToRun().map { testCase in
+                (testCase.testDescription, String(bytes: try JSONEncoder().encode(EncodedCase(testCase)), encoding: .utf8) ?? "")
+            })
+        }
+        Feature("F") {
+            Scenario("Kept", line: 20, column: 13) {
+                Given(_macroStep: (), stepText: "I: keep()", line: 21, column: 22, file: "/B.swift")
+            }
+        }
+        let before = try identities()
+        Cucumber.shared.dsl = DSLFeatures()
+        Feature("F") {
+            Scenario("Added", line: 10, column: 13) {
+                Given(_macroStep: (), stepText: "I: add()", line: 11, column: 22, file: "/B.swift")
+            }
+            Scenario("Kept", line: 20, column: 13) {
+                Given(_macroStep: (), stepText: "I: keep()", line: 21, column: 22, file: "/B.swift")
+            }
+        }
+        let after = try identities()
+        let kept = "F › Kept › 1 › Given I: keep()"
+        #expect(before[kept] != nil)
+        #expect(after[kept] == before[kept])
+    }
+
+    @Test func eachFeatureEndsAfterItsLastScenarioAndRulesAndDescriptionsAreItsOwn() async throws {
+        resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        var descriptions = [String: String]()
+        AfterFeature { feature in descriptions[feature.title] = feature.desc }
+        Feature("F") {
+            Description("About F")
+            Rule("R") {
+                Scenario("S") {
+                    Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+                }
+            }
+        }
+        Feature("G") {
+            Scenario("T") {
+                Given(_macroStep: (), stepText: "I: start()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.beginSuite()
+        try await runAll()
+        await Cucumber.shared.endSuite()
+        #expect(observer.log == [
+            "suite started",
+            "feature started F", "scenario started S", "step started Given I: start()", "step passed", "scenario passed S", "feature passed F",
+            "feature started G", "scenario started T", "step started Given I: start()", "step passed", "scenario passed T", "feature passed G",
+            "suite finished"
+        ])
+        #expect(descriptions == ["F": "About F", "G": ""])
+    }
+
+    #if compiler(>=6.2)
+    @Test(.reportedInFeatureFiles)
+    func aStepMarkedNotToContinueAfterFailureIsCancelledAtItsFirstFailedExpectation() async throws {
+        resetNames()
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: {
+                          #expect(Bool(false), "deliberately")
+                          try await Task.sleep(nanoseconds: 5_000_000_000)
+                          self.ran.append("went on")
+                      },
+                      stepText: "I: fail()",
+                      line: 1,
+                      column: 1,
+                      file: "/B.swift")
+                    .continueAfterFailure(false)
+            }
+        }
+        try await withKnownIssue {
+            try await runAll()
+        } matching: { issue in
+            issue.error == nil
+        }
+        #expect(ran.isEmpty)
+    }
+    #endif
+
+    /// A feature whose first scenario takes a while and whose second doesn't.
+    /// `onSlowStart` runs when the slow scenario's step starts, once it has its place in its feature's order.
+    private func slowAndQuickFeature(onSlowStart: @escaping @MainActor () -> Void = {}) {
+        Feature("F") {
+            Scenario("Slow") {
+                Given(_macroStep: {
+                          onSlowStart()
+                          try await Task.sleep(nanoseconds: 50_000_000)
+                          self.ran.append("slow")
+                      },
+                      stepText: "I: waitAWhile()",
+                      line: 1,
+                      column: 1,
+                      file: "/B.swift")
+            }
+            Scenario("Quick") {
+                Given(_macroStep: self.ran.append("quick"), stepText: "I: goAtOnce()", line: 2, column: 1, file: "/B.swift")
+            }
+        }
+    }
+
+    @Test func withParallelTestingEachScenarioIsOneCaseAndTheyRunAtTheSameTime() async throws {
+        resetNames()
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        slowAndQuickFeature()
+        Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES"]
+        let cases = Cucumber.shared.dslCasesToRun()
+        #expect(cases.map(\.testDescription) == ["F › Slow", "F › Quick"])
+        Cucumber.shared.beginSuite()
+        await withTaskGroup(of: Void.self) { group in
+            for testCase in cases {
+                group.addTask { try? await Cucumber.shared.run(testCase) }
+            }
+        }
+        await Cucumber.shared.endSuite()
+        // The quick scenario didn't wait for the slow one, and the feature ended once, after both.
+        #expect(ran == ["quick", "slow"])
+        #expect(observer.log.filter { $0.hasPrefix("feature") } == ["feature started F", "feature passed F"])
+        #expect(observer.log.dropLast().last == "feature passed F")
+    }
+
+    @Test func withParallelTestingByFeatureAFeaturesScenariosRunOneAtATime() async throws {
+        resetNames()
+        var slowStarted = false
+        slowAndQuickFeature { slowStarted = true }
+        Cucumber.shared.environment = ["CUCUMBER_PARALLEL_TESTING": "YES", "CUCUMBER_PARALLEL_TESTING_UNIT": "feature"]
+        let cases = Cucumber.shared.dslCasesToRun()
+        try #require(cases.count == 2)
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { try? await Cucumber.shared.run(cases[0]) }
+            // The quick scenario starts only once the slow one is running, so it can only wait for it. The wait is
+            // bounded, so that a slow scenario that never starts fails the test rather than hanging it.
+            let deadline = Date().addingTimeInterval(5)
+            while !slowStarted, Date() < deadline {
+                try? await Task.sleep(nanoseconds: 1_000_000)
+            }
+            #expect(slowStarted, "The slow scenario's step didn't start.")
+            group.addTask { try? await Cucumber.shared.run(cases[1]) }
+        }
+        #expect(ran == ["slow", "quick"])
+    }
+
+    @Test func aDSLFeatureIsNamedByItsSwiftFileInItsTestBundle() async throws {
+        resetNames()
+        var uris = [String]()
+        BeforeFeature { feature in uris.append(feature.uri) }
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        let cases = Cucumber.shared.dslCasesToRun(testBundle: Bundle.main.bundleURL)
+        #expect(cases.allSatisfy { $0.scenario.testBundle == Bundle.main.bundleURL })
+        for testCase in cases {
+            try await Cucumber.shared.run(testCase)
+        }
+        // As CucumberSwift names a feature of its DSL: by the Swift file's path, not a copy in the test bundle.
+        #expect(uris == [#filePath])
+    }
+
+    @Test func scenariosAtTheSamePlaceInSameNamedFilesKeepTheirOwnIdentities() throws {
+        resetNames()
+        func identities() throws -> [String: String] {
+            Dictionary(uniqueKeysWithValues: try Cucumber.shared.dslCasesToRun().map { testCase in
+                (testCase.testDescription, String(bytes: try JSONEncoder().encode(EncodedCase(testCase)), encoding: .utf8) ?? "")
+            })
+        }
+        func declare(_ title: String, in file: StaticString) {
+            Feature(title, file: file) {
+                Scenario("S", line: 5, column: 9) {
+                    Given(_macroStep: (), stepText: "I: start()", line: 6, column: 18, file: file)
+                }
+            }
+        }
+        declare("A", in: "/Tests/A/Steps.swift")
+        let alone = try identities()
+        Cucumber.shared.dsl = DSLFeatures()
+        // A same-named file at the same line and column, declared first, doesn't change A's identity.
+        declare("B", in: "/Tests/B/Steps.swift")
+        declare("A", in: "/Tests/A/Steps.swift")
+        let both = try identities()
+        let caseOfA = "A › S › 1 › Given I: start()"
+        #expect(alone[caseOfA] != nil)
+        #expect(both[caseOfA] == alone[caseOfA])
+        #expect(both["B › S › 1 › Given I: start()"] != both[caseOfA])
+    }
+
+    @Test func aStepDefinitionInAScenarioIsLeftOutAndReportedAtItsLineWhenTheSuiteEnds() async {
+        resetNames()
+        let definitionLine = #line + 3
+        Feature("F") {
+            Scenario("S") {
+                Given("I do X") { _, _ in }
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.first?.steps.map(\.text) == ["I: start()"])
+        Cucumber.shared.beginSuite()
+        _ = Cucumber.shared.dslCasesToRun()
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue == DSLFeatures.misplacedStepDefinitionMessage }
+                && issue.sourceLocation?.line == definitionLine && issue.sourceLocation?.fileName == "DSLTests.swift"
+        }
+    }
+
+    @Test func aScenarioWhoseOnlyStepIsAStepDefinitionLeavesItOutAndRecordsItsLine() {
+        resetNames()
+        let definitionLine = #line + 3
+        Feature("F") {
+            Scenario("S") {
+                Given("I do X") { _, _ in }
+            }
+        }
+        #expect(Cucumber.shared.dsl.scenarios.first?.steps.isEmpty == true)
+        #expect(Cucumber.shared.dsl.misplacedStepDefinitions.map(\.line) == [definitionLine])
+    }
+
+    @Test func aDSLStepThatNoScenarioTakesIsReportedAtItsLineWhenTheSuiteEnds() async {
+        resetNames()
+        // Written in a hook's closure, where it compiles but no scenario takes it.
+        BeforeScenario { _ in
+            _ = Given(_macroStep: (), stepText: "I: start()", line: 41, column: 18, file: "/Hooks.swift")
+        }
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.beginSuite()
+        try? await Cucumber.shared.run(Cucumber.shared.dslCasesToRun()[0])
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue == DSLFeatures.stepOutsideScenarioMessage }
+                && issue.sourceLocation?.fileName == "Hooks.swift" && issue.sourceLocation?.line == 41
+        }
+    }
+
+    @Test func featuresWrittenInTheDSLThatNoTestRunsFailTheSuite() async {
+        Feature("F") {
+            Scenario("S") {
+                Given(_macroStep: (), stepText: "I: start()", line: 1, column: 1, file: "/B.swift")
+            }
+        }
+        Cucumber.shared.beginSuite()
+        await withKnownIssue {
+            await Cucumber.shared.endSuite()
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue.hasPrefix("setupSteps() wrote features in the Swift DSL, but none of them ran") }
+        }
+    }
+}

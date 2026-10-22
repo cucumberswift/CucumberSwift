@@ -45,6 +45,8 @@ public enum Screen { case settings }
 public func open(_ screen: Screen) async throws {}
 
 public func settingsAreShown() {}
+public func addCukes(_ count: Int) {}
+public func checkOut() {}
 
 // "Matching Steps" declares these in one example and uses them in the one before it.
 // swiftlint:disable:next convenience_type

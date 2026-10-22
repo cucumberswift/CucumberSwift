@@ -74,6 +74,7 @@ extension Cucumber: @retroactive StepImplementation {
             Basket.shared.colors = []
             Basket.shared.note = nil
         }
+        swiftDSLFeature()
 
         #Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
             XCTAssertEqual(container, "basket")

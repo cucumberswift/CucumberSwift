@@ -52,6 +52,7 @@ extension CucumberTest {
         featuresLoaded = true
         Cucumber.shared.features.removeAll()
         DuplicateStepDefinition.reset()
+        MisplacedStepDefinition.reset()
         if let bundle = (Cucumber.shared as? StepImplementation)?.bundle {
             Cucumber.shared.readFromFeaturesFolder(in: bundle)
         }
