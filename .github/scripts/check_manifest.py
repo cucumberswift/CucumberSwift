@@ -16,12 +16,13 @@ prints the products, so the log shows what the toolchain sees.
 
 Only the standard library is used.
 """
+import glob
 import json
 import re
 import subprocess
 import sys
 
-TOOLS_VERSION = re.compile(r"^// swift-tools-version:\s*([0-9]+(?:\.[0-9]+){0,2})")
+TOOLS_VERSION = re.compile(r"^// swift-tools-version:\s*(\d+(?:\.\d+){0,2})")
 
 
 def normalized(version):
@@ -54,7 +55,12 @@ def main(argv):
     if len(argv) not in (2, 3) or (len(argv) == 3 and argv[2] != "-"):
         print(__doc__.strip().split("\n\n")[1], file=sys.stderr)
         return 2
-    manifest_path = argv[1]
+    # Only the package's own manifests, in the current directory.
+    manifests = sorted(glob.glob("Package.swift") + glob.glob("Package@swift-*.swift"))
+    if argv[1] not in manifests:
+        print(f"{argv[1]} is not one of this package's manifests: {', '.join(manifests)}", file=sys.stderr)
+        return 2
+    manifest_path = manifests[manifests.index(argv[1])]
     with open(manifest_path, encoding="utf-8") as handle:
         manifest_text = handle.read()
     if len(argv) == 3:

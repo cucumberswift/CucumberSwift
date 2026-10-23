@@ -7,6 +7,8 @@ Run from the repository root:
 Each test passes dump-package output in, so the tests need no Swift toolchain.
 Only the standard library is used.
 """
+import contextlib
+import io
 import json
 import os
 import sys
@@ -41,8 +43,15 @@ class CheckManifestTests(unittest.TestCase):
         self.assertTrue(ok)
 
     def test_a_manifest_without_the_line_is_an_error(self):
+        output = dump("6.1.0")
         with self.assertRaises(ValueError):
-            check_manifest.check("Package.swift", "import PackageDescription\n", dump("6.1.0"))
+            check_manifest.check("Package.swift", "import PackageDescription\n", output)
+
+    def test_only_the_package_manifests_are_read(self):
+        with contextlib.redirect_stderr(io.StringIO()) as error:
+            status = check_manifest.main(["check_manifest.py", "../Package.swift"])
+        self.assertEqual(status, 2)
+        self.assertIn("is not one of this package's manifests", error.getvalue())
 
 
 if __name__ == "__main__":
