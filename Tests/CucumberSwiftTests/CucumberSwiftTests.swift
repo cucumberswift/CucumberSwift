@@ -86,7 +86,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
 #if swift(>=5.7)
-    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func testStepsGetCallbacksAttachedCorrectly_WithRegexLiterals() {
         let featureFile: String =
         """
@@ -326,7 +326,7 @@ class CucumberSwiftTests: XCTestCase {
 
 #if swift(>=5.7)
     @available(*, deprecated) // runs ExecuteFirstStep on purpose
-    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func testExecuteFirstStep_WithoutParameterWithRegexLiteral() {
         let featureFile: String =
         """
@@ -351,7 +351,7 @@ class CucumberSwiftTests: XCTestCase {
     }
 
     @available(*, deprecated) // runs ExecuteFirstStep on purpose
-    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func testExecuteFirstStep_WithParameterWithRegexLiteral() {
         let featureFile: String =
         """

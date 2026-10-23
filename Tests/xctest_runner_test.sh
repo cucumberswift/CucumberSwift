@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tests xctest_runner.template.sh with a stand-in for `xcrun xctest`, so no
-# real tests run. Each case fills in the template as rules_apple does and checks
+# Tests xctest_runner.template.sh with a stand-in for `xcrun xctest` and
+# `xcrun simctl`, so no real tests run and no simulator is made. Each case fills in the template as rules_apple does and checks
 # what the runner passes to xctest and how it exits.
 
 set -euo pipefail
@@ -9,11 +9,27 @@ template="$1"
 work="$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/runner_test.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-# A stand-in for xcrun: records its arguments, PROBE and DEVELOPER_DIR, prints the summary
-# line xctest would print for FAKE_COUNT tests, and exits with FAKE_STATUS.
+# A stand-in for xcrun. For xctest, and for a process simctl spawns: records its arguments,
+# PROBE and DEVELOPER_DIR (SIMCTL_CHILD_PROBE and SIMCTL_CHILD_PATH for a spawned one), prints the
+# summary line xctest would print for FAKE_COUNT tests, and exits with FAKE_STATUS. Every simctl
+# command goes to FAKE_SIMCTL; `simctl list` prints FAKE_RUNTIMES, and `simctl create` a device.
 mkdir -p "$work/bin"
 cat > "$work/bin/xcrun" <<'EOF'
 #!/bin/bash
+if [[ "$1" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
+if [[ "$1" == "simctl" ]]; then
+  echo "${*:2}" >> "$FAKE_SIMCTL"
+  if [[ "$2" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
+  case "$2" in
+    list) printf '%s\n' "$FAKE_RUNTIMES"; exit 0 ;;
+    create) echo "FAKE-DEVICE"; exit 0 ;;
+    spawn)
+      shift 3
+      PROBE="${SIMCTL_CHILD_PROBE-unset}"
+      printf '%s' "${SIMCTL_CHILD_PATH-unset}" > "$FAKE_CHILD_PATH" ;;
+    *) exit 0 ;;
+  esac
+fi
 printf '%s\n' "$@" > "$FAKE_ARGS"
 printf '%s' "${PROBE-unset}" > "$FAKE_PROBE"
 printf '%s' "${DEVELOPER_DIR-unset}" > "$FAKE_DEVELOPER_DIR"
@@ -26,8 +42,23 @@ chmod +x "$work/bin/xcrun"
 mkdir -p "$work/bundle/Fake.xctest/Contents"
 (cd "$work/bundle" && zip -qr "$work/Fake.zip" Fake.xctest)
 
-# The runner's bundle: the zip, unless a case sets it.
+# The runner's bundle: the zip, unless a case sets it. The platform: macOS, unless a case sets it.
 bundle="$work/Fake.zip"
+platform="macos"
+
+# What `simctl list --json runtimes` prints: three watchOS runtimes, an unavailable newer one,
+# and an iOS one. The selected Xcode's watchOS SDK is FAKE_SDK_VERSION, 26.4 unless a case sets it.
+runtimes='{"runtimes": [
+  {"platform": "watchOS", "isAvailable": true, "version": "11.5", "identifier": "watchOS-11-5",
+   "supportedDeviceTypes": [{"identifier": "Watch-Old"}]},
+  {"platform": "watchOS", "isAvailable": true, "version": "26.4", "identifier": "watchOS-26-4",
+   "supportedDeviceTypes": [{"identifier": "Watch-A"}, {"identifier": "Watch-B"}]},
+  {"platform": "watchOS", "isAvailable": true, "version": "26.5", "identifier": "watchOS-26-5",
+   "supportedDeviceTypes": [{"identifier": "Watch-C"}]},
+  {"platform": "watchOS", "isAvailable": false, "version": "27.0", "identifier": "watchOS-27-0",
+   "supportedDeviceTypes": [{"identifier": "Watch-New"}]},
+  {"platform": "iOS", "isAvailable": true, "version": "26.4", "identifier": "iOS-26-4",
+   "supportedDeviceTypes": [{"identifier": "iPhone"}]}]}'
 
 failures=0
 fail() {
@@ -44,11 +75,14 @@ run() {
     -e "s|%(test_host_path)s||" \
     -e "s|%(test_bundle_path)s|$bundle|" \
     -e "s|%(test_filter)s|$filter|" \
+    -e "s|__PLATFORM__|$platform|" \
     "$template" > "$work/runner.sh"
+  rm -f "$work/simctl" "$work/child_path"
   status=0
   env -u TEST_PREMATURE_EXIT_FILE -u TESTBRIDGE_TEST_ONLY \
     PATH="$work/bin:$PATH" FAKE_ARGS="$work/args" FAKE_PROBE="$work/probe" FAKE_DEVELOPER_DIR="$work/developer_dir" \
-    FAKE_COUNT=3 FAKE_STATUS=0 "$@" \
+    FAKE_SIMCTL="$work/simctl" FAKE_CHILD_PATH="$work/child_path" FAKE_RUNTIMES="$runtimes" \
+    FAKE_SDK_VERSION=26.4 FAKE_COUNT=3 FAKE_STATUS=0 "$@" \
     bash "$work/runner.sh" > "$work/out" 2> "$work/err" || status=$?
 }
 
@@ -94,6 +128,53 @@ run "Mod.B" TESTBRIDGE_TEST_ONLY="Mod.A/testOne"
 rm -f "$work/args"
 run "" TESTBRIDGE_TEST_ONLY="Mod.A,-Mod.B"
 [[ "$status" -ne 0 && ! -e "$work/args" ]] || fail "a skip filter ran xctest or passed"
+
+# macOS makes no simulator.
+run ""
+[[ ! -e "$work/simctl" ]] || fail "a macOS run used simctl: $(cat "$work/simctl")"
+
+platform="watchos"
+
+# A watchOS run makes a simulator of the newest available watchOS that is not newer than the
+# selected Xcode's watchOS SDK, boots it, runs the
+# watchOS simulator's xctest of the selected Xcode on the unzipped bundle, and deletes it.
+run "" DEVELOPER_DIR="/Selected/Xcode.app/Contents/Developer"
+[[ "$status" -eq 0 ]] || fail "a passing watchOS run exited $status: $(cat "$work/err")"
+grep -qx "create bazel-xctest-.* Watch-B watchOS-26-4" "$work/simctl" || fail "unexpected simctl create: $(cat "$work/simctl")"
+grep -qx "boot FAKE-DEVICE" "$work/simctl" || fail "the simulator was not booted: $(cat "$work/simctl")"
+[[ "$(tail -2 "$work/simctl")" == "shutdown FAKE-DEVICE"$'\n'"delete FAKE-DEVICE" ]] || fail "the simulator was not deleted: $(cat "$work/simctl")"
+[[ "$(cat "$work/args")" == "/Selected/Xcode.app/Contents/Developer/Platforms/WatchSimulator.platform/Developer/Library/Xcode/Agents/xctest"$'\n'*/Fake.xctest ]] || fail "unexpected watchOS arguments: $(cat "$work/args")"
+
+# An older Xcode's watchOS SDK picks the newest runtime that it isn't older than.
+run "" FAKE_SDK_VERSION=11.5
+grep -qx "create bazel-xctest-.* Watch-Old watchOS-11-5" "$work/simctl" || fail "Xcode 16.4's SDK picked: $(grep create "$work/simctl")"
+
+# When every runtime is newer than the SDK, the newest available one runs.
+run "" FAKE_SDK_VERSION=10.0
+grep -qx "create bazel-xctest-.* Watch-C watchOS-26-5" "$work/simctl" || fail "an SDK older than every runtime picked: $(grep create "$work/simctl")"
+
+# The test environment reaches the spawned xctest, but this Mac's PATH doesn't.
+run "" PROBE="a,b=c,d"
+[[ "$(cat "$work/probe")" == "a,b=c,d" ]] || fail "PROBE reached the watchOS xctest as '$(cat "$work/probe")'"
+[[ "$(cat "$work/child_path")" == "unset" ]] || fail "PATH reached the watchOS xctest as '$(cat "$work/child_path")'"
+
+# A filter goes to the watchOS xctest too.
+run "Mod.B"
+[[ "$(sed -n 2,3p "$work/args")" == "-XCTest"$'\n'"Mod.B" ]] || fail "unexpected watchOS filter: $(cat "$work/args")"
+
+# The simulator is deleted when the tests fail too.
+run "" FAKE_STATUS=1
+[[ "$status" -eq 1 ]] || fail "a failing watchOS run exited $status"
+grep -qx "delete FAKE-DEVICE" "$work/simctl" || fail "a failing run left the simulator: $(cat "$work/simctl")"
+
+# With no watchOS runtime, the run fails and says how to install one.
+saved_runtimes="$runtimes"
+runtimes='{"runtimes": []}'
+run ""
+runtimes="$saved_runtimes"
+[[ "$status" -ne 0 ]] || fail "a run with no watchOS runtime passed"
+grep -q "xcodebuild -downloadPlatform watchOS" "$work/err" || fail "no install hint: $(cat "$work/err")"
+! grep -q "^create" "$work/simctl" || fail "a run with no watchOS runtime made a simulator"
 
 if [[ "$failures" -ne 0 ]]; then
   exit 1

@@ -17,7 +17,7 @@ import CucumberSwift
 ///
 /// If the generator changes, replace everything between the BEGIN and END lines with the output
 /// the failing test prints.
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 func registerGeneratedBareSlashStepDefinitions() {
     // BEGIN GENERATED
     Given(/^a step with no parameters$/) { _, _ in
