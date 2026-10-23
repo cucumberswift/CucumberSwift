@@ -13,6 +13,9 @@ name: CI
 # on pull requests and main (the full matrix on main), and run the full matrix on
 # every nightly and manual run (see parallel_tests). A manual run's inputs can
 # narrow the parallel tests to some combinations, and skip every other job.
+# The tests on tvOS and on the oldest Simulator runtimes run only in the nightly
+# and manual runs (tvOS tests, Older runtime tests); pull requests build for
+# tvOS in Catalyst tests (#271).
 #
 # A pull request that merges through the merge queue is tested twice on one
 # commit: the merge_group run tests it, and when that passes, main moves to that
@@ -170,7 +173,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parallel-fixture|keep-package-resolved)\.sh$|\.github/scripts/parallel_(matrix|records)\.py$)'
+          relevant='^(Sources/|Tests/ParallelFixtures/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parallel-fixture|keep-package-resolved|simulator-destination)\.sh$|\.github/scripts/parallel_(matrix|records)\.py$)'
           if [ "$EVENT" = merge_group ] || [ "$VERSION_COMMIT" = true ]; then
             run=false
           elif [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
@@ -511,6 +514,26 @@ jobs:
           path: Carthage/Build/*.xcframework
           if-no-files-found: error
           retention-days: 7
+      # The Xcode project builds for tvOS too (#271), so Carthage users can build a tvOS framework.
+      # Nightly and manual runs only, with the newest Xcode: pull requests build for tvOS in
+      # Catalyst tests. After the upload, as it replaces the iOS xcframework.
+      - name: Build the tvOS framework with Carthage
+        if: matrix.xcode == '26.2' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        run: |
+          carthage build --no-skip-current --use-xcframeworks --platform tvOS --log-path carthage-build.log
+          xcf=Carthage/Build/CucumberSwift.xcframework
+          ls "$xcf"
+          for slice in tvos-arm64 tvos-arm64_x86_64-simulator; do
+            binary="$xcf/$slice/CucumberSwift.framework/CucumberSwift"
+            if [ ! -f "$binary" ]; then
+              echo "::error::Carthage built no $slice slice."
+              exit 1
+            fi
+            if otool -L "$binary" | grep -i CucumberSwiftExpressions; then
+              echo "::error::$binary links CucumberSwiftExpressions dynamically, which Carthage does not deliver."
+              exit 1
+            fi
+          done
       - name: Show why the build failed
         if: failure()
         run: |
@@ -559,6 +582,16 @@ jobs:
           swift --version
       - name: Run the tests on Mac Catalyst
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
+      # Builds for tvOS 13 without running a test (#271): the scheme's framework and test bundles
+      # from the Xcode project, as Carthage does, then CucumberSwift as a Swift package, through
+      # a consumer test package. Xcode 26 only. tvOS tests runs the tests, in nightly and manual runs.
+      - name: Build for tvOS
+        if: ${{ !matrix.xcode }}
+        run: |
+          xcodebuild build-for-testing -scheme CucumberSwift -destination 'generic/platform=tvOS Simulator' -quiet
+          cd Tests/CucumberSwiftConsumerTests
+          xcodebuild build-for-testing -scheme CucumberSwiftConsumerTests-Package -destination 'generic/platform=tvOS Simulator' \
+            -skipPackagePluginValidation -quiet
       - name: Build Package.swift with Swift 6.0
         if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: swift build --force-resolved-versions
@@ -579,6 +612,85 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
         run: mise exec -- .github/scripts/macros-trait-fixture.sh 16.3
+
+  # The tests on a tvOS Simulator (#271): the CucumberSwift scheme's test bundles, as iOS tests
+  # runs them, then the consumer test packages, which build CucumberSwift as a Swift package.
+  # The newest Xcode, on macos-26, with the tvOS runtime it comes with. Nightly and manual runs
+  # only: pull requests build for tvOS in Catalyst tests.
+  tvos_tests:
+    name: tvOS tests
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i tvos || true
+      - name: Run the tests on a tvOS Simulator
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination"
+      # A run with no features still passes, so each package must run at least the tests
+      # `swift test` runs on macOS.
+      - name: Run the consumer test packages on a tvOS Simulator
+        if: ${{ !cancelled() }}
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
+          status=0
+          for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
+            name=${suite%%:*}; min=${suite##*:}
+            log="$RUNNER_TEMP/$name.log"
+            (cd "Tests/$name" && xcodebuild test -scheme "$name-Package" -destination "$destination" \
+              -skipPackagePluginValidation > "$log" 2>&1) || status=1
+            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+            n=$(grep -Eo 'Executed [0-9]+ tests' "$log" | tail -1 | grep -Eo '[0-9]+' || true)
+            echo "$name: ${n:-0} tests (at least $min expected)"
+            if [ "${n:-0}" -lt "$min" ]; then
+              echo "::error::Only ${n:-0} tests ran in $name on tvOS."
+              status=1
+            fi
+          done
+          exit $status
+
+  # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job
+  # uses, so that something checks the back-deployed Swift concurrency runtime and other
+  # behaviour of older OS versions: Xcode 16.4 on macos-15, with the runtimes it comes with.
+  # 16.4, not 16.0: it is the oldest Xcode the image has Simulator runtimes for. Nightly and
+  # manual runs only.
+  older_runtime_tests:
+    name: Older runtime tests (Xcode 16)
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 16.4
+        run: .github/scripts/select-xcode.sh 16.4
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i -E 'ios|tvos' || true
+      - name: Run the tests on an iOS Simulator
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination"
+      - name: Run the tests on a tvOS Simulator
+        if: ${{ !cancelled() }}
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination"
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,
@@ -892,7 +1004,8 @@ jobs:
   #   archive (and so the Bazel Central Registry entry) contains, not the checkout;
   # - from Tests/, a separate module that depends on this one;
   # - on every Bazel major that MODULE.bazel's bazel_compatibility allows, and
-  #   on macOS and an iOS simulator, at the lowest OS versions consumers use.
+  #   on macOS and an iOS simulator, at the lowest OS versions consumers use;
+  #   nightly and manual runs add a tvOS simulator, with the newest Bazel only.
   bazel_tests:
     name: Bazel tests${{ matrix.variant }}
     needs: changes
@@ -914,6 +1027,8 @@ jobs:
     env:
       # The runner's `bazel` is Bazelisk, which runs this version, or .bazelversion.
       USE_BAZEL_VERSION: ${{ matrix.bazel }}
+      # The tvOS tests (#271) build and run only in nightly and manual runs, with the newest Bazel.
+      TVOS: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.bazel == '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -949,9 +1064,14 @@ jobs:
       - name: Build every target in the module, as a consumer would
         working-directory: Tests
         run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
-      - name: Run the consumer tests on macOS and on an iOS simulator
+      - name: Run the consumer tests on macOS and on an iOS simulator, and on a tvOS simulator at night
         working-directory: Tests
-        run: bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors
+        run: |
+          filters=()
+          if [ "$TVOS" != true ]; then
+            filters=(--build_tag_filters=-tvos --test_tag_filters=-tvos)
+          fi
+          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors ${filters[@]+"${filters[@]}"}
       # A run with no features still passes, so this catches a Features folder
       # Bazel left out. The floors are what `swift test` runs for each suite.
       - name: Check every feature ran
@@ -963,7 +1083,9 @@ jobs:
           status=0
           for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
             name=${suite%%:*}; min=${suite##*:}
-            for t in "$name" "${name}_iOS"; do
+            targets=("$name" "${name}_iOS")
+            if [ "$TVOS" = true ]; then targets+=("${name}_tvOS"); fi
+            for t in "${targets[@]}"; do
               # A log with no count, or no log, counts as 0 rather than ending the step.
               n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/$t/test.log" 2>/dev/null | tail -1 | grep -Eo '[0-9]+' || true)
               echo "$t: ${n:-0} tests (at least $min expected)"
