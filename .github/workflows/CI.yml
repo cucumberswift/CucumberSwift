@@ -1005,7 +1005,8 @@ jobs:
   # - from Tests/, a separate module that depends on this one;
   # - on every Bazel major that MODULE.bazel's bazel_compatibility allows, and
   #   on macOS and an iOS simulator, at the lowest OS versions consumers use;
-  #   nightly and manual runs add a tvOS simulator, with the newest Bazel only.
+  #   nightly and manual runs also build the suites for tvOS, with the newest Bazel
+  #   only. rules_apple can't run tvOS tests (see Tests/consumer_tests.bzl).
   bazel_tests:
     name: Bazel tests${{ matrix.variant }}
     needs: changes
@@ -1027,7 +1028,7 @@ jobs:
     env:
       # The runner's `bazel` is Bazelisk, which runs this version, or .bazelversion.
       USE_BAZEL_VERSION: ${{ matrix.bazel }}
-      # The tvOS tests (#271) build and run only in nightly and manual runs, with the newest Bazel.
+      # The tvOS test bundles (#271) build only in nightly and manual runs, with the newest Bazel.
       TVOS: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && matrix.bazel == '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1064,14 +1065,16 @@ jobs:
       - name: Build every target in the module, as a consumer would
         working-directory: Tests
         run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
-      - name: Run the consumer tests on macOS and on an iOS simulator, and on a tvOS simulator at night
+      # rules_apple can't run tvOS tests, so no run tests the tvOS bundles. Nightly and manual runs
+      # build them.
+      - name: Run the consumer tests on macOS and on an iOS simulator, and build them for tvOS at night
         working-directory: Tests
         run: |
-          filters=()
+          filters=(--test_tag_filters=-tvos)
           if [ "$TVOS" != true ]; then
-            filters=(--build_tag_filters=-tvos --test_tag_filters=-tvos)
+            filters+=(--build_tag_filters=-tvos)
           fi
-          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors ${filters[@]+"${filters[@]}"}
+          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors "${filters[@]}"
       # A run with no features still passes, so this catches a Features folder
       # Bazel left out. The floors are what `swift test` runs for each suite.
       - name: Check every feature ran
@@ -1083,9 +1086,7 @@ jobs:
           status=0
           for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
             name=${suite%%:*}; min=${suite##*:}
-            targets=("$name" "${name}_iOS")
-            if [ "$TVOS" = true ]; then targets+=("${name}_tvOS"); fi
-            for t in "${targets[@]}"; do
+            for t in "$name" "${name}_iOS"; do
               # A log with no count, or no log, counts as 0 rather than ending the step.
               n=$(grep -Eo 'Executed [0-9]+ tests' "bazel-testlogs/$t/test.log" 2>/dev/null | tail -1 | grep -Eo '[0-9]+' || true)
               echo "$t: ${n:-0} tests (at least $min expected)"

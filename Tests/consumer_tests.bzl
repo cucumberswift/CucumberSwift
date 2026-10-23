@@ -1,4 +1,4 @@
-"""Runs a consumer test suite on macOS, on an iOS simulator and on a tvOS simulator."""
+"""Runs a consumer test suite on macOS and on an iOS simulator, and builds it for tvOS."""
 
 load("@rules_apple//apple:ios.bzl", "ios_unit_test")
 load("@rules_apple//apple:macos.bzl", "macos_unit_test")
@@ -32,8 +32,8 @@ def consumer_tests(name, copts = []):
     )
 
     # The lowest OS versions CucumberSwift supports, so the library is compiled for them too.
-    # macOS runs the bundle with `xcrun xctest` (see xctest_runner.bzl). iOS and tvOS keep
-    # rules_apple's runners, which run the tests on a simulator.
+    # macOS runs the bundle with `xcrun xctest` (see xctest_runner.bzl). iOS keeps
+    # rules_apple's runner, which runs the tests on a simulator.
     macos_unit_test(
         name = name,
         minimum_os_version = "10.15",
@@ -47,8 +47,9 @@ def consumer_tests(name, copts = []):
         deps = [":" + name + "Lib"],
     )
 
-    # Tagged "tvos" so CI can leave it out (--build_tag_filters and --test_tag_filters):
-    # only nightly and manual runs build and run it.
+    # Built, never run: rules_apple's default tvOS runner fails every test without running it
+    # (5.2.0). Tagged "tvos" so CI can leave it out: only nightly and manual runs build it, and
+    # no run tests it (--test_tag_filters=-tvos). The tvOS tests run through Xcode and SwiftPM.
     tvos_unit_test(
         name = name + "_tvOS",
         minimum_os_version = "13.0",
