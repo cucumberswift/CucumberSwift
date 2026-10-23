@@ -1,3 +1,17 @@
 version: 1
+# The Swift Package Index builds CucumberSwift-Package, the scheme with every product, on each Apple
+# platform. Package.swift turns the Macros trait on in those builds (SPI_BUILD), so they build the macros.
+builder:
+  configs:
+    - platform: ios
+      scheme: CucumberSwift-Package
+    - platform: macos-xcodebuild
+      scheme: CucumberSwift-Package
+    - platform: tvos
+      scheme: CucumberSwift-Package
+    - platform: visionos
+      scheme: CucumberSwift-Package
+    - platform: watchos
+      scheme: CucumberSwift-Package
 external_links:
   documentation: "https://cucumberswift.org/CucumberSwift/documentation/cucumberswift/"
