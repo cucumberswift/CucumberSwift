@@ -10,7 +10,9 @@ On one large project, UI tests that took about 20 minutes with XCUITest took abo
 
 ### Add the packages
 
-In Xcode, choose **File > Add Package Dependencies...** and add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest](https://github.com/nallick/UIUTest) to your `AppCucumberTests` target only.
+With Swift Package Manager, choose **File > Add Package Dependencies...** in Xcode, and add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest](https://github.com/nallick/UIUTest) to your `AppCucumberTests` target only.
+
+With Carthage, add CucumberSwift as <doc:Carthage-Step-By-Step> describes, so that you don't add it twice. Then add UIUTest to the `AppCucumberTests` target with **File > Add Package Dependencies...**.
 
 ### Create the test target
 

@@ -13,7 +13,9 @@ A behaviour that you can turn on or off has two switches:
 - An environment variable, named `CUCUMBER_` plus the setting's name in upper snake case, such as `CUCUMBER_ONE_TEST_PER_SCENARIO`.
 - A static variable on `Cucumber`, with the same name in lower camel case, such as `Cucumber.oneTestPerScenario`.
 
-The static variable wins when it is set. If it isn't set, the environment variable decides, and if neither is set, the default applies. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable. A setting that takes a value instead of a switch, such as `Cucumber.reportPath`, follows the same order. Its static variable is an optional `String`, and its environment variable takes text. An empty value counts as not set.
+`Cucumber.parallelTesting` has a third switch with the Swift Testing runner, a compilation condition. See <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>.
+
+The static variable wins when it is set. If it isn't set, the environment variable decides, and if neither is set, the default applies. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable. A setting that takes a value instead of a switch, such as `Cucumber.reportPath`, follows the same order. Its static variable is an optional `String`, and its environment variable takes text. For these settings, an empty value counts as not set.
 
 Set the static variables in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
 
@@ -85,7 +87,7 @@ extension Cucumber: StepImplementation {
 
 **Info.plist keys apply only to Xcode test targets.** Swift Package Manager generates the test bundle's `Info.plist` itself, so the keys aren't available there.
 
-**`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions, which match regardless of case. A scenario runs when any of its tags, its Rule's tags or its feature's tags matches any of the expressions. Don't put spaces around the commas, because the spaces become part of the expression. See <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan>.
+**`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions that match regardless of case. A scenario runs when any of its tags, its Rule's tags or its feature's tags matches any of the expressions. Don't put spaces around the commas, because the spaces become part of the expression. Both runners use `CUCUMBER_TAGS` whenever it's set, even to an empty value, and then don't call `shouldRunWith`. See <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan>.
 
 **With Swift Testing, some settings work differently.** The Swift Testing runner does the same as the XCTest runner for every setting marked "Swift Testing" above, with these exceptions:
 

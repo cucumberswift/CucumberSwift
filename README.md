@@ -4,13 +4,15 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=cucumberswift_CucumberSwift&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=cucumberswift_CucumberSwift)
 
 ### Welcome to CucumberSwift
-CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS and macOS, written only in Swift. You describe behaviour in Gherkin feature files, and match their steps with step definitions written in Swift. CucumberSwift aims to be easy to install and easy to use, and your feedback is welcome.
+CucumberSwift is a lightweight Swift only Cucumber implementation for iOS, tvOS, and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
+
+You describe behaviour in Gherkin feature files, and match their steps with step definitions written in Swift.
 
 watchOS support is coming soon.
 
 CucumberSwift isn't published to CocoaPods from 6.0.0 on. The last version on CocoaPods is 5.0.3. It still resolves, but no newer version will be published there. Install CucumberSwift with Swift Package Manager or Carthage instead.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and the docs say which. Start with these links:
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and their docs name it. Start with these links:
 
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)

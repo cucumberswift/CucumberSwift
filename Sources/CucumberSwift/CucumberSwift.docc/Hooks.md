@@ -209,7 +209,7 @@ AfterStep { step in
 
 #### Where to find an attachment
 
-`Attach(_:)` adds the attachment to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step. So an `AfterScenario` attachment is on the last step's test. An `AfterStep` attachment is on its own step's test.
+`Attach(_:)` adds the attachment to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step. So an `AfterScenario` attachment is on the last step's test. An `AfterStep` attachment is on its own step's test. With one test per scenario, every attachment is on the scenario's test.
 
 In Xcode, open the **Report navigator**, choose the test run, expand the scenario and select the step's test. The attachment is listed under an **Attachment** activity, named after the attachment's `name`.
 
