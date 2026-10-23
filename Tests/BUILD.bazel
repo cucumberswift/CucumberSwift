@@ -1,6 +1,6 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
-load(":xctest_runner.bzl", "macos_xctest_runner", "watchos_xctest_runner")
+load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
 # From this folder: `bazel test //...` runs each suite on macOS, and on iOS, tvOS and watchOS
@@ -9,14 +9,12 @@ load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
 macos_xctest_runner(name = "macos_xctest_runner")
 
-watchos_xctest_runner(name = "watchos_xctest_runner")
-
 # Checks the runner's script with a stand-in for xctest.
 sh_test(
     name = "xctest_runner_test",
     srcs = ["xctest_runner_test.sh"],
-    args = ["$(rootpath :xctest_runner.template.sh)"],
-    data = [":xctest_runner.template.sh"],
+    args = ["$(rootpath @cucumberswift//bazel:xctest_runner.template.sh)"],
+    data = ["@cucumberswift//bazel:xctest_runner.template.sh"],
 )
 
 # Checks the runner passes on the Xcode that Bazel selected.
@@ -27,7 +25,7 @@ xctest_runner_info_test(
 
 xctest_runner_info_test(
     name = "watchos_xctest_runner_info_test",
-    runner = ":watchos_xctest_runner",
+    runner = "@cucumberswift//bazel:watchos_xctest_runner",
 )
 
 consumer_tests(

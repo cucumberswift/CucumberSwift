@@ -33,8 +33,8 @@ def consumer_tests(name, copts = []):
     )
 
     # The lowest OS versions CucumberSwift supports, so the library is compiled for them too.
-    # macOS runs the bundle with `xcrun xctest`, and watchOS with a watchOS simulator's xctest
-    # (see xctest_runner.bzl). iOS and tvOS keep rules_apple's runners, which run the tests on a
+    # macOS runs the bundle with `xcrun xctest`, and watchOS with a watchOS simulator's xctest,
+    # with the runner the cucumberswift module publishes (see bazel/xctest_runner.bzl). iOS and tvOS keep rules_apple's runners, which run the tests on a
     # simulator.
     macos_unit_test(
         name = name,
@@ -62,7 +62,7 @@ def consumer_tests(name, copts = []):
     watchos_unit_test(
         name = name + "_watchOS",
         minimum_os_version = "7.4",
-        runner = Label("//:watchos_xctest_runner"),
+        runner = Label("@cucumberswift//bazel:watchos_xctest_runner"),
         tags = ["watchos"],
         deps = [":" + name + "Lib"],
     )

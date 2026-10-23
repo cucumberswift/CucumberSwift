@@ -1,5 +1,5 @@
 #!/bin/bash
-# Tests xctest_runner.template.sh with a stand-in for `xcrun xctest` and
+# Tests bazel/xctest_runner.template.sh with a stand-in for `xcrun xctest` and
 # `xcrun simctl`, so no real tests run and no simulator is made. Each case fills in the template as rules_apple does and checks
 # what the runner passes to xctest and how it exits.
 

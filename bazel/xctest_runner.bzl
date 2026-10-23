@@ -3,7 +3,9 @@
 `macos_xctest_runner` runs a macOS bundle with `xcrun xctest`.
 `watchos_xctest_runner` runs a watchOS bundle on a watchOS simulator that it
 creates for the run and deletes afterwards, with the simulator's `xctest`.
-rules_apple's own watchOS runner runs no tests.
+rules_apple's own watchOS runner runs no tests, so the module publishes
+`@cucumberswift//bazel:watchos_xctest_runner` for projects to use. CucumberSwift's
+own Bazel tests in Tests/ use both runners.
 
 `rules_apple`'s macOS runner runs tests with `xcodebuild test-without-building`,
 which needs the com.apple.testmanagerd service. This one runs the bundle
