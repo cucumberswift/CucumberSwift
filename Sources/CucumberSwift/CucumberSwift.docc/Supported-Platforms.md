@@ -8,8 +8,8 @@ CucumberSwift supports what its continuous integration (CI) verifies. This artic
 
 | Tier | What it means | Today |
 |---|---|---|
-| **Tested** | CI builds it and runs the tests on it | The oldest Xcode CI runs, and newer ones up to Xcode 26, on macOS 15 and macOS 26 build machines. The tests run on the iOS Simulator, on Mac Catalyst, and on macOS through Swift Package Manager, on the runtimes each Xcode comes with. |
-| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | Deployment targets iOS 13 and macOS 10.15: every pull request builds at them. tvOS 13, once CI builds it. |
+| **Tested** | CI builds it and runs the tests on it | The oldest Xcode CI runs, and newer ones up to Xcode 26, on macOS 15 and macOS 26 build machines. The tests run on the iOS Simulator, on Mac Catalyst, and on macOS through Swift Package Manager, on the runtimes each Xcode comes with. Nightly runs also run them on a watchOS Simulator, with CucumberSwift built as a Swift package. |
+| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | Deployment targets iOS 13 and macOS 10.15: every pull request builds at them. tvOS 13, once CI builds it. Every pull request also builds for watchOS 7.4, as a Swift package. |
 | **Not supported** | Not built or tested | Xcode versions older than the oldest CI runs, older deployment targets, and anything not listed here. |
 
 ### The Xcode you build with
@@ -24,6 +24,12 @@ This article names the Xcode, not the macOS you build on: Apple's requirements f
 
 A bug you report on an OS that is "built, not run" is fixed when it can be reproduced.
 
+### watchOS
+
+CucumberSwift supports watchOS 7.4 and later, because watchOS 7.4 is the first version with XCTest. Add it to a watchOS test target with Swift Package Manager or Bazel. Carthage doesn't build CucumberSwift for watchOS.
+
+With Bazel, run watchOS tests with the runner the `cucumberswift` module provides, because rules_apple's own runner doesn't run them. See <doc:Running-Tests-With-Bazel#Run-tests-on-watchOS>.
+
 ### Features that need more than the floor
 
 Some features need a newer Xcode or Swift than the oldest supported one. Each says so the same way everywhere, and CI checks each at exactly the version given:
@@ -34,7 +40,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. Each sa
 | <doc:Using-Step-Definition-Macros> in an Xcode or Tuist project | Xcode 26.4 | Xcode 26.4 |
 | <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Running-Scenarios-In-Parallel> (experimental) | Per platform: the article lists what has been tried | The versions its CI jobs run |
-| Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
+| Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16, watchOS 9 at run time | Swift's `@available` on the API |
 
 An article about such a feature shows its requirement as a badge at the top of the page, such as Xcode 16.3, and has a "Requirements" section that says why. A setting that needs more than the oldest supported Xcode says so in its documentation and in the "Requires" column of <doc:Settings>. A requirement on the OS your tests run on is Swift's `@available` on the API, which this documentation shows by itself.
 
