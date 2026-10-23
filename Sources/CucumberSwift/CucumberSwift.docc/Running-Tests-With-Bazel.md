@@ -30,7 +30,7 @@ bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
 git_override(module_name = "cucumberswift_expressions", remote = "https://github.com/cucumberswift/CucumberSwiftExpressions.git", tag = "1.4.2")
 ```
 
-A `git_override` works only in the root module, which is your project's `MODULE.bazel`.
+A `git_override` works only in the root module, your project's `MODULE.bazel`.
 
 Your tests also need `rules_apple` and `rules_swift`. CI tests CucumberSwift with these versions:
 
@@ -44,7 +44,7 @@ The module needs Bazel 8 or later. CI tests it with the latest Bazel 8 release a
 
 ### Put the Features folder at the root of the test bundle
 
-CucumberSwift looks for a folder named `Features` at the root of the test bundle. Add the folder to an `apple_resource_group` as `structured_resources`, which keeps its subfolders. Bazel keeps each file's path relative to the folder of your `BUILD.bazel` file, so remove any folders above `Features` with `strip_structured_resources_prefixes`:
+CucumberSwift looks for a folder named `Features` at the root of the test bundle. Add the folder to an `apple_resource_group` as `structured_resources`, so that it keeps its subfolders. Bazel keeps each file's path relative to the folder of your `BUILD.bazel` file, so remove any folders above `Features` with `strip_structured_resources_prefixes`:
 
 ```starlark
 load("@rules_apple//apple:ios.bzl", "ios_unit_test")
@@ -109,7 +109,7 @@ Pass every other environment variable in <doc:Settings>, such as `CUCUMBER_VERBO
 
 ### Paste generated step definitions
 
-CucumberSwift generates step definitions as Cucumber expressions, which compile in any test target. To get regex literals written as `#/^…$/#` instead, turn on `Cucumber.generateRegexLiterals` in `setupSteps()`, or pass `--test_env=CUCUMBER_GENERATE_REGEX_LITERALS=YES`. See <doc:Matching-Steps#Generate-regex-literals-instead>.
+CucumberSwift generates step definitions as Cucumber expressions, and these compile in any test target. To get regex literals written as `#/^…$/#` instead, turn on `Cucumber.generateRegexLiterals` in `setupSteps()`, or pass `--test_env=CUCUMBER_GENERATE_REGEX_LITERALS=YES`. See <doc:Matching-Steps#Generate-regex-literals-instead>.
 
 To get them written as `/^…$/` in the Swift 5 language mode, turn on bare slash regex literals in your `swift_library`:
 

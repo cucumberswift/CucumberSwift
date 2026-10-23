@@ -34,14 +34,11 @@ This article describes what the macros need, how to set them up for each kind of
 The notes below explain the requirements:
 
 - **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed. The macOS that an Xcode needs is Apple's requirement for that Xcode.
-- **In a Swift package**, you need Swift 6.1, the first version with package traits. The macros are behind a trait.
-- **In an Xcode project**, you need Xcode 26.4, the first version that can turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes. Or run your tests from a Swift package, as <doc:Running-Tests-With-Swift-Package-Manager> describes.
-- **In a Tuist project**, the Xcode project's requirement applies. You also need Tuist 4.203.0 or later to set the trait in `Project.swift`. See <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project>.
+- **Each kind of project has its own minimum.** The macros are behind a package trait. In a Swift package, you need Swift 6.1, the first version with package traits. In an Xcode project, you need Xcode 26.4, the first version that can turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, or run your tests from a Swift package, as <doc:Running-Tests-With-Swift-Package-Manager> describes. In a Tuist project, the Xcode project's requirement applies, and you also need Tuist 4.203.0 or later to set the trait in `Project.swift` (see <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project>).
 - **Convert to Gherkin Macros** (see <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros>) is tested in the same way in a Swift package. CI runs the command with exactly Xcode 16.3. In an Xcode project, the command needs the trait on, so it needs Xcode 26.4, as the macros do. But CI doesn't run the command there.
 - **swift-syntax 600 to 604.** SwiftPM picks one swift-syntax version for your whole package, so the macros accept any version in that range. Your package can also use another macro package, as long as the two ranges overlap. CI tests the macros every night with the oldest version, 600.0.0, and on every change with the version that CucumberSwift's own `Package.resolved` pins. Versions before 600 don't build.
-- **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
-- **Regex literals need iOS 16, macOS 13 or tvOS 16**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Using-Step-Definition-Macros#Regex-literals>.
-- **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which can't deliver macros. So a Carthage install keeps the step definition functions.
+- **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time. Regex literals are the one exception: they need iOS 16, macOS 13 or tvOS 16, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Using-Step-Definition-Macros#Regex-literals>.
+- **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, and that project can't deliver macros. So a Carthage install keeps the step definition functions.
 
 ## Set up a Swift package
 
@@ -70,7 +67,7 @@ let package = Package(
 
 Then `import CucumberSwiftMacros` where you write step definitions. It imports CucumberSwift and CucumberSwiftExpressions as well. Once you use Swift 6.4 or later, you can remove the swift-syntax dependency. See <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>.
 
-The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros`. They need the swift-syntax package, which SwiftPM downloads only when the trait is on. With Swift 6.2, a package that doesn't turn the trait on doesn't download swift-syntax. Swift 6.1 may still record a pin for it in `Package.resolved`, because the dependency is declared, but it doesn't build it.
+The macros are a separate product, `CucumberSwiftMacros`, behind a package trait named `Macros`. They need the swift-syntax package, and SwiftPM downloads it only when the trait is on. With Swift 6.2, a package that doesn't turn the trait on doesn't download swift-syntax. Swift 6.1 may still record a pin for it in `Package.resolved`, because the dependency is declared, but it doesn't build it.
 
 To run your feature files with Swift Testing instead, depend on `CucumberSwiftTestingMacros` instead of `CucumberSwiftMacros`, and apply its plugin. <doc:Running-Feature-Files-With-Swift-Testing#Set-up-a-Swift-package> shows the manifest.
 
@@ -109,7 +106,7 @@ let package = Package(
 )
 ```
 
-Its target needs one source file, which can be empty, such as `Sources/MacrosTrait/MacrosTrait.swift`.
+Its target needs one source file, such as `Sources/MacrosTrait/MacrosTrait.swift`. The file can be empty.
 
 Add the folder to your project as a local package with **File > Add Package Dependencies… > Add Local…**, without adding its product to any target. Then add CucumberSwift to the project as usual, without the trait. Add the swift-syntax package to the project too, not to `MacrosTrait` (see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>). Add `CucumberSwiftMacros` or `CucumberSwiftTestingMacros` to your test target, and `import` it, exactly as with Xcode 26.4.
 
@@ -291,7 +288,7 @@ The closure takes one argument for each capture group, in order, and optionally 
 
 Every group counts, including one inside another: `#/^((\d+) red) cukes$/#` gives two arguments. A string pattern read as a regular expression, such as `"^((\\d+) red) cukes$"`, gives only its outer group. A named group's name doesn't need to match the argument's.
 
-A capture is always text, which the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression. Cucumber expressions are the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the three kinds.
+A capture is always text that the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression. Cucumber expressions are the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the three kinds.
 
 Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
 
@@ -382,11 +379,11 @@ SwiftPM picks one swift-syntax version for all your packages, so every package t
 error: Dependencies could not be resolved because root depends on 'swift-syntax' 509.0.0..<510.0.0 and 'cucumberswift' depends on 'swift-syntax' 600.0.0..<605.0.0.
 ```
 
-The message names the two ranges that conflict, and the package that each comes from. Here, they're your own `Package.swift`, which asks for 509, and CucumberSwift, which accepts 600 up to, but not including, 605. To fix it, do one of these things:
+The message names the two ranges that conflict, and the package that each comes from. Here, they're your own `Package.swift`, asking for 509, and CucumberSwift, accepting 600 up to, but not including, 605. To fix it, do one of these things:
 
 - **Widen your own range** when it's yours, as here, so that it overlaps 600.0.0..<605.0.0.
 - **Update the other package** to a release whose range overlaps CucumberSwift's. Most macro packages have moved to 600 or later.
-- **Keep the macros out of that package.** If the other package can't move yet, leave the trait off where it's used, and write step definitions with ``Given`` and the like, which need no swift-syntax.
+- **Keep the macros out of that package.** If the other package can't move yet, leave the trait off where it's used, and write step definitions with ``Given`` and the like, because they need no swift-syntax.
 
 ### Multiple commands produce swift-syntax.build
 

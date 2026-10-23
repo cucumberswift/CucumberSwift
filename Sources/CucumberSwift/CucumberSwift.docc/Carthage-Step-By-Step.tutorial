@@ -32,7 +32,7 @@
             }
 
             @Step {
-                Your step definitions use types from CucumberSwiftExpressions, which CucumberSwift is built on. Its module is inside the framework, so tell Xcode where to find it. Open your test target's Build Settings, search for "Import Paths", and add `$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules` to Module Import Paths.
+                Your step definitions use types from CucumberSwiftExpressions, the package that CucumberSwift is built on. Its module is inside the framework, so tell Xcode where to find it. Open your test target's Build Settings, search for "Import Paths", and add `$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules` to Module Import Paths.
 
                 > Note: Without it, the build fails with "Unable to find module dependency: 'CucumberSwiftExpressions'".
 
@@ -62,7 +62,7 @@
             }
 
             @Step {
-                Xcode adds the folder as a synchronized folder, which copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
+                Xcode adds the folder as a synchronized folder. A synchronized folder copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
 
                 Changing the build rule removes the folder from your test target. Under Target Membership, select the add button (+), choose your test target, and select Save.
 
@@ -126,7 +126,7 @@
 
                 See <doc:Matching-Steps> for every way to match a step.
 
-                > Note: A Carthage install writes step definitions as functions, as here, because Carthage builds CucumberSwift from its Xcode project, which can't deliver the step definition macros. The macros are the recommended style where you can use them. See <doc:SPM-Step-By-Step> and <doc:Using-Step-Definition-Macros>.
+                > Note: A Carthage install writes step definitions as functions, as here, because Carthage builds CucumberSwift from its Xcode project, and that project can't deliver the step definition macros. The macros are the recommended style where you can use them. See <doc:SPM-Step-By-Step> and <doc:Using-Step-Definition-Macros>.
 
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions.swift")
             }

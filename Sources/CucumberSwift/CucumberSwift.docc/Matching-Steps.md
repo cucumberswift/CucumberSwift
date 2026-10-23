@@ -166,7 +166,7 @@ Given(/^I owe 5\$$/) { _, _ in }
 }
 }
 
-To read the amount instead of matching one price, capture it. Again, choose one of the alternatives. A regular expression gives the closure text, which the closure converts itself. The text is a `String` for a regular expression in a string, and a `Substring` for a regex literal:
+To read the amount instead of matching one price, capture it. Again, choose one of the alternatives. A regular expression gives the closure text that the closure converts itself. The text is a `String` for a regular expression in a string, and a `Substring` for a regex literal:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -455,7 +455,7 @@ When(/^some (\w+) by the actor$/.ignoresCase()) { match, _ in
 
 > Note: You can also use Swift's regex builders to convert matches to concrete types. They're more verbose, and CucumberSwift supports them.
 
-This is the same step definition with an extended delimiter, which compiles in any test target:
+This is the same step definition with an extended delimiter. It compiles in any test target:
 
 <!-- swift-example: steps -->
 ```swift
@@ -468,7 +468,7 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 
 ## Step definitions for undefined steps
 
-For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition that you can paste in. It also attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code uses a Cucumber expression, which works on every deployment target. It's a step definition macro when your tests link the step definition macros, and a function otherwise, such as with Carthage (see <doc:Matching-Steps#Step-definition-macros>). Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
+For each step that no step definition matches, CucumberSwift reports a failure with the Swift code for a step definition that you can paste in. It also attaches all of them to the test `GenerateStepsStubsIfNecessary`. The code uses a Cucumber expression, and Cucumber expressions work on every deployment target. It's a step definition macro when your tests link the step definition macros, and a function otherwise, such as with Carthage (see <doc:Matching-Steps#Step-definition-macros>). Whole numbers become `{int}`, decimals `{float}`, and text in double quotes `{string}`. Text in single quotes stays as written:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -516,7 +516,7 @@ Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
 }
 }
 
-The generated regex literals are written as `#/…/#`, which compiles in any test target. To get `/…/` instead, return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle`. It has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target, which CucumberSwift can't read. So check it in your own code, as <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions> shows. Regex literals need iOS 16, macOS 13 or tvOS 16.
+The generated regex literals are written as `#/…/#`, a form that compiles in any test target. To get `/…/` instead, return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle`. It has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target that CucumberSwift can't read. So check it in your own code, as <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions> shows. Regex literals need iOS 16, macOS 13 or tvOS 16.
 
 ### Step definition macros
 

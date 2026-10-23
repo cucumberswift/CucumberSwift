@@ -8,7 +8,7 @@ You can run CucumberSwift from a test target in a Swift package, not only from t
 
 ### Declare the Features folder as a resource
 
-Declare your `Features` folder as a resource with `.copy`, which keeps its subfolders:
+Declare your `Features` folder as a resource with `.copy`, so that it keeps its subfolders:
 
 <!-- swift-example: package-target -->
 ```swift
@@ -86,7 +86,7 @@ To see which steps ran and how each scenario ended, turn on verbose output with 
 
 ### Paste generated step definitions
 
-For each step that has no step definition, CucumberSwift reports a failure with the Swift code for one. The code uses a Cucumber expression, which compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, the code uses a regex literal instead, written as `#/^…$/#`, which also compiles in any test target.
+For each step that has no step definition, CucumberSwift reports a failure with the Swift code for one. The code uses a Cucumber expression that compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, the code uses a regex literal instead, written as `#/^…$/#`, a form that also compiles in any test target.
 
 To get the regex literal written as `/^…$/`, your test target needs bare slash regex literals. The Swift 6 language mode has them. In the Swift 5 language mode, with tools version 5.8 or later, add this setting:
 

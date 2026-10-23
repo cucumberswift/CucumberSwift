@@ -18,20 +18,33 @@ Ask questions, get help and discuss CucumberSwift on [Slack](https://join.slack.
 
 ## Topics
 
-### Discussions
+### Getting started
+
 - <doc:Tutorial-Table-of-Contents>
 - <doc:Running-Tests-In-Xcode>
 - <doc:Supported-Platforms>
 - <doc:Settings>
+
+### Running tests
+
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Tests-With-Bazel>
 - <doc:Running-Feature-Files-With-Swift-Testing>
 - <doc:Running-Scenarios-In-Parallel>
+
+### Writing step definitions
+
 - <doc:Matching-Steps>
-- <doc:Checking-Feature-Files>
 - <doc:Using-Step-Definition-Macros>
 - <doc:Checking-Step-Definitions>
+- <doc:Hooks>
+
+### Checking and reporting
+
+- <doc:Checking-Feature-Files>
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>
-- <doc:Hooks>
+
+### UI testing
+
 - <doc:CucumberSwift+UIUTest>

@@ -17,7 +17,7 @@ A behaviour that you can turn on or off has two switches:
 
 The static variable wins when it is set. If it isn't set, the environment variable decides, and if neither is set, the default applies. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable. A setting that takes a value instead of a switch, such as `Cucumber.reportPath`, follows the same order. Its static variable is an optional `String`, and its environment variable takes text. For these settings, an empty value counts as not set.
 
-Set the static variables in your `StepImplementation`'s `setupSteps()`, which CucumberSwift calls before it creates the tests:
+Set the static variables in your `StepImplementation`'s `setupSteps()`. CucumberSwift calls it before it creates the tests:
 
 ```swift
 extension Cucumber: StepImplementation {
@@ -165,7 +165,7 @@ When `CUCUMBER_TAGS` is set, it takes over, and CucumberSwift doesn't call `shou
 
 ### Continue after a failed assertion
 
-`continueTestingAfterFailure` sets what XCTest does when an assertion in a step fails. If your `StepImplementation` doesn't declare it, CucumberSwift uses XCTest's own `continueAfterFailure`, which is `true`. So by default, a failed assertion doesn't stop its step. The rest of the step's code runs, and XCTest reports every failure. A failing async step's task isn't cancelled either.
+`continueTestingAfterFailure` sets what XCTest does when an assertion in a step fails. If your `StepImplementation` doesn't declare it, CucumberSwift uses XCTest's own `continueAfterFailure`. Its value is `true`. So by default, a failed assertion doesn't stop its step. The rest of the step's code runs, and XCTest reports every failure. A failing async step's task isn't cancelled either.
 
 If you return `false`, XCTest stops the step at its first failed assertion. With one test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
 

@@ -61,7 +61,7 @@ let package = Package(
 
 The plugin finds every `.feature` file in the target's folder. `CucumberSwiftTestingMacros` has the step definition macros, and also imports `CucumberSwiftTesting`, the runner.
 
-The macros need the trait, which downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above (see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>). To write step definitions without the macros, leave the trait off and depend on `CucumberSwiftTesting` instead. See <doc:#Without-the-macros>.
+The macros need the trait, and the trait downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above (see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>). To write step definitions without the macros, leave the trait off and depend on `CucumberSwiftTesting` instead. See <doc:#Without-the-macros>.
 
 ## Set up an Xcode project
 
@@ -194,7 +194,7 @@ xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkou
 
 A Scenario Outline is one test, and each example is one of its test cases. Each example is named after the line of its row, such as `Example (line 17)`, so its results stay on its row when you change a value. Xcode can run a single example from the test navigator. `xcodebuild -only-testing` can select only the whole outline. Given a test case, it runs nothing, and still succeeds.
 
-`CUCUMBER_TAGS` works as it does with CucumberSwift. It takes a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, which Swift Testing reports as a pass.
+`CUCUMBER_TAGS` works as it does with CucumberSwift. It takes a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, and Swift Testing reports that as a pass.
 
 Scenarios run one at a time, in the order of the feature files, as with CucumberSwift, because step definitions usually share state. This applies only to the scenarios. Your target's other Swift Testing tests can run at the same time as them. To run scenarios at the same time, see <doc:#Run-scenarios-in-parallel>.
 
@@ -393,7 +393,7 @@ These rules also apply to the report:
 - **A step is `failed` when its step definition throws, when no step definition matches it, and when one of its step hooks throws.** Its `error_message` is the error. An ambiguous step is `ambiguous`. The steps after a failed one aren't in the report, as with CucumberSwift.
 - **A failed `#expect` fails its step in the report too, with Swift 6.2 or later.** Swift Testing doesn't tell the running code when an expectation fails. The runner learns of it from the same issue handling that moves the issue to the feature file's line. With Swift 6.1, such a step is reported as `passed`, though Swift Testing still fails the test. A step that throws, with `try #require` or otherwise, is `failed` in every version.
 
-**Verbose output.** The runner prints the lines that <doc:Verbose-Output> shows, with the same three switches: `Cucumber.verboseOutput`, `StepImplementation.verbose` and the environment variable `CUCUMBER_VERBOSE`, which takes `1` or `true`. Any one of them turns it on:
+**Verbose output.** The runner prints the lines that <doc:Verbose-Output> shows, with the same three switches: `Cucumber.verboseOutput`, `StepImplementation.verbose` and the environment variable `CUCUMBER_VERBOSE`, set to `1` or `true`. Any one of them turns it on:
 
 ```swift
 extension Cucumber: @retroactive StepImplementation {
@@ -508,7 +508,7 @@ With parallel testing on, each scenario is one case, and scenarios run at the sa
 
 ## Move unit tests to Swift Testing
 
-A project can move its unit tests to Swift Testing and keep its UI tests, which can't move, on CucumberSwift and XCTest. Each test target links one runner:
+A project can move its unit tests to Swift Testing and keep its UI tests on CucumberSwift and XCTest, because UI tests can't move. Each test target links one runner:
 
 | Test target | Product | Runs feature files with |
 |---|---|---|
@@ -518,7 +518,7 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 One scheme can test both targets. To move a unit test target:
 
 1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`. Mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Otherwise, step definitions written as macros or with the plain DSL stay as they are, and so do features written in the Swift DSL. If you filter scenarios in code, declare `shouldRunWith(scenario:tags:)`. This runner calls only that one, so it ignores an older `shouldRunWith(tags:)`, and every scenario runs.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`. Mark the conformance `@retroactive`, and remove `bundle`, because this runner doesn't use it. Otherwise, step definitions written as macros or with the plain DSL stay as they are, and so do features written in the Swift DSL. If you filter scenarios in code, declare `shouldRunWith(scenario:tags:)`. This runner calls only that one, so it ignores an older `shouldRunWith(tags:)`, and every scenario runs.
 3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once. A failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
 4. Check <doc:#Differences-from-the-XCTest-runner> and <doc:Settings#Settings-that-work-differently> for what differs.
 
@@ -528,8 +528,8 @@ One scheme can test both targets. To move a unit test target:
 
 The Swift Testing runner does everything the XCTest runner does, with these exceptions:
 
-1. **No UI testing.** Swift Testing doesn't support `XCUIApplication`, so you can use it only for unit tests. This is a known limitation of Swift Testing, which Apple describes in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
-2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. Return `false` to fail fast. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require`, which stops the step at once, when it's `false`. See <doc:#After-a-failed-assertion>.
+1. **No UI testing.** Swift Testing doesn't support `XCUIApplication`, so you can use it only for unit tests. This is a known limitation of Swift Testing that Apple describes in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
+2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. Return `false` to fail fast. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require` when it's `false`, because it stops the step at once. See <doc:#After-a-failed-assertion>.
 
    ```swift
    import CucumberSwiftTestingMacros

@@ -62,7 +62,7 @@ Xcode shows `.feature` files as plain text. To highlight them, install the Gherk
 
 ![A feature file in Xcode with Gherkin highlighting: the tags, comment, and keywords such as Feature, Background, Scenario Outline, Given, When, Then and Examples are colored, as are the <placeholders>, the string, the table separators and the numbers.](HighlightFeatureFiles.png)
 
-The highlighting relies on how Xcode loads grammars and plug-ins, which Apple doesn't document. So a future version of Xcode could stop highlighting your feature files. Your tests aren't affected either way.
+The highlighting relies on how Xcode loads grammars and plug-ins in a way that Apple doesn't document. So a future version of Xcode could stop highlighting your feature files. Your tests aren't affected either way.
 
 To install it, run the script from a copy of the CucumberSwift repository:
 
@@ -71,7 +71,7 @@ git clone --depth 1 https://github.com/cucumberswift/CucumberSwift.git
 CucumberSwift/Tools/Xcode/gherkin-highlighting.sh install
 ```
 
-Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle, the Gherkin plug-in, which contains only data and no code. Choose **Load Bundle**. Xcode asks again after each Xcode update.
+Then quit and reopen Xcode. Xcode asks whether to load an unexpected code bundle, the Gherkin plug-in. The plug-in contains only data and no code. Choose **Load Bundle**. Xcode asks again after each Xcode update.
 
 Feature files then open as Gherkin. In the File inspector (View ▸ Inspectors ▸ File), their type is **Default - Gherkin Query Document**. A feature file that Xcode opened before keeps its old type, Default - Plain Text. To set it once, select the file, choose **Gherkin Query Document** as its type in the File inspector, then close the file and open it again.
 
@@ -81,7 +81,7 @@ To add a snippet, open the Library in a feature file (View ▸ Show Library, or 
 
 The script installs these items:
 
-- `~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin`, which tells Xcode that `.feature` files are Gherkin
+- `~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin`, the plug-in that tells Xcode that `.feature` files are Gherkin
 - `~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec`, the grammar
 - three snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
 
@@ -131,9 +131,9 @@ The command converts every target by default, and the diff for a large project c
 | Several | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Cart --path Tests/MyAppTests/Checkout` |
 | A folder of one target | `swift package convert-to-gherkin-macros --target MyAppTests --path Tests/MyAppTests/Checkout` |
 
-A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside that folder. If a path is outside the folder, doesn't exist, or isn't a Swift file or a folder, the command stops, names the path and changes nothing. It stops in the same way for a folder with no Swift files, and for `--path` or `--target` with no value after it. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets. A path with no files in those targets stops the command, which names the path.
+A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside that folder. If a path is outside the folder, doesn't exist, or isn't a Swift file or a folder, the command stops, names the path and changes nothing. It stops in the same way for a folder with no Swift files, and for `--path` or `--target` with no value after it. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets. A path with no files in those targets stops the command, and the command names the path.
 
-Add `--dry-run` to any of these to report what the command would do without changing a file. It reports the same files that it would change. The command needs permission to change files in your project or package. Xcode asks before it runs, and `swift package` asks in Terminal. Or you can pass `--allow-writing-to-package-directory`, which a script needs even for `--dry-run`. The command first checks that your project is set up for the macros.
+Add `--dry-run` to any of these to report what the command would do without changing a file. It reports the same files that it would change. The command needs permission to change files in your project or package. Xcode asks before it runs, and `swift package` asks in Terminal. Or you can pass `--allow-writing-to-package-directory`. A script needs it even for `--dry-run`. The command first checks that your project is set up for the macros.
 
 In a project with many step definitions, convert them gradually, one folder or feature at a time, with `--dry-run` first. Commit each conversion on its own, after you build and run your tests. Each diff is then small enough to review, and a step definition that needs converting by hand doesn't hold up the rest.
 
@@ -161,7 +161,7 @@ Xcode can't convert a file that isn't in a target you chose, because `--path` on
 
 The command converts hook calls, such as `BeforeScenario { … }`, to their macros. The macros take the same arguments and closure, and expand back to the call. The command doesn't convert a hook call that passes a function, or an argument that the macros don't take.
 
-It also converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``. A step definition can have a trailing closure or `callback:`. Its pattern can be a string literal, with or without `as CucumberExpression`, which the macro adds itself, or a regex literal.
+It also converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``. A step definition can have a trailing closure or `callback:`. Its pattern can be a string literal, with or without `as CucumberExpression` (the macro adds it itself), or a regex literal.
 
 The command converts a step definition when its closure reads each parameter from `match` in its first statements, in the pattern's order, and uses `match` for nothing else. Reads such as `let count = try match.first(\.int)` and `let count: Int = match[\.int, index: 0]` qualify. Those statements become the closure's arguments, and the macro expands to the same step definition as before. If you wrote a type on a read, the type stays. Otherwise the argument gets the type that the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are. The command adds `import CucumberSwiftMacros`, or `CucumberSwiftTestingMacros`, when the file doesn't import it.
 
@@ -169,12 +169,12 @@ The command converts a step definition when its closure reads each parameter fro
 
 The command checks your project's setup first, and changes nothing until the project is ready:
 
-- **The `Macros` trait must be on for CucumberSwift.** The command reads and writes Swift code with swift-syntax, which comes only with the trait. With the trait off, the command can't run. It stops, and its message is the first thing you see. The message gives the exact change for the kind of project it finds: a Swift package (the trait on the dependency, with `swift-tools-version` 6.1 or later), a Tuist project (`Project.swift`), or an Xcode project (the package's trait setting with Xcode 26.4 or later, or the local `MacrosTrait` package before it). When it can't tell which kind, it lists them all.
-- **Each target it converts must depend on the macros product.** A target that depends on `CucumberSwift` but not on `CucumberSwiftMacros`, or on `CucumberSwiftTesting` but not on `CucumberSwiftTestingMacros`, stops the command, which names the target and says what to add. The converted step definitions couldn't compile without it.
+- **The `Macros` trait must be on for CucumberSwift.** The command reads and writes Swift code with swift-syntax, and swift-syntax comes only with the trait. With the trait off, the command can't run. It stops, and its message is the first thing you see. The message gives the exact change for the kind of project it finds: a Swift package (the trait on the dependency, with `swift-tools-version` 6.1 or later), a Tuist project (`Project.swift`), or an Xcode project (the package's trait setting with Xcode 26.4 or later, or the local `MacrosTrait` package before it). When it can't tell which kind, it lists them all.
+- **Each target it converts must depend on the macros product.** A target that depends on `CucumberSwift` but not on `CucumberSwiftMacros`, or on `CucumberSwiftTesting` but not on `CucumberSwiftTestingMacros`, stops the command, and the command names the target and says what to add. The converted step definitions couldn't compile without it.
 
 The command never edits `Package.swift`, `Project.swift` or the Xcode project. Turning the trait on and adding the product are changes that you make once, as in <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>, <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> or <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project>. When it stops for either reason, it exits with an error, so a script can tell.
 
-In each file that it converts, the command imports the macros module for you: `CucumberSwiftMacros` after the file's import of `CucumberSwift`, or `CucumberSwiftTestingMacros` after its import of `CucumberSwiftTesting`. It keeps the import of the runner, which the macros module re-exports, and adds nothing to a file that imports the macros module already.
+In each file that it converts, the command imports the macros module for you: `CucumberSwiftMacros` after the file's import of `CucumberSwift`, or `CucumberSwiftTestingMacros` after its import of `CucumberSwiftTesting`. It keeps the import of the runner, because the macros module re-exports it, and adds nothing to a file that imports the macros module already.
 
 ### Converting regex literals
 
@@ -200,14 +200,12 @@ A regex literal needs iOS 16, macOS 13 or tvOS 16 with or without the macros, so
 
 The command leaves a step definition unchanged, and lists it with its reason, in these cases:
 
-- Its closure passes `match` on to other code, reads `match.allParameters`, or reads a parameter after other code.
-- It reads parameters in an order other than the pattern's. Or it reads by position a parameter type that the pattern has once, or reads with `first` one that the pattern has more than once.
+- Its closure reads `match` in a way the macro can't. It passes `match` on to other code, reads `match.allParameters`, or reads a parameter after other code. Or it reads parameters in an order other than the pattern's, reads by position a parameter type that the pattern has once, or reads with `first` one that the pattern has more than once.
 - Its pattern isn't a string literal or a regex literal, has a mistake that the macro would report, or is a regex literal whose capture groups the command can't read.
 - Its closure is the deprecated `[String]` closure, uses `$0` and `$1`, or is a function or a selector.
 - It declares a type other than the one that the pattern gives, including for a capture group, or it doesn't read a custom parameter type. The macro's closure then couldn't be given its type.
-- The file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition or hook.
+- The file declares a function, variable, type or parameter with the keyword's name where the call is, so the call may not be a step definition or hook. Or the file imports neither CucumberSwift nor CucumberSwiftTesting, or imports both.
 - A hook passes a function instead of a closure, or an argument that the macros don't take.
-- The file imports neither CucumberSwift nor CucumberSwiftTesting, or imports both.
 
 The command puts a `#warning` before each one that stands alone as a statement. The compiler then points to it in Xcode's issue navigator and in the build output, and you can convert it by hand:
 

@@ -100,7 +100,7 @@ You can register hooks in more than one place. CucumberSwift still calls each ho
 
 The hook macros, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, are the preferred way to write hooks. The compiler checks each closure where you write it. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument. Anything else is an error that says what the hook passes, and offers a fix. The macros also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
 
-The hook functions keep working, so existing hooks need no change. Use them where the macros aren't available. The macros need CucumberSwift's `Macros` package trait, which downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros, together with your step definitions. Tagged hooks have no macro.
+The hook functions keep working, so existing hooks need no change. Use them where the macros aren't available. The macros need CucumberSwift's `Macros` package trait, and the trait downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros, together with your step definitions. Tagged hooks have no macro.
 
 ### Async hooks
 

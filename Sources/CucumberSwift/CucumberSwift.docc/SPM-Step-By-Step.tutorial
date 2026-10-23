@@ -14,7 +14,7 @@
 
         @Steps {
             @Step {
-                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", which starts at the latest release, and select Add Package.
+                Choose File → Add Package Dependencies…, and enter `https://github.com/cucumberswift/CucumberSwift` in the search field. Keep the dependency rule "Up to Next Major Version", starting at the latest release, and select Add Package.
 
                 The sheet has no setting for package traits. So afterwards, turn on the package's `Macros` trait, add the swift-syntax package to the project as well, and add the `CucumberSwiftMacros` library to your unit test target, not to your app. <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> gives each step.
 
@@ -44,7 +44,7 @@
             }
 
             @Step {
-                Xcode adds the folder as a synchronized folder, which copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
+                Xcode adds the folder as a synchronized folder. A synchronized folder copies each file in it into the bundle on its own. Select `Features` in the project navigator, choose View → Inspectors → File, and set Build Rules to "Apply Once to Folder". Xcode then copies the folder, with everything in it, into the test bundle.
 
                 Changing the build rule removes the folder from your test target. Under Target Membership, select the add button (+), choose your test target, and select Save.
 
@@ -70,7 +70,7 @@
             @Step {
                 Replace the test file Xcode created in your test target with this one. `bundle` returns the bundle that holds the `Features` folder: your test bundle.
 
-                The file imports `CucumberSwiftMacros`, which also imports CucumberSwift. The extension adds a conformance to a type and a protocol that both come from CucumberSwift, and `@retroactive` says that you mean it. Without it, Xcode warns about the conformance, in both the Swift 5 and Swift 6 language modes.
+                The file imports `CucumberSwiftMacros`, and that module also imports CucumberSwift. The extension adds a conformance to a type and a protocol that both come from CucumberSwift, and `@retroactive` says that you mean it. Without it, Xcode warns about the conformance, in both the Swift 5 and Swift 6 language modes.
 
                 @Code(name: "StepDefinitions.swift", file: "StepDefinitions-Macros-Empty.swift")
             }

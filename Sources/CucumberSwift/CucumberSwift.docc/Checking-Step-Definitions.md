@@ -93,4 +93,4 @@ Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { match, _ in
 }
 ```
 
-With a capture list, the expansion gives a regex literal's closure its type through a small generic function instead. It does this because the type names the regex's `Output`, which only Swift knows.
+With a capture list, the expansion gives a regex literal's closure its type through a small generic function instead. It does this because the type names the regex's `Output`, a type that only Swift knows.

@@ -8,7 +8,7 @@ The `CucumberSwiftLint` build tool plugin checks every `.feature` file in a targ
 
 ![A feature file in Xcode with four warnings shown inline: an undefined step on line 8, the misspelt keyword "Thne" on line 12, a table row with one cell too many on line 21, and a doc string that is never closed on line 25.](CheckingFeatureFiles-Warnings.png)
 
-The plugin's warnings never fail a build, and the plugin changes nothing about how the tests run. A step in the wrong place in a feature written in the Swift DSL is the one exception. That is an error, which fails the build, as <doc:#What-it-checks> explains.
+The plugin's warnings never fail a build, and the plugin changes nothing about how the tests run. A step in the wrong place in a feature written in the Swift DSL is the one exception. That is an error that fails the build, as <doc:#What-it-checks> explains.
 
 The plugin needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later. Carthage can't deliver Swift package plugins.
 
@@ -70,7 +70,7 @@ The plugin also checks the feature files against the target's step definitions, 
 - **Undefined steps.** The plugin warns about a step that none of the target's step definitions matches. It checks each step of a `Scenario Outline` with the values from its `Examples` filled in.
 - **Step definitions that can never match.** The plugin warns about a string pattern that starts with `^`, ends with `$` or is written between slashes but isn't a valid regular expression, and about a regex literal that doesn't compile. The warning appears on the step definition's line.
 
-> Note: CucumberSwift supports two ways to write a feature. The declarative way, which is recommended, is a feature file. Its steps describe the behaviour in Gherkin, and step definitions in `setupSteps()` match them. The imperative way is a feature written in the Swift DSL, whose steps are the code they run. Write each feature one way only. A step of one kind written inside the other is an error, which fails the build.
+> Note: CucumberSwift supports two ways to write a feature. The recommended declarative way is a feature file. Its steps describe the behaviour in Gherkin, and step definitions in `setupSteps()` match them. The imperative way is a feature written in the Swift DSL, whose steps are the code they run. Write each feature one way only. A step of one kind written inside the other is an error that fails the build.
 
 When a target mixes the two ways, the plugin reports one of two errors, and the build fails. With the macros, the compiler also reports them.
 
@@ -281,7 +281,7 @@ The command lists each line it changed, before and after, with the file's absolu
 Fixed 1 line in 1 of 4 feature files.
 ```
 
-Fixing a line can turn the lines after it into steps, which the plugin checks more closely. The command therefore checks each file again, and applies new suggestions until nothing is left to fix.
+Fixing a line can turn the lines after it into steps that the plugin checks more closely. The command therefore checks each file again, and applies new suggestions until nothing is left to fix.
 
 Text between a header and its first step is a description, where any text is allowed. The command fixes a line in a description only when the next line is a step, a table or a doc string. A line that the command doesn't fix keeps its warning, for you to fix or ignore.
 

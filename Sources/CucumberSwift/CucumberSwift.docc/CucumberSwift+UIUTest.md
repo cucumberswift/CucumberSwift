@@ -6,7 +6,7 @@ Run UI tests as unit tests, with CucumberSwift and UIUTest.
 
 [UIUTest](https://github.com/nallick/UIUTest) runs UI tests in a unit test bundle, without XCUITest. It still checks what a UI test checks, such as whether an element is covered or can be tapped. Combined with CucumberSwift, it runs your Gherkin scenarios as fast unit tests.
 
-On one large project, UI tests that took about 20 minutes with XCUITest took about 2 minutes with UIUTest. That project didn't mock its network calls, which is why the tests took minutes and not seconds.
+On one large project, UI tests that took about 20 minutes with XCUITest took about 2 minutes with UIUTest. That project didn't mock its network calls, so the tests took minutes and not seconds.
 
 ### Add the packages
 
@@ -22,7 +22,7 @@ If your features folder isn't named `Features`, for example `specs/features`, ad
 
 ### Write the step implementation
 
-`AppCucumberTests.swift` sets up UIUTest in hooks around each scenario. The Swift Package Manager tab uses the step definition and hook macros, which are the recommended style. The Carthage tab uses functions, because Carthage can't deliver macros (see <doc:Using-Step-Definition-Macros>).
+`AppCucumberTests.swift` sets up UIUTest in hooks around each scenario. The Swift Package Manager tab uses the step definition and hook macros, the recommended style. The Carthage tab uses functions, because Carthage can't deliver macros (see <doc:Using-Step-Definition-Macros>).
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
