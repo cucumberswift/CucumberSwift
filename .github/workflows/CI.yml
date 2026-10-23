@@ -332,7 +332,8 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    # 10, not 5: the last step pulls the Swift image.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -351,6 +352,16 @@ jobs:
             Tools/Xcode
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
+      # The Swift Package Index lists what `swift package dump-package` reads, run in the official
+      # Swift image on Linux with SPI_PROCESSING set. Swift 6.4 must read Package.swift, which has the
+      # macros and Swift Testing (#492). The sparse checkout has the manifests: it keeps the root's files.
+      - name: Check which manifest Swift 6.4 reads on Linux
+        env:
+          SWIFT_IMAGE: swift:6.4-jammy@sha256:51729e0f6ed2f477490cd1e1132e5eddbf011b81092f4998fc8d88e5435e33cb
+        run: |
+          set -o pipefail
+          docker run --rm --network none --env SPI_PROCESSING=1 -v "$PWD:/package:ro" -w /package "$SWIFT_IMAGE" \
+            swift package dump-package --scratch-path /tmp/build | python3 .github/scripts/check_manifest.py Package.swift -
 
   # The pre-commit hook runs actionlint and SwiftLint too, but a commit can skip it,
   # and it only reports SwiftLint's problems on the lines a commit changes. The
@@ -525,8 +536,8 @@ jobs:
   # Pull requests run Xcode 26, on macos-26: the macos-15 image carries Xcode 26
   # too, but its host is macOS 15, and Xcode 26 will not run Catalyst tests there.
   # The merge queue and main also run Xcode 16.0, on macos-15. In the nightly and
-  # manual runs, that variant also builds Package.swift, which only Swift 6.0
-  # reads: Xcode 16.3 and later read Package@swift-6.1.swift. That variant also runs
+  # manual runs, that variant also builds Package@swift-6.0.swift, which only Swift 6.0
+  # reads: Xcode 16.3 and later read Package.swift. That variant also runs
   # the Xcode project fixture that uses the macros through a local package, with
   # Xcode 16.3, the oldest Xcode the docs give for that route (Fixture tests runs it
   # with a newer one).
@@ -557,9 +568,14 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+      # Xcode 16.0 (Swift 6.0) reads Package@swift-6.0.swift; Xcode 26 reads Package.swift (#492).
+      - name: Check which manifest this Xcode reads
+        env:
+          MANIFEST: ${{ matrix.xcode == '16.0' && 'Package@swift-6.0.swift' || 'Package.swift' }}
+        run: python3 .github/scripts/check_manifest.py "$MANIFEST"
       - name: Run the tests on Mac Catalyst
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
-      - name: Build Package.swift with Swift 6.0
+      - name: Build Package@swift-6.0.swift with Swift 6.0
         if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: swift build --force-resolved-versions
       - name: Install mise
@@ -821,19 +837,19 @@ jobs:
           swift --version
           python3 .github/scripts/docs_examples.py
       # The steps above build the swift-syntax version Package.resolved pins. This one checks the lower
-      # bound of the range Package@swift-6.1.swift accepts (#414): it requires exactly that version, then
+      # bound of the range Package.swift accepts (#414): it requires exactly that version, then
       # builds the Macros trait and runs the macro and converter tests. It changes the manifest and
       # Package.resolved in this checkout, so it stays the last step.
       - name: Test the macros with the oldest swift-syntax they accept
         if: needs.changes.outputs.no_code != 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
-          floor=$(sed -nE 's|.*swift-syntax\.git", "([0-9.]+)"\.\.<.*|\1|p' Package@swift-6.1.swift)
+          floor=$(sed -nE 's|.*swift-syntax\.git", "([0-9.]+)"\.\.<.*|\1|p' Package.swift)
           if [ -z "$floor" ]; then
-            echo "::error file=Package@swift-6.1.swift::Can't find the range of swift-syntax versions"
+            echo "::error file=Package.swift::Can't find the range of swift-syntax versions"
             exit 1
           fi
-          sed -i '' -E "s|(swift-syntax\.git\", )\"$floor\"\.\.<\"[0-9.]+\"|\1exact: \"$floor\"|" Package@swift-6.1.swift
-          grep -F "swift-syntax.git\", exact: \"$floor\"" Package@swift-6.1.swift
+          sed -i '' -E "s|(swift-syntax\.git\", )\"$floor\"\.\.<\"[0-9.]+\"|\1exact: \"$floor\"|" Package.swift
+          grep -F "swift-syntax.git\", exact: \"$floor\"" Package.swift
           swift test --enable-all-traits --filter 'CucumberSwiftMacrosTests|CucumberSwiftMacroConverterTests'
 
   # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist

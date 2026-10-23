@@ -4,7 +4,7 @@
 # URL is a bare git repository of the checked-out commit, tagged 999.0.0, in <directory>. SwiftPM resolves
 # a package from a URL differently from a path: before Swift 6.4, it resolves the Macros trait only when
 # the project declares swift-syntax too, as "Checking Step Definitions When They Compile" says (#418). So
-# the script declares swift-syntax as that article shows, with the range Package@swift-6.1.swift accepts.
+# the script declares swift-syntax as that article shows, with the range Package.swift accepts.
 # Used by CI's Fixture tests, before `mise run test-fixtures`.
 #
 #   .github/scripts/macros-fixture-by-url.sh <directory>
@@ -25,9 +25,9 @@ path_dependency='.package(name: "CucumberSwift", path: "../..", traits: ["Macros
 url_dependency=".package(url: \"file://$repo\", from: \"$version\", traits: [\"Macros\"])"
 
 # The range of swift-syntax versions the macros accept, as the article shows it.
-range=$(sed -nE 's|.*swift-syntax\.git", ("[0-9.]+"\.\.<"[0-9.]+")\).*|\1|p' Package@swift-6.1.swift)
+range=$(sed -nE 's|.*swift-syntax\.git", ("[0-9.]+"\.\.<"[0-9.]+")\).*|\1|p' Package.swift)
 if [[ -z "$range" ]]; then
-  echo "::error file=Package@swift-6.1.swift::Can't find the range of swift-syntax versions" >&2
+  echo "::error file=Package.swift::Can't find the range of swift-syntax versions" >&2
   exit 1
 fi
 swift_syntax_dependency=".package(url: \"https://github.com/swiftlang/swift-syntax.git\", $range)"

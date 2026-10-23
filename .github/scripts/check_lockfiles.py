@@ -8,8 +8,8 @@ The repository has two kinds of manifest, each with its own lockfile:
   Project.swift (Tuist)  -> CucumberSwift.xcodeproj/.../swiftpm/Package.resolved
                             (Xcode, CI's test jobs, and Carthage users)
 
-A newer toolchain reads the version-specific manifest, Package@swift-6.1.swift,
-instead of Package.swift. It adds swift-syntax behind the Macros package trait.
+Swift 6.0 reads the version-specific manifest, Package@swift-6.0.swift, instead
+of Package.swift. Package.swift adds swift-syntax behind the Macros package trait.
 Package.resolved must pin it (see TRAIT_ONLY), because CI's release build on
 Swift 6.1 uses --force-resolved-versions, which fails without the pin.
 
@@ -49,7 +49,7 @@ import subprocess
 import sys
 
 PACKAGE_SWIFT = "Package.swift"
-# Version-specific manifests, such as Package@swift-6.1.swift.
+# Version-specific manifests, such as Package@swift-6.0.swift.
 VERSIONED_PACKAGE_SWIFT = "Package@swift-*.swift"
 PACKAGE_RESOLVED = "Package.resolved"
 XCODE_PROJECT = "CucumberSwift.xcodeproj"
