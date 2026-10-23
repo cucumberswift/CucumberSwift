@@ -42,6 +42,9 @@ chmod +x "$work/bin/xcrun"
 mkdir -p "$work/bundle/Fake.xctest/Contents"
 (cd "$work/bundle" && zip -qr "$work/Fake.zip" Fake.xctest)
 
+# An environment value with commas and an equals sign, which must reach xctest as it is.
+probe="a,b=c,d"
+
 # The runner's bundle: the zip, unless a case sets it. The platform: macOS, unless a case sets it.
 bundle="$work/Fake.zip"
 platform="macos"
@@ -102,8 +105,8 @@ copied="$(sed -n 2p "$work/args")"
 [[ "$copied" != "$work/bundle/Fake.xctest" ]] || fail "xctest ran the folder bundle in place"
 
 # An environment value keeps its commas.
-run "" PROBE="a,b=c,d"
-[[ "$(cat "$work/probe")" == "a,b=c,d" ]] || fail "PROBE reached xctest as '$(cat "$work/probe")'"
+run "" PROBE="$probe"
+[[ "$(cat "$work/probe")" == "$probe" ]] || fail "PROBE reached xctest as '$(cat "$work/probe")'"
 
 # The log names the Xcode Bazel selected, and xctest gets it in DEVELOPER_DIR.
 run "" DEVELOPER_DIR="/Selected/Xcode.app/Contents/Developer"
@@ -154,8 +157,8 @@ run "" FAKE_SDK_VERSION=10.0
 grep -qx "create bazel-xctest-.* Watch-C watchOS-26-5" "$work/simctl" || fail "an SDK older than every runtime picked: $(grep create "$work/simctl")"
 
 # The test environment reaches the spawned xctest, but this Mac's PATH doesn't.
-run "" PROBE="a,b=c,d"
-[[ "$(cat "$work/probe")" == "a,b=c,d" ]] || fail "PROBE reached the watchOS xctest as '$(cat "$work/probe")'"
+run "" PROBE="$probe"
+[[ "$(cat "$work/probe")" == "$probe" ]] || fail "PROBE reached the watchOS xctest as '$(cat "$work/probe")'"
 [[ "$(cat "$work/child_path")" == "unset" ]] || fail "PATH reached the watchOS xctest as '$(cat "$work/child_path")'"
 
 # A filter goes to the watchOS xctest too.

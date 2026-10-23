@@ -114,11 +114,12 @@ if [[ "$platform" == "watchos" ]]; then
   while IFS= read -r -d '' entry; do
     name="${entry%%=*}"
     case "$name" in
-      PATH | HOME | TMPDIR | PWD | OLDPWD | SHLVL | _ | DYLD_* | SIMCTL_CHILD_*) continue ;;
+      PATH | HOME | TMPDIR | PWD | OLDPWD | SHLVL | _ | DYLD_* | SIMCTL_CHILD_*) ;;
+      *)
+        if [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+          export "SIMCTL_CHILD_$name=${entry#*=}"
+        fi ;;
     esac
-    if [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-      export "SIMCTL_CHILD_$name=${entry#*=}"
-    fi
   done < <(env -0)
 fi
 
