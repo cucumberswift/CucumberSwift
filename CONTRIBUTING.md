@@ -28,7 +28,7 @@ Then open an issue with the **Bug report** or **Feature request** template.
 
 A good bug report has:
 
-- The CucumberSwift version, the Xcode version, and the platform (iOS, macOS or tvOS, and the OS version).
+- The CucumberSwift version, the Xcode version, and the platform (iOS, macOS, tvOS or watchOS, and the OS version).
 - How you installed CucumberSwift: Swift Package Manager or Carthage.
 - A minimal `.feature` file and the step definitions that reproduce the problem. This is the most useful thing you can give us.
 - What you expected to happen and what happened instead, including the test output.
@@ -299,9 +299,9 @@ Tuist could recreate the project, so committing it is a deliberate choice. Carth
 - Think about the edge cases: empty or whitespace-only input, accented characters and other Unicode, `And` and `But` steps, tags, comments, data tables and doc strings.
 - A failing step must never be reported as passing. Anything that could hide a failure is a serious bug.
 
-**Platforms.** The minimum deployment targets are iOS 13, macOS 10.15 and tvOS 13.
+**Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
-- Swift regex literals need iOS 16, macOS 13 or tvOS 16 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
+- Swift regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
 - Don't raise the deployment targets in a PR. That's a breaking change for users on older platforms, so open an issue to discuss it first.
 
 **Toolchain.** CucumberSwift builds with Xcode 16.0 (Swift 6.0) or later: the oldest Xcode CI runs, on its macOS 15 runners. Its other runners use macOS 26. Code that `Package.swift` or the Xcode project builds may use anything Swift 6.0 has, and nothing newer without a `#if compiler(>=…)` check. The macros and the Swift Testing runner, which only `Package@swift-6.1.swift` builds, need Swift 6.1. When GitHub's runner images drop the oldest Xcode, the floor rises with the next release, which says so in its notes.

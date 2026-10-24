@@ -1,16 +1,16 @@
 # ``CucumberSwift``
 
-a lightweight Cucumber implementation for iOS, tvOS, and macOS.
+a lightweight Cucumber implementation for iOS, tvOS, watchOS and macOS.
 
 ## Overview
 
-CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
+CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, watchOS and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
 
 ### Get started
 
 Follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents> to add CucumberSwift to a test target, with Swift Package Manager or Carthage. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) are working projects, tested every night against the latest CucumberSwift release, and the documentation says what each one shows. The [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup the tutorials lead to.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and their articles say which.
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their articles name it.
 
 ### Community & Support
 

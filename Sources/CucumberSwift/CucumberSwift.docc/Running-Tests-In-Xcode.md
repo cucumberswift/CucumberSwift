@@ -184,7 +184,7 @@ Given(#/^I have (\d+) cukes( today)?$/#) { match, _ in
 }
 ```
 
-A regex literal needs iOS 16, macOS 13 or tvOS 16 with or without the macros, so the code around it already has the `@available` that the macro needs. A regex with syntax that changes how its groups are numbered or what captures, such as `(?|…)` or the `n` and `x` options, is left as it is, because the command can't give each capture group its type.
+A regex literal needs iOS 16, macOS 13, tvOS 16 or watchOS 9 with or without the macros, so the code around it already has the `@available` that the macro needs. A regex with syntax that changes how its groups are numbered or what captures, such as `(?|…)` or the `n` and `x` options, is left as it is, because the command can't give each capture group its type.
 
 ### What it leaves
 

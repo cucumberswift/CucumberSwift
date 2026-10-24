@@ -8,21 +8,27 @@ CucumberSwift supports what its continuous integration (CI) verifies. This artic
 
 | Tier | What it means | Today |
 |---|---|---|
-| **Tested** | CI builds it and runs the tests on it | iOS Simulator, tvOS Simulator, Mac Catalyst and macOS, with Xcode 16.0 to 26. |
-| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | iOS 13, macOS 10.15 and tvOS 13. |
+| **Tested** | CI builds it and runs the tests on it | iOS Simulator, tvOS Simulator, Mac Catalyst and macOS, with Xcode 16.0 to 26. watchOS Simulator, with Xcode 26. |
+| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4. |
 | **Not supported** | Not built or tested | Older Xcode versions and deployment targets, and anything not listed here. |
 
 ### The Xcode you build with
 
-**The oldest supported Xcode is the oldest one CI runs.** When GitHub's runner image drops it, CucumberSwift's oldest supported Xcode rises in the next release, and that release's notes say so.
+**The oldest supported Xcode is 16.0 (the oldest one our CI runs).** When GitHub's runner image drops it, CucumberSwift's oldest supported Xcode rises in the next release, and that release's notes say so.
 
 This article names the Xcode, not the macOS you build on: Apple's requirements for each Xcode decide which macOS it needs. CI uses macOS 15 and macOS 26 build machines.
 
 ### The OS your tests run on
 
-"Built, not run" says what it means for a test framework: CucumberSwift's own tests don't run on iOS 13, macOS 10.15 or tvOS 13, but a project whose app targets iOS 13 can add CucumberSwift to its test target, and its tests run on the OS versions that the Xcode you use can run them on. The compiler checks every CucumberSwift API against the deployment target, so nothing in a test target needs a newer OS unless this documentation says so, as it does for regex literals below.
+"Built, not run" says what it means for a test framework: CucumberSwift's own tests don't run on iOS 13, macOS 10.15, tvOS 13 or watchOS 7.4, but a project whose app targets iOS 13 can add CucumberSwift to its test target, and its tests run on the OS versions that the Xcode you use can run them on. The compiler checks every CucumberSwift API against the deployment target, so nothing in a test target needs a newer OS unless this documentation says so, as it does for regex literals below.
 
 A bug you report on an OS that is "built, not run" is fixed when it can be reproduced.
+
+### watchOS
+
+CucumberSwift supports watchOS 7.4 and later, because watchOS 7.4 is the first version with XCTest. Add it to a watchOS test target with Swift Package Manager or Bazel. Carthage doesn't build CucumberSwift for watchOS.
+
+With Bazel, run watchOS tests with the runner the `cucumberswift` module provides, because rules_apple's own runner doesn't run them. See <doc:Running-Tests-With-Bazel#Run-tests-on-watchOS>.
 
 ### Features that need more than the floor
 
@@ -34,7 +40,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. Each sa
 | <doc:Using-Step-Definition-Macros> in an Xcode or Tuist project | Xcode 26.4 | Xcode 26.4 |
 | <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> in a Swift package | Xcode 16.3 (Swift 6.1) | Xcode 16.3 |
 | <doc:Running-Scenarios-In-Parallel> (experimental) | Per platform: the article lists what has been tried | The versions its CI jobs run |
-| Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16 at run time | Swift's `@available` on the API |
+| Regex literals in step definitions: <doc:Matching-Steps#Matching-with-Regular-Expressions> | iOS 16, macOS 13, tvOS 16, watchOS 9 at run time | Swift's `@available` on the API |
 
 An article about such a feature shows its requirement as a badge at the top of the page, such as Xcode 16.3, and has a "Requirements" section that says why. A setting that needs more than the oldest supported Xcode says so in its documentation and in the "Requires" column of <doc:Settings>. A requirement on the OS your tests run on is Swift's `@available` on the API, which this documentation shows by itself.
 

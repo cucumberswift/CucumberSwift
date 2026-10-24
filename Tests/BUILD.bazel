@@ -1,10 +1,11 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
-load(":xctest_runner.bzl", "macos_xctest_runner")
+load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
-# From this folder: `bazel test //... --test_tag_filters=-tvos` runs each suite on macOS and on an
-# iOS simulator, and builds it for tvOS. rules_apple can't run tvOS tests (see consumer_tests.bzl).
+# From this folder: `bazel test //... --test_tag_filters=-tvos` runs each suite on macOS, on an
+# iOS simulator and on a watchOS simulator, and builds it for tvOS. rules_apple can't run tvOS
+# tests (see consumer_tests.bzl). CI leaves watchOS out with -watchos in both tag filters.
 
 macos_xctest_runner(name = "macos_xctest_runner")
 
@@ -12,14 +13,19 @@ macos_xctest_runner(name = "macos_xctest_runner")
 sh_test(
     name = "xctest_runner_test",
     srcs = ["xctest_runner_test.sh"],
-    args = ["$(rootpath :xctest_runner.template.sh)"],
-    data = [":xctest_runner.template.sh"],
+    args = ["$(rootpath @cucumberswift//bazel:xctest_runner.template.sh)"],
+    data = ["@cucumberswift//bazel:xctest_runner.template.sh"],
 )
 
 # Checks the runner passes on the Xcode that Bazel selected.
 xctest_runner_info_test(
     name = "xctest_runner_info_test",
     runner = ":macos_xctest_runner",
+)
+
+xctest_runner_info_test(
+    name = "watchos_xctest_runner_info_test",
+    runner = "@cucumberswift//bazel:watchos_xctest_runner",
 )
 
 consumer_tests(

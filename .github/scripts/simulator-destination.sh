@@ -2,9 +2,9 @@
 # Prints the xcodebuild destination of a simulator on this runner, such as
 # platform=tvOS Simulator,id=<udid>, for the jobs that run tests on one.
 #
-#   .github/scripts/simulator-destination.sh <iOS Simulator|tvOS Simulator>
+#   .github/scripts/simulator-destination.sh <iOS Simulator|tvOS Simulator|watchOS Simulator>
 #
-# The first iPhone or Apple TV of the runtime the selected Xcode comes with, so the job doesn't
+# The first iPhone, Apple TV or Apple Watch of the runtime the selected Xcode comes with, so the job doesn't
 # depend on a device name: the newest runtime not newer than the Xcode's SDK, or else the oldest
 # newer one of the same major version, or else the newest. A runner can have newer runtimes than
 # an older Xcode, such as iOS 18.6 and 26.2 beside Xcode 16.4, and the tests run on the runtimes
@@ -14,8 +14,9 @@ set -euo pipefail
 case "${1:-}" in
   "iOS Simulator") runtime="iOS"; device="iPhone"; sdk="iphonesimulator" ;;
   "tvOS Simulator") runtime="tvOS"; device="Apple TV"; sdk="appletvsimulator" ;;
+  "watchOS Simulator") runtime="watchOS"; device="Apple Watch"; sdk="watchsimulator" ;;
   *)
-    echo "usage: $0 <iOS Simulator|tvOS Simulator>" >&2
+    echo "usage: $0 <iOS Simulator|tvOS Simulator|watchOS Simulator>" >&2
     exit 2 ;;
 esac
 
