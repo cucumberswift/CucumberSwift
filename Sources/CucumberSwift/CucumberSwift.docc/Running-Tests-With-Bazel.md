@@ -74,6 +74,13 @@ ios_unit_test(
 
 For macOS, load `macos_unit_test` from `@rules_apple//apple:macos.bzl` and use it the same way, with a `minimum_os_version` of `"10.15"` or later.
 
+For tvOS, load `tvos_unit_test` from `@rules_apple//apple:tvos.bzl`, with a `minimum_os_version` of `"13.0"` or later. It builds your tests, but rules_apple 5.2.0 can't run them: its default tvOS test runner fails every test. To run them, give the target a `runner` of your own. By default, rules_swift scans only the macOS and iOS SDKs, so add the tvOS Simulator SDK in your `MODULE.bazel`:
+
+```starlark
+system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
+system_sdk.configure_sdks(names = ["AppleTVSimulator"])
+```
+
 If CucumberSwift finds no features, the run reports one failing test, `FoundNoFeatures`. Its message names the bundle that was searched.
 
 `CucumberSwift` is a `testonly` target, because it links XCTest. Only `testonly` targets can depend on it.
