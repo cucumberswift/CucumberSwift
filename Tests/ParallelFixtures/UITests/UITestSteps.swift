@@ -183,9 +183,9 @@ extension Cucumber: StepImplementation {
             await Task.yield()
             UITestApp.waitForItems(count, "The cart does not hold \(count) items")
         }
-        // Long enough that Xcode hands the scenarios to more than one worker.
+        // Temporary (#491): 10 seconds, so the run outlasts the Simulator clones' start-up.
         Then("the scenario takes a moment") { _, _ in
-            Thread.sleep(forTimeInterval: 0.5)
+            Thread.sleep(forTimeInterval: 10)
         }
         // Long enough that the two scenarios that share a name run at the same time in two workers.
         Then("the scenario takes a while") { _, _ in

@@ -686,12 +686,13 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run generate-fixtures
-      # Temporary, for #491: measure worker use at 2 and 3 workers, both units, instead of the usual checks.
+      # Temporary, for #491: measure worker use at 2 workers, both units, with 10-second scenarios, instead of the usual checks.
       - name: Measure the parallel fixture's worker use
         env:
           PLATFORM: ${{ matrix.platform == 'iOS' && 'iOS Simulator' || matrix.platform == 'tvOS' && 'tvOS Simulator' || matrix.platform == 'Catalyst' && 'Mac Catalyst' || 'macOS' }}
           KIND: ${{ matrix.kind == 'hostless' && 'Hostless' || matrix.kind == 'hosted' && 'Hosted' || 'UI' }}
           REPEATS: ${{ inputs.parallel_repeats || '3' }}
+          WORKERS_LIST: '2'
         run: .github/scripts/parallel-measure.sh
       - name: Upload the measurements
         if: always()

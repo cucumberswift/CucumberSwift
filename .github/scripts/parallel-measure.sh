@@ -12,7 +12,7 @@ out=parallel-measure
 temp=${RUNNER_TEMP:-$(mktemp -d)}
 mkdir -p "$out"
 results="$out/results.tsv"
-printf "xcode\tplatform\tkind\tworkers\trep\tunit\tscenario_workers\tcontrol_workers\ttesting_s\tpassed\tfailed\tfixture_status\tclone_warning\n" > "$results"
+printf "xcode\tplatform\tkind\tworkers\trep\tunit\tscenario_workers\tcontrol_workers\ttesting_s\tpassed\tfailed\tfixture_status\tclone_warning\tdestinations\n" > "$results"
 xcode=$(xcodebuild -version | head -1 | awk '{print $2}')
 for rep in $(seq 1 "$REPEATS"); do
   for workers in $WORKERS_LIST; do
@@ -35,8 +35,10 @@ for rep in $(seq 1 "$REPEATS"); do
       passed=$(grep -cE "^Test [Cc]ase .* passed" "$log" 2>/dev/null)
       failed=$(grep -cE "^Test [Cc]ase .* failed" "$log" 2>/dev/null)
       warning=$(grep -c "Only .* clones ran scenarios in the $unit run" "$run/fixture.out")
-      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$xcode" "$PLATFORM" "$KIND" "$workers" "$rep" "$unit" \
-        "$scenario_workers" "$control_workers" "${testing:-NA}" "$passed" "$failed" "$status" "$warning" >> "$results"
+      # The run destinations (Simulator clones, or My Mac) that ran any test, without their process IDs.
+      destinations=$(grep -ohE "(passed|failed) on '[^']*'" "$log" 2>/dev/null | sed -E "s/^.* on '//; s/ - .*//" | sort -u | paste -sd ';' -)
+      printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$xcode" "$PLATFORM" "$KIND" "$workers" "$rep" "$unit" \
+        "$scenario_workers" "$control_workers" "${testing:-NA}" "$passed" "$failed" "$status" "$warning" "${destinations:-NA}" >> "$results"
       mv "$log" "$run/" 2>/dev/null
     done
   done
