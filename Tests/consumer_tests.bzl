@@ -1,12 +1,13 @@
-"""Runs a consumer test suite on macOS and on an iOS simulator."""
+"""Runs a consumer test suite on macOS and on an iOS simulator, and builds it for tvOS."""
 
 load("@rules_apple//apple:ios.bzl", "ios_unit_test")
 load("@rules_apple//apple:macos.bzl", "macos_unit_test")
 load("@rules_apple//apple:resources.bzl", "apple_resource_group")
+load("@rules_apple//apple:tvos.bzl", "tvos_unit_test")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 
 def consumer_tests(name, copts = []):
-    """Defines `name` (macOS) and `name_iOS` for the suite in the folder `name`.
+    """Defines `name` (macOS), `name_iOS` and `name_tvOS` for the suite in the folder `name`.
 
     Args:
         name: the suite's folder, which is also its module name.
@@ -43,5 +44,15 @@ def consumer_tests(name, copts = []):
     ios_unit_test(
         name = name + "_iOS",
         minimum_os_version = "13.0",
+        deps = [":" + name + "Lib"],
+    )
+
+    # Built, never run: rules_apple's default tvOS runner fails every test without running it
+    # (5.2.0). Tagged "tvos" so CI can leave it out: only nightly and manual runs build it, and
+    # no run tests it (--test_tag_filters=-tvos). The tvOS tests run through Xcode and SwiftPM.
+    tvos_unit_test(
+        name = name + "_tvOS",
+        minimum_os_version = "13.0",
+        tags = ["tvos"],
         deps = [":" + name + "Lib"],
     )
