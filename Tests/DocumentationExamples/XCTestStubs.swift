@@ -13,7 +13,7 @@ import XCTest
 
 public final class Basket {
     public init() {}
-    public func add(_ count: Int) {}
+    public func add(_: Int) {}
     public func add(_ count: Int, to container: String) {}
     public func eat(_ count: Int) {}
     public func waitForCount(_ count: Int?) async throws {}
