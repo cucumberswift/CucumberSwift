@@ -3,7 +3,8 @@ load(":consumer_tests.bzl", "consumer_tests")
 load(":xctest_runner.bzl", "macos_xctest_runner")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
-# From this folder: `bazel test //...` runs each suite on macOS and on an iOS simulator.
+# From this folder: `bazel test //... --test_tag_filters=-tvos` runs each suite on macOS and on an
+# iOS simulator, and builds it for tvOS. rules_apple can't run tvOS tests (see consumer_tests.bzl).
 
 macos_xctest_runner(name = "macos_xctest_runner")
 
