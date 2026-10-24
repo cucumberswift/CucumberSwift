@@ -14,7 +14,7 @@
 
         @Steps {
             @Step {
-                Add CucumberSwift to your Cartfile, then run `carthage update --use-xcframeworks --platform iOS`. That builds `CucumberSwift.xcframework` in `Carthage/Build`.
+                Add CucumberSwift to your Cartfile, then run `carthage update --use-xcframeworks --platform iOS`. That builds `CucumberSwift.xcframework` in `Carthage/Build`. For a tvOS test target, use `--platform tvOS`.
 
                 @Code(name: "Cartfile", file: "Cartfile")
             }
