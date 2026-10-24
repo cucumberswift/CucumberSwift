@@ -1,21 +1,29 @@
 # CucumberSwift+UIUTest
 
-A colleague of mine wrote UIUTest which allows for UI testing in a unit testing bundle. It drastically speeds up UI tests but gives a lot of the same functionality, like making sure elements are not covered, able to be tapped etc...
+Run UI tests as unit tests, with CucumberSwift and UIUTest.
 
-So in many of our projects that have to function at a large scale and have quite a bit of gherkin we combined CucumberSwift and [UIUTest](https://github.com/nallick/UIUTest) for some really cool results!
+## Overview
 
-### SETUP:
+[UIUTest](https://github.com/nallick/UIUTest) runs UI tests in a unit test bundle, without XCUITest. It still checks what a UI test checks, such as whether an element is covered or can be tapped. Combined with CucumberSwift, it runs your Gherkin scenarios as fast unit tests.
 
-#### Packages:
-Add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest](https://github.com/nallick/UIUTest) to your `AppCucumberTests` target with Swift Package Manager. In Xcode, choose **File > Add Package Dependencies...** and add both to that target only.
+On one large project, UI tests that took about 20 minutes with XCUITest took about 2 minutes with UIUTest. That project didn't mock its network calls, so the tests took minutes and not seconds.
 
-#### XCode Setup
-When adding your `AppCucumberTests` target make sure to add it as a `Unit Testing Bundle`
+### Add the packages
 
-There's always a weird tendency for people to lowercase the name of their features folder so the Info.plist should contain `FeaturesPath` with the path to the folder, relative to the test bundle (e.g. `specs/features`). See <doc:Settings#Where-the-feature-files-are>.
+With Swift Package Manager, choose **File > Add Package Dependencies...** in Xcode, and add [CucumberSwift](https://github.com/cucumberswift/CucumberSwift) and [UIUTest](https://github.com/nallick/UIUTest) to your `AppCucumberTests` target only.
 
-#### Magic Happens Here
-The `AppCucumberTests.swift` file looks something like this. The Swift Package Manager tab uses the step definition and hook macros, which are the recommended style, and the Carthage tab uses functions, because Carthage can't deliver macros (see <doc:Using-Step-Definition-Macros>):
+With Carthage, add CucumberSwift as <doc:Carthage-Step-By-Step> describes, so that you don't add it twice. Then add UIUTest to the `AppCucumberTests` target with **File > Add Package Dependencies...**.
+
+### Create the test target
+
+Create the `AppCucumberTests` target as a **Unit Testing Bundle**.
+
+If your features folder isn't named `Features`, for example `specs/features`, add `FeaturesPath` to the target's Info.plist with the path to the folder, relative to the test bundle. See <doc:Settings#Where-the-feature-files-are>.
+
+### Write the step implementation
+
+`AppCucumberTests.swift` sets up UIUTest in hooks around each scenario. The Swift Package Manager tab uses the step definition and hook macros, the recommended style. The Carthage tab uses functions, because Carthage can't deliver macros (see <doc:Using-Step-Definition-Macros>).
+
 @TabNavigator {
 @Tab("Swift Package Manager") {
 <!-- swift-example: fragment: needs the UIUTest package and your app, and UIKit, which a macOS build doesn't have -->
@@ -39,7 +47,7 @@ extension Cucumber : StepImplementation {
         #AfterScenario {
             UIViewController.flushPendingTestArtifacts()
         }
-        setupEnrollmentTests() //this is a method that lives in a different file with the Given(regex, closure) syntax. These setup methods usually contain all the implementation needed for a .feature file
+        setupEnrollmentTests() // Defined in another file, with the step definitions for one feature file
     }
 }
 ```
@@ -66,12 +74,9 @@ extension Cucumber : StepImplementation {
         AfterScenario { _ in
             UIViewController.flushPendingTestArtifacts()
         }
-        setupEnrollmentTests() //this is a method that lives in a different file with the Given(regex, closure) syntax. These setup methods usually contain all the implementation needed for a .feature file
+        setupEnrollmentTests() // Defined in another file, with the step definitions for one feature file
     }
 }
 ```
 }
 }
-
-#### What was the result?
-We saw a huge performance increase using this over XCUITest but got the same value for those tests. At the time we went from about 20 minutes of UI test execution time to about 2 minutes. We chose not to mock our network calls which is why these tests didn't run in a matter of seconds.

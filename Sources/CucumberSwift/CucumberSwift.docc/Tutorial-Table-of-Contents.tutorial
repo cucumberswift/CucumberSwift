@@ -1,6 +1,6 @@
-@Tutorials(name: "Getting Started") {
-    @Intro(title: "Getting Started with CucumberSwift") {
-        This getting started series walks you through installing CucumberSwift and setting up a test target in your project. It leads to the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample).
+@Tutorials(name: "Getting started") {
+    @Intro(title: "Getting started with CucumberSwift") {
+        Install CucumberSwift and set up a test target in your project. The tutorials end with the setup of the [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample in [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample).
     }
     
     @Chapter(name: "Installation") {

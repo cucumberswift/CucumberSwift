@@ -1,11 +1,10 @@
-# Generating Reports
+# Generating reports
 
-Reports are an important part of what Cucumber does, it allows us to see the specification in Gherkin executed. 
+Write a Cucumber JSON report of each run, or receive the runner's events in your own code.
 
-## Automatic Reports
-CucumberSwift has a JSON reporter that writes in real-time while your code is executing. Unfortunately because the simulator is sandboxed it can be a tad tricky to get at that report.
+## Automatic reports
 
-To help you get started here's a script you can add as a post-action after running your tests in your Xcode scheme. It uses some XCode build variables to find the device you ran on, and get the Cucumber json file from it. This particular command can also pull reports off a physical device using the [ios-deploy](https://github.com/ios-control/ios-deploy) utility. 
+CucumberSwift writes a JSON report while your tests run. On a Simulator, the report is inside the Simulator's sandbox. To copy it into your project, add this script as a post-action of the Test action in your Xcode scheme. The script uses Xcode's build variables to find the device you ran on. On a physical device, it downloads the report with the [ios-deploy](https://github.com/ios-control/ios-deploy) tool.
 
 ```bash
 #!/bin/bash -x
@@ -26,34 +25,47 @@ fi
 ```
 
 ### Choose where the report is written
-By default the report is `_cucumberReport.json` in the documents folder, which on a Simulator is inside the Simulator. Set `Cucumber.reportPath` in `setupSteps()`, or the environment variable `CUCUMBER_REPORT_PATH`, to a full path to write it somewhere else. The static variable wins when both are set (see <doc:Settings>), and CucumberSwift creates the folder. A path under the Mac's home folder is the same one from the Mac and from every Simulator, which reads the Mac's home folder in its `SIMULATOR_HOST_HOME` environment variable.
 
-A Simulator's test process doesn't get your shell's environment. Set the variable in the scheme's Test action, where `$(SRCROOT)/CucumberReports/report.json` writes beside your project, or give `xcodebuild` the same variable with a `TEST_RUNNER_` prefix:
+Set `Cucumber.reportPath` in `setupSteps()`, or the environment variable `CUCUMBER_REPORT_PATH`, to a full path. CucumberSwift creates the folder. If both are set, the static variable wins (see <doc:Settings>). By default, the report is `_cucumberReport.json` in the documents folder. On a Simulator, that folder is inside the Simulator.
+
+A path under the Mac's home folder works from the Mac and from every Simulator. Each Simulator finds the Mac's home folder in its `SIMULATOR_HOST_HOME` environment variable.
+
+A Simulator's test process doesn't get your shell's environment. Set the variable in the scheme's Test action instead. There, `$(SRCROOT)/CucumberReports/report.json` writes the report next to your project. With `xcodebuild`, add the prefix `TEST_RUNNER_` to the variable's name:
 
 ```bash
 TEST_RUNNER_CUCUMBER_REPORT_PATH="$HOME/CucumberReports/report.json" xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
 ### One report for a parallel run
-With <doc:Running-Scenarios-In-Parallel> on, each worker is a process of its own, but they write one report. Each time a worker writes, it locks the report, reads it, adds its own features, writes the result to a temporary file in the same folder, moves that into place and unlocks. A feature whose scenarios ran in several workers has all of them, in the order of the feature file, and every scenario is in the report once.
 
-- **Put the report where every worker reaches it.** On macOS and Mac Catalyst the default is already one file. On an iOS or tvOS Simulator, each clone has a documents folder of its own, so without `reportPath` there is one report in each clone, and the script above copies one of them. Set `reportPath` to a path on the Mac, as above, and the workers share one file.
-- **A new run replaces the old report.** The first worker of a run empties the report the last run left, when nothing is writing it and it hasn't been written for a minute. Delete the report before a run that starts within a minute of another's.
-- **The report's folder must be writable, and its lock files too.** The workers also create `<report>.lock` and `<report>.run` beside the report. They are empty, and safe to delete between runs.
-- **A physical device hasn't been tried.** It is expected to run one worker and write its own file, as before.
-- **A serial run** writes the same report as ever.
+When scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), each worker is a separate process, but all the workers write one report. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
 
-### With Swift Testing
-The Swift Testing runner writes the same report, to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters: see <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in one process, which writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+To do this, a worker locks the report each time it writes. It reads the report, adds its own features, and writes the result to a temporary file in the same folder. Then it moves that file into place and unlocks the report.
 
-## Verbose Output
+Keep these points in mind for the shared report:
+
+- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone has its own documents folder. Without `reportPath`, each clone writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already one file.
+- A new run replaces the old report. The first worker of a run empties the report that the last run left, if nothing is writing it and nothing has written it for a minute. If you start a run within a minute of another, delete the report first.
+- The report's folder must be writable. The workers also create `<report>.lock` and `<report>.run` next to the report. These files are empty, and you can delete them between runs.
+- We haven't tried a physical device. A device is expected to run one worker and write its own file.
+- A serial run writes the report in the same way as before.
+
+### Swift Testing
+
+The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in one process. That process writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+
+## Verbose output
+
 To print each feature, scenario and step to the test log as it runs, see <doc:Verbose-Output>.
 
-### Custom Reporters
-If you'd like to be notified about what the Cucumber runner saw during execution there are 2 steps needed.
+## Custom reporters
 
-### The Test Observer
-Start by creating a test observer, something like this:
+To receive the runner's events in your own code, write a test observer and add it to Cucumber's observers.
+
+### Write a test observer
+
+Create a class that conforms to `CucumberTestObserver`:
+
 ```swift
 class MyTestObserver: CucumberTestObserver {
     func testSuiteStarted(at date: Date) { }
@@ -74,13 +86,17 @@ class MyTestObserver: CucumberTestObserver {
 }
 ```
 
-Note the duration is a `Measurement` type, by default its value is in nanoseconds but you can convert that to whatever makes sense, like this:
+Each `duration` is a `Measurement`, in nanoseconds by default. Convert it to the unit you need:
+
 <!-- swift-example: steps -->
 ```swift
 duration.converted(to: .seconds).value // value in seconds
 ```
 
-Next you'll want to add your reporter to a list of reporters Cucumber knows about by extending it, like this:
+### Add the observer
+
+Extend `Cucumber` to conform to `CucumberTestObservable`, and return your observers:
+
 ```swift
 extension Cucumber: CucumberTestObservable {
     public var observers: [CucumberTestObserver] {

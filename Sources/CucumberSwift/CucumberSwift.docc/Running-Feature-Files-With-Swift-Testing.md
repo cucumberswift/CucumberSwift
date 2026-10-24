@@ -1,4 +1,4 @@
-# Running Feature Files with Swift Testing
+# Running feature files with Swift Testing
 
 @Metadata {
     @Available(Xcode, introduced: "16.3")
@@ -9,30 +9,30 @@ Run your feature files with Swift Testing in a unit test target, with the step d
 
 ## Overview
 
-CucumberSwift runs feature files with XCTest. In a unit test target, you can run them with Swift Testing instead. A build tool plugin reads the target's feature files when it builds, and generates a Swift Testing test for each scenario:
+In a unit test target, you can run your feature files with Swift Testing instead of XCTest. A build tool plugin reads the target's feature files when it builds, and generates Swift Testing tests from them:
 
-- a suite for each feature,
-- a test for each Scenario,
-- a parameterized test for each Scenario Outline, with one test case for each row of its Examples tables.
+- A suite for each feature.
+- A test for each Scenario.
+- A parameterized test for each Scenario Outline, with one test case for each row of its Examples tables.
 
-Xcode's test navigator shows every feature and scenario before anything runs, and you can run a single scenario from Xcode, with `swift test --filter`, or with `xcodebuild -only-testing`.
+Xcode's test navigator shows every feature and scenario before anything runs. You can run a single scenario from Xcode, with `swift test --filter`, or with `xcodebuild -only-testing`.
 
-Step definitions are written as for CucumberSwift: `extension Cucumber: StepImplementation`, `setupSteps()`, `Given`, `When`, `Then`, `And`, `But` and `MatchAll`, and the step definition macros. Backgrounds, Rules, Scenario Outlines, tags and `CUCUMBER_TAGS`, doc strings, data tables, scenario and step hooks, and feature files in other languages work as they do with CucumberSwift.
+You write step definitions as for CucumberSwift: `extension Cucumber: StepImplementation`, `setupSteps()`, `Given`, `When`, `Then`, `And`, `But` and `MatchAll`, and the step definition macros. Backgrounds, Rules, Scenario Outlines, tags and `CUCUMBER_TAGS`, doc strings, data tables, scenario and step hooks, and feature files in other languages work as they do with CucumberSwift.
 
 ## Requirements
 
 The Swift Testing runner has these requirements:
 
-- **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin. <doc:Running-Tests-In-Xcode#CucumberSwiftTestingPlugin> covers the plugin alongside CucumberSwift's others.
+- **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin. <doc:Running-Tests-In-Xcode#CucumberSwiftTestingPlugin> covers this plugin together with CucumberSwift's other plugins.
 - **Unit test targets only.** Xcode doesn't allow Swift Testing in UI test targets. UI tests keep running their feature files with CucumberSwift and XCTest.
-- **`#expect` and `#require`, not `XCTAssert`.** Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass. Step definitions that this runner runs must use Swift Testing's expectations.
-- **Swift 6.2 or later for two features.** `Attach` and the report of a failed `#expect` on its step need it. With Swift 6.1, `Attach` is a compile error, and a failed `#expect` is reported where you wrote it, not on the step: see <doc:#Attachments> and <doc:#After-a-failed-assertion>.
-- **Swift 6.3 or later for Xcode to show a skipped scenario as skipped.** Before Swift 6.3, a step that throws `XCTSkip` still stops its scenario, the hooks still run and the report is the same, but Xcode shows the scenario's tests as passed. `Test.cancel` needs Swift 6.3. See <doc:#Skip-a-scenario>.
-- **One runner per test target.** Link either `CucumberSwift` or `CucumberSwiftTesting` to a test target, not both. They have their own `Cucumber`, `Given` and the rest, with the same names, so a file can't import both. In a target that links both, each runner runs every scenario with its own step definitions, and CucumberSwift fails the test run if it isn't set up too. A project can use both, in different targets: see <doc:#Move-unit-tests-to-Swift-Testing>.
+- **`#expect` and `#require`, not `XCTAssert`.** Step definitions that this runner runs must use Swift Testing's expectations. Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass.
+- **Swift 6.2 or later for two features.** `Attach` needs it, and so does reporting a failed `#expect` on its step. With Swift 6.1, `Attach` is a compile error, and a failed `#expect` is reported where you wrote it, not on the step. See <doc:#Attachments> and <doc:#After-a-failed-assertion>.
+- **Swift 6.3 or later for Xcode to show a skipped scenario as skipped.** Before Swift 6.3, a step that throws `XCTSkip` still stops its scenario, the hooks still run, and the report is the same. But Xcode shows the scenario's tests as passed. `Test.cancel` needs Swift 6.3. See <doc:#Skip-a-scenario>.
+- **One runner per test target.** Link either `CucumberSwift` or `CucumberSwiftTesting` to a test target, not both. Each has its own `Cucumber`, `Given` and the rest, with the same names, so a file can't import both. In a target that links both, each runner runs every scenario with its own step definitions, and CucumberSwift fails the test run if it isn't set up too. A project can use both runners in different targets. See <doc:#Move-unit-tests-to-Swift-Testing>.
 
 ## Set up a Swift package
 
-Turn on CucumberSwift's `Macros` trait, add `CucumberSwiftTestingMacros` to the test target, and apply the two plugins to it: `CucumberSwiftTestingPlugin`, which generates the tests, and `CucumberSwiftLint`, which checks the feature files and step definitions, as it does with the XCTest runner:
+To set up a Swift package, turn on CucumberSwift's `Macros` trait and add `CucumberSwiftTestingMacros` to the test target. Then apply two plugins to the target. `CucumberSwiftTestingPlugin` generates the tests, and `CucumberSwiftLint` checks the feature files and step definitions, as it does with the XCTest runner:
 
 ```swift
 // swift-tools-version:6.1
@@ -59,21 +59,23 @@ let package = Package(
 )
 ```
 
-The plugin finds every `.feature` file in the target's folder. `CucumberSwiftTestingMacros` has the step definition macros, and imports `CucumberSwiftTesting`, the runner, too.
+The plugin finds every `.feature` file in the target's folder. `CucumberSwiftTestingMacros` has the step definition macros, and also imports `CucumberSwiftTesting`, the runner.
 
-The macros need the trait, which downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above: see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>. To write step definitions without them, leave the trait off and depend on `CucumberSwiftTesting` instead; see <doc:#Without-the-macros>.
+The macros need the trait, and the trait downloads swift-syntax. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift to resolve the trait, as above (see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>). To write step definitions without the macros, leave the trait off and depend on `CucumberSwiftTesting` instead. See <doc:#Without-the-macros>.
 
 ## Set up an Xcode project
 
 To use the runner in an Xcode project, follow these steps:
 
-1. Add the CucumberSwift package to the project, turn on its `Macros` trait in the package dependency's settings, add the swift-syntax package to the project as <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64> describes, and add `CucumberSwiftTestingMacros` to your unit test target. Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, add a local package that only turns the trait on, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, and add `CucumberSwiftTestingMacros` from CucumberSwift as above; or add `CucumberSwiftTesting` and write step definitions without the macros.
-2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` and `CucumberSwiftLint` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugins the first time they run; on a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild` instead.
-3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin only sees files that belong to the target.
+1. Add the CucumberSwift package to the project, and turn on its `Macros` trait in the package dependency's settings. Add the swift-syntax package to the project, as <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64> describes. Then add `CucumberSwiftTestingMacros` to your unit test target.
+
+   Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, add a local package that only turns the trait on, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, and add `CucumberSwiftTestingMacros` from CucumberSwift as above. Or add `CucumberSwiftTesting`, and write step definitions without the macros.
+2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` and `CucumberSwiftLint` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugins the first time they run. On a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild` instead.
+3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin sees only files that belong to the target.
 
 ## Write step definitions
 
-Register step definitions in `setupSteps()`, as with CucumberSwift, and write them with the step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`. The compiler checks each expression against its closure: one argument for each parameter, of the parameter's type, and optionally the `Step` last. Because `Cucumber` and `StepImplementation` both come from `CucumberSwiftTesting`, Swift 6 asks you to mark the conformance `@retroactive`:
+Register step definitions in `setupSteps()`, as with CucumberSwift, and write them with the step definition macros: `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`. The compiler checks each expression against its closure. The closure takes one argument for each parameter, of the parameter's type, and optionally the `Step` last. `Cucumber` and `StepImplementation` both come from `CucumberSwiftTesting`, so Swift 6 asks you to mark the conformance `@retroactive`:
 
 ```swift
 import CucumberSwiftTestingMacros
@@ -94,15 +96,17 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-<doc:Using-Step-Definition-Macros> describes the macros in full, with the argument each parameter gives, and <doc:Checking-Step-Definitions> the mistakes the compiler reports and the fixes Xcode offers. They work the same with this runner, localized macros such as `#ES_Dado` included: `CucumberSwiftTestingMacros` has every one that `CucumberSwiftMacros` has, and the step types they expand to, such as ``ES_Dado``, are in `CucumberSwiftTesting`.
+<doc:Using-Step-Definition-Macros> describes the macros in full, with the argument that each parameter gives. <doc:Checking-Step-Definitions> describes the mistakes the compiler reports and the fixes Xcode offers. Both work the same with this runner, including localized macros such as `#ES_Dado`. `CucumberSwiftTestingMacros` has every macro that `CucumberSwiftMacros` has, and the step types they expand to, such as ``ES_Dado``, are in `CucumberSwiftTesting`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. It takes a Cucumber expression, or a string that starts with `^` or ends with `$`, or is written between `/`, for a regular expression. A deprecated form takes a regular expression in a `String` variable and a closure with the matches as a `[String]`, as in CucumberSwift: `Given(pattern) { matches, step in … }`. As there, a string literal binds to the Cucumber expression form instead, so use a variable or a regex literal. A step definition can also take a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>), which needs iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. Its pattern can be a Cucumber expression, or a regular expression in a string that starts with `^`, ends with `$`, or is written between slashes. It can also be a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>). Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
-`BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift: hooks with a priority run first, lowest first. Each also has a macro, such as `#BeforeScenario`, that expands to it with the same arguments: see <doc:Using-Step-Definition-Macros#Hooks>.
+A deprecated form takes a regular expression in a `String` variable, and a closure that takes the matches as a `[String]`, as in CucumberSwift: `Given(pattern) { matches, step in … }`. As in CucumberSwift, a string literal binds to the Cucumber expression form instead, so use a variable or a regex literal.
+
+`BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` take an optional `priority`, as with CucumberSwift. Hooks with a priority run first, lowest first. Each hook also has a macro, such as `#BeforeScenario`, that expands to it with the same arguments. See <doc:Using-Step-Definition-Macros#Hooks>.
 
 ### Feature hooks
 
-`BeforeFeature` runs once, before the first scenario of a feature, and `AfterFeature` once, after its last. Each takes the `Feature`:
+`BeforeFeature` runs once, before the first scenario of a feature, and `AfterFeature` runs once, after its last scenario. Each takes the `Feature`:
 
 ```swift
 import CucumberSwiftTestingMacros
@@ -121,9 +125,9 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-They run once for each feature, around all of its scenarios, even when Swift Testing runs the feature's scenarios at the same time: the scenarios wait for `BeforeFeature` to finish. The tests that CucumberSwiftTestingPlugin generates mark where each feature ends. They need Swift 6.1, the runner's minimum.
+Each hook runs once for each feature, around all of its scenarios, even when Swift Testing runs the feature's scenarios at the same time. The scenarios wait for `BeforeFeature` to finish. The tests that `CucumberSwiftTestingPlugin` generates mark where each feature ends. They need Swift 6.1, the runner's minimum.
 
-As with CucumberSwift, `BeforeFeature` hooks run before the observers hear that the feature started, and `AfterFeature` hooks before they hear that it finished. A feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, runs neither. A feature hook that throws fails at the line where you wrote it, and the feature's scenarios still run.
+As with CucumberSwift, `BeforeFeature` hooks run before the observers hear that the feature started, and `AfterFeature` hooks run before the observers hear that it finished. If `CUCUMBER_TAGS` filters out all of a feature's scenarios, neither hook runs for it. A feature hook that throws fails at the line where you wrote it, and the feature's scenarios still run.
 
 ### Attachments
 
@@ -144,11 +148,11 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. The JSON report doesn't have attachments, as with CucumberSwift. `Attach` needs Swift 6.2, the first with attachments in Swift Testing. With Swift 6.1 it's unavailable: calling it is a compile error, so no attachment is lost without your noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does. 
+Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. The JSON report doesn't include attachments, as with CucumberSwift. `Attach` needs Swift 6.2, the first version with attachments in Swift Testing. With Swift 6.1, calling `Attach` is a compile error, so you can't lose an attachment without noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does.
 
 ### Without the macros
 
-Each macro expands to a step definition you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`. The macros are the recommended style; this form is for when you can't use them:
+Each macro expands to a step definition that you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`. The macros are the recommended style. Use this form when you can't use them:
 
 ```swift
 import CucumberSwiftTesting
@@ -167,53 +171,63 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-This needs no package trait, and so works in an Xcode project with any supported Xcode. You can mix both styles in one target.
+This form needs no package trait, so it works in an Xcode project with Xcode 16.3 (Swift 6.1) or later, the runner's minimum. It doesn't need the Xcode 26.4 that the trait needs in a project. You can mix both styles in one target.
 
 ## Run scenarios
 
-Each scenario is a test, named after its title in camel case: the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard(_:)`. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card", and a repeated name gets `_2`, `_3` and so on.
+Each scenario is a test, named after its title in camel case. For example, the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard(_:)`. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card". A repeated name gets `_2`, `_3` and so on.
 
-As with CucumberSwift, each step is a test of its own: the scenario's test has a test case for each step, named as CucumberSwift names the step's test, such as `3 › Then the total is 99`, or with `Cucumber.readableTestNames` off, `Step002_ThenTheTotalIs99`. The test navigator and the test report give a result for each step. A scenario's `BeforeScenario` hooks run with its first step and its `AfterScenario` hooks with its last, and running one step alone runs the steps before it. Once a step fails, the later steps don't run: with Swift 6.3 they are reported as cancelled, and before it Swift Testing can't skip a test case from inside it, so they pass without running. Set `Cucumber.oneTestPerScenario` to `true`, or the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`, for one test case for the whole scenario. An example of a Scenario Outline adds `Example (line 7)` before the step's name. Swift Testing needs the names of suites and tests as literals when the tests build, so the feature's and the scenario's names, unlike the step's, don't follow `Cucumber.readableTestNames`.
+As with CucumberSwift, each step is a test of its own. The scenario's test has a test case for each step, named as CucumberSwift names the step's test, such as `3 › Then the total is 99`, or `Step002_ThenTheTotalIs99` with `Cucumber.readableTestNames` off. An example of a Scenario Outline adds `Example (line 7)` before the step's name. The test navigator and the test report give a result for each step.
+
+A scenario's `BeforeScenario` hooks run with its first step, and its `AfterScenario` hooks with its last. Running one step alone runs the steps before it. Once a step fails, the later steps don't run. With Swift 6.3, they're reported as cancelled. Before Swift 6.3, Swift Testing can't skip a test case from inside it, so they pass without running.
+
+For one test case for the whole scenario, set `Cucumber.oneTestPerScenario` to `true`, or the environment variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`.
+
+Swift Testing needs the names of suites and tests as literals when the tests build. So unlike the step's name, the feature's and the scenario's names don't follow `Cucumber.readableTestNames`.
+
+To run one scenario from the command line, select it by its name:
 
 ```bash
 swift test --filter PayWithAGiftCard
 xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithAGiftCard(_:)'
 ```
 
-A Scenario Outline is one test, and each example is one of its test cases, named after the line of its row, such as `Example (line 17)`, so that its results stay on its row when you change a value. Xcode can run a single example from the test navigator, but `xcodebuild -only-testing` can only select the whole outline: given a test case, it runs nothing, and still succeeds.
+A Scenario Outline is one test, and each example is one of its test cases. Each example is named after the line of its row, such as `Example (line 17)`, so its results stay on its row when you change a value. Xcode can run a single example from the test navigator. `xcodebuild -only-testing` can select only the whole outline. Given a test case, it runs nothing, and still succeeds.
 
-`CUCUMBER_TAGS` works as it does with CucumberSwift: a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, which Swift Testing reports as a pass.
+`CUCUMBER_TAGS` works as it does with CucumberSwift. It takes a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, and Swift Testing reports that as a pass.
 
-Scenarios run one at a time, in the order of the feature files, as with CucumberSwift, because step definitions usually share state. That applies to the scenarios: your target's other Swift Testing tests aren't held back by it, and can run alongside them. To run scenarios at the same time, see <doc:#Run-scenarios-in-parallel>.
+Scenarios run one at a time, in the order of the feature files, as with CucumberSwift, because step definitions usually share state. This applies only to the scenarios. Your target's other Swift Testing tests can run at the same time as them. To run scenarios at the same time, see <doc:#Run-scenarios-in-parallel>.
 
 ### Run scenarios in parallel
 
-Swift Testing can run tests at the same time, and a test target with many slow scenarios finishes sooner if it does. It is off by default, as with CucumberSwift, and turned on the same way: set the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`. `TRUE` and `1` work too, in any case, and `NO`, `FALSE` and `0` turn it off.
+To run scenarios at the same time, set the environment variable `CUCUMBER_PARALLEL_TESTING` to `YES`. A test target with many slow scenarios then finishes sooner. Parallel testing is off by default, as with CucumberSwift. The variable takes `YES`, `TRUE` or `1`, in any case, to turn it on, and `NO`, `FALSE` or `0` to turn it off. You can set it in two places:
 
-- **Xcode:** choose **Product → Scheme → Edit Scheme…**, select **Test**, open **Arguments**, and add `CUCUMBER_PARALLEL_TESTING` with the value `YES` under **Environment Variables**.
-- **Swift Package Manager or `xcodebuild`:** set it on the command line.
+- In Xcode, choose **Product → Scheme → Edit Scheme…**, select **Test**, open **Arguments**, and add `CUCUMBER_PARALLEL_TESTING` with the value `YES` under **Environment Variables**.
+- With Swift Package Manager or `xcodebuild`, set it on the command line:
 
-```bash
-CUCUMBER_PARALLEL_TESTING=YES swift test
-```
+  ```bash
+  CUCUMBER_PARALLEL_TESTING=YES swift test
+  ```
 
-You can also set `Cucumber.parallelTesting = true` in `setupSteps()`, as with CucumberSwift: Swift Testing decides when it discovers the tests, so the runner runs `setupSteps()` then. It wins over the environment variable, as it does there. If the runner can't run `setupSteps()` in time, only this variable is affected: scenarios run one at a time unless the environment variable or the compilation condition turns parallel on, and a note says so once, without failing the run. A third way is a compilation condition of the same name in the **test target** that has the feature files, not in your app target: in `Package.swift`, add `swiftSettings: [.define("CUCUMBER_PARALLEL_TESTING")]` to the test target, and in an Xcode project, add `CUCUMBER_PARALLEL_TESTING` to the test target's **Active Compilation Conditions** build setting. It applies when neither the static variable nor the environment variable is set, so `CUCUMBER_PARALLEL_TESTING=NO` still turns it off.
+You can also set `Cucumber.parallelTesting = true` in `setupSteps()`, as with CucumberSwift. It wins over the environment variable, as it does there. Swift Testing decides when it discovers the tests, so the runner runs `setupSteps()` at that point. If the runner can't run `setupSteps()` in time, only the static variable is affected. Scenarios then run one at a time unless the environment variable or the compilation condition turns parallel testing on, and a note says so once, without failing the run.
+
+A third way is a compilation condition of the same name in the test target that has the feature files, not in your app target. In `Package.swift`, add `swiftSettings: [.define("CUCUMBER_PARALLEL_TESTING")]` to the test target. In an Xcode project, add `CUCUMBER_PARALLEL_TESTING` to the test target's **Active Compilation Conditions** build setting. The condition applies when neither the static variable nor the environment variable is set, so `CUCUMBER_PARALLEL_TESTING=NO` still turns parallel testing off.
 
 ### Choose what runs together
 
-By default any scenario may run at the same time as any other: the unit is the scenario. Set `Cucumber.parallelTestingUnit = .feature` in `setupSteps()`, or the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature` (`scenario` or `feature`, in any case, with spaces and tabs around it ignored), to run each feature's scenarios one at a time, in the order of the feature file, while features run at the same time. The static variable wins over the environment variable, as with CucumberSwift, and any other value is ignored. The unit only matters when parallel scenarios are on.
+By default, any scenario may run at the same time as any other, because the unit is the scenario. To run each feature's scenarios one at a time, in the order of the feature file, while features run at the same time, set `Cucumber.parallelTestingUnit = .feature` in `setupSteps()`. Or set the environment variable `CUCUMBER_PARALLEL_TESTING_UNIT` to `feature`. The variable takes `scenario` or `feature`, in any case, and ignores spaces and tabs around the value. It ignores any other value. The static variable wins over the environment variable, as with CucumberSwift. The unit matters only when parallel testing is on.
 
-The setting means something else here than it does in <doc:Running-Scenarios-In-Parallel>. There, Xcode spreads scenarios across worker processes, each with its own copy of your step definitions' state. Swift Testing runs them in one process, so every scenario sees what the others change. The scenarios may then run in any order. The runner starts each scenario's steps in order. Different scenarios can interleave at suspension points: while a step definition or a hook awaits, the main actor can run another scenario's step or hook. Main-actor isolation does not make shared state exclusive for the whole of an async step or hook, so a step definition that never awaits runs from start to finish, and one that awaits does not. Swift Testing's own `--no-parallel` option, as in `swift test --no-parallel`, still runs one test at a time.
+The setting means something else here than in <doc:Running-Scenarios-In-Parallel>. There, Xcode spreads scenarios across worker processes, and each process has its own copy of your step definitions' state. Swift Testing runs them in one process, so every scenario sees what the others change, and the scenarios may run in any order. The runner starts each scenario's steps in order. Different scenarios can interleave at suspension points. While a step definition or a hook awaits, the main actor can run another scenario's step or hook. So main-actor isolation doesn't make shared state exclusive for the whole of an async step or hook. A step definition that never awaits runs from start to finish, and one that awaits doesn't. Swift Testing's own `--no-parallel` option, as in `swift test --no-parallel`, still runs one test at a time.
 
 ### Sharing state between steps in a scenario
 
-Scenarios that run at the same time share one process, so anything one scenario writes, another can read. That includes:
+Scenarios that run at the same time share one process, so anything one scenario writes, another can read. That includes the following:
 
-- global and static variables, singletons, and properties of an object your step definitions capture, such as a shared `World` holding "the basket" that each step fills in,
-- files, `UserDefaults`, the keychain, a database, a port, or any other outside state that scenarios change,
-- the app, the server or the fake that the scenarios drive, when they need it in different states.
+- Global and static variables, singletons, and properties of an object that your step definitions capture, such as a shared `World` holding "the basket" that each step fills in.
+- Files, `UserDefaults`, the keychain, a database, a port, or any other outside state that scenarios change.
+- The app, the server or the fake that the scenarios drive, when they need it in different states.
 
-Instead, keep what the steps of one scenario share in that scenario's own state, with `Scenario.state(_:)`. Called from any step or scenario hook, it gives the running scenario a value of the type you ask for: it makes the value the first time any step or hook of that scenario asks, and gives every later step and hook of that scenario the same object. Another scenario gets a value of its own, so scenarios that overlap never see each other's. The runner lets go of it when the scenario is over, and the lookup needs no lock of yours. Put it behind your `World`, and the steps keep reading `World.basket`:
+Keep what the steps of one scenario share in that scenario's own state instead, with `Scenario.state(_:)`. Call it from any step or scenario hook, and it gives the running scenario a value of the type you ask for. It makes the value the first time a step or hook of that scenario asks, and gives every later step and hook of that scenario the same object. Another scenario gets its own value, so scenarios that overlap never see each other's. The runner releases the value when the scenario is over, and you don't need a lock for the lookup. Put it behind your `World`, and the steps keep reading `World.basket`:
 
 ```swift
 import CucumberSwiftTestingMacros
@@ -239,24 +253,24 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-The value is a class, so that what one step changes the next one sees. Different types are different values, so a scenario can have a `Basket` and a `Beach`, and a step that runs another with `ExecuteFirstStep` shares its caller's. It works the same in CucumberSwift's XCTest runner, so step definitions that use it move between the runners unchanged. It needs a running scenario: called from a feature hook, or from a task that a step left running with `Task.detached`, it fails the test with a message that says so. Use files, databases and fakes named after the scenario for what lives outside the process. This only matters when parallel is on: a suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel off.
+The value is a class, so the next step sees what one step changes. Different types are different values, so a scenario can have a `Basket` and a `Beach`. A step that runs another with `ExecuteFirstStep` shares its caller's values. `Scenario.state(_:)` works the same in CucumberSwift's XCTest runner, so step definitions that use it move between the runners unchanged. It needs a running scenario. If you call it from a feature hook, or from a task that a step left running with `Task.detached`, it fails the test with a message that says so. For what lives outside the process, use files, databases and fakes named after the scenario. All this matters only when parallel testing is on. A suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel testing off.
 
 ### What behaves differently with parallel on
 
-With scenarios running at the same time:
+With scenarios running at the same time, these things behave differently:
 
-- **Failures stay with their step.** A failed `#expect` or a thrown error is reported on the line of the step that was running in the scenario that failed, in the test results and in the Cucumber JSON report, though other scenarios' steps are running.
-- **Hooks run around their own scenario and step.** `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` hooks run for each scenario, as before, in priority order and around the same scenario. The hooks of different scenarios can be in progress at the same time, so a hook that sets up shared state, such as a database, runs once per scenario, while others are using it.
+- **Failures stay with their step.** A failed `#expect` or a thrown error is reported on the line of the step that was running in the failed scenario, even though other scenarios' steps are running. This holds in the test results and in the Cucumber JSON report.
+- **Hooks run around their own scenario and step.** `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep` hooks run for each scenario, in priority order, around the same scenario. The hooks of different scenarios can run at the same time. So a hook that sets up shared state, such as a database, runs once per scenario, while other scenarios are using that state.
 - **Verbose output interleaves.** It prints each line as it happens, so the lines of different scenarios mix, as they do in a parallel XCTest run. See <doc:Verbose-Output>.
-- **The JSON report is the same,** with each scenario once, in the order of the feature files.
-- **Observers get events from several scenarios in turn.** A custom `CucumberTestObserver` sees one scenario's events in order, with other scenarios' events between them: see <doc:#Reports-verbose-output-and-custom-reporters>.
-- **A scenario's duration includes the time it waited** for other scenarios to give back the main actor.
+- **The JSON report is the same.** It has each scenario once, in the order of the feature files.
+- **Observers get events from several scenarios in turn.** A custom `CucumberTestObserver` sees one scenario's events in order, with other scenarios' events between them. See <doc:#Reports-verbose-output-and-custom-reporters>.
+- **Durations include waiting.** A scenario's duration includes the time it waited for other scenarios to give back the main actor.
 
 ### Check the feature files
 
-Besides the scenarios, the runner adds one test, `CucumberFeatures/gherkin()`, shown as "Feature files are valid Gherkin". It fails, with an issue on the file, for each problem the Gherkin parser finds in the target's feature files, and passes when there is none.
+The runner adds one test besides the scenarios, `CucumberFeatures/gherkin()`, shown as "Feature files are valid Gherkin". For each problem that the Gherkin parser finds in the target's feature files, the test fails with an issue on the file. It passes when there are none.
 
-The test navigator lists the scenarios that Xcode found when it last indexed the target, and it doesn't always index again when only a feature file changes. Editing a scenario's steps or examples keeps its results on its row. A scenario you add or rename runs with the others, and shows in the test report, but its row in the navigator can wait until Xcode indexes the target again, for example after you build it or reopen the project.
+The test navigator lists the scenarios that Xcode found when it last indexed the target. Xcode doesn't always index again when only a feature file changes. Editing a scenario's steps or examples keeps its results on its row. A scenario that you add or rename runs with the others and shows in the test report. But its row in the navigator can wait until Xcode indexes the target again, for example after you build it or reopen the project.
 
 ## How failures are reported
 
@@ -267,23 +281,23 @@ The runner reports each failure on the line that caused it:
 - A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
 - A `wait(for:timeout:)` fails when its timeout passes first, or when it sees an inverted expectation fulfilled. The failure appears on the step's line in the feature file, with XCTest's message for that result, as in CucumberSwift. This also works in Swift 6.1. The step runs to its end, and the scenario's later steps don't run. To wait without holding the main actor, write `await wait(for:timeout:)`.
 
-When a step has no step definition, has more than one, or its step definition or a step hook throws, the scenario's later steps don't run, and its `AfterScenario` hooks still do. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
+If a step has no step definition or more than one, or its step definition or a step hook throws, the scenario's later steps don't run. Its `AfterScenario` hooks still run. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 
-A hook that throws doesn't stop the hooks after it of the same kind, as with CucumberSwift. A hook that throws, or fails an `#expect`, fails its scenario and feature, as with CucumberSwift, and where it shows in the report is the step that is current when it runs. A `BeforeStep` hook fails its own step. A `BeforeScenario` hook fails the scenario's first step, and a `BeforeFeature` hook the first step of the feature's first scenario; the steps after it don't run. An `AfterStep`, `AfterScenario` or `AfterFeature` hook runs after the step is reported, so it leaves that step as it was and fails the scenario or the feature.
+A hook that throws doesn't stop the later hooks of the same kind, as with CucumberSwift. A hook that throws, or fails an `#expect`, fails its scenario and feature, as with CucumberSwift. The report shows the failure on the step that is current when the hook runs. A `BeforeStep` hook fails its own step. A `BeforeScenario` hook fails the scenario's first step, and a `BeforeFeature` hook fails the first step of the feature's first scenario. The steps after it don't run. An `AfterStep`, `AfterScenario` or `AfterFeature` hook runs after the step is reported. So it leaves that step as it was, and fails the scenario or the feature.
 
-A step or a hook that doesn't finish within `asyncStepTimeout` fails on its line, as in CucumberSwift: see <doc:#Step-and-hook-options>.
+A step or a hook that doesn't finish within `asyncStepTimeout` fails on its line, as in CucumberSwift. See <doc:#Step-and-hook-options>.
 
-A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook. Its message gives the step as it ran, with an example's values, such as `Then the basket has 3 cukes`, and where it was recorded, such as `Recorded at StepDefinitions.swift:31`. A step definition that throws gets the step in its message too. This needs Swift 6.2 or later; with Swift 6.1, a failed `#expect` is reported where you wrote it.
+A failed `#expect`, or any other issue recorded while a step or a hook runs, is reported on the step's line in the feature file, or the scenario's for a scenario hook. Its message gives the step as it ran, with an example's values, such as `Then the basket has 3 cukes`, and where it was recorded, such as `Recorded at StepDefinitions.swift:31`. A step definition that throws gets the step in its message too. This needs Swift 6.2 or later. With Swift 6.1, a failed `#expect` is reported where you wrote it.
 
 ### After a failed assertion
 
-Swift Testing records a failed `#expect` or `Issue.record` without telling the step, so the step's own code can't stop at it. The runner learns of the issue afterwards, so:
+Swift Testing records a failed `#expect` or `Issue.record` without telling the step, so the step's own code can't stop at it. The runner learns of the issue afterwards, with these results:
 
-- **The step runs to its end, and then counts as failed.** Every failure inside it is reported. The scenario's later steps don't run and aren't in the report, and its `AfterScenario` and `AfterStep` hooks still do. That is what CucumberSwift does once a step has failed.
-- **`continueTestingAfterFailure`.** Return `false` from your `StepImplementation` and an `async` step's task is also cancelled at its first failed expectation, so a step that is waiting stops waiting. The runner still waits for it to finish. A synchronous step can't be stopped part way, whatever this says: XCTest can stop one at a failed assertion, and Swift Testing can't.
+- **The step runs to its end, and then counts as failed.** Every failure inside it is reported. The scenario's later steps don't run and aren't in the report. Its `AfterScenario` and `AfterStep` hooks still run. CucumberSwift does the same once a step has failed.
+- **`continueTestingAfterFailure` cancels async steps.** If you return `false` from your `StepImplementation`, an `async` step's task is also cancelled at its first failed expectation, so a step that's waiting stops waiting. The runner still waits for the task to finish. A synchronous step can't be stopped part way, whatever the setting says. XCTest can stop one at a failed assertion, but Swift Testing can't.
 - **`try #require`, or any error a step throws, stops the step at once.** Use it where the next line can't make sense after this one failed.
 
-This needs Swift 6.2 or later. With Swift 6.1 the runner can't see a failed `#expect`: the step is reported as passed and the scenario goes on, so use `try #require` where a step must stop the scenario.
+This needs Swift 6.2 or later. With Swift 6.1, the runner can't see a failed `#expect`. The step is reported as passed and the scenario goes on, so use `try #require` where a step must stop the scenario.
 
 ### Skip a scenario
 
@@ -305,11 +319,11 @@ extension Cucumber: @retroactive StepImplementation {
 
 With Swift 6.3 or later, `try Test.cancel("The card terminal is offline")` does the same.
 
-The scenario's later steps don't run. Xcode shows the step's test as skipped with your reason, and each later step's test as skipped with "Skipped:" and your reason. With one test per scenario, the scenario's test is skipped. The step's `AfterStep` hooks and the scenario's `AfterScenario` hooks still run. In the JSON report the step is `skipped`, and the steps after it aren't listed, as with CucumberSwift. A step that has already failed an `#expect` stays failed. Before Swift 6.3, Xcode shows these tests as passed: see <doc:#Requirements>.
+The scenario's later steps don't run. Xcode shows the step's test as skipped, with your reason, and each later step's test as skipped, with "Skipped:" and your reason. With one test per scenario, the scenario's test is skipped. The step's `AfterStep` hooks and the scenario's `AfterScenario` hooks still run. In the JSON report, the step is `skipped`, and the steps after it aren't listed, as with CucumberSwift. A step that has already failed an `#expect` stays failed. Before Swift 6.3, Xcode shows these tests as passed. See <doc:#Requirements>.
 
 ## Step and hook options
 
-The `StepImplementation` properties and functions below work as they do in CucumberSwift. Declare them next to `setupSteps()`. Each one is optional.
+The `StepImplementation` properties and functions below work as they do in CucumberSwift. Declare them next to `setupSteps()`. Each one is optional:
 
 ```swift
 import CucumberSwiftTestingMacros
@@ -325,20 +339,22 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-- **`shouldRunWith(scenario:tags:)`** decides in code which scenarios run, and `CUCUMBER_TAGS` takes over when it is set. The runner asks it once for each scenario, before any scenario runs, after calling `setupSteps()` if that hasn't happened yet, and Xcode shows a scenario it leaves out as skipped, as it does with `CUCUMBER_TAGS`.  An example of a Scenario Outline that it leaves out isn't a test case at all, as `CUCUMBER_TAGS` does with examples.
+The options work like this:
+
+- **`shouldRunWith(scenario:tags:)`** decides in code which scenarios run. `CUCUMBER_TAGS` takes over when it's set. The runner calls it once for each scenario, before any scenario runs, after it calls `setupSteps()` if that hasn't happened yet. Xcode shows a scenario that it leaves out as skipped, as it does with `CUCUMBER_TAGS`. An example of a Scenario Outline that it leaves out isn't a test case at all, as with `CUCUMBER_TAGS`.
 - **`reverseOrderForAfterHooks`** runs the `AfterScenario` and `AfterStep` hooks in the reverse of their usual order.
-- **`asyncStepTimeout`** is how many seconds a step or a hook may run, 60 by default. One that suspends for longer is cancelled and fails on its line in the feature file, and the runner waits for it to finish. As in CucumberSwift, the timeout applies only to a step or a hook that suspends: one that blocks the main actor can't be interrupted, and isn't failed.
-- **`continueTestingAfterFailure`**: see <doc:#After-a-failed-assertion>.
-- **`verbose`**: see <doc:#Reports-verbose-output-and-custom-reporters>.
-- **`regexLiteralStyle`** says how the step definitions the runner suggests for undefined steps write their regex literals, `#/…/#` by default or ``RegexLiteralStyle/bareSlash``, when `Cucumber.generateRegexLiterals` is on. Cucumber expressions are suggested by default; set `Cucumber.generateRegexLiterals = true` in `setupSteps()`, or `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, for regex literals, as in <doc:Matching-Steps#Generate-regex-literals-instead>. With `CucumberSwiftTestingMacros` linked, the suggestions are step definition macros, unless `Cucumber.generateMacros` is `false`: see <doc:Matching-Steps#Step-definition-macros>.
+- **`asyncStepTimeout`** is how many seconds a step or a hook may run, 60 by default. A step or hook that suspends for longer is cancelled and fails on its line in the feature file, if what it awaits ends when it's cancelled. The runner waits for it to finish. As in CucumberSwift, the timeout applies only to a step or a hook that suspends. One that blocks the main actor can't be interrupted, and isn't failed.
+- **`continueTestingAfterFailure`** is described in <doc:#After-a-failed-assertion>.
+- **`verbose`** is described in <doc:#Reports-verbose-output-and-custom-reporters>.
+- **`regexLiteralStyle`** sets how the suggested step definitions for undefined steps write their regex literals when `Cucumber.generateRegexLiterals` is on. The style is `#/…/#` by default, or ``RegexLiteralStyle/bareSlash``. The runner suggests Cucumber expressions by default. For regex literals, set `Cucumber.generateRegexLiterals = true` in `setupSteps()`, or `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES`, as in <doc:Matching-Steps#Generate-regex-literals-instead>. With `CucumberSwiftTestingMacros` linked, the suggestions are step definition macros, unless `Cucumber.generateMacros` is `false`. See <doc:Matching-Steps#Step-definition-macros>.
 
 ### Run another step
 
 > Deprecation Warning: `ExecuteFirstStep(keyword:matching:)` is deprecated, in this runner and in CucumberSwift's, and will be removed in a future major version. It still works as before.
 >
-> Cucumber's own guidance recommends against one step definition running another: share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
+> Cucumber's own guidance recommends against one step definition running another. Share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
 
-Put the code both step definitions need in a function instead, and call it from each:
+Put the code that both step definitions need in a function, and call the function from each:
 
 ```swift
 import CucumberSwiftTestingMacros
@@ -363,15 +379,21 @@ extension Cucumber: @retroactive StepImplementation {
 
 The runner writes the Cucumber JSON report, prints verbose output and tells your own reporters what it sees, with the same settings, the same report and the same `CucumberTestObserver` as CucumberSwift.
 
-**The JSON report.** The report is written as scenarios finish, to `_cucumberReport.json` in the documents folder. Set `Cucumber.reportPath` in `setupSteps()`, or the environment variable `CUCUMBER_REPORT_PATH`, to a full path to write it somewhere else, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes. The static variable wins when both are set, and the runner creates the folder.
+**The JSON report.** The runner writes the report as scenarios finish, to `_cucumberReport.json` in the documents folder. To write it somewhere else, set `Cucumber.reportPath` in `setupSteps()`, or the environment variable `CUCUMBER_REPORT_PATH`, to a full path, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes. If both are set, the static variable wins. The runner creates the folder.
 
-Swift Testing runs the tests of a process side by side, in no order you can rely on. The report holds every scenario once, with the features in the order of their feature files and each feature's scenarios in the order of their lines, as CucumberSwift's does. It is the same report, with the same keys, for the same feature files, and it validates against Cucumber's JSON schema. A feature's `uri` is the `file://` URL of its feature file in the test bundle, as CucumberSwift writes it, though the runner reads the feature files when the tests build: where the test bundle has no copy, as when a Swift package leaves the `Features` folder out, it's where the copy would be, in the bundle's `Features` folder. A hook's or an observer's `Feature.uri` is the same URL. Failures are still reported in the feature file you edit, so that Xcode shows them there. When the tests finish, the runner copies the report to `CucumberTestResultsFor<target>.json` in the documents folder, replacing the copy from the run before, as CucumberSwift does, so the script in <doc:Generating-Reports#Automatic-Reports> finds it.
+Swift Testing runs the tests of a process side by side, in no order that you can rely on. The report still holds every scenario once, with the features in the order of their feature files, and each feature's scenarios in the order of their lines, as CucumberSwift's report does. It's the same report, with the same keys, for the same feature files, and it validates against Cucumber's JSON schema.
 
-- **A test run replaces the report.** One process runs a test target's tests, so each run starts a report of its own. Two test targets that run in one `xcodebuild` or `swift test` run write to the same path one after the other: give each its own `CUCUMBER_REPORT_PATH` if you need both.
+A feature's `uri` is the `file://` URL of its feature file in the test bundle, as CucumberSwift writes it, even though the runner reads the feature files when the tests build. If the test bundle has no copy, as when a Swift package leaves the `Features` folder out, the URL points where the copy would be, in the bundle's `Features` folder. A hook's or an observer's `Feature.uri` is the same URL. Failures are still reported in the feature file you edit, so that Xcode shows them there.
+
+When the tests finish, the runner copies the report to `CucumberTestResultsFor<target>.json` in the documents folder, and replaces the copy from the run before, as CucumberSwift does. So the script in <doc:Generating-Reports#Automatic-reports> finds it.
+
+These rules also apply to the report:
+
+- **A test run replaces the report.** One process runs a test target's tests, so each run starts a report of its own. Two test targets that run in one `xcodebuild` or `swift test` run write to the same path, one after the other. If you need both reports, give each target its own `CUCUMBER_REPORT_PATH`.
 - **A step is `failed` when its step definition throws, when no step definition matches it, and when one of its step hooks throws.** Its `error_message` is the error. An ambiguous step is `ambiguous`. The steps after a failed one aren't in the report, as with CucumberSwift.
-- **A failed `#expect` fails its step in the report too, with Swift 6.2 or later.** Swift Testing doesn't tell the code that is running when an expectation fails, so the runner learns of it from the same issue handling that moves the issue to the feature file's line. With Swift 6.1 such a step is reported as `passed`, though Swift Testing still fails the test; a step that throws, with `try #require` or otherwise, is `failed` in every version.
+- **A failed `#expect` fails its step in the report too, with Swift 6.2 or later.** Swift Testing doesn't tell the running code when an expectation fails. The runner learns of it from the same issue handling that moves the issue to the feature file's line. With Swift 6.1, such a step is reported as `passed`, though Swift Testing still fails the test. A step that throws, with `try #require` or otherwise, is `failed` in every version.
 
-**Verbose output.** It prints the lines <doc:Verbose-Output> shows, with the same three switches: `Cucumber.verboseOutput`, `StepImplementation.verbose` and the environment variable `CUCUMBER_VERBOSE`, which takes `1` or `true`. Any one of them turns it on.
+**Verbose output.** The runner prints the lines that <doc:Verbose-Output> shows, with the same three switches: `Cucumber.verboseOutput`, `StepImplementation.verbose` and the environment variable `CUCUMBER_VERBOSE`, set to `1` or `true`. Any one of them turns it on:
 
 ```swift
 extension Cucumber: @retroactive StepImplementation {
@@ -380,7 +402,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-**Custom reporters.** Write a `CucumberTestObserver` and hand it to the runner with `CucumberTestObservable`, as <doc:Generating-Reports#Custom-Reporters> shows for CucumberSwift:
+**Custom reporters.** Write a `CucumberTestObserver` and hand it to the runner with `CucumberTestObservable`, as <doc:Generating-Reports#Custom-reporters> shows for CucumberSwift:
 
 ```swift
 final class MyTestObserver: CucumberTestObserver {
@@ -399,14 +421,14 @@ extension Cucumber: @retroactive CucumberTestObservable {
 }
 ```
 
-The `Feature`, `Scenario` and `Step` an observer receives are this runner's own, the ones step definitions and hooks see; `Reporter.Result` is the same type. The runner calls observers on the main actor, in the order things happen:
+The `Feature`, `Scenario` and `Step` that an observer receives are this runner's own, the ones that step definitions and hooks see. `Reporter.Result` is the same type. The runner calls observers on the main actor, in the order things happen:
 
-- the test suite starts before the first scenario, and finishes after the last,
-- a feature starts with its first scenario that runs, after its `BeforeFeature` hooks, and finishes after its last and its `AfterFeature` hooks: a feature none of whose scenarios run, because `CUCUMBER_TAGS` filters them out, doesn't start,
-- a scenario starts before its hooks, and finishes after its `AfterScenario` hooks, `.failed` if a step or a hook failed, and
-- a step starts before its `BeforeStep` hooks, and finishes before its `AfterStep` hooks run, as in CucumberSwift: an `AfterStep` hook that fails fails the scenario, not the step the observers were told about.
+- The test suite starts before the first scenario, and finishes after the last.
+- A feature starts with its first scenario that runs, after its `BeforeFeature` hooks. It finishes after its last scenario and its `AfterFeature` hooks. If `CUCUMBER_TAGS` filters out all of a feature's scenarios, the feature doesn't start.
+- A scenario starts before its hooks, and finishes after its `AfterScenario` hooks. It finishes `.failed` if a step or a hook failed.
+- A step starts before its `BeforeStep` hooks, and finishes before its `AfterStep` hooks run, as in CucumberSwift. So an `AfterStep` hook that fails fails the scenario, not the step that the observers were told about.
 
-A step with no step definition finishes `.failed`, with the message the runner records, and an ambiguous step finishes `.ambiguous`. The events of one scenario arrive in order; don't assume anything about the order of events from different scenarios.
+A step with no step definition finishes `.failed`, with the message that the runner records. An ambiguous step finishes `.ambiguous`. The events of one scenario arrive in order. Don't assume anything about the order of events from different scenarios.
 
 ## Write features in Swift
 
@@ -486,7 +508,7 @@ With parallel testing on, each scenario is one case, and scenarios run at the sa
 
 ## Move unit tests to Swift Testing
 
-A project can move its unit tests to Swift Testing and keep its UI tests, which can't move, on CucumberSwift and XCTest. Each test target links one runner:
+A project can move its unit tests to Swift Testing and keep its UI tests on CucumberSwift and XCTest, because UI tests can't move. Each test target links one runner:
 
 | Test target | Product | Runs feature files with |
 |---|---|---|
@@ -496,18 +518,18 @@ A project can move its unit tests to Swift Testing and keep its UI tests, which 
 One scheme can test both targets. To move a unit test target:
 
 1. Replace its `CucumberSwift` or `CucumberSwiftMacros` dependency with `CucumberSwiftTestingMacros`, or with `CucumberSwiftTesting` without the macros, and add the plugin, as in <doc:#Set-up-a-Swift-package> or <doc:#Set-up-an-Xcode-project>.
-2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`, mark the conformance `@retroactive`, and remove `bundle`, which this runner doesn't use. Step definitions written as macros, or with the plain DSL, otherwise stay as they are, and so do features written in the Swift DSL. Declare `shouldRunWith(scenario:tags:)` if you filter scenarios in code: this runner asks only that one, so an older `shouldRunWith(tags:)` is ignored and every scenario runs.
-3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once: a failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
+2. In its step definitions, import that module instead of `CucumberSwift` or `CucumberSwiftMacros`. Mark the conformance `@retroactive`, and remove `bundle`, because this runner doesn't use it. Otherwise, step definitions written as macros or with the plain DSL stay as they are, and so do features written in the Swift DSL. If you filter scenarios in code, declare `shouldRunWith(scenario:tags:)`. This runner calls only that one, so it ignores an older `shouldRunWith(tags:)`, and every scenario runs.
+3. Replace each `XCTAssert` with `#expect`, or with `try #require` where the step must stop at once. A failed `#expect` lets its step run to the end, as <doc:#After-a-failed-assertion> describes.
 4. Check <doc:#Differences-from-the-XCTest-runner> and <doc:Settings#Settings-that-work-differently> for what differs.
 
-**Sharing step definitions between the runners.** A step definition file that both targets compile needs a different `import` in each, and assertions that both runners report. Before Swift 6.4, neither runner sees the other's: Swift Testing ignores a failed `XCTAssert`, and CucumberSwift's XCTest runner ignores a failed `#expect`, so in either case the step passes. A failed `try #require` throws, and both runners fail a step that throws, on its line in the feature file. Keep the step definitions for UI tests and for unit tests apart where you can: they usually do different things.
+**Sharing step definitions between the runners.** A step definition file that both targets compile needs a different `import` in each, and assertions that both runners report. Before Swift 6.4, neither runner sees the other's assertions. Swift Testing ignores a failed `XCTAssert`, and CucumberSwift's XCTest runner ignores a failed `#expect`, so in either case the step passes. A failed `try #require` throws, and both runners fail a step that throws, on its line in the feature file. Keep the step definitions for UI tests and for unit tests apart where you can, because they usually do different things.
 
 ## Differences from the XCTest runner
 
-CucumberSwift has full functional parity in both XCTest and Swift Testing modes, with the following exceptions:
+The Swift Testing runner does everything the XCTest runner does, with these exceptions:
 
-1. **No UI testing.** Swift Testing does not support `XCUIApplication`, so it can't be used for UI testing, only unit testing. This is a known limitation of Swift Testing, and Apple covers it in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
-2. **`continueTestingAfterFailure`.** It is the setting for fail-fast mode. By default, the value is `true`, and both modes let a step run to its end after a failed assertion. Return `false` to fail fast. XCTest stops the step at its first failed assertion; Swift Testing can't stop the step's code part way at a failed `#expect`, so check `continueTestingAfterFailure` in the step: use `#expect` when it is `true`, and `try #require`, which stops the step at once, when it is `false`. See <doc:#After-a-failed-assertion>.
+1. **No UI testing.** Swift Testing doesn't support `XCUIApplication`, so you can use it only for unit tests. This is a known limitation of Swift Testing that Apple describes in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
+2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. To fail fast, return `false` from `continueTestingAfterFailure` in your `StepImplementation`, as the example below does. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require` when it's `false`, because it stops the step at once. See <doc:#After-a-failed-assertion>.
 
    ```swift
    import CucumberSwiftTestingMacros
@@ -531,7 +553,7 @@ CucumberSwift has full functional parity in both XCTest and Swift Testing modes,
    }
    ```
 
-3. **`parallelTesting` and shared state.** XCTest runs parallel tests in separate processes, so their state is isolated, whereas Swift Testing runs them in one process, so scenarios can see each other's state. Parallel testing works in both modes, turned on the same way. Use `Scenario.state(_:)` to share state between steps and to isolate it between scenarios. It works the same in both modes: see <doc:#Sharing-state-between-steps-in-a-scenario>.
+3. **`parallelTesting` and shared state.** XCTest runs parallel tests in separate processes, so their state is isolated. Swift Testing runs them in one process, so scenarios can see each other's state. Parallel testing works with both runners, and you turn it on the same way. Use `Scenario.state(_:)` to share state between steps and to keep it apart between scenarios. It works the same with both runners. See <doc:#Sharing-state-between-steps-in-a-scenario>.
 
    ```swift
    import CucumberSwiftTestingMacros
@@ -560,17 +582,17 @@ CucumberSwift has full functional parity in both XCTest and Swift Testing modes,
    }
    ```
 
-   The container is safe to use from any task of the step. The value you keep in it is not made safe for you: steps run on the main actor, so a plain class works, and if you pass it to other tasks, make it `Sendable`, for example an `actor`.
+   The container is safe to use from any task of the step. The value you keep in it isn't made safe for you. Steps run on the main actor, so a plain class works. If you pass the value to other tasks, make it `Sendable`, for example an `actor`.
 
-4. **The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter`.** The plugin finds the feature files in the test target's folder, whatever `FeaturesPath` says: the runner reads `FeaturesPath` only to map them to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Honouring both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
+4. **The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter`.** The plugin finds the feature files in the test target's folder, whatever `FeaturesPath` says. The runner reads `FeaturesPath` only to map the files to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Support for both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
-<doc:Settings#Settings-that-work-differently> has more on the settings. The Swift version limits are under <doc:#Requirements>.
+<doc:Settings#Settings-that-work-differently> has more on the settings. <doc:#Requirements> lists the Swift version limits.
 
 ### Use Swift Testing's own tools
 
-`Cucumber.expectation(description:)` and `wait(for:timeout:)` work in this runner as they do with CucumberSwift. In a step definition you write for this runner, Swift Testing has its own tools for the same job, which you can use instead. Make the step `async`:
+`Cucumber.expectation(description:)` and `wait(for:timeout:)` work in this runner as they do with CucumberSwift. In a step definition that you write for this runner, you can use Swift Testing's own tools for the same job instead. Make the step `async`, then use these tools:
 
-- To wait for something, `await` an `async` API. A callback wrapped in `withCheckedContinuation` doesn't stop waiting when the step is cancelled, so if the callback never comes, the run waits for it, even with `asyncStepTimeout`.
+- To wait for something, `await` an `async` API. A callback wrapped in `withCheckedContinuation` doesn't stop waiting when the step is cancelled. If the callback never comes, the run waits for it, even with `asyncStepTimeout`.
 - To check that something happens, and how many times, use `confirmation(_:expectedCount:)`. It fails the step if the confirmation is confirmed a different number of times before its closure returns.
 
 <!-- swift-example: file swift6 -->
@@ -604,6 +626,6 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-A step or a hook that suspends for longer than `asyncStepTimeout` is cancelled and fails on its line in the feature file, as long as what it awaits ends when it is cancelled: see <doc:#Step-and-hook-options>.
+A step or a hook that suspends for longer than `asyncStepTimeout` is cancelled and fails on its line in the feature file, if what it awaits ends when it's cancelled. See <doc:#Step-and-hook-options>.
 
-Feature files in any language still work: their steps match by their text. The step definitions the runner suggests for undefined steps are Cucumber expressions, unless `Cucumber.generateRegexLiterals` asks for regex literals, and step definition macros when the target links `CucumberSwiftTestingMacros`.
+Feature files in any language still work, because their steps match by their text. The runner suggests Cucumber expressions for undefined steps, unless `Cucumber.generateRegexLiterals` asks for regex literals. It suggests step definition macros when the target links `CucumberSwiftTestingMacros`.

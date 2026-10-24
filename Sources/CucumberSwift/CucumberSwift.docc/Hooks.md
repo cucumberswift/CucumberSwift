@@ -1,13 +1,14 @@
 # Hooks
 
-Hooks are used to tie into CucumberSwift's runtime. They are great for setting up preconditions before a feature, or cleaning up after it is completed.
+Run your own code before and after each feature, scenario and step, for example to set up preconditions or to clean up.
 
-The examples on this page come in two tabs: **Swift Package Manager**, written with the hook macros, and **Carthage**, written with the hook functions. See <doc:Hooks#Hook-macros> for the difference.
+## Overview
 
-## Types of Hooks
-CucumberSwift comes with 6 hooks, Before/After Feature Before/After Scenario and Before/After step, use them like so
+Each example on this page has two tabs. The **Swift Package Manager** tab uses the hook macros, and the **Carthage** tab uses the hook functions. <doc:Hooks#Hook-macros> explains the difference.
 
-NOTE: Hooks can be setup in more than 1 place however each hook will only be called once
+## Types of hooks
+
+CucumberSwift has six hooks: `BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep`. Register them in `setupSteps()`:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -24,7 +25,7 @@ extension Cucumber: StepImplementation {
 
     public func setupSteps() {
         #BeforeFeature { feature in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
         
         #AfterFeature { feature in
@@ -65,7 +66,7 @@ extension Cucumber: StepImplementation {
 
     public func setupSteps() {
         BeforeFeature { feature in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
         
         AfterFeature { feature in
@@ -93,13 +94,16 @@ extension Cucumber: StepImplementation {
 }
 }
 
+You can register hooks in more than one place. CucumberSwift still calls each hook once.
+
 ### Hook macros
 
-Each hook also has a macro, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, and the macros are the preferred way to write hooks. The compiler checks the closure where you write it: it takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and anything else is an error that says what the hook passes, with a fix. They also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
+The hook macros, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, are the preferred way to write hooks. The compiler checks each closure where you write it. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument. Anything else is an error that says what the hook passes, and offers a fix. The macros also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
 
-The functions keep working, so existing hooks need no change, and they are the way to write hooks where the macros aren't available: they need CucumberSwift's `Macros` package trait, which downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros along with your step definitions. The examples on this page come in two tabs: Swift Package Manager, with the macros, and Carthage, with the functions. Tagged hooks have no macro.
+The hook functions keep working, so existing hooks need no change. Use them where the macros aren't available. The macros need CucumberSwift's `Macros` package trait, and the trait downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros, together with your step definitions. Tagged hooks have no macro.
 
 ### Async hooks
+
 A hook can be `async` and `throws`. Write `await` in its closure:
 
 @TabNavigator {
@@ -121,17 +125,19 @@ BeforeScenario { scenario in
 }
 }
 
-An async hook's closure runs on the main actor, at the same point as a synchronous hook would. CucumberSwift waits for each one to finish before going on, so hooks and steps never run in parallel. A thrown error fails the test at the hook, and the `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same for async and synchronous hooks.
+An async hook's closure runs on the main actor, at the same point as a synchronous hook. CucumberSwift waits for each one to finish before it goes on, so hooks and steps never run in parallel. A thrown error fails the test at the hook. The `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same way for async and synchronous hooks.
 
 ### Feature hooks in a parallel run
-With <doc:Running-Scenarios-In-Parallel>, each worker runs `BeforeFeature` and `AfterFeature` for the features it runs, and when `AfterFeature` runs depends on what Xcode hands out: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
+
+When scenarios run in parallel, each worker runs `BeforeFeature` and `AfterFeature` for the features it runs. When `AfterFeature` runs depends on what Xcode hands out. See <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
 
 ### Attachments
-Hooks and steps are not `XCTestCase` methods, so there is no `add(_:)` to attach a screenshot, a log or a file with. Call `Attach(_:)` instead. It works in any hook and in any step, and takes any `XCTAttachment`.
 
-Set `lifetime` to `.keepAlways`, because Xcode deletes an attachment when the test passes unless you do. Set `name` to label it.
+Call `Attach(_:)` to attach a screenshot, a log or a file to the running test. It works in any hook and in any step, and takes any `XCTAttachment`. Hooks and steps aren't `XCTestCase` methods, so they have no `add(_:)`.
 
-**In a UI test target**, attach a screenshot of the screen:
+Set the attachment's `lifetime` to `.keepAlways`. Otherwise Xcode deletes the attachment when the test passes. Set its `name` to label it.
+
+In a UI test target, attach a screenshot of the screen:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -158,9 +164,9 @@ AfterScenario { scenario in
 }
 }
 
-`XCUIScreen` only works in a UI test target. In a unit test bundle, `screenshot()` fails the test with "Not authorized for performing UI testing actions".
+`XCUIScreen` works only in a UI test target. In a unit test bundle, `screenshot()` fails the test with "Not authorized for performing UI testing actions".
 
-**In a unit test bundle** (for example with UIUTest), attach a view you render yourself, or text or data:
+In a unit test bundle, for example with UIUTest, attach a view that you render yourself, or text or data:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -202,17 +208,16 @@ AfterStep { step in
 }
 
 #### Where to find an attachment
-An attachment is added to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step, so its attachment is on that last step's test. An `AfterStep` attachment is on its own step.
+
+`Attach(_:)` adds the attachment to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step. So an `AfterScenario` attachment is on the last step's test. An `AfterStep` attachment is on its own step's test. With one test per scenario, every attachment is on the scenario's test.
 
 In Xcode, open the **Report navigator**, choose the test run, expand the scenario and select the step's test. The attachment is listed under an **Attachment** activity, named after the attachment's `name`.
 
-### Execution Order
-If you never specify anything hooks will just execute in whatever order they appear in the code. However if you need specific control you can add a `priority` to hooks. The lower the priority, the earlier it executes. So a priority 1 executes before a priority 2.
+### Hook order
 
-Other cucumber engines might have different behaviour for hooks order. For example cucumber-jvm reverses order for `@After` hooks. I.e. the earlier the priority the later `@After` hook is executed. Also `@After` hooks are executed in reverse order of registering.
-Option `reverseOrderForAfterHooks` can be overriden for `StepImplementation` and set to true to make similar behaviour. It works the same with the Swift Testing runner, for `AfterScenario` and `AfterStep` hooks.
+Give a hook a `priority` to control when it runs. A lower priority runs earlier, so priority 1 runs before priority 2. Hooks without a priority run after the hooks with one, in the order they appear in your code.
 
-NOTE: If you do *not* specify an order hooks with no priority will execute *after* hooks with a priority
+To run after hooks in reverse order, as cucumber-jvm does, return `true` from `reverseOrderForAfterHooks` in your `StepImplementation`. A hook with an earlier priority then runs later, and hooks with the same priority run in the reverse of the order you registered them. The Swift Testing runner does the same for `AfterScenario` and `AfterStep` hooks.
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -233,12 +238,12 @@ extension Cucumber: StepImplementation {
     public func setupSteps() {
         // This hook will execute last, because it uses UInt.max as a priority
         #BeforeFeature(priority: .max) { (feature: Feature) in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
         
         // This hook executes first, even though it is declared second
         #BeforeFeature(priority: 1) { (feature: Feature) in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
     }
 }
@@ -262,12 +267,12 @@ extension Cucumber: StepImplementation {
     public func setupSteps() {
         // This hook will execute last, because it uses UInt.max as a priority
         BeforeFeature(priority: .max) { feature in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
         
         // This hook executes first, even though it is declared second
         BeforeFeature(priority: 1) { feature in
-            //called once before the feature, but can be setup in more than 1 file.
+            // Called once before the feature. You can register it in more than one file.
         }
     }
 }
