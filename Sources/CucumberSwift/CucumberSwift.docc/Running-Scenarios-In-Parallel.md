@@ -15,7 +15,7 @@ public func setupSteps() {
 
 Xcode's parallel testing runs tests in several worker processes. For iOS, each worker runs on a clone of the simulator. You turn it on with the **Execute in parallel** option on a test target in a scheme or test plan, or with `xcodebuild -parallel-testing-enabled YES`. Xcode hands each worker whole test classes.
 
-With the experiment on, each scenario is a test class of its own, and Xcode hands it to one worker. The class has a test for each step by default, or one test for the scenario with ``Cucumber/oneTestPerScenario``. The scenario's steps run in order in that worker, as they do in a serial run. A serial run with the experiment on also runs each scenario once, as a class of its own, in the order of the feature files. Each class's name starts with its position in the feature files, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
+With the experiment on, each scenario is a test class of its own by default, and Xcode hands it to one worker. With `Cucumber.parallelTestingUnit` set to `.feature`, each feature is a class instead (see <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out>). The class has a test for each step by default, or one test for the scenario with ``Cucumber/oneTestPerScenario``. The scenario's steps run in order in that worker, as they do in a serial run. A serial run with the experiment on also runs each scenario once, as a class of its own, in the order of the feature files. Each class's name starts with its position in the feature files, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
 
 With the experiment off, CucumberSwift's scenarios don't run correctly in parallel. Depending on the setup, each scenario runs in every worker, or not at all, and the run can still pass. So when Xcode runs a CucumberSwift test target in parallel with the experiment off, the first test of each worker fails, with a message that names the setting. With one test per scenario, nothing fails, because that mode isn't affected. Turn the experiment on, or turn parallel testing off for the target.
 
@@ -65,7 +65,7 @@ Xcode hands out whole test classes, one at a time, to each worker. Apple's WWDC2
 Set `Cucumber.parallelTestingUnit` to choose what a test class holds, and so what Xcode hands to a worker:
 
 - With `.scenario`, the default, each scenario is a class of its own. Xcode can hand it to any worker.
-- With `.feature`, each feature is a class of its own, with a test for each step of each of its scenarios. Xcode hands the whole feature to one worker, and that worker runs its scenarios in the order of the feature file.
+- With `.feature`, each feature is a class of its own. The class has a test for each step of each of its scenarios, or a test for each scenario with one test per scenario. Xcode hands the whole feature to one worker, and that worker runs its scenarios in the order of the feature file.
 
 Set it in `setupSteps()`, or set `CUCUMBER_PARALLEL_TESTING_UNIT` to `scenario` or `feature`, in any case. As for every setting, the static variable wins over the environment variable (see <doc:Settings>). The setting applies only with parallel testing on.
 
