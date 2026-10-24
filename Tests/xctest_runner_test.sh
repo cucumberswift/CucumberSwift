@@ -10,7 +10,8 @@ work="$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/runner_test.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 # A stand-in for xcrun. For xctest, and for a process simctl spawns: records its arguments,
-# PROBE and DEVELOPER_DIR (SIMCTL_CHILD_PROBE and SIMCTL_CHILD_PATH for a spawned one), prints the
+# PROBE and DEVELOPER_DIR (SIMCTL_CHILD_PROBE for a spawned one, which also records whether the
+# variables the runner must not pass on reached it: PATH and SIMCTL_CHILD_*), prints the
 # summary line xctest would print for FAKE_COUNT tests, and exits with FAKE_STATUS. Every simctl
 # command goes to FAKE_SIMCTL; `simctl list` prints FAKE_RUNTIMES, and `simctl create` a device.
 mkdir -p "$work/bin"
@@ -26,7 +27,8 @@ if [[ "$1" == "simctl" ]]; then
     spawn)
       shift 3
       PROBE="${SIMCTL_CHILD_PROBE-unset}"
-      printf '%s' "${SIMCTL_CHILD_PATH-unset}" > "$FAKE_CHILD_PATH" ;;
+      printf 'PATH=%s\nNESTED=%s\n' "${SIMCTL_CHILD_PATH-unset}" "${SIMCTL_CHILD_SIMCTL_CHILD_FAKE-unset}" \
+        > "$FAKE_CHILD_EXCLUDED" ;;
     *) exit 0 ;;
   esac
 fi
@@ -80,11 +82,11 @@ run() {
     -e "s|%(test_filter)s|$filter|" \
     -e "s|__PLATFORM__|$platform|" \
     "$template" > "$work/runner.sh"
-  rm -f "$work/simctl" "$work/child_path"
+  rm -f "$work/simctl" "$work/child_excluded"
   status=0
   env -u TEST_PREMATURE_EXIT_FILE -u TESTBRIDGE_TEST_ONLY \
     PATH="$work/bin:$PATH" FAKE_ARGS="$work/args" FAKE_PROBE="$work/probe" FAKE_DEVELOPER_DIR="$work/developer_dir" \
-    FAKE_SIMCTL="$work/simctl" FAKE_CHILD_PATH="$work/child_path" FAKE_RUNTIMES="$runtimes" \
+    FAKE_SIMCTL="$work/simctl" FAKE_CHILD_EXCLUDED="$work/child_excluded" FAKE_RUNTIMES="$runtimes" \
     FAKE_SDK_VERSION=26.4 FAKE_COUNT=3 FAKE_STATUS=0 "$@" \
     bash "$work/runner.sh" > "$work/out" 2> "$work/err" || status=$?
 }
@@ -159,7 +161,18 @@ grep -qx "create bazel-xctest-.* Watch-C watchOS-26-5" "$work/simctl" || fail "a
 # The test environment reaches the spawned xctest, but this Mac's PATH doesn't.
 run "" PROBE="$probe"
 [[ "$(cat "$work/probe")" == "$probe" ]] || fail "PROBE reached the watchOS xctest as '$(cat "$work/probe")'"
-[[ "$(cat "$work/child_path")" == "unset" ]] || fail "PATH reached the watchOS xctest as '$(cat "$work/child_path")'"
+grep -qx "PATH=unset" "$work/child_excluded" || fail "PATH reached the watchOS xctest: $(cat "$work/child_excluded")"
+
+# A value with a newline and Unicode, an empty value and a whitespace-only value reach it as they are.
+for value in $'line one\nline two' "café ✓ 日本" "" "   "; do
+  run "" PROBE="$value"
+  [[ "$(cat "$work/probe")" == "$value" ]] || fail "PROBE='$value' reached the watchOS xctest as '$(cat "$work/probe")'"
+done
+
+# SIMCTL_CHILD_* variables are already simctl's own, so they aren't passed on again. (The runner
+# skips DYLD_* too, but macOS strips those before bash starts, so no case can set one.)
+run "" SIMCTL_CHILD_FAKE=1
+grep -qx "NESTED=unset" "$work/child_excluded" || fail "SIMCTL_CHILD_FAKE was passed on again: $(cat "$work/child_excluded")"
 
 # A filter goes to the watchOS xctest too.
 run "Mod.B"

@@ -836,7 +836,7 @@ class AsyncStepTests: XCTestCase {
 
     #if compiler(>=5.7) && canImport(_StringProcessing)
     func testRegexClosuresBindToTheMatchingOverload() throws {
-        guard #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) else { throw XCTSkip("Regex needs iOS 16, macOS 13 or tvOS 16") }
+        guard #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) else { throw XCTSkip("Regex needs iOS 16, macOS 13, tvOS 16 or watchOS 9") }
         Cucumber.shared.parseIntoFeatures("""
         Feature: Some terse yet descriptive text of what is desired
            Scenario: Some determinable business situation
