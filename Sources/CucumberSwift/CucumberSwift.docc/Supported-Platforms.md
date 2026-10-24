@@ -8,19 +8,19 @@ CucumberSwift supports what its continuous integration (CI) verifies. This artic
 
 | Tier | What it means | Today |
 |---|---|---|
-| **Tested** | CI builds it and runs the tests on it | The oldest Xcode CI runs, and newer ones up to Xcode 26, on macOS 15 and macOS 26 build machines. The tests run on the iOS Simulator, on Mac Catalyst, and on macOS through Swift Package Manager, on the runtimes each Xcode comes with. Nightly runs also run them on a watchOS Simulator, with CucumberSwift built as a Swift package. |
-| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | Deployment targets iOS 13 and macOS 10.15: every pull request builds at them. tvOS 13, once CI builds it. Every pull request also builds for watchOS 7.4, as a Swift package. |
-| **Not supported** | Not built or tested | Xcode versions older than the oldest CI runs, older deployment targets, and anything not listed here. |
+| **Tested** | CI builds it and runs the tests on it | iOS Simulator, tvOS Simulator, Mac Catalyst and macOS, with Xcode 16.0 to 26. watchOS Simulator, with Xcode 26. |
+| **Built, not run** | The compiler checks every API against the deployment target, but no test runs there | iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4. |
+| **Not supported** | Not built or tested | Older Xcode versions and deployment targets, and anything not listed here. |
 
 ### The Xcode you build with
 
-**The oldest supported Xcode is the oldest one CI runs.** When GitHub's runner image drops it, CucumberSwift's oldest supported Xcode rises in the next release, and that release's notes say so.
+**The oldest supported Xcode is 16.0 (the oldest one our CI runs).** When GitHub's runner image drops it, CucumberSwift's oldest supported Xcode rises in the next release, and that release's notes say so.
 
 This article names the Xcode, not the macOS you build on: Apple's requirements for each Xcode decide which macOS it needs. CI uses macOS 15 and macOS 26 build machines.
 
 ### The OS your tests run on
 
-"Built, not run" says what it means for a test framework: CucumberSwift's own tests don't run on iOS 13 or macOS 10.15, but a project whose app targets iOS 13 can add CucumberSwift to its test target, and its tests run on the OS versions that the Xcode you use can run them on. The compiler checks every CucumberSwift API against the deployment target, so nothing in a test target needs a newer OS unless this documentation says so, as it does for regex literals below.
+"Built, not run" says what it means for a test framework: CucumberSwift's own tests don't run on iOS 13, macOS 10.15, tvOS 13 or watchOS 7.4, but a project whose app targets iOS 13 can add CucumberSwift to its test target, and its tests run on the OS versions that the Xcode you use can run them on. The compiler checks every CucumberSwift API against the deployment target, so nothing in a test target needs a newer OS unless this documentation says so, as it does for regex literals below.
 
 A bug you report on an OS that is "built, not run" is fixed when it can be reproduced.
 
