@@ -171,7 +171,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-This form needs no package trait, so it works in an Xcode project with any supported Xcode. You can mix both styles in one target.
+This form needs no package trait, so it works in an Xcode project with Xcode 16.3 (Swift 6.1) or later, the runner's minimum. It doesn't need the Xcode 26.4 that the trait needs in a project. You can mix both styles in one target.
 
 ## Run scenarios
 
@@ -529,7 +529,7 @@ One scheme can test both targets. To move a unit test target:
 The Swift Testing runner does everything the XCTest runner does, with these exceptions:
 
 1. **No UI testing.** Swift Testing doesn't support `XCUIApplication`, so you can use it only for unit tests. This is a known limitation of Swift Testing that Apple describes in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
-2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. Return `false` to fail fast. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require` when it's `false`, because it stops the step at once. See <doc:#After-a-failed-assertion>.
+2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. To fail fast, return `false` from `continueTestingAfterFailure` in your `StepImplementation`, as the example below does. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require` when it's `false`, because it stops the step at once. See <doc:#After-a-failed-assertion>.
 
    ```swift
    import CucumberSwiftTestingMacros
