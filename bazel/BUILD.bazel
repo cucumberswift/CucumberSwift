@@ -1,0 +1,12 @@
+load(":xctest_runner.bzl", "watchos_xctest_runner")
+
+# Runs a watchos_unit_test's bundle on a watchOS simulator that it creates for the run,
+# because rules_apple's own watchOS runner runs no tests. Pass it as the test's `runner`:
+# runner = "@cucumberswift//bazel:watchos_xctest_runner".
+watchos_xctest_runner(
+    name = "watchos_xctest_runner",
+    visibility = ["//visibility:public"],
+)
+
+# For the runner's own test, in the test module in Tests/.
+exports_files(["xctest_runner.template.sh"])

@@ -13,6 +13,6 @@ local_path_override(
 )
 
 # rules_swift scans only the macOS and iOS SDKs for system modules unless the root module asks
-# for more. The tvOS simulator tests (consumer_tests.bzl) need the tvOS Simulator SDK.
+# for more. The tvOS and watchOS simulator tests (consumer_tests.bzl) need those simulators' SDKs.
 system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
-system_sdk.configure_sdks(names = ["AppleTVSimulator"])
+system_sdk.configure_sdks(names = ["AppleTVSimulator", "WatchSimulator"])

@@ -329,7 +329,7 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
         XCTAssertEqual(problem?.line, 42)
         XCTAssert(problem?.message.contains(pattern) ?? false)
 #if compiler(>=5.7) && canImport(_StringProcessing)
-        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) {
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
             XCTAssert(problem?.message.hasSuffix("expected ')'") ?? false,
                       "The message should say what is wrong with the pattern: \(problem?.message ?? "")")
         }

@@ -221,7 +221,7 @@ final class CucumberTests {
     #endif
 
     @Test func aRegexLiteralMatchesAStepsWholeText() async {
-        guard #available(macOS 13.0, *) else { return }
+        guard #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) else { return }
         Given(#/I have (\d+) cukes/#) { [self] match, _ in ran.append(String(match.1)) }
 
         await Cucumber.shared.run(scenario([step(.given, "I have 3 cukes", line: 3)]))

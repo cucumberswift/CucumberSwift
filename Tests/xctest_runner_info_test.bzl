@@ -1,4 +1,4 @@
-"""Checks that macos_xctest_runner runs tests with the Xcode that Bazel selected.
+"""Checks that an xctest runner (bazel/xctest_runner.bzl) runs tests with the Xcode that Bazel selected.
 
 The test is decided when Bazel analyses it: it reads the runner's
 AppleTestRunnerInfo and compares it with the selected Xcode (xcode_config,

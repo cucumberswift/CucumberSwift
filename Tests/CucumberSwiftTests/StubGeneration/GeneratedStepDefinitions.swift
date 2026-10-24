@@ -96,7 +96,7 @@ enum GeneratedStepDefinitions {
         // END GENERATED CUCUMBER EXPRESSIONS
     }
 
-    @available(iOS 16.0, macOS 13.0, tvOS 16.0, *)
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     static func register() {
         // BEGIN GENERATED
         Given(#/^a step with no parameters$/#) { _, _ in

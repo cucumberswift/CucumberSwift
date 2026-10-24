@@ -52,7 +52,7 @@ env:
   RELEASE_SHA: ${{ github.sha }}
   # What the source archive must contain: the Swift package, and the Bazel module
   # and its test module, which the Bazel registry entry uses.
-  ARCHIVE_REQUIRES: Package.swift Sources/ MODULE.bazel BUILD.bazel REPO.bazel Tests/MODULE.bazel Tests/BUILD.bazel Tests/consumer_tests.bzl
+  ARCHIVE_REQUIRES: Package.swift Sources/ MODULE.bazel BUILD.bazel REPO.bazel bazel/BUILD.bazel bazel/xctest_runner.bzl bazel/xctest_runner.template.sh Tests/MODULE.bazel Tests/BUILD.bazel Tests/consumer_tests.bzl
 
 # `shell: bash` adds `-o pipefail`.
 defaults:
