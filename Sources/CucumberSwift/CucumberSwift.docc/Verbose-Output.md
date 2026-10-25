@@ -17,11 +17,11 @@ Turn on verbose output when a scenario doesn't reach the step you expected, or y
 [CucumberSwift] Feature "Greeting" failed (0.447s)
 ```
 
-Verbose output is off by default. Any one of the three switches below turns it on. None of them turns it off again. `Cucumber.verboseOutput` is a `Bool`, so unlike the other settings' static variables, it can't override the environment variable. See <doc:Settings>.
+Verbose output is off by default. Any one of the 3 switches below turns it on. None of them turns it off again. `Cucumber.verboseOutput` is a `Bool`, so unlike the other settings' static variables, it can't override the environment variable. See <doc:Settings>.
 
 ### Use an environment variable
 
-Set `CUCUMBER_VERBOSE` to `1` or `true`, in any case. Any other value, `YES` included, leaves it off. You don't change any code, so this suits a one-off run or a CI job.
+Set `CUCUMBER_VERBOSE` to `1` or `true`, in any case. Any other value, `YES` included, leaves it off. You don't change any code, so this suits a one-off run or a job on a build server.
 
 - In Xcode, choose **Product → Scheme → Edit Scheme…**, select **Test**, open **Arguments**, and add `CUCUMBER_VERBOSE` with the value `1` under **Environment Variables**.
 - With Swift Package Manager or `xcodebuild`, set it on the command line:
@@ -65,11 +65,11 @@ CucumberSwift prints to standard output. Each line starts with `[CucumberSwift]`
 - In Xcode, open the **Report navigator** (⌘9), choose the test run, and look at its **Test** log. Type `[CucumberSwift]` in the filter box.
 - On the command line, the lines appear in the terminal among the usual `Test Case` lines.
 
-CucumberSwift creates its scenarios while the tests run, so Xcode's Test navigator lists them only after the first run. To run one scenario on its own, see <doc:Running-Tests-In-Xcode#Run-one-scenario>.
+CucumberSwift creates its scenarios while the tests run, so Xcode's Test navigator lists them only after the first run. To run 1 scenario on its own, see <doc:Running-Tests-In-Xcode#Run-1-scenario>.
 
 ### Swift Testing
 
-The Swift Testing runner prints the same lines and has the same three switches. Its lines go to the test log, between Swift Testing's own lines. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>.
+The Swift Testing runner prints the same lines and has the same 3 switches. Its lines go to the test log, between Swift Testing's own lines. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>.
 
 ### What it doesn't change
 

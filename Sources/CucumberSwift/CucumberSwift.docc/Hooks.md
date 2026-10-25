@@ -4,11 +4,11 @@ Run your own code before and after each feature, scenario and step, for example 
 
 ## Overview
 
-Each example on this page has two tabs. The **Swift Package Manager** tab uses the hook macros, and the **Carthage** tab uses the hook functions. <doc:Hooks#Hook-macros> explains the difference.
+Each example on this page has 2 tabs. The **Swift Package Manager** tab uses the hook macros, and the **Carthage** tab uses the hook functions. <doc:Hooks#Hook-macros> explains the difference.
 
 ## Types of hooks
 
-CucumberSwift has six hooks: `BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep`. Register them in `setupSteps()`:
+CucumberSwift has 6 hooks: `BeforeFeature`, `AfterFeature`, `BeforeScenario`, `AfterScenario`, `BeforeStep` and `AfterStep`. Register them in `setupSteps()`:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -94,11 +94,11 @@ extension Cucumber: StepImplementation {
 }
 }
 
-You can register hooks in more than one place. CucumberSwift still calls each hook once.
+You can register hooks in more than 1 place. CucumberSwift still calls each hook once.
 
 ### Hook macros
 
-The hook macros, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, are the preferred way to write hooks. The compiler checks each closure where you write it. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument. Anything else is an error that says what the hook passes, and offers a fix. The macros also keep a step definitions file in one style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
+The hook macros, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, are the preferred way to write hooks. The compiler checks each closure where you write it. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument. Anything else is an error that says what the hook passes, and offers a fix. The macros also keep a step definitions file in 1 style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
 
 The hook functions keep working, so existing hooks need no change. Use them where the macros aren't available. The macros need CucumberSwift's `Macros` package trait, and the trait downloads swift-syntax (see <doc:Using-Step-Definition-Macros>). **Convert to Gherkin Macros** rewrites hook functions as macros, together with your step definitions. Tagged hooks have no macro.
 
@@ -209,7 +209,7 @@ AfterStep { step in
 
 #### Where to find an attachment
 
-`Attach(_:)` adds the attachment to the test that is running. CucumberSwift generates one test per step, and `AfterScenario` runs at the end of the scenario's last step. So an `AfterScenario` attachment is on the last step's test. An `AfterStep` attachment is on its own step's test. With one test per scenario, every attachment is on the scenario's test.
+`Attach(_:)` adds the attachment to the test that is running. CucumberSwift generates 1 test per step, and `AfterScenario` runs at the end of the scenario's last step. So an `AfterScenario` attachment is on the last step's test. An `AfterStep` attachment is on its own step's test. With 1 test per scenario, every attachment is on the scenario's test.
 
 In Xcode, open the **Report navigator**, choose the test run, expand the scenario and select the step's test. The attachment is listed under an **Attachment** activity, named after the attachment's `name`.
 

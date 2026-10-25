@@ -15,13 +15,13 @@ A step definition's pattern can be a Cucumber expression, a regular expression w
 | | Cucumber expression | Regular expression in a string | Regex literal |
 |---|---|---|---|
 | Example | `"I have {int} cukes"` | `"^I have (\\d+) cukes$"` | `#/^I have (\d+) cukes$/#` |
-| Arguments | Typed: `Int` for `{int}`, `Double` for `{double}`, `String` for `{string}`, and any type of your own with a custom parameter type | `String`, one per top-level capture group | `Substring`, or `Substring?` for a group that may not match, one per capture group, nested ones included |
+| Arguments | Typed: `Int` for `{int}`, `Double` for `{double}`, `String` for `{string}`, and any type of your own with a custom parameter type | A `String` for each top-level capture group | A `Substring` for each capture group, nested ones included, or `Substring?` for a group that may not match |
 | Converting the text | CucumberSwift converts it. A value that can't be converted fails the step. | The closure converts it. | The closure converts it. |
 | Checked when it compiles, with the step definition macros | The syntax, the number of arguments and each one's type | The syntax, the number of arguments, and that each is a `String` | The syntax, the number of arguments and each one's type, against the regex's output |
-| Two step definitions with the same pattern | Reported | Reported | Not detected |
+| 2 step definitions with the same pattern | Reported | Reported | Not detected |
 | Runs on | iOS 13, macOS 10.15, tvOS 13, watchOS 7.4 and later | iOS 13, macOS 10.15, tvOS 13, watchOS 7.4 and later | iOS 16, macOS 13, tvOS 16, watchOS 9 and later |
 
-Use a regular expression when the step needs something that a Cucumber expression can't say, such as alternatives of more than one word, lookarounds or a case-insensitive match. Prefer a regex literal to a regular expression in a string. Swift checks a regex literal's syntax when it compiles, with or without the macros. A regular expression in a string is checked only with the macros, and otherwise only when the tests run.
+Use a regular expression when the step needs something that a Cucumber expression can't say, such as alternatives of more than 1 word, lookarounds or a case-insensitive match. Prefer a regex literal to a regular expression in a string. Swift checks a regex literal's syntax when it compiles, with or without the macros. A regular expression in a string is checked only with the macros, and otherwise only when the tests run.
 
 Write a custom parameter type instead if you need a typed value from text that no built-in parameter matches, such as a date or an airport code. You keep the Cucumber expression, and every step definition can reuse the parameter type (see <doc:Matching-Steps#Matching-with-Cucumber-expressions>).
 
@@ -49,7 +49,7 @@ Most step definitions need no change. Step definitions whose closure takes `[Str
 
 #### Anchored patterns
 
-Each of these step definitions matches the step `the app is at the Main Menu`. The second one, a regular expression in a string, matches from 6.0.0 on. Older versions read it as a Cucumber expression, so it never matched. Use only one of them, because more than one for the same step makes the step ambiguous (see <doc:Matching-Steps#When-more-than-one-step-definition-matches-a-step>):
+Each of these step definitions matches the step `the app is at the Main Menu`. The second one, a regular expression in a string, matches from 6.0.0 on. Older versions read it as a Cucumber expression, so it never matched. Use only one of them, because several step definitions for the same step make the step ambiguous (see <doc:Matching-Steps#When-more-than-1-step-definition-matches-a-step>):
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -166,7 +166,7 @@ Given(/^I owe 5\$$/) { _, _ in }
 }
 }
 
-To read the amount instead of matching one price, capture it. Again, choose one of the alternatives. A regular expression gives the closure text that the closure converts itself. The text is a `String` for a regular expression in a string, and a `Substring` for a regex literal:
+To read the amount instead of matching 1 price, capture it. Again, choose one of the alternatives. A regular expression gives the closure text that the closure converts itself. The text is a `String` for a regular expression in a string, and a `Substring` for a regex literal:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -236,7 +236,7 @@ extension Cucumber: StepImplementation {
 
 Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before it starts the next one. So a step that ignores cancellation holds up the run, but never overlaps the next step.
 
-**UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous one can. Its closure runs on the main actor, as `XCUIApplication` needs:
+**UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous step can. Its closure runs on the main actor, as `XCUIApplication` needs:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -265,7 +265,7 @@ XCUI's own waits, such as `waitForExistence(timeout:)`, count toward the step's 
 
 **Passing a function instead of a closure.** An async function keeps its own isolation. Mark it `@MainActor` if it needs the main actor, for example to change UI state. A plain `async` function doesn't run on the main actor. Either way, the next step waits for it.
 
-**Running another step.** To share code between two step definitions, put it in a function and call the function from each one, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. Any step can call a synchronous helper. An `async` helper needs `await`, so only an async step or hook can call it.
+**Running another step.** To share code between 2 step definitions, put it in a function and call the function from each one, as in <doc:Running-Feature-Files-With-Swift-Testing#Run-another-step>. Any step can call a synchronous helper. An `async` helper needs `await`, so only an async step or hook can call it.
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -300,9 +300,9 @@ When("I add {int} more cukes") { match, _ in
 
 > Deprecation Warning: `ExecuteFirstStep(matching:)` is deprecated and will be removed in a future major version.
 >
-> Cucumber's own guidance recommends against one step definition running another. Share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
+> Cucumber's own guidance recommends against 1 step definition running another. Share the code through a helper function instead. See [Cucumber anti-patterns](https://cucumber.io/docs/guides/anti-patterns/) and [step organization](https://cucumber.io/docs/gherkin/step-organization/).
 
-For an async step in the Swift DSL, pass an async function or closure, not a call. Prefer feature files where you can, and use the DSL where a feature is better written in code. With the Macros trait, write the feature with the DSL macros, such as `#Feature`, `#Scenario` and `#Given(I: signIn)`. They capture each step's text when the tests compile. Without the trait, as with Carthage, the step functions read the text from the Swift file when the tests run. Keep to one style in a test target:
+For an async step in the Swift DSL, pass an async function or closure, not a call. Prefer feature files where you can, and use the DSL where a feature is better written in code. With the Macros trait, write the feature with the DSL macros, such as `#Feature`, `#Scenario` and `#Given(I: signIn)`. They capture each step's text when the tests compile. Without the trait, as with Carthage, the step functions read the text from the Swift file when the tests run. Keep to 1 style in a test target:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -494,7 +494,7 @@ A parameter type that a step uses more than once is read by position, such as `m
 
 ### Generate regex literals instead
 
-To generate regex literals, as earlier versions did, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`. Or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. If both are set, the static variable wins (see <doc:Settings>). The Swift Testing runner reads the same two settings.
+To generate regex literals, as earlier versions did, set `Cucumber.generateRegexLiterals = true` in your `StepImplementation`'s `setupSteps()`. Or set the environment variable `CUCUMBER_GENERATE_REGEX_LITERALS` to `YES` in a scheme or test plan. If both are set, the static variable wins (see <doc:Settings>). The Swift Testing runner reads the same 2 settings.
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -522,13 +522,13 @@ The generated regex literals are written as `#/…/#`, a form that compiles in a
 
 CucumberSwift suggests macros if your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), as Convert to Gherkin Macros writes them and as the Swift Package Manager tabs above show.
 
-CucumberSwift suggests macros when the test target links the macros built with the `Macros` trait: `CucumberSwiftMacros`, or `CucumberSwiftTestingMacros` with the Swift Testing runner. Otherwise, such as with Carthage, it suggests functions. To choose yourself, set `Cucumber.generateMacros` in `setupSteps()` to `true` for macros or `false` for functions. Or set the environment variable `CUCUMBER_GENERATE_MACROS` to `YES` or `NO`. If both are set, the static variable wins. The Swift Testing runner reads the same two settings.
+CucumberSwift suggests macros when the test target links the macros built with the `Macros` trait: `CucumberSwiftMacros`, or `CucumberSwiftTestingMacros` with the Swift Testing runner. Otherwise, such as with Carthage, it suggests functions. To choose yourself, set `Cucumber.generateMacros` in `setupSteps()` to `true` for macros or `false` for functions. Or set the environment variable `CUCUMBER_GENERATE_MACROS` to `YES` or `NO`. If both are set, the static variable wins. The Swift Testing runner reads the same 2 settings.
 
-The suggested closure takes one typed argument for each parameter: `Int` for `{int}`, `Float` for `{float}` and `String` for `{string}`. A step with a data table or a doc string adds `step: Step` as the last argument, to read it. A step that starts with `^` gets a regular expression, such as `#Then("^\\^a caret$")`. That's because the macro checks the Cucumber expression when it compiles, and a Cucumber expression can't escape a `^`. With `generateRegexLiterals` on as well, the macros take regex literals in the style that `regexLiteralStyle` sets, with a `Substring` for each capture group, such as `#Then(#/^the display shows \"(.*?)\"$/#) { (string: Substring) in`.
+The suggested closure takes 1 typed argument for each parameter: `Int` for `{int}`, `Float` for `{float}` and `String` for `{string}`. A step with a data table or a doc string adds `step: Step` as the last argument, to read it. A step that starts with `^` gets a regular expression, such as `#Then("^\\^a caret$")`. That's because the macro checks the Cucumber expression when it compiles, and a Cucumber expression can't escape a `^`. With `generateRegexLiterals` on as well, the macros take regex literals in the style that `regexLiteralStyle` sets, with a `Substring` for each capture group, such as `#Then(#/^the display shows \"(.*?)\"$/#) { (string: Substring) in`.
 
-## When more than one step definition matches a step
+## When more than 1 step definition matches a step
 
-Each step should match exactly one step definition. If more than one step definition matches a step, the step is *ambiguous*, as in other Cucumber implementations. CucumberSwift then runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
+Each step should match exactly 1 step definition. If more than 1 step definition matches a step, the step is *ambiguous*, as in other Cucumber implementations. CucumberSwift then runs none of them, fails the step, and reports it as `ambiguous`. The failure is at the step in the `.feature` file, and it names the file and line of each matching step definition.
 
 A step definition matches a step only if its keyword fits the step. ``Given`` fits a `Given` step, and any `And` or `But` step that follows one. ``MatchAll`` fits every step. For example:
 
@@ -551,6 +551,6 @@ MatchAll("^some (.*)$") { _, _ in }        // ambiguous with the Given above: bo
 }
 }
 
-Two step definitions with the *same* pattern are a mistake even when no step uses them, as in Cucumber for Java. If their keywords can match the same steps, the test run fails at the second one, and the failure names both. Two keywords can match the same steps when they're the same keyword, when one is ``MatchAll``, or when one is ``And`` or ``But`` and the other is ``Given``, ``When`` or ``Then``. So `Given("x")` and `When("x")` aren't duplicates. Two patterns count as the same when they're the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, can't be compared, so only the ambiguity check applies to them.
+It's a mistake to write 2 step definitions with the *same* pattern, even when no step uses them, as in Cucumber for Java. If their keywords can match the same steps, the test run fails at the second one, and the failure names both. Keywords can match the same steps when they're the same keyword, when either is ``MatchAll``, or when one is ``And`` or ``But`` and the other is ``Given``, ``When`` or ``Then``. So `Given("x")` and `When("x")` aren't duplicates. Patterns count as the same when they're the same regular expression, or the same Cucumber expression. Regex literals, such as `Given(/x/)`, can't be compared, so only the ambiguity check applies to them.
 
 To fix an ambiguous step or a duplicate, remove all but one of the step definitions, or make their patterns more specific so that each step matches only one. Earlier versions reported neither, and the step definition registered last silently replaced the others.

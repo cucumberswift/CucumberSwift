@@ -10,7 +10,7 @@ You describe behaviour in Gherkin feature files, and match their steps with step
 
 CucumberSwift isn't published to CocoaPods from 6.0.0 on. The last version on CocoaPods is 5.0.3. It still resolves, but no newer version will be published there. Install CucumberSwift with Swift Package Manager or Carthage instead.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their docs name it. Start with these links:
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that our GitHub Actions CI workflow tests with. Our CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their docs name it. Start with these links:
 
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)

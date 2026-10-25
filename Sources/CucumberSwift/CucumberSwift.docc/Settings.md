@@ -8,7 +8,7 @@ CucumberSwift's settings turn behaviours on or off, or give them a value. The ta
 
 ### How a setting works
 
-A behaviour that you can turn on or off has two switches:
+A behaviour that you can turn on or off has 2 switches:
 
 - An environment variable, named `CUCUMBER_` plus the setting's name in upper snake case, such as `CUCUMBER_ONE_TEST_PER_SCENARIO`.
 - A static variable on `Cucumber`, with the same name in lower camel case, such as `Cucumber.oneTestPerScenario`.
@@ -43,7 +43,7 @@ The table lists every setting, with the article that describes it:
 | Setting | In code | Environment variable | Default | Runs with | Requires |
 |---|---|---|---|---|---|
 | <doc:Running-Tests-In-Xcode#Test-names> | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On | XCTest and Swift Testing | None |
-| <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest and Swift Testing | None |
+| <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-1-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest and Swift Testing | None |
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13, tvOS 16 or watchOS 9 to run the regex literals it generates |
 | <doc:Matching-Steps#Step-definition-macros> | `Cucumber.generateMacros` | `CUCUMBER_GENERATE_MACROS` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | None |
 | <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | Off | XCTest and Swift Testing | With XCTest, it depends on the platform. See the article. |
@@ -65,9 +65,9 @@ The "Requires" column lists what a setting needs beyond the Xcode versions in <d
 
 A few settings don't follow the rules in <doc:Settings#How-a-setting-works>.
 
-**Verbose output has three switches, and any one of them turns it on.** Unlike the other settings, its static variable doesn't win over the environment variable:
+**Verbose output has 3 switches, and any one of them turns it on.** Unlike the other settings, its static variable doesn't win over the environment variable:
 
-1. `Cucumber.verboseOutput` is a `Bool`. `true` turns verbose output on. `false` only means this switch is off, so it can't turn off what the other two turn on.
+1. `Cucumber.verboseOutput` is a `Bool`. `true` turns verbose output on. `false` only means this switch is off, so it can't turn off what the other 2 turn on.
 2. `StepImplementation.verbose` is a `Bool` that you declare next to `setupSteps()`. `true` turns verbose output on.
 3. `CUCUMBER_VERBOSE` is an environment variable. `1` or `true`, in any case, turns verbose output on. `YES` and `NO` do nothing.
 
@@ -92,7 +92,7 @@ extension Cucumber: StepImplementation {
 **With Swift Testing, some settings work differently.** The Swift Testing runner does the same as the XCTest runner for every setting marked "Swift Testing" above, with these exceptions:
 
 - `continueTestingAfterFailure` sets fail-fast mode. By default it's `true`, and a step runs to its end after a failed assertion. With `false`, XCTest stops a step at its first failed assertion. With Swift Testing, a failed `#expect` doesn't stop a step, so use `try #require` for the checks that must stop it. See <doc:Running-Feature-Files-With-Swift-Testing#After-a-failed-assertion>.
-- With `parallelTesting`, XCTest runs tests in separate processes, so their state is isolated. Swift Testing runs them in one process. Use `Scenario.state(_:)` to share state between the steps of a scenario and to keep it apart between scenarios. See <doc:Running-Feature-Files-With-Swift-Testing#Sharing-state-between-steps-in-a-scenario>.
+- With `parallelTesting`, XCTest runs tests in separate processes, so their state is isolated. Swift Testing runs them in 1 process. Use `Scenario.state(_:)` to share state between the steps of a scenario and to keep it apart between scenarios. See <doc:Running-Feature-Files-With-Swift-Testing#Sharing-state-between-steps-in-a-scenario>.
 - The plugin finds the feature files in the test target's folder, whatever the Info.plist key `FeaturesPath` says. The runner reads `FeaturesPath` only to map the files to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Support for both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
 ### Choose scenarios in code
@@ -167,7 +167,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 `continueTestingAfterFailure` sets what XCTest does when an assertion in a step fails. If your `StepImplementation` doesn't declare it, CucumberSwift uses XCTest's own `continueAfterFailure`. Its value is `true`. So by default, a failed assertion doesn't stop its step. The rest of the step's code runs, and XCTest reports every failure. A failing async step's task isn't cancelled either.
 
-XCTest stops the step at its first failed assertion if you return `false`. With one test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
+XCTest stops the step at its first failed assertion if you return `false`. With 1 test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
 
 <!-- swift-example: members -->
 ```swift
@@ -182,4 +182,4 @@ Either way, once a step fails, the rest of its scenario's steps don't run, and X
 
 ### Test name delimiter
 
-`FeatureScenarioDelimiter` is the text between the feature's name and the scenario's name in a test's name. If you don't set it, the delimiter is ` › ` with readable test names, and `|` with them off. It applies both to a test per step and to one test per scenario.
+`FeatureScenarioDelimiter` is the text between the feature's name and the scenario's name in a test's name. If you don't set it, the delimiter is ` › ` with readable test names, and `|` with them off. It applies both to a test per step and to 1 test per scenario.

@@ -36,23 +36,23 @@ A Simulator's test process doesn't get your shell's environment. Set the variabl
 TEST_RUNNER_CUCUMBER_REPORT_PATH="$HOME/CucumberReports/report.json" xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
-### One report for a parallel run
+### The report of a parallel run
 
-All the workers write one report when scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), even though each worker is a separate process. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
+All the workers write 1 report when scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), even though each worker is a separate process. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
 
 To do this, a worker locks the report each time it writes. It reads the report, adds its own features, and writes the result to a temporary file in the same folder. Then it moves that file into place and unlocks the report.
 
 Keep these points in mind for the shared report:
 
-- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone has its own documents folder. Without `reportPath`, each clone writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already one file.
+- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone has its own documents folder. Without `reportPath`, each clone writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
 - A new run replaces the old report. The first worker of a run empties the report that the last run left, if nothing is writing it and nothing has written it for a minute. If you start a run within a minute of another, delete the report first.
 - The report's folder must be writable. The workers also create `<report>.lock` and `<report>.run` next to the report. These files are empty, and you can delete them between runs.
-- We haven't tried a physical device. A device is expected to run one worker and write its own file.
+- We haven't tried a physical device. A device is expected to run 1 worker and write its own file.
 - A serial run writes the report in the same way as before.
 
 ### Swift Testing
 
-The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in one process. That process writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
 
 ## Verbose output
 

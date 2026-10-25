@@ -6,7 +6,7 @@ Run UI tests as unit tests, with CucumberSwift and UIUTest.
 
 [UIUTest](https://github.com/nallick/UIUTest) runs UI tests in a unit test bundle, without XCUITest. It still checks what a UI test checks, such as whether an element is covered or can be tapped. Combined with CucumberSwift, it runs your Gherkin scenarios as fast unit tests.
 
-On one large project, UI tests that took about 20 minutes with XCUITest took about 2 minutes with UIUTest. That project didn't mock its network calls, so the tests took minutes and not seconds.
+On 1 large project, UI tests that took about 20 minutes with XCUITest took about 2 minutes with UIUTest. That project didn't mock its network calls, so the tests took minutes and not seconds.
 
 ### Add the packages
 

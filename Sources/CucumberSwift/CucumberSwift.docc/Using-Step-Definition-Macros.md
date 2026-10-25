@@ -9,7 +9,7 @@ Set up the step definition macros in a Swift package, an Xcode project or a Tuis
 
 ## Overview
 
-The step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`, are another way to write the step definitions that you would write with ``Given``, ``When`` and the like. The closure takes one argument for each parameter in the pattern, already converted to its type, instead of reading each one from `match`. For example, a feature file has this step:
+The step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`, are another way to write the step definitions that you would write with ``Given``, ``When`` and the like. The closure takes 1 argument for each parameter in the pattern, already converted to its type, instead of reading each one from `match`. For example, a feature file has this step:
 
 ```gherkin
 Given I have 5 cukes
@@ -24,7 +24,7 @@ This step definition matches it, with `count` set to 5:
 }
 ```
 
-The compiler checks each pattern and closure where you write it, and offers a fix for the common mistakes. See <doc:Checking-Step-Definitions>. Each macro expands to the step definition that you would otherwise write by hand, so steps match and run in the same way. Your feature files, hook functions and existing step definitions keep working, and you can mix both styles in one target.
+The compiler checks each pattern and closure where you write it, and offers a fix for the common mistakes. See <doc:Checking-Step-Definitions>. Each macro expands to the step definition that you would otherwise write by hand, so steps match and run in the same way. Your feature files, hook functions and existing step definitions keep working, and you can mix both styles in 1 target.
 
 This article describes what the macros need, how to set them up for each kind of project, and how to write step definitions with them for XCTest and for Swift Testing. It then covers converting the step definitions you have, and troubleshooting.
 
@@ -39,10 +39,10 @@ This article describes what the macros need, how to set them up for each kind of
 
 The notes below explain the requirements:
 
-- **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed. The macOS that an Xcode needs is Apple's requirement for that Xcode.
+- **Both are tested.** Our GitHub Actions CI workflow builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed. The macOS that an Xcode needs is Apple's requirement for that Xcode.
 - **Each kind of project has its own minimum.** The macros are behind a package trait. In a Swift package, you need Swift 6.1, the first version with package traits. In an Xcode project, you need Xcode 26.4, the first version that can turn on a package dependency's traits in a project. With an earlier Xcode, turn the trait on from a local package, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, or run your tests from a Swift package, as <doc:Running-Tests-With-Swift-Package-Manager> describes. In a Tuist project, the Xcode project's requirement applies, and you also need Tuist 4.203.0 or later to set the trait in `Project.swift` (see <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project>).
-- **Convert to Gherkin Macros** (see <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros>) is tested in the same way in a Swift package. CI runs the command with exactly Xcode 16.3. In an Xcode project, the command needs the trait on, so it needs Xcode 26.4, as the macros do. But CI doesn't run the command there.
-- **swift-syntax 600 to 604.** SwiftPM picks one swift-syntax version for your whole package, so the macros accept any version in that range. Your package can also use another macro package, as long as the two ranges overlap. CI tests the macros every night with the oldest version, 600.0.0, and on every change with the version that CucumberSwift's own `Package.resolved` pins. Versions before 600 don't build.
+- **Convert to Gherkin Macros** (see <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros>) is tested in the same way in a Swift package. Our CI runs the command with exactly Xcode 16.3. In an Xcode project, the command needs the trait on, so it needs Xcode 26.4, as the macros do. But our CI doesn't run the command there.
+- **swift-syntax 600 to 604.** SwiftPM picks 1 swift-syntax version for your whole package, so the macros accept any version in that range. Your package can also use another macro package, as long as the 2 ranges overlap. Our CI tests the macros every night with the oldest version, 600.0.0, and on every change with the version that CucumberSwift's own `Package.resolved` pins. Versions before 600 don't build.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time. Regex literals are the one exception: they need iOS 16, macOS 13, tvOS 16 or watchOS 9, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)`, or use a string pattern. See <doc:Using-Step-Definition-Macros#Regex-literals>.
 - **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, and that project can't deliver macros. So a Carthage install keeps the step definition functions.
 
@@ -112,7 +112,7 @@ let package = Package(
 )
 ```
 
-Its target needs one source file, such as `Sources/MacrosTrait/MacrosTrait.swift`. The file can be empty.
+Its target needs 1 source file, such as `Sources/MacrosTrait/MacrosTrait.swift`. The file can be empty.
 
 Add the folder to your project as a local package with **File > Add Package Dependencies… > Add Local…**, without adding its product to any target. Then add CucumberSwift to the project as usual, without the trait. Add the swift-syntax package to the project too, not to `MacrosTrait` (see <doc:Using-Step-Definition-Macros#Declare-swift-syntax-before-Swift-64>). Add `CucumberSwiftMacros` or `CucumberSwiftTestingMacros` to your test target, and `import` it, exactly as with Xcode 26.4.
 
@@ -143,7 +143,7 @@ let project = Project(
 )
 ```
 
-Tuist writes the trait into the Xcode project that it generates, so it needs the same Xcode as any Xcode project, 26.4 or later. The `traits:` parameter is new in Tuist 4.203.0, so with an earlier Tuist, `Project.swift` doesn't compile with it. CI generates and tests a project like this one with Xcode 26.4 and the Tuist version that CucumberSwift pins.
+Tuist writes the trait into the Xcode project that it generates, so it needs the same Xcode as any Xcode project, 26.4 or later. The `traits:` parameter is new in Tuist 4.203.0, so with an earlier Tuist, `Project.swift` doesn't compile with it. Our CI generates and tests a project like this one with Xcode 26.4 and the Tuist version that CucumberSwift pins.
 
 With a Tuist earlier than 4.203.0, or an Xcode earlier than 26.4, turn the trait on from the `MacrosTrait` local package instead, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, and list it with the project's other packages:
 
@@ -170,13 +170,13 @@ let project = Project(
 )
 ```
 
-The targets depend on `CucumberSwiftMacros` from CucumberSwift, exactly as with the `traits:` parameter, so moving to the parameter later changes only the `packages` list. CI tests this setup with Xcode 16.3, the oldest Xcode it supports, and with the Xcode it tests by default.
+The targets depend on `CucumberSwiftMacros` from CucumberSwift, exactly as with the `traits:` parameter, so moving to the parameter later changes only the `packages` list. Our CI tests this setup with Xcode 16.3, the oldest Xcode it supports, and with the Xcode it tests by default.
 
 See <doc:Using-Step-Definition-Macros#Multiple-commands-produce-swift-syntaxbuild> if your project also uses Tuist's own integration for some packages, the ones in `Tuist/Package.swift` that targets reach with `.external(name:)`.
 
 ## The first build
 
-The first time you build a macro, Xcode asks you to trust and enable it (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>). A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead. They do so only when swift.org publishes one for both your toolchain and the swift-syntax version that your package resolves, and not in every build even then. Swift 6.1 always compiles swift-syntax.
+The first time you build a macro, Xcode asks you to trust and enable it (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>). A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead. They do so only when swift.org publishes a prebuilt swift-syntax for both your toolchain and the swift-syntax version that your package resolves, and not in every build even then. Swift 6.1 always compiles swift-syntax.
 
 ## Declare swift-syntax before Swift 6.4
 
@@ -192,7 +192,7 @@ This is a SwiftPM bug, fixed in Swift 6.4 ([swift-package-manager#10409](https:/
 - **In a Swift package**, add it to the `dependencies` of the `Package.swift` that turns the trait on, as in <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>.
 - **In an Xcode project**, add it to the project's packages, without adding any of its products to a target. In Xcode, use **File > Add Package Dependencies…**. In Tuist, add it to `Project.packages`. This holds whether the project turns the trait on itself, with Xcode 26.4 or later, or through `MacrosTrait` (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>). Declaring it in `MacrosTrait` doesn't help.
 
-CI resolves and builds the Swift package setup above, swift-syntax included, from a git URL of the commit it tests.
+Our CI resolves and builds the Swift package setup above, swift-syntax included, from a git URL of the commit it tests.
 
 ## Write step definitions with the macros
 
@@ -242,7 +242,7 @@ The macros work the same with both runners, including localized macros (see <doc
 
 ### Cucumber expressions
 
-The closure takes one argument for each parameter of a Cucumber expression, or each capture group of a regular expression, in the order they appear. Give each argument its type:
+The closure takes 1 argument for each parameter of a Cucumber expression, or each capture group of a regular expression, in the order they appear. Give each argument its type:
 
 | In the pattern | The argument's type |
 |---|---|
@@ -287,16 +287,16 @@ For the step `Given I have 5 cukes`:
 }
 ```
 
-The closure takes one argument for each capture group, in order, and optionally the `Step` last. Each argument's type is the capture's type in the regex's `Output`, as Swift gives it:
+The closure takes 1 argument for each capture group, in order, and optionally the `Step` last. Each argument's type is the capture's type in the regex's `Output`, as Swift gives it:
 
 | In the regex | The argument's type |
 |---|---|
 | A capture group, numbered or named | `Substring` |
 | A capture group that may not take part in the match: in an alternation, such as `(a)\|(b)`, or repeated zero or more times, such as `(\d+)?` or `(,\d+)*` | `Substring?` |
 
-Every group counts, including one inside another: `#/^((\d+) red) cukes$/#` gives two arguments. A string pattern read as a regular expression, such as `"^((\\d+) red) cukes$"`, gives only its outer group. A named group's name doesn't need to match the argument's.
+Every group counts, including a group inside another: `#/^((\d+) red) cukes$/#` gives 2 arguments. A string pattern read as a regular expression, such as `"^((\\d+) red) cukes$"`, gives only its outer group. A named group's name doesn't need to match the argument's.
 
-A capture is always text that the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression. Cucumber expressions are the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the three kinds.
+A capture is always text that the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression. Cucumber expressions are the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the 3 kinds.
 
 Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
 
@@ -315,7 +315,7 @@ The compiler checks the argument's type against the parameter's output. The para
 
 ### Keywords in other languages
 
-`#Given`, `#When`, `#Then`, `#And` and `#But` fit steps with those keywords, and `#MatchAll` fits every step, exactly as ``Given``, ``When``, ``Then``, ``And``, ``But`` and ``MatchAll`` do. A step written with `*`, or with a keyword in another language, matches as it does without macros. See <doc:Matching-Steps#When-more-than-one-step-definition-matches-a-step>.
+`#Given`, `#When`, `#Then`, `#And` and `#But` fit steps with those keywords, and `#MatchAll` fits every step, exactly as ``Given``, ``When``, ``Then``, ``And``, ``But`` and ``MatchAll`` do. A step written with `*`, or with a keyword in another language, matches as it does without macros. See <doc:Matching-Steps#When-more-than-1-step-definition-matches-a-step>.
 
 Every localized step definition has a macro too, with the same name: `#ES_Dado` for ``ES_Dado``, `#FR_Quand` for `FR_Quand`, and so on. `CucumberSwiftMacros` and the Swift Testing runner's `CucumberSwiftTestingMacros` both have them.
 
@@ -328,7 +328,7 @@ Every localized step definition has a macro too, with the same name: `#ES_Dado` 
 
 ### Hooks
 
-The hooks have macros too: `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`. With them, you can write a step definition file in one style. Each macro expands to the hook function of the same name, with the same `priority:` and closure. So it runs exactly as the function does: in the same order, on the main actor, and failing in the same way when it throws. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and may be `async throws`:
+The hooks have macros too: `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`. With them, you can write a step definition file in 1 style. Each macro expands to the hook function of the same name, with the same `priority:` and closure. So it runs exactly as the function does: in the same order, on the main actor, and failing in the same way when it throws. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument, and may be `async throws`:
 
 <!-- swift-example: steps -->
 ```swift
@@ -344,11 +344,11 @@ The hooks have macros too: `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`,
 }
 ```
 
-The compiler checks the closure where you write it. A closure with more than one argument, or an argument of another type, is an error that names the type that the hook passes, and offers a fix. The hook functions keep working, and a project can use both. Tagged hooks have no macro.
+The compiler checks the closure where you write it. A closure with more than 1 argument, or an argument of another type, is an error that names the type that the hook passes, and offers a fix. The hook functions keep working, and a project can use both. Tagged hooks have no macro.
 
 ## Convert existing step definitions
 
-The **Convert to Gherkin Macros** command rewrites step definitions written with ``Given`` and the like as macros, wherever a macro expands to the same step definition. It also rewrites hook calls, such as `BeforeScenario { … }`, as their macros. <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> describes how to run it, what it converts and what it leaves. <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything> describes how to convert one file, one folder or everything.
+The **Convert to Gherkin Macros** command rewrites step definitions written with ``Given`` and the like as macros, wherever a macro expands to the same step definition. It also rewrites hook calls, such as `BeforeScenario { … }`, as their macros. <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros> describes how to run it, what it converts and what it leaves. <doc:Running-Tests-In-Xcode#Convert-a-file-a-folder-or-everything> describes how to convert 1 file, 1 folder or everything.
 
 The command leaves these things for you to do:
 
@@ -367,9 +367,9 @@ CucumberSwift suggests a macro, not a function, for each step that has no step d
 
 The first time you build a macro, Xcode stops with a warning that the macro must be enabled, and each macro in your code shows an error that its implementation couldn't be found. Click the warning and choose **Trust & Enable**. <doc:Running-Tests-In-Xcode#Trust-the-plugins> shows both. `swift build` and `swift test` don't ask.
 
-### The build fails in CI
+### The build fails on a build server
 
-On a CI machine, nobody can answer Xcode's request to trust a macro. So pass `-skipMacroValidation` to `xcodebuild`, and `-skipPackagePluginValidation` if a target applies CucumberSwift's plugins. The same goes for a project that Tuist generates. <doc:Running-Tests-In-Xcode#Build-an-Xcode-project-in-CI> has the command.
+On a build server, nobody can answer Xcode's request to trust a macro. So pass `-skipMacroValidation` to `xcodebuild`, and `-skipPackagePluginValidation` if a target applies CucumberSwift's plugins. The same goes for a project that Tuist generates. <doc:Running-Tests-In-Xcode#Build-an-Xcode-project-on-a-build-server> has the command.
 
 ### Each macro says to turn the Macros trait on
 
@@ -381,13 +381,13 @@ SwiftPM before Swift 6.4 can fail to resolve swift-syntax when you add CucumberS
 
 ### Another macro package needs a different swift-syntax
 
-SwiftPM picks one swift-syntax version for all your packages, so every package that depends on it must accept that version. When the ranges don't overlap, resolving fails:
+SwiftPM picks 1 swift-syntax version for all your packages, so every package that depends on it must accept that version. When the ranges don't overlap, resolving fails:
 
 ```
 error: Dependencies could not be resolved because root depends on 'swift-syntax' 509.0.0..<510.0.0 and 'cucumberswift' depends on 'swift-syntax' 600.0.0..<605.0.0.
 ```
 
-The message names the two ranges that conflict, and the package that each comes from. Here, they're your own `Package.swift`, asking for 509, and CucumberSwift, accepting 600 up to, but not including, 605. To fix it, do one of these things:
+The message names the 2 ranges that conflict, and the package that each comes from. Here, they're your own `Package.swift`, asking for 509, and CucumberSwift, accepting 600 up to, but not including, 605. To fix it, do one of these things:
 
 - **Widen your own range** when it's yours, as here, so that it overlaps 600.0.0..<605.0.0.
 - **Update the other package** to a release whose range overlaps CucumberSwift's. Most macro packages have moved to 600 or later.

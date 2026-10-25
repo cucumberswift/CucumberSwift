@@ -23,11 +23,11 @@ extension Cucumber: StepImplementation {
 }
 ```
 
-The closure takes one argument for each parameter in the expression, already converted to its type. A mistake is a compile error on the line that has it. When the fix is clear, Xcode offers to make it for you.
+The closure takes 1 argument for each parameter in the expression, already converted to its type. A mistake is a compile error on the line that has it. When the fix is clear, Xcode offers to make it for you.
 
 The ``Given``, ``When`` and ``Then`` functions are checked only when the tests run. With them, a Cucumber expression that is missing a `}`, a regular expression that doesn't compile, or a closure that reads the wrong parameter fails after a full build and test launch.
 
-Each macro expands to the step definition you would otherwise write by hand, so steps match and run in the same way. Your feature files, hook functions and existing step definitions keep working, and you can mix both styles in one target.
+Each macro expands to the step definition you would otherwise write by hand, so steps match and run in the same way. Your feature files, hook functions and existing step definitions keep working, and you can mix both styles in 1 target.
 
 This article describes what the compiler checks. <doc:Using-Step-Definition-Macros> shows how to set up the macros, write step definitions with them, and convert the ones you have.
 
@@ -35,7 +35,7 @@ This article describes what the compiler checks. <doc:Using-Step-Definition-Macr
 
 The compiler reports each mistake as an error on its own line. Click the error's icon to see the whole message. If the error has a fix, click **Apply** to make the change.
 
-![A Swift file in Xcode with four step definition macros marked as errors. In the first, the pattern has 2 parameters but the closure takes 1 argument. In the second, {int} gives Int but 'count' is declared as String. In the third, the '{' does not have a matching '}'. In the fourth, a pattern ending in "$" is read as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
+![A Swift file in Xcode with 4 step definition macros marked as errors. In the first, the pattern has 2 parameters but the closure takes 1 argument. In the second, {int} gives Int but 'count' is declared as String. In the third, the '{' does not have a matching '}'. In the fourth, a pattern ending in "$" is read as a regular expression that is not valid.](CheckingStepDefinitions-FixIt.png)
 
 | Mistake | Example | Fix |
 |---|---|---|
@@ -51,7 +51,7 @@ The compiler reports each mistake as an error on its own line. Click the error's
 | An argument for a regex literal's capture isn't a `Substring` | `#Given(#/^I have (\d+) cukes$/#) { (count: Int) in … }` | Changes `Int` to `Substring` |
 | An argument for a regex literal's capture is `Substring` where the capture gives `Substring?`, or the other way round | `#Given(#/^I have (\d+)?$/#) { (count: Substring) in … }` | None. Swift reports its own error, inside the expansion. |
 
-Each macro reports one kind of mistake at a time. If the pattern's parameters and the closure's arguments differ in number, you see only that error. Once the number is right, you see one type error for each wrong argument. Fix the first error and build again to see the next.
+Each macro reports 1 kind of mistake at a time. If the pattern's parameters and the closure's arguments differ in number, you see only that error. Once the number is right, you see 1 type error for each wrong argument. Fix the first error and build again to see the next.
 
 Macros can't read files, so a pattern that compiles but matches no step in your feature files is not a compile error. <doc:Checking-Feature-Files> reports those steps when you build.
 

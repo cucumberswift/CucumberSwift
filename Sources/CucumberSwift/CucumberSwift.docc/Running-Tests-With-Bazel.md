@@ -32,7 +32,7 @@ git_override(module_name = "cucumberswift_expressions", remote = "https://github
 
 A `git_override` works only in the root module, your project's `MODULE.bazel`.
 
-Your tests also need `rules_apple` and `rules_swift`. CI tests CucumberSwift with these versions:
+Your tests also need `rules_apple` and `rules_swift`. Our GitHub Actions CI workflow tests CucumberSwift with these versions:
 
 ```starlark
 bazel_dep(name = "apple_support", version = "2.9.1")
@@ -40,7 +40,7 @@ bazel_dep(name = "rules_apple", version = "5.2.0")
 bazel_dep(name = "rules_swift", version = "4.1.2")
 ```
 
-The module needs Bazel 8 or later. CI tests it with the latest Bazel 8 release and with Bazel 9.2.0.
+The module needs Bazel 8 or later. Our CI tests it with the latest Bazel 8 release and with Bazel 9.2.0.
 
 ### Put the Features folder at the root of the test bundle
 
@@ -81,7 +81,7 @@ system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
 system_sdk.configure_sdks(names = ["AppleTVSimulator"])
 ```
 
-The run reports one failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle it searched.
+The run reports 1 failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle it searched.
 
 `CucumberSwift` links XCTest, so it's a `testonly` target. Only `testonly` targets can depend on it.
 

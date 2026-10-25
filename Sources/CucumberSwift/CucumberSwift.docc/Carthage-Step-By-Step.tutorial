@@ -83,7 +83,7 @@
 
     @Section(title: "Write the step definitions") {
         @ContentAndMedia {
-            CucumberSwift finds your step definitions through an extension of `Cucumber` that conforms to `StepImplementation`. When a step has no step definition, CucumberSwift writes one for you.
+            CucumberSwift finds your step definitions through an extension of `Cucumber` that conforms to `StepImplementation`. When a step has no step definition, CucumberSwift writes the step definition for you.
         }
 
         @Steps {
@@ -106,11 +106,11 @@
             @Step {
                 Run the tests with ⌘U. The scenario fails at its first step, because no step definition matches it. The failure points at the step's line in the feature file, and its message contains a step definition for that step. The steps after it are skipped.
 
-                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of Add two numbers has failed and the other three are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
+                @Image(source: "UndefinedStepFailure.png", alt: "The Test navigator after the first run: the first step of the scenario has failed and the other 3 are skipped. Calculator.feature is open at line 5, with the failure message and its suggested step definition.")
             }
 
             @Step {
-                The failure suggests a step definition for the first step only. CucumberSwift also writes one for every step without a step definition, including skipped steps, to a file. To open it, right-click the test `GenerateStepsStubsIfNecessary` in the Test navigator and choose Jump to Report. Under Pending Steps, open the file whose name starts with `GENERATED_Unimplemented_Step_Definitions`. Xcode adds a unique ID to the end of the file name.
+                The failure suggests a step definition for the first step only. CucumberSwift also writes a step definition for every step that has none, including skipped steps, to a file. To open it, right-click the test `GenerateStepsStubsIfNecessary` in the Test navigator and choose Jump to Report. Under Pending Steps, open the file whose name starts with `GENERATED_Unimplemented_Step_Definitions`. Xcode adds a unique ID to the end of the file name.
 
                 @Image(source: "ViewGeneratedStubs.png", alt: "The test report for GenerateStepsStubsIfNecessary, with the GENERATED_Unimplemented_Step_Definitions file under Pending Steps.")
             }

@@ -10,7 +10,7 @@ CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, watchOS an
 
 To add CucumberSwift to a test target, follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents>, with Swift Package Manager or Carthage. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) are working projects, tested every night against the latest CucumberSwift release. Their documentation says what each one shows. The [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup that the tutorials lead to.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their articles name it.
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that our GitHub Actions CI workflow tests with. Our CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their articles name it.
 
 ### Community and support
 

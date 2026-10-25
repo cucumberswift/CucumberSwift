@@ -52,13 +52,13 @@ extension Cucumber: StepImplementation {
 
 SwiftPM puts resources in a bundle of their own, not in the test bundle, so `Bundle(for:)` doesn't find them. `SWIFT_PACKAGE` is defined only when SwiftPM builds the code. The `#if` lets the same file build in an Xcode test target too. `Bundle.module` exists only for a target that declares resources.
 
-The run reports one failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle that it searched, and what to change. The other tests in the bundle still run.
+The run reports 1 failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle that it searched, and what to change. The other tests in the bundle still run.
 
-### Use one StepImplementation per package
+### Use 1 StepImplementation per package
 
-Put all of a package's step definitions behind one `StepImplementation`. SwiftPM links all of a package's test targets into one test bundle, and a bundle can use only one `extension Cucumber: StepImplementation`. With two, only one takes effect, and the other target's features never run, even though `swift test` passes.
+Put all of a package's step definitions behind 1 `StepImplementation`. SwiftPM links all of a package's test targets into 1 test bundle, and a bundle can use only 1 `extension Cucumber: StepImplementation`. With 2, only one of them takes effect, and the other target's features never run, even though `swift test` passes.
 
-Give each step implementation its own package if you need separate ones, for example for two apps. That is a folder with a `Package.swift` whose test target depends on your main package by path.
+Give each step implementation its own package if you need separate ones, for example for 2 apps. That is a folder with a `Package.swift` whose test target depends on your main package by path.
 
 ### Don't run in parallel
 

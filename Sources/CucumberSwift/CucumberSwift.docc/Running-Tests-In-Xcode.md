@@ -4,7 +4,7 @@ Set up Xcode for CucumberSwift, use its plugins to check and fix your feature fi
 
 ## Overview
 
-Set up an Xcode project for CucumberSwift, use its plugins, and run your scenarios in Xcode and in CI.
+Set up an Xcode project for CucumberSwift, use its plugins, and run your scenarios in Xcode and on a build server.
 
 The plugins are optional. Add them when they help, for example once your project has more than a few feature files. They check your feature files while you build, fix misspelt keywords, convert step definitions to macros, and run feature files with Swift Testing.
 
@@ -20,11 +20,11 @@ Add CucumberSwift with Swift Package Manager to get the plugins. With Carthage, 
 
 ### Turn off parallel testing
 
-Turn off parallel testing for your test target. Choose **Product > Test Plan > Edit Test Plan**, select **Options…** next to your test target, and set **Parallelization** to **Disabled**. Xcode turns parallel testing on for new test targets, and by default CucumberSwift's scenarios don't run correctly in parallel. Leave **Automatically include new tests** on, because CucumberSwift creates its tests while they run. <doc:SPM-Step-By-Step> shows the setting. <doc:Running-Scenarios-In-Parallel> describes an experiment that lets Xcode hand each scenario to one worker.
+Turn off parallel testing for your test target. Choose **Product > Test Plan > Edit Test Plan**, select **Options…** next to your test target, and set **Parallelization** to **Disabled**. Xcode turns parallel testing on for new test targets, and by default CucumberSwift's scenarios don't run correctly in parallel. Leave **Automatically include new tests** on, because CucumberSwift creates its tests while they run. <doc:SPM-Step-By-Step> shows the setting. <doc:Running-Scenarios-In-Parallel> describes an experiment that lets Xcode hand each scenario to 1 worker.
 
 ### Choose the plugins
 
-CucumberSwift comes with four Swift package plugins of two kinds. Two run by themselves, and you run the other two:
+CucumberSwift comes with 4 Swift package plugins of 2 kinds. Some run by themselves, and you run the others:
 
 - **Build tool plugins run by themselves.** `CucumberSwiftLint` and `CucumberSwiftTestingPlugin` run on every build of a target you add them to. You add each one to a target yourself, because Xcode doesn't let a package apply a plugin to your targets.
 - **Command plugins run only when you choose them.** Fix Feature Files and Convert to Gherkin Macros are commands on the project's menu as soon as the package is added, and they never run on a build.
@@ -36,7 +36,7 @@ CucumberSwift comes with four Swift package plugins of two kinds. Two run by the
 | Command: Fix Feature Files | Command plugin: only when you choose it | Fixes misspelt keywords in feature files | Choose it on the project's menu when you want it | Xcode 16.0 |
 | Command: Convert to Gherkin Macros | Command plugin: only when you choose it | Rewrites step definitions and hooks as macros | Choose it on the project's menu when you want it | Xcode 16.3 and the `Macros` trait |
 
-Xcode 16.0 to 16.2 read a manifest without `CucumberSwiftTestingPlugin` and Convert to Gherkin Macros, so these two don't appear there.
+Xcode 16.0 to 16.2 read a manifest without `CucumberSwiftTestingPlugin` and Convert to Gherkin Macros, so these 2 don't appear there.
 
 <doc:Checking-Feature-Files> explains how to add `CucumberSwiftLint` to a test target, what it checks, and how to fix what it finds with **Fix Feature Files**.
 
@@ -52,7 +52,7 @@ Macros, such as the step definition macros, need the same. Until you enable them
 
 ![Xcode's dialog: Macro "CucumberSwiftMacrosPlugin" from package "CucumberSwift" must be enabled before it can be used. Enable it now? With Trust & Enable and Cancel buttons.](ConvertToGherkinMacros-TrustMacros.png)
 
-`swift build` and `swift test` don't ask. On a CI machine, where nobody can answer, pass `-skipPackagePluginValidation` and `-skipMacroValidation` to `xcodebuild` instead.
+`swift build` and `swift test` don't ask. On a build server, where nobody can answer, pass `-skipPackagePluginValidation` and `-skipMacroValidation` to `xcodebuild` instead.
 
 A command plugin instead asks for permission to change files in your project each time you run it. You can tell Xcode not to ask again.
 
@@ -83,7 +83,7 @@ The script installs these items:
 
 - `~/Library/Developer/Xcode/Plug-ins/Gherkin.ideplugin`, the plug-in that tells Xcode that `.feature` files are Gherkin
 - `~/Library/Developer/Xcode/Specifications/Gherkin.xclangspec`, the grammar
-- three snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
+- 3 snippets in `~/Library/Developer/Xcode/UserData/CodeSnippets`
 
 To remove them, run the script with `uninstall`, then quit and reopen Xcode. To see which of them are installed, run it with `status`. It lists each item as installed or not, and changes nothing:
 
@@ -125,17 +125,17 @@ The command converts every target by default, and the diff for a large project c
 | To convert | In Terminal, in the package's folder |
 |---|---|
 | Every target | `swift package convert-to-gherkin-macros` |
-| One target | `swift package convert-to-gherkin-macros --target MyAppTests` |
-| One file | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/CartSteps.swift` |
-| One folder | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Checkout` |
+| 1 target | `swift package convert-to-gherkin-macros --target MyAppTests` |
+| 1 file | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/CartSteps.swift` |
+| 1 folder | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Checkout` |
 | Several | `swift package convert-to-gherkin-macros --path Tests/MyAppTests/Cart --path Tests/MyAppTests/Checkout` |
-| A folder of one target | `swift package convert-to-gherkin-macros --target MyAppTests --path Tests/MyAppTests/Checkout` |
+| A folder of 1 target | `swift package convert-to-gherkin-macros --target MyAppTests --path Tests/MyAppTests/Checkout` |
 
 A folder converts the Swift files under it. A path is relative to the package or project folder, or absolute, and must be inside that folder. If a path is outside the folder, doesn't exist, or isn't a Swift file or a folder, the command stops, names the path and changes nothing. It stops in the same way for a folder with no Swift files, and for `--path` or `--target` with no value after it. With `--target` and `--path` together, the command converts only the files under the paths that belong to the targets. A path with no files in those targets stops the command, and the command names the path.
 
 Add `--dry-run` to any of these to report what the command would do without changing a file. It reports the same files that it would change. The command needs permission to change files in your project or package. Xcode asks before it runs, and `swift package` asks in Terminal. Or you can pass `--allow-writing-to-package-directory`. A script needs it even for `--dry-run`. The command first checks that your project is set up for the macros.
 
-In a project with many step definitions, convert them gradually, one folder or feature at a time, with `--dry-run` first. Commit each conversion on its own, after you build and run your tests. Each diff is then small enough to review, and a step definition that needs converting by hand doesn't hold up the rest.
+In a project with many step definitions, convert them gradually, 1 folder or feature at a time, with `--dry-run` first. Commit each conversion on its own, after you build and run your tests. Each diff is then small enough to review, and a step definition that needs converting by hand doesn't hold up the rest.
 
 #### From Xcode
 
@@ -149,9 +149,9 @@ To narrow a conversion in Xcode, follow these steps:
 
 To convert every file of the targets again, untick the argument.
 
-This dialog converts one file, `Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift`, and only reports what it would do:
+This dialog converts 1 file, `Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift`, and only reports what it would do:
 
-![The Convert to Gherkin Macros dialog for a package and its test target, with the Arguments list open and one ticked argument: --path Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift --dry-run.](ConvertToGherkinMacros-Arguments.png)
+![The Convert to Gherkin Macros dialog for a package and its test target, with the Arguments list open and 1 ticked argument: --path Tests/StepDefinitionMacrosPackageTests/StepDefinitions.swift --dry-run.](ConvertToGherkinMacros-Arguments.png)
 
 Xcode shows the command's report, with the line for each step definition and the total, in the Report navigator (**⌘9**), under the plug-in command's entry.
 
@@ -249,31 +249,31 @@ Press ⌘U to run the tests. CucumberSwift reads your feature files when the tes
 
 Settings change how your tests are named and laid out. You set each one with a static variable on `Cucumber` in your `StepImplementation`'s `setupSteps()`, or with an environment variable in a scheme or test plan. <doc:Settings> lists every setting.
 
-### Choose a test per step or one test per scenario
+### Choose a test per step or 1 test per scenario
 
-CucumberSwift can lay out a scenario's tests in two ways, and you choose. A test per step is the default.
+CucumberSwift can lay out a scenario's tests in 2 ways, and you choose. A test per step is the default.
 
-| | A test per step (default) | One test per scenario |
+| | A test per step (default) | 1 test per scenario |
 |---|---|---|
-| In the test navigator | A class per scenario, such as `Checkout › Pay with a gift card`, with a test for each step | One test per scenario, such as `Checkout › Pay with a gift card`, in the class `CucumberScenarioTest` |
-| A step's result | Each step has its own result: passed, failed or skipped | The scenario has one result. Its steps show as activities in the test report. |
-| Run one scenario from the test navigator | No. Give it a tag of its own, and choose it with `CUCUMBER_TAGS`. | Yes, with the scenario's run button |
+| In the test navigator | A class per scenario, such as `Checkout › Pay with a gift card`, with a test for each step | 1 test per scenario, such as `Checkout › Pay with a gift card`, in the class `CucumberScenarioTest` |
+| A step's result | Each step has its own result: passed, failed or skipped | The scenario has 1 result. Its steps show as activities in the test report. |
+| Run 1 scenario from the test navigator | No. Give it a tag of its own, and choose it with `CUCUMBER_TAGS`. | Yes, with the scenario's run button |
 | A failing step | Opens its line in the feature file | Opens its line in the feature file |
 | Steps after a failure, or after a step that throws `XCTSkip` | Skipped | Skipped activities |
 
-To have one test per scenario, set `Cucumber.oneTestPerScenario = true` in `setupSteps()`, or set `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`. For example, keep a test per step in your default test plan, and add a test plan that sets `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` for when you want to run scenarios one at a time.
+To have 1 test per scenario, set `Cucumber.oneTestPerScenario = true` in `setupSteps()`, or set `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`. For example, keep a test per step in your default test plan, and add a test plan that sets `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES` for when you want to run scenarios one at a time.
 
-Your step definitions, hooks and feature files don't change between the two. The tests' names do, so test plans that select or skip tests by name, and test history in CI, see different tests when you switch.
+Your step definitions, hooks and feature files don't change between the 2 layouts. The tests' names do, so test plans that select or skip tests by name, and test history on your build server, see different tests when you switch.
 
 ### Go from a failure to its step
 
 A step that fails is reported at its line in the feature file. Click the failure in the issue navigator or the test report, and Xcode opens the feature file at that step and marks it there. The failure's call stack still leads to the line in your step definition that failed.
 
-This holds for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than one step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
+This holds for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than 1 step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
 
-The rest of a scenario's steps don't run once a step fails. Xcode shows them as skipped, or as skipped activities with one test per scenario.
+The rest of a scenario's steps don't run once a step fails. Xcode shows them as skipped, or as skipped activities with 1 test per scenario.
 
-A step that no step definition matches fails its own test, or with one test per scenario, its scenario's test. The failure message contains the step definition CucumberSwift generated for it. A step like that after a step that failed is skipped too, and its generated step definition is in the file attached to the `GenerateStepsStubsIfNecessary` test.
+A step that no step definition matches fails its own test, or with 1 test per scenario, its scenario's test. The failure message contains the step definition CucumberSwift generated for it. A step like that after a step that failed is skipped too, and its generated step definition is in the file attached to the `GenerateStepsStubsIfNecessary` test.
 
 ### Tell Scenario Outline examples apart
 
@@ -281,15 +281,15 @@ Each example of a Scenario Outline is a scenario of its own, named after the out
 
 ### Test names
 
-By default, tests are named with the text of your features, scenarios and steps as you wrote them, such as `Checkout › Pay with a gift card` and `3 › Then the order total is 99`. Each step's name starts with its position in the scenario, so the steps sort in the order of the feature file. A `/` in your text becomes `-`, and a full stop becomes a one dot leader (`․`), because Xcode reads those as separators in a test's name.
+By default, tests are named with the text of your features, scenarios and steps as you wrote them, such as `Checkout › Pay with a gift card` and `3 › Then the order total is 99`. Each step's name starts with its position in the scenario, so the steps sort in the order of the feature file. A `/` in your text becomes `-`, and a full stop becomes the dot leader character (`․`), because Xcode reads those as separators in a test's name.
 
 Test names then contain spaces and punctuation. If a tool in your build parses the output of `xcodebuild` and expects test names without spaces, turn readable names off with `Cucumber.readableTestNames = false` in `setupSteps()`, or set `CUCUMBER_READABLE_TEST_NAMES` to `NO`. Tests are then named in camel case, as in earlier versions: `Checkout|PayWithAGiftCard` and `Step002_ThenTheOrderTotalIs99`.
 
 ### Keep secrets out of feature files
 
-Your step text, scenario names and Scenario Outline example values become test names, whether or not readable names are on. Test names appear in the output of `xcodebuild`, in CI logs, in `.xcresult` bundles and in test reports, and these often reach more people, and are kept longer, than your feature files. CI services hide only the secrets you register with them, not text from a feature file.
+Your step text, scenario names and Scenario Outline example values become test names, whether or not readable names are on. Test names appear in the output of `xcodebuild`, in your build server's logs, in `.xcresult` bundles and in test reports, and these often reach more people, and are kept longer, than your feature files. Continuous integration services hide only the secrets you register with them, not text from a feature file.
 
-So don't write passwords, tokens or other secrets in a feature file. Name who or what the step uses, and have the step definition read the secret, for example from an environment variable that CI sets, or that a scheme you don't share sets:
+So don't write passwords, tokens or other secrets in a feature file. Name who or what the step uses, and have the step definition read the secret, for example from an environment variable that your build server sets, or that a scheme you don't share sets:
 
 ```gherkin
 When I sign in as the admin user
@@ -303,7 +303,7 @@ When I sign in as the admin user
 }
 ```
 
-Shared schemes and test plans are usually committed, so a secret set in one ends up in your repository too. A configuration file that isn't committed, or the Keychain, works as well.
+Shared schemes and test plans are usually committed, so a secret set in one of them ends up in your repository too. A configuration file that isn't committed, or the Keychain, works as well.
 
 ### Run specific scenarios using a test plan
 
@@ -333,15 +333,15 @@ To run a set of tags, choose its test plan in the menu at the top of the test na
 xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -testPlan Smoke
 ```
 
-Use a test plan for each set of tags, not a configuration for each set in one test plan. A test plan runs all of its configurations, and Xcode's test navigator shows a scenario as not run unless it ran in every one of them.
+Use a test plan for each set of tags, not a configuration for each set in 1 test plan. A test plan runs all of its configurations, and Xcode's test navigator shows a scenario as not run unless it ran in every one of them.
 
 A tag in `CUCUMBER_TAGS` matches a feature's or scenario's tags as a regular expression, regardless of case, so `Smoke` also matches `@SmokeTest`. Don't put spaces around the commas, because the spaces would become part of the expression. A feature's tag applies to every scenario in the feature. A Rule's tag applies to every scenario and Scenario Outline example in the Rule.
 
-### Run one scenario
+### Run 1 scenario
 
-With a test per step, the default, Xcode's test navigator can't run one scenario on its own. The test classes exist only while the bundle runs, so Xcode can't find the one it's asked for. It runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run one scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, or switch to one test per scenario.
+With a test per step, the default, Xcode's test navigator can't run 1 scenario on its own. The test classes exist only while the bundle runs, so Xcode can't find the one it's asked for. It runs no tests, and reports success. The same happens with `xcodebuild -only-testing:` and a scenario's name. To run 1 scenario, give it a tag of its own and choose it with `CUCUMBER_TAGS`, or switch to 1 test per scenario.
 
-With one test per scenario, a scenario's run button in the test navigator runs only that scenario. From the command line, name its test with `-only-testing:`:
+With 1 test per scenario, a scenario's run button in the test navigator runs only that scenario. From the command line, name its test with `-only-testing:`:
 
 ```bash
 xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:'MyAppTests/CucumberScenarioTest/Checkout › Pay with a gift card'
@@ -362,28 +362,28 @@ To skip a scenario, for example when a service it needs is unavailable, throw `X
 }
 ```
 
-The rest of the scenario doesn't run, and Xcode shows the steps after that one as skipped, with your reason. With one test per scenario, the scenario's test is skipped.
+The rest of the scenario doesn't run, and Xcode shows the steps after that one as skipped, with your reason. With 1 test per scenario, the scenario's test is skipped.
 
-## Run the plugins in CI
+## Run the plugins on a build server
 
-The build tool plugins run in any build of a target that applies them, so a CI build checks what Xcode checks on your Mac. The command plugins change files, so you run them, not CI. Convert to Gherkin Macros can also report without changing anything:
+The build tool plugins run in any build of a target that applies them, so a build on a build server checks what Xcode checks on your Mac. The command plugins change files, so you run them, not the build server. Convert to Gherkin Macros can also report without changing anything:
 
-| Plugin | In CI | How |
+| Plugin | On a build server | How |
 |---|---|---|
 | `CucumberSwiftLint` | Runs in every build, and reports warnings, never errors | `swift build`, `swift test` or `xcodebuild`, on a target that applies it |
 | `CucumberSwiftTestingPlugin` | Runs in every build | The same commands. The tests need it. |
 | **Convert to Gherkin Macros** | Can report what is left to convert, in a Swift package | `swift package --allow-writing-to-package-directory convert-to-gherkin-macros --dry-run` |
-| **Fix Feature Files** | Not for CI. It changes files and has no report-only mode. | Run it on your Mac |
+| **Fix Feature Files** | Not for a build server. It changes files and has no report-only mode. | Run it on your Mac |
 
-### Build an Xcode project in CI
+### Build an Xcode project on a build server
 
-On a CI machine, nobody can answer Xcode's request to trust a plugin or a macro. So pass `-skipPackagePluginValidation`, and `-skipMacroValidation` if your step definitions use the macros. The same goes for a project that Tuist generates. Each flag trusts every package plugin or macro in the build, so use them only for code you trust:
+On a build server, nobody can answer Xcode's request to trust a plugin or a macro. So pass `-skipPackagePluginValidation`, and `-skipMacroValidation` if your step definitions use the macros. The same goes for a project that Tuist generates. Each flag trusts every package plugin or macro in the build, so use them only for code you trust:
 
 ```bash
 xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 17' -skipPackagePluginValidation -skipMacroValidation
 ```
 
-### Build a Swift package in CI
+### Build a Swift package on a build server
 
 `swift build` and `swift test` don't ask to trust plugins or macros, so they need no flags. To list the step definitions that Convert to Gherkin Macros would convert, without changing a file:
 
@@ -391,4 +391,4 @@ xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 1
 swift package --allow-writing-to-package-directory convert-to-gherkin-macros --dry-run
 ```
 
-The command declares that it changes files, so `swift package` asks for the permission even with `--dry-run`. In CI, nobody can answer, so `--allow-writing-to-package-directory` gives the permission. The command exits with an error when the package isn't set up for the macros, that is, when the `Macros` trait is off, or when a target it converts doesn't depend on the macros product.
+The command declares that it changes files, so `swift package` asks for the permission even with `--dry-run`. On a build server, nobody can answer, so `--allow-writing-to-package-directory` gives the permission. The command exits with an error when the package isn't set up for the macros, that is, when the `Macros` trait is off, or when a target it converts doesn't depend on the macros product.
