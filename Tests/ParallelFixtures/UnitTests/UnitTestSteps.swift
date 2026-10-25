@@ -36,9 +36,9 @@ extension Cucumber: StepImplementation {
         Then("the cart holds {int} items") { match, _ in
             XCTAssertEqual(items, try match.first(\.int))
         }
-        // Temporary (#491): 10 seconds, so the run outlasts the Simulator clones' start-up.
+        // Long enough that Xcode hands the scenarios to more than one worker.
         Then("the scenario takes a moment") { _, _ in
-            Thread.sleep(forTimeInterval: 10)
+            Thread.sleep(forTimeInterval: 0.5)
         }
         // Long enough that the two scenarios that share a name run at the same time in two workers.
         Then("the scenario takes a while") { _, _ in
