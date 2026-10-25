@@ -1,52 +1,54 @@
-# Running Scenarios in Parallel
+# Running scenarios in parallel
 
 Spread your scenarios across Xcode's parallel test workers. Experimental, and off by default.
 
 ## Overview
 
-Xcode's parallel testing, the **Execute in parallel** option on a test target in a scheme or test plan, or `xcodebuild -parallel-testing-enabled YES`, runs tests in several worker processes, on clones of the simulator for iOS. It hands each worker whole test classes. Without this experiment, CucumberSwift's scenarios don't run correctly in parallel: depending on the setup, each one runs in every worker, or not at all, and the run can still pass. So when Xcode runs a CucumberSwift test target in parallel and the experiment is off, the run fails: the first test of each worker fails with a message that names the setting. Turn the experiment on, or turn parallel testing off for the target.
+Turn on `Cucumber.parallelTesting` to run your scenarios in Xcode's parallel test workers:
 
-With `Cucumber.parallelTesting = true` in `setupSteps()`, or `CUCUMBER_PARALLEL_TESTING` set to `YES` (the value is case-insensitive, and `TRUE` or `1` work too: see <doc:Settings>), each scenario is a test class of its own, which Xcode hands to one worker, with a test per step, the default, and with one test per scenario (``Cucumber/oneTestPerScenario``). The scenario's steps run in order in that worker, as they do in a serial run. A serial run with the experiment on also runs each scenario as a class of its own, once, in the order of the feature files: each class's name starts with its position in them, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
+```swift
+public func setupSteps() {
+    Cucumber.parallelTesting = true
+    // Your steps
+}
+```
 
-Each scenario also has state of its own, which its steps and hooks reach with `Scenario.state(Basket.init)`: see <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>. The Swift Testing runner has the same setting, which lets scenarios run at the same time in one process: see <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>.
+You can set the `CUCUMBER_PARALLEL_TESTING` environment variable to `YES` instead: see <doc:Settings>.
 
-It is experimental. Before you rely on it, read what works and what doesn't in the table below, and check your kind of test target and platform against it.
+Xcode's parallel testing runs your tests in several worker processes. It hands each worker whole test classes. On iOS and tvOS, each worker runs in its own copy of the simulator. Turn it on with the **Execute in parallel** option on a test target, or with `xcodebuild -parallel-testing-enabled YES`.
 
-## What works
+CucumberSwift makes each scenario a test class of its own, so Xcode hands each scenario to 1 worker. The scenario's steps run in order in that worker.
 
-What works today and what doesn't, from what we have run with Xcode 16.4 and Xcode 26. **Yes** means it works there, and CI checks it. **No** means it doesn't work there, today. **Not checked** means we have no result, so don't read it as working or as not working.
+Parallel testing needs this setting. Without it, a scenario can run in every worker or in none, and the run can still pass. CucumberSwift fails the run instead. The first test in each worker fails with a message that names the setting.
 
-| Feature | iOS\* | tvOS\* | mac&#x2060;OS | Mac&nbsp;Catalyst |
-|---|---|---|---|---|
-| Unit tests without a host app run in parallel | Yes | Yes | Yes | Yes |
-| Unit tests hosted in an app run in parallel | No | No | Yes | No |
-| UI tests run in parallel | Yes | Yes | No | No |
-| Each scenario runs once, assigned to one worker (`.scenario`) | Yes | Yes | Yes | Yes |
-| Each feature runs whole in one worker (`.feature`) | Not&nbsp;checked | Not&nbsp;checked | Yes | Not&nbsp;checked |
-| One test per scenario (``Cucumber/oneTestPerScenario``) | Yes | Yes | Yes | Yes |
-| A serial run keeps the order of the feature files | Not&nbsp;checked | Not&nbsp;checked | Yes | Not&nbsp;checked |
-| `BeforeFeature` and `AfterFeature` run in each worker that runs the feature | Yes | Yes | Yes | Yes |
-| Scenario and step hooks run as they do in a serial run | Yes | Yes | Yes | Yes |
-| One shared JSON report holds every scenario once (on a Simulator, set `reportPath`) | Yes | Yes | Yes | Yes |
-| A scenario that starts twice in one worker fails at its line | Yes | Yes | Yes | Yes |
-| Classes made too late for XCTest to list them fail the run | Yes | Yes | Yes | Yes |
-| A parallel run with `Cucumber.parallelTesting` off fails with a message that names the setting | Yes | Yes | Yes | Yes |
-| State your step definitions share is shared between workers | No | No | No | No |
-| A scenario that didn't run is reported | No | No | No | No |
+Each scenario has its own state. Its steps and hooks reach it with `Scenario.state(Basket.init)`: see <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>. The Swift Testing runner has the same setting. There, scenarios run at the same time in 1 process.
 
-\* iOS and tvOS were run on Simulators.
+Parallel testing is experimental. Check the table below for your kind of test target and platform.
 
-- **No** for a row about running in parallel means the scenarios still run correctly, in one worker. On the Simulators and Mac Catalyst, Xcode runs the tests of a target hosted in an app in one worker, plain XCTest tests too. That is how Xcode runs them, which we measured and found no Apple documentation for, not something CucumberSwift decides. UI tests on macOS and Mac Catalyst have only been tried with one worker, so we don't know whether they would run in parallel.
-- **Order:** a serial run is one with Xcode's parallel testing off. With it on, Xcode gives each worker its classes in an order of its own, so the scenarios of a worker don't run in the order of the feature files. CucumberSwift's classes are named so that XCTest's order by name is the order of the files: see <doc:Running-Scenarios-In-Parallel#Test-names>.
-- **A parallel run with `Cucumber.parallelTesting` off:** the first test of each worker fails with a message that names the setting. It relies on Xcode's private API, which a new Xcode can change: the run then behaves as it did before, without the message. It doesn't notice a unit test target hosted in an app on Mac Catalyst either, where Xcode runs the tests in one worker. And with one test per scenario nothing fails: that mode is not affected.
-- **Feature hooks:** when they run depends on what Xcode hands out: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
-- **The JSON report:** every worker writes to the same report, which holds every scenario once. On a Simulator, set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac, which every clone can reach: see <doc:Generating-Reports#One-report-for-a-parallel-run>.
-- **State:** each worker is a process of its own, so a variable that counts scenarios counts only that worker's.
-- **A scenario that didn't run:** from inside a worker, CucumberSwift can't tell a scenario your test plan, `-skip-testing` or a rerun of failed tests left out on purpose from one that went missing.
+## What works and what doesn't
 
-Physical devices (a connected iPhone, iPad or Apple TV) haven't been tried, because CI has none. A device is expected to run one worker and write its own report, but we make no claim about it.
+Xcode decides how many worker processes run your tests. It splits a test target by class, so a target's tests can run in several processes. Each scenario runs once and correctly in 1 process or in several. Its hooks run, and it appears once in the JSON report. Step definitions can't share state between workers.
 
-Xcode hands out whole test classes, one at a time to each worker (Apple's WWDC20 session [Get your test results faster](https://developer.apple.com/videos/play/wwdc2020/10221/) says "Xcode build will distribute tests to each run destination by class"), so each class has to exist before XCTest lists the classes. CucumberSwift makes them when the test bundle loads, which was before XCTest listed any class in every kind of target tried.
+A unit test target has a host app or it doesn't. Xcode starts a host app and loads the tests into it. You choose it in the target's **Host Application** setting. A target without one runs its tests in a plain test process. UI tests are the third kind. They drive your app from a separate runner.
+
+Xcode 26 spreads these targets over several processes. In our testing, iOS and tvOS ran on Simulators.
+
+| Test target | iOS | tvOS | mac&#x2060;OS | Mac&nbsp;Catalyst |
+|---|:-:|:-:|:-:|:-:|
+| Unit tests without a host app | ✅ | ✅ | ✅ | ✅ |
+| Unit tests with a host app |  | ✅ | ✅ | ❌ |
+| UI tests |  | ✅ | ❌ | ❌ |
+
+Our GitHub Actions CI workflow couldn't show the empty cells on iOS Simulators: the second Simulator clone often failed to launch its app.
+
+CucumberSwift works the same way on every platform:
+
+- Xcode runs every test of a ❌ target in 1 worker, plain XCTest tests included, and neither unit changes that. We found no Apple documentation for this. Xcode 16.4 gave tvOS hosted tests 1 worker in a short run, and we haven't repeated it with a long one. Our CI checks the ✅ targets with `.scenario`, and with `.feature` on macOS. We haven't tried physical devices, because our CI has none.
+- Each scenario runs once, in 1 worker. That holds with a test per step and with one test per scenario (``Cucumber/oneTestPerScenario``). `.feature` runs each feature whole in 1 worker. Feature hooks run in each worker that runs the feature: see <doc:Running-Scenarios-In-Parallel#Feature-hooks>. Scenario and step hooks run as they do in a serial run.
+- All workers write to 1 JSON report, and every scenario appears once in it. Set `Cucumber.reportPath` or `CUCUMBER_REPORT_PATH` to a path on the Mac when you test on a Simulator, so every clone can reach it: see <doc:Generating-Reports#One-report-for-a-parallel-run>.
+- Mistakes fail the run. A scenario that starts twice in 1 worker fails at its line. Xcode hands out whole test classes ([Get your test results faster](https://developer.apple.com/videos/play/wwdc2020/10221/), WWDC20), so a class made too late for XCTest to list fails the run. A parallel run with `Cucumber.parallelTesting` off fails too. That check uses Xcode's private API, so a new Xcode can break it. It misses targets with a host app on Mac Catalyst. It also misses runs with one test per scenario, because they work without the setting.
+- A serial run keeps the order of the feature files. A serial run is one with Xcode's parallel testing off. Our CI checks this on macOS only. Xcode orders each worker's classes its own way when parallel testing is on: see <doc:Running-Scenarios-In-Parallel#Test-names>.
+- Each worker is a separate process. Step definitions don't share state between workers, so a counter counts only its own worker's scenarios.
 
 ## What Xcode hands out
 
@@ -74,6 +76,40 @@ Hand out whole features when:
 Keep `.scenario` when one feature holds most of the slow scenarios: Xcode can then spread them over the workers, and with `.feature` one worker would run them all.
 
 With `.feature`, the name of each test starts with its scenario's position in the feature and the scenario's title, then the step's position, so that the tests run in the order of the feature file and two scenarios with the same title stay apart: `2 › Pay by card › 3 › Then the cart holds 1 items`, or `Scenario02_PayByCard_Step002_ThenTheCartHolds1Items` with readable test names off. With one test per scenario, the feature's class has a test for each scenario, named with the scenario's position and title: `2 › Pay by card`, or `Scenario02_PayByCard`. The feature's class is named with the feature's position among the features, as <doc:Running-Scenarios-In-Parallel#Test-names> shows.
+
+## How many workers run
+
+Use `.scenario` for the most parallelism. `.scenario` lets Xcode give scenarios to every worker. `.feature` runs each feature in 1 worker, so 2 features use at most 2 workers, however many you ask for. Our test project has 10 scenarios in 2 features. On 3 macOS workers it took about 8 seconds with `.scenario` and 14 seconds with `.feature`. The unit changes nothing in a target that Xcode runs in 1 worker. A worker gets no scenarios until its Simulator clone is ready, so a short run can finish before the second clone starts.
+
+Xcode picks the number of workers. Pass one of these options to `xcodebuild` to set it yourself:
+
+```bash
+xcodebuild test -scheme MyAppTests -destination 'platform=macOS' \
+  -parallel-testing-enabled YES -parallel-testing-worker-count 3
+```
+
+- `-parallel-testing-enabled YES` turns parallel testing on for every test target, whatever the scheme or test plan says.
+- `-parallel-testing-worker-count 3` starts exactly 3 workers.
+- `-maximum-parallel-testing-workers 3` lets Xcode start up to 3 workers.
+
+In our testing, `.scenario` ran in exactly the number of workers we passed to `-parallel-testing-worker-count`, in every target marked ✅ above.
+
+Xcode boots a copy of the simulator for each worker on iOS and tvOS.
+
+### Example: a large feature
+
+Suppose your suite has 10 features: 9 with 3 scenarios each, and 1 with 12. Each scenario takes 20 seconds. A serial run takes 13 minutes (39 scenarios x 20 seconds each = 780 seconds). With `.scenario`, Xcode hands out 39 classes of 20 seconds each. With `.feature`, it hands out 9 classes of 60 seconds each (3 scenarios x 20 seconds) and 1 class of 240 seconds (12 scenarios x 20 seconds). This table shows the fastest parallel run with each unit, in a target marked ✅ above. It assumes that every scenario takes the same time, and it ignores start-up:
+
+| Workers | `.scenario` | `.feature` |
+|---|:-:|:-:|
+| 2 | 6 min 40 s | 7 min |
+| 3 | 4 min 20 s | 5 min |
+| 4 | 3 min 20 s | 4 min |
+| 8 | 1 min 40 s | 4 min |
+
+`.feature` can't get below 4 minutes, because the large feature runs in 1 worker. `.scenario` keeps getting faster with every worker, because Xcode gives each free worker its next scenario. If all your features have the same size, the 2 units differ by less than 1 feature. The table is arithmetic, not a measurement.
+
+Every worker adds start-up time, and a Simulator worker has to boot first. Add workers until the saving per worker gets small, and expect little gain from a run of a few seconds.
 
 ## Feature hooks
 
