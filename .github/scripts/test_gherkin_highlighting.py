@@ -95,7 +95,8 @@ def documented_items():
         path = re.search(r"`~/([^`]+)`", line).group(1)
         count = re.match(r"- (\w+) snippets in ", line)
         if count:
-            items["snippets"] = (path, NUMBERS[count.group(1)])
+            number = count.group(1)
+            items["snippets"] = (path, NUMBERS.get(number) or int(number))
         else:
             items[os.path.basename(path)] = path
     return items
