@@ -43,7 +43,7 @@ Then add the `CucumberSwiftMacros` product to your test target for XCTest, or `C
 
 You can also install CucumberSwift with [Carthage](https://cucumberswift.org/CucumberSwift/tutorials/cucumberswift/carthage-step-by-step) or [Bazel](https://cucumberswift.org/CucumberSwift/documentation/cucumberswift/running-tests-with-bazel). CucumberSwift isn't published to CocoaPods from 6.0.0 on. The last version on CocoaPods is 5.0.3. It still resolves, but no newer version will be published there.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. The macros and Swift Testing need Xcode 16.3 or later, and the docs say what other features need. Start with these links:
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that our GitHub Actions CI workflow tests with. Our CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. The macros and Swift Testing need Xcode 16.3 or later, and the docs say what other features need. Start with these links:
 
 * [Docs](https://cucumberswift.org/CucumberSwift/documentation/cucumberswift/)
 * [Getting started](https://cucumberswift.org/CucumberSwift/tutorials/tutorial-table-of-contents/)

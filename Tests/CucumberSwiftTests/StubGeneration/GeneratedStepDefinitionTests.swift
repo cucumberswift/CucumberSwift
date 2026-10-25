@@ -92,8 +92,8 @@ class GeneratedStepDefinitionTests: XCTestCase {
     }
 
     func testGeneratedStepDefinitionsMatchEveryStep() throws {
-        guard #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) else {
-            throw XCTSkip("Regex literals need iOS 16, macOS 13 or tvOS 16")
+        guard #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) else {
+            throw XCTSkip("Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9")
         }
         Cucumber.shared.parseIntoFeatures(GeneratedStepDefinitions.feature)
         GeneratedStepDefinitions.register()

@@ -13,9 +13,9 @@ name: CI
 # on pull requests and main (the full matrix on main), and run the full matrix on
 # every nightly and manual run (see parallel_tests). A manual run's inputs can
 # narrow the parallel tests to some combinations, and skip every other job.
-# The tests on tvOS and on the oldest Simulator runtimes run only in the nightly
-# and manual runs (tvOS tests, Older runtime tests); pull requests build for
-# tvOS in Catalyst tests (#271).
+# The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
+# the nightly and manual runs (tvOS and watchOS tests, Older runtime tests); pull
+# requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
 #
 # A pull request that merges through the merge queue is tested twice on one
 # commit: the merge_group run tests it, and when that passes, main moves to that
@@ -600,13 +600,24 @@ jobs:
         run: .github/scripts/xcode-test.sh -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO
       # Builds for tvOS 13 without running a test (#271): the scheme's framework and test bundles
       # from the Xcode project, as Carthage does, then CucumberSwift as a Swift package, through
-      # a consumer test package. Xcode 26 only. tvOS tests runs the tests, in nightly and manual runs.
+      # a consumer test package. Xcode 26 only. tvOS and watchOS tests runs the tests, in nightly and
+      # manual runs.
       - name: Build for tvOS
         if: ${{ !matrix.xcode }}
         run: |
           xcodebuild build-for-testing -scheme CucumberSwift -destination 'generic/platform=tvOS Simulator' -quiet
           cd Tests/CucumberSwiftConsumerTests
           xcodebuild build-for-testing -scheme CucumberSwiftConsumerTests-Package -destination 'generic/platform=tvOS Simulator' \
+            -skipPackagePluginValidation -quiet
+      # Builds for watchOS 7.4 without running a test (#269): CucumberSwift as a Swift package,
+      # through a consumer test package. The Xcode project doesn't build for watchOS, as Carthage
+      # doesn't deliver it. Xcode 26 only. tvOS and watchOS tests runs the tests, in nightly and
+      # manual runs.
+      - name: Build for watchOS
+        if: ${{ !matrix.xcode }}
+        working-directory: Tests/CucumberSwiftConsumerTests
+        run: |
+          xcodebuild build-for-testing -scheme CucumberSwiftConsumerTests-Package -destination 'generic/platform=watchOS Simulator' \
             -skipPackagePluginValidation -quiet
       - name: Build Package@swift-6.0.swift with Swift 6.0
         if: matrix.xcode == '16.0' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
@@ -631,10 +642,12 @@ jobs:
 
   # The tests on a tvOS Simulator (#271): the CucumberSwift scheme's test bundles, as iOS tests
   # runs them, then the consumer test packages, which build CucumberSwift as a Swift package.
-  # The newest Xcode, on macos-26, with the tvOS runtime it comes with. Nightly and manual runs
-  # only: pull requests build for tvOS in Catalyst tests.
-  tvos_tests:
-    name: tvOS tests
+  # Then the same on a watchOS Simulator (#269), where the Xcode project doesn't build: the
+  # package's own tests through its CucumberSwift-Package scheme, and the consumer test packages.
+  # The newest Xcode, on macos-26, with the runtimes it comes with. Nightly and manual runs
+  # only: pull requests build for tvOS and watchOS in Catalyst tests.
+  tvos_watchos_tests:
+    name: tvOS and watchOS tests
     needs: changes
     if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
     runs-on: macos-26
@@ -648,31 +661,62 @@ jobs:
       - name: Show the toolchain
         run: |
           xcodebuild -version
-          xcrun simctl list runtimes | grep -i tvos || true
+          xcrun simctl list runtimes | grep -i -E 'tvos|watchos' || true
       - name: Run the tests on a tvOS Simulator
         run: |
           destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
           .github/scripts/xcode-test.sh -destination "$destination"
       # A run with no features still passes, so each package must run at least the tests
       # `swift test` runs on macOS.
-      - name: Run the consumer test packages on a tvOS Simulator
+      - name: Run the consumer test packages on tvOS and watchOS Simulators
         if: ${{ !cancelled() }}
         run: |
-          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
           status=0
-          for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
-            name=${suite%%:*}; min=${suite##*:}
-            log="$RUNNER_TEMP/$name.log"
-            (cd "Tests/$name" && xcodebuild test -scheme "$name-Package" -destination "$destination" \
-              -skipPackagePluginValidation > "$log" 2>&1) || status=1
-            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
-            n=$(grep -Eo 'Executed [0-9]+ tests' "$log" | tail -1 | grep -Eo '[0-9]+' || true)
-            echo "$name: ${n:-0} tests (at least $min expected)"
-            if [ "${n:-0}" -lt "$min" ]; then
-              echo "::error::Only ${n:-0} tests ran in $name on tvOS."
-              status=1
-            fi
+          for platform in tvOS watchOS; do
+            destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
+            for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
+              name=${suite%%:*}; min=${suite##*:}
+              log="$RUNNER_TEMP/$name-$platform.log"
+              (cd "Tests/$name" && xcodebuild test -scheme "$name-Package" -destination "$destination" \
+                -skipPackagePluginValidation > "$log" 2>&1) || status=1
+              grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+              n=$(grep -Eo 'Executed [0-9]+ tests' "$log" | tail -1 | grep -Eo '[0-9]+' || true)
+              echo "$name on $platform: ${n:-0} tests (at least $min expected)"
+              if [ "${n:-0}" -lt "$min" ]; then
+                echo "::error::Only ${n:-0} tests ran in $name on $platform."
+                status=1
+              fi
+            done
           done
+          exit $status
+      # The Xcode project doesn't build for watchOS, so this runs the package's own tests, from a
+      # copy of the checkout without the project, because xcodebuild picks a project over a
+      # package. It leaves out what can't run here: CucumberTest's generated tests, which need a
+      # StepImplementation the package's tests don't have, and CucumberSwiftGherkinTests, which
+      # reports FoundNoFeatures in a bundle of its own and tests only the parser that macOS tests.
+      # The floors are the iOS bundle's share of MIN_TESTS and the Swift Testing floor.
+      - name: Run the package's tests on a watchOS Simulator
+        if: ${{ !cancelled() }}
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "watchOS Simulator")
+          package="$RUNNER_TEMP/package"
+          mkdir "$package"
+          rsync -a --exclude .git --exclude CucumberSwift.xcodeproj --exclude CucumberSwift.xcworkspace ./ "$package/"
+          log="$RUNNER_TEMP/package-watchOS.log"
+          status=0
+          (cd "$package" && xcodebuild test -scheme CucumberSwift-Package -destination "$destination" \
+            -skip-testing:CucumberSwiftTests/CucumberTest -skip-testing:CucumberSwiftGherkinTests \
+            -skipPackagePluginValidation -skipMacroValidation > "$log" 2>&1) || status=1
+          grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+          xctest=$(grep -E "^Test Suite 'CucumberSwiftTests.xctest' (passed|failed)" -A1 "$log" | grep -Eo 'Executed [0-9]+' | grep -Eo '[0-9]+' | tail -1 || true)
+          swift_testing=$(grep -Eo 'Test run with [0-9]+ tests' "$log" | tail -1 | grep -Eo '[0-9]+' || true)
+          min_xctest=$((MIN_TESTS - 61 - 28))
+          echo "CucumberSwiftTests: ${xctest:-0} tests (at least $min_xctest expected)"
+          echo "Swift Testing: ${swift_testing:-0} tests (at least $MIN_SWIFT_TESTING_TESTS expected)"
+          if [ "${xctest:-0}" -lt "$min_xctest" ] || [ "${swift_testing:-0}" -lt "$MIN_SWIFT_TESTING_TESTS" ]; then
+            echo "::error::Fewer tests ran on watchOS than the floors. If you removed tests on purpose, lower MIN_TESTS or MIN_SWIFT_TESTING_TESTS in CI.yml."
+            status=1
+          fi
           exit $status
 
   # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job
@@ -1086,9 +1130,12 @@ jobs:
       - name: Run the consumer tests on macOS and on an iOS simulator, and build them for tvOS at night
         working-directory: Tests
         run: |
-          filters=(--test_tag_filters=-tvos)
+          # The watchOS suites (#269) run on a Mac only: CI neither builds nor runs them.
+          filters=("--test_tag_filters=-tvos,-watchos")
           if [ "$TVOS" != true ]; then
-            filters+=(--build_tag_filters=-tvos)
+            filters+=("--build_tag_filters=-tvos,-watchos")
+          else
+            filters+=("--build_tag_filters=-watchos")
           fi
           bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors "${filters[@]}"
       # A run with no features still passes, so this catches a Features folder

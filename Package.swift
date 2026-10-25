@@ -10,7 +10,7 @@ import PackageDescription
 
 let package = Package(
     name: "CucumberSwift",
-    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13)],
+    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13), .watchOS("7.4")],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(

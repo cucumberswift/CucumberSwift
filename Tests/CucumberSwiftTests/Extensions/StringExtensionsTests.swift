@@ -43,7 +43,7 @@ class StringExtensionsTests: XCTestCase {
         XCTAssertFalse(RegularExpression.validate("^a{,3}$", file: "StepDefinitions.swift", line: 1))
         let problem = try XCTUnwrap(RegularExpression.errors.withLock { $0.popLast() })
 
-        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *), (try? Regex("^a{,3}$")) == nil {
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *), (try? Regex("^a{,3}$")) == nil {
             throw XCTSkip("This platform's Swift regular expression parser rejects the pattern too")
         }
         XCTAssert(problem.message.hasPrefix("Invalid regular expression '^a{,3}$': The value"), problem.message)
