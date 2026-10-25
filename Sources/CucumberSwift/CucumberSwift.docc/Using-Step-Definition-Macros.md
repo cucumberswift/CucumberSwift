@@ -9,12 +9,18 @@ Set up the step definition macros in a Swift package, an Xcode project or a Tuis
 
 ## Overview
 
-The step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`, are another way to write the step definitions you would write with ``Given``, ``When`` and the like. The closure takes one argument per parameter in the pattern, already converted to its type, instead of reading each one from `match`:
+The step definition macros, `#Given`, `#When`, `#Then`, `#And`, `#But` and `#MatchAll`, are another way to write the step definitions you would write with ``Given``, ``When`` and the like. The closure takes one argument per parameter in the pattern, already converted to its type, instead of reading each one from `match`. For example, a feature file has this step:
+
+```gherkin
+Given I have 5 cukes
+```
+
+This step definition matches it, with `count` set to 5:
 
 <!-- swift-example: steps -->
 ```swift
-#Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
-    basket.add(count, to: container)
+#Given("I have {int} cukes") { (count: Int) in
+    basket.add(count)
 }
 ```
 
@@ -28,8 +34,8 @@ This article covers, in order: what the macros need, setting them up for each ki
 |---|---|---|
 | Xcode | 16.3 (Swift 6.1) or later | 26.4 or later |
 | swift-syntax | 600.0.0 up to, but not including, 605.0.0 | 600.0.0 up to, but not including, 605.0.0 |
-| Where the tests run | iOS 13, macOS 10.15 and tvOS 13 or later | iOS 13, macOS 10.15 and tvOS 13 or later |
-| Where step definitions with a regex literal run | iOS 16, macOS 13 and tvOS 16 or later | iOS 16, macOS 13 and tvOS 16 or later |
+| Where the tests run | iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later | iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later |
+| Where step definitions with a regex literal run | iOS 16, macOS 13, tvOS 16 and watchOS 9 or later | iOS 16, macOS 13, tvOS 16 and watchOS 9 or later |
 
 - **Both are tested.** CI builds and tests a Swift package that uses the macros with exactly Xcode 16.3, and a Tuist project that uses them with exactly Xcode 26.4, on macOS 15 and macOS 26 build machines. Nothing else is claimed: the macOS an Xcode needs is Apple's requirement for that Xcode.
 - **In a Swift package**, you need Swift 6.1, the first version with package traits, which the macros are behind.
@@ -38,7 +44,7 @@ This article covers, in order: what the macros need, setting them up for each ki
 - **Convert to Gherkin Macros** (see <doc:Running-Tests-In-Xcode#Convert-to-Gherkin-Macros>) is tested the same way in a Swift package: CI runs the command with exactly Xcode 16.3. In an Xcode project it needs the trait on, so Xcode 26.4, as the macros do, but CI doesn't run the command there.
 - **swift-syntax 600 to 604.** SwiftPM picks one swift-syntax version for your whole package, so the macros accept any version in that range: your package can also use another macro package, as long as the two ranges overlap. CI tests the macros with the oldest, 600.0.0, every night, and with the version CucumberSwift's own `Package.resolved` pins on every change. Versions before 600 don't build.
 - **The tests run wherever CucumberSwift runs.** A macro expands into an ordinary step definition when your code compiles, so it adds nothing at run time.
-- **Regex literals need iOS 16, macOS 13 or tvOS 16**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, *)`, or use a string pattern. See <doc:Using-Step-Definition-Macros#Regex-literals>.
+- **Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9**, as Swift's `Regex` does, with or without the macros. Below those versions, mark the code that uses them with `@available(iOS 16, macOS 13, tvOS 16, watchOS 9, *)`, or use a string pattern. See <doc:Using-Step-Definition-Macros#Regex-literals>.
 - **Swift Package Manager only.** Carthage builds CucumberSwift from its Xcode project, which cannot deliver macros, so a Carthage install keeps the step definition functions.
 
 ## Set up a Swift package
@@ -91,7 +97,7 @@ import PackageDescription
 
 let package = Package(
     name: "MacrosTrait",
-    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13)],
+    platforms: [.iOS(.v13), .macOS(.v10_15), .tvOS(.v13), .watchOS("7.4")],
     products: [
         .library(name: "MacrosTrait", targets: ["MacrosTrait"])
     ],
@@ -201,8 +207,8 @@ import XCTest
 
 extension Cucumber: StepImplementation {
     public func setupSteps() {
-        #Given("I have {int} cukes in my {string}") { (count: Int, container: String) in
-            basket.add(count, to: container)
+        #Given("I have {int} cukes") { (count: Int) in
+            basket.add(count)
         }
         #When("I eat {int} cukes") { (count: Int) in
             basket.eat(count)
@@ -271,10 +277,12 @@ A closure can be `async` and `throws`, and can have a capture list, exactly as w
 
 The macros take a regex literal too, `#/…/#`, or `/…/` where your target allows bare regex literals, as the Swift 6 language mode does. The step matches when the regex matches its whole text, exactly as with ``Given``'s regex literal form.
 
+For the step `Given I have 5 cukes`:
+
 <!-- swift-example: steps -->
 ```swift
-#Given(#/^I have (\d+) cukes in my (?<container>\w+)$/#) { (count: Substring, container: Substring) in
-    basket.add(Int(count) ?? 0, to: String(container))
+#Given(#/^I have (?<count>\d+) cukes$/#) { (count: Substring) in
+    basket.add(Int(count) ?? 0)
 }
 ```
 
@@ -289,7 +297,7 @@ Every group counts, including one inside another: `#/^((\d+) red) cukes$/#` give
 
 A capture is always text, which the closure converts itself. For typed arguments, such as an `Int` from `{int}` or a type of your own from a custom parameter type, use a Cucumber expression: it is the recommended pattern, and <doc:Matching-Steps#Choose-a-pattern> compares the three kinds.
 
-Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
+Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time. A macro with a regex literal in code that can run on earlier versions is a compile error that says so, and Xcode offers to add `@available` to that code.
 
 ### Custom parameter types
 

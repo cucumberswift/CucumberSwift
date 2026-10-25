@@ -74,7 +74,7 @@ To see which steps ran and how each scenario ended, turn on verbose output: `CUC
 
 ### Know what swift test covers
 
-- `swift test` builds and runs your tests on macOS. To test on iOS or tvOS, use Xcode or `xcodebuild` with a destination.
+- `swift test` builds and runs your tests on macOS. To test on iOS, tvOS or watchOS, use Xcode or `xcodebuild` with a destination.
 - CucumberSwift uses the Objective-C runtime, so it runs on Apple platforms only.
 - Regex literals need macOS 13 or later at runtime, and the `/…/` form needs a compiler setting in the Swift 5 language mode. See <doc:Matching-Steps>.
 

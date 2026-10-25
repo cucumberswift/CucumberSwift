@@ -40,8 +40,7 @@ public struct DSLStepMacro: ExpressionMacro {
         // As the function form's text: the label and what is after it, such as `I: logIn()`.
         let stepText = (argument.label.map { "\($0.text): " } ?? "") + text(of: expression)
         // The function form's `#line` and `#column` are those of the opening parenthesis.
-        let anchor = node.leftParen.map { Syntax($0) } ?? Syntax(node)
-        let location = context.location(of: anchor, at: .afterLeadingTrivia, filePathMode: .filePath)
+        let location = DSLContainer.location(of: node, in: context)
         let line = location?.line ?? "#line"
         let column = location?.column ?? "#column"
         let file = location?.file ?? "#filePath"

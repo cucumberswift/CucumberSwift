@@ -99,9 +99,9 @@ class AttachTests: XCTestCase {
         XCTAssertTrue(record(attachment).attachments.first === attachment)
     }
 
-    // MARK: With a UI (a rendered view; XCUIScreen needs a UI test target)
+    // MARK: With a UI (a rendered view; XCUIScreen needs a UI test target, and watchOS has no UIView)
 
-    #if canImport(UIKit)
+    #if canImport(UIKit) && !os(watchOS)
     func testAttachDeliversASnapshotOfARenderedView() {
         let view = UIView(frame: CGRect(x: 0, y: 0, width: 120, height: 80))
         view.backgroundColor = .systemTeal

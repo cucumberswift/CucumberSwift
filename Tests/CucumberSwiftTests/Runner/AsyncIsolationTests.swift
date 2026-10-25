@@ -140,7 +140,7 @@ class AsyncIsolationTests: XCTestCase {
     func testAsyncClosuresRunOnTheMainActorForEveryMatcherKind() throws {
         var labels = ["a Cucumber expression closure", "an anchored pattern closure"]
         #if compiler(>=5.7) && canImport(_StringProcessing)
-        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) { labels.append("a Regex closure") }
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) { labels.append("a Regex closure") }
         #endif
         parseFeature(withStepsFor: labels)
 
@@ -155,7 +155,7 @@ class AsyncIsolationTests: XCTestCase {
             log.finish("an anchored pattern closure")
         }
         #if compiler(>=5.7) && canImport(_StringProcessing)
-        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, *) {
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
             Given(try Regex("^a Regex closure step (\\d+)$")) { _, _ in
                 log.check("a Regex closure")
                 await backgroundWork()

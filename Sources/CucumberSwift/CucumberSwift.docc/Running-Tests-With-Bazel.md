@@ -1,6 +1,6 @@
 # Running Tests with Bazel
 
-Run your features with `bazel test`, from an `ios_unit_test` or `macos_unit_test` target.
+Run your features with `bazel test`, from an `ios_unit_test`, `macos_unit_test` or `watchos_unit_test` target.
 
 ## Overview
 
@@ -74,6 +74,13 @@ ios_unit_test(
 
 For macOS, load `macos_unit_test` from `@rules_apple//apple:macos.bzl` and use it the same way, with a `minimum_os_version` of `"10.15"` or later.
 
+For tvOS, load `tvos_unit_test` from `@rules_apple//apple:tvos.bzl`, with a `minimum_os_version` of `"13.0"` or later. It builds your tests, but rules_apple 5.2.0 can't run them: its default tvOS test runner fails every test. To run them, give the target a `runner` of your own. By default, rules_swift scans only the macOS and iOS SDKs, so add the tvOS Simulator SDK in your `MODULE.bazel`:
+
+```starlark
+system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
+system_sdk.configure_sdks(names = ["AppleTVSimulator"])
+```
+
 If CucumberSwift finds no features, the run reports one failing test, `FoundNoFeatures`. Its message names the bundle that was searched.
 
 `CucumberSwift` is a `testonly` target, because it links XCTest. Only `testonly` targets can depend on it.
@@ -116,3 +123,29 @@ copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
 ```
 
 Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. See <doc:Running-Tests-With-Swift-Package-Manager> for how to follow the setting automatically.
+
+### Run tests on watchOS
+
+Run your features on a watchOS simulator with a `watchos_unit_test` target and the runner the `cucumberswift` module provides. rules_apple's own watchOS runner doesn't run tests, so pass CucumberSwift's as the test's `runner`:
+
+```starlark
+load("@rules_apple//apple:watchos.bzl", "watchos_unit_test")
+
+watchos_unit_test(
+    name = "MyWatchAppFeatureTests",
+    minimum_os_version = "7.4",
+    runner = "@cucumberswift//bazel:watchos_xctest_runner",
+    deps = [":MyWatchAppFeatureTestsLib"],
+)
+```
+
+Set up the `swift_library` and the `Features` folder as for iOS. The runner creates a watchOS simulator for each run and deletes it afterwards. The simulator runs the newest installed watchOS that isn't newer than the watchOS SDK of the Xcode Bazel selected. If no watchOS simulator runtime is installed, the test fails and says how to install one.
+
+rules_swift builds the system modules of the macOS and iOS SDKs only. Add the watchOS Simulator SDK in your project's `MODULE.bazel`, because only the root module's `configure_sdks` counts:
+
+```starlark
+system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
+system_sdk.configure_sdks(names = ["WatchSimulator"])
+```
+
+Bazel passes the variables you set with `--test_env` on to the tests on the simulator, as on the other platforms.
