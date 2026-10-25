@@ -49,7 +49,7 @@ Most step definitions need no change. Step definitions whose closure takes `[Str
 
 #### Anchored patterns
 
-Each of these step definitions matches the step `the app is at the Main Menu`. The second one, a regular expression in a string, matches from 6.0.0 on. Older versions read it as a Cucumber expression, so it never matched. Use only one of them, because several step definitions for the same step make the step ambiguous (see <doc:Matching-Steps#When-more-than-1-step-definition-matches-a-step>):
+Each of these step definitions matches the step `the app is at the Main Menu`. The second one, a regular expression in a string, matches from 6.0.0 on. Older versions read it as a Cucumber expression, so it never matched. Use only one of them, because more than one for the same step makes the step ambiguous (see <doc:Matching-Steps#When-more-than-1-step-definition-matches-a-step>):
 
 @TabNavigator {
 @Tab("Swift Package Manager") {

@@ -176,7 +176,7 @@ See <doc:Using-Step-Definition-Macros#Multiple-commands-produce-swift-syntaxbuil
 
 ## The first build
 
-The first time you build a macro, Xcode asks you to trust and enable it (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>). A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead. They do so only when swift.org publishes a prebuilt swift-syntax for both your toolchain and the swift-syntax version that your package resolves, and not in every build even then. Swift 6.1 always compiles swift-syntax.
+The first time you build a macro, Xcode asks you to trust and enable it (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>). A clean build also compiles swift-syntax. Xcode 26 and Swift 6.2 or later can use a prebuilt swift-syntax instead. They do so only when swift.org publishes one for both your toolchain and the swift-syntax version that your package resolves, and not in every build even then. Swift 6.1 always compiles swift-syntax.
 
 ## Declare swift-syntax before Swift 6.4
 
