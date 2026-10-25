@@ -158,10 +158,10 @@ let expressionsModuleScript = TargetScript.post(
 
 let cucumberSwift = Target.target(
     name: "CucumberSwift",
-    destinations: [.iPhone, .iPad, .macCatalyst],
+    destinations: [.iPhone, .iPad, .macCatalyst, .appleTv],
     product: .framework,
     bundleId: "TylerThompson.CucumberSwift",
-    deploymentTargets: .iOS("13.0"),
+    deploymentTargets: .multiplatform(iOS: "13.0", tvOS: "13.0"),
     infoPlist: .file(path: "Sources/CucumberSwift/Info.plist"),
     sources: [
         // The .docc catalog carries two sample .swift files that are documentation
@@ -199,7 +199,8 @@ let cucumberSwift = Target.target(
             "SKIP_INSTALL": "YES",
             "SWIFT_OBJC_BRIDGING_HEADER": "",
             "SWIFT_VERSION": "5.0",
-            "TARGETED_DEVICE_FAMILY": "1,2"
+            "TARGETED_DEVICE_FAMILY": "1,2",
+            "TARGETED_DEVICE_FAMILY[sdk=appletv*]": "3"
         ],
         configurations: [
             .debug(name: .debug, settings: ["SWIFT_OPTIMIZATION_LEVEL": "-Onone"]),
@@ -211,10 +212,10 @@ let cucumberSwift = Target.target(
 
 let cucumberSwiftTests = Target.target(
     name: "CucumberSwiftTests",
-    destinations: [.iPhone, .iPad, .macCatalyst],
+    destinations: [.iPhone, .iPad, .macCatalyst, .appleTv],
     product: .unitTests,
     bundleId: "Tyler.Thompson.CucumberSwiftTests",
-    deploymentTargets: .iOS("13.0"),
+    deploymentTargets: .multiplatform(iOS: "13.0", tvOS: "13.0"),
     infoPlist: .file(path: "Tests/CucumberSwiftTests/Info.plist"),
     sources: ["Tests/CucumberSwiftTests/**/*.swift"],
     resources: [
@@ -240,7 +241,8 @@ let cucumberSwiftTests = Target.target(
             "PRODUCT_NAME": "$(TARGET_NAME)",
             "PROVISIONING_PROFILE_SPECIFIER": "",
             "PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]": "",
-            "TARGETED_DEVICE_FAMILY": "1,2"
+            "TARGETED_DEVICE_FAMILY": "1,2",
+            "TARGETED_DEVICE_FAMILY[sdk=appletv*]": "3"
         ],
         defaultSettings: .none
     ),
@@ -260,10 +262,10 @@ func consumerTestPackageFiles(_ folder: String) -> [Path] {
 
 let cucumberSwiftConsumerTests = Target.target(
     name: "CucumberSwiftConsumerTests",
-    destinations: [.iPhone, .iPad, .macCatalyst],
+    destinations: [.iPhone, .iPad, .macCatalyst, .appleTv],
     product: .unitTests,
     bundleId: "dignityhealth.CucumberSwiftConsumerTests",
-    deploymentTargets: .iOS("13.0"),
+    deploymentTargets: .multiplatform(iOS: "13.0", tvOS: "13.0"),
     infoPlist: .file(path: "Tests/CucumberSwiftConsumerTests/Info.plist"),
     sources: [.glob(
         "Tests/CucumberSwiftConsumerTests/**/*.swift",
@@ -283,7 +285,8 @@ let cucumberSwiftConsumerTests = Target.target(
             "DEVELOPMENT_TEAM": .string(developmentTeam),
             "LD_RUNPATH_SEARCH_PATHS": runpathSearchPaths,
             "PRODUCT_NAME": "$(TARGET_NAME)",
-            "TARGETED_DEVICE_FAMILY": "1,2"
+            "TARGETED_DEVICE_FAMILY": "1,2",
+            "TARGETED_DEVICE_FAMILY[sdk=appletv*]": "3"
         ],
         defaultSettings: .none
     )
@@ -291,10 +294,10 @@ let cucumberSwiftConsumerTests = Target.target(
 
 let cucumberSwiftDSLConsumerTests = Target.target(
     name: "CucumberSwiftDSLConsumerTests",
-    destinations: [.iPhone, .iPad, .macCatalyst],
+    destinations: [.iPhone, .iPad, .macCatalyst, .appleTv],
     product: .unitTests,
     bundleId: "TT.CucumberSwiftDSLConsumerTests",
-    deploymentTargets: .iOS("13.0"),
+    deploymentTargets: .multiplatform(iOS: "13.0", tvOS: "13.0"),
     infoPlist: .file(path: "Tests/CucumberSwiftDSLConsumerTests/Info.plist"),
     sources: [.glob(
         "Tests/CucumberSwiftDSLConsumerTests/**/*.swift",
@@ -310,7 +313,8 @@ let cucumberSwiftDSLConsumerTests = Target.target(
             "MTL_FAST_MATH": "YES",
             "PRODUCT_NAME": "$(TARGET_NAME)",
             "SWIFT_VERSION": "5.0",
-            "TARGETED_DEVICE_FAMILY": "1,2"
+            "TARGETED_DEVICE_FAMILY": "1,2",
+            "TARGETED_DEVICE_FAMILY[sdk=appletv*]": "3"
         ],
         configurations: [
             .debug(name: .debug, settings: ["MTL_ENABLE_DEBUG_INFO": "INCLUDE_SOURCE"]),

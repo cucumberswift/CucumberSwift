@@ -18,7 +18,7 @@ With Carthage, add CucumberSwift as <doc:Carthage-Step-By-Step> describes, so th
 
 Create the `AppCucumberTests` target as a **Unit Testing Bundle**.
 
-If your features folder isn't named `Features`, for example `specs/features`, add `FeaturesPath` to the target's Info.plist with the path to the folder, relative to the test bundle. See <doc:Settings#Where-the-feature-files-are>.
+Add `FeaturesPath` to the target's Info.plist if your features folder isn't named `Features`, for example `specs/features`. Its value is the path to the folder, relative to the test bundle. See <doc:Settings#Where-the-feature-files-are>.
 
 ### Write the step implementation
 

@@ -98,7 +98,7 @@ With `.scenario`, the hooks run like this in each worker that runs at least one 
 
 A worker can start other features in between. If a feature's scenarios run in three workers, each hook runs three times. With parallel testing on and one worker, `AfterFeature` runs at the end of the run, after all of the feature's scenarios.
 
-When `AfterFeature` runs at the end of a worker, no test is running. So XCTest drops a failed assertion there, and the run still passes. If an async `AfterFeature` hook throws there, CucumberSwift prints the error to the log, with the hook's file and line and the feature's title. If `AfterFeature` must be able to fail a test, use `.feature`, and run the whole feature. With only some of its tests, `AfterFeature` can again run after the worker's last test, as the next paragraph says.
+No test is running when `AfterFeature` runs at the end of a worker. So XCTest drops a failed assertion there, and the run still passes. If an async `AfterFeature` hook throws there, CucumberSwift prints the error to the log, with the hook's file and line and the feature's title. If `AfterFeature` must be able to fail a test, use `.feature`, and run the whole feature. With only some of its tests, `AfterFeature` can again run after the worker's last test, as the next paragraph says.
 
 With `.feature`, each feature runs whole in one worker, so each hook runs once. They run in this order: `BeforeFeature`, the feature's scenarios in the order of the feature file, then `AfterFeature`. `AfterFeature` runs as the feature's last test finishes, so its failures fail that test. That test might not run, because Xcode was told to run only some tests. `AfterFeature` then runs after the worker's last test instead.
 

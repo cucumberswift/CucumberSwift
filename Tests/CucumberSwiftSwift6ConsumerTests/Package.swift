@@ -10,7 +10,7 @@ import PackageDescription
 
 let package = Package(
     name: "CucumberSwiftSwift6ConsumerTests",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v13), .watchOS("7.4")],
     dependencies: [
         // Keep `name:`. Without it, SwiftPM names a path dependency after its folder,
         // which is not "CucumberSwift" in a worktree or a renamed clone, and the

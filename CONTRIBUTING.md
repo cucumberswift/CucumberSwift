@@ -16,7 +16,7 @@ The rest of this page explains how each step works here, so that your contributi
 
 Ask usage questions in **#help** on [Slack](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw) or in [GitHub Discussions](https://github.com/cucumberswift/CucumberSwift/discussions), not in an issue.
 
-If you're not sure whether something is a bug, ask in **#contributors** on Slack. That's a good place to work it out before it becomes a bug report.
+Ask in **#contributors** on Slack if you're not sure whether something is a bug. That's a good place to work it out before it becomes a bug report.
 
 [![Slack](https://img.shields.io/badge/Slack-join%20the%20community-4A154B?style=popout&logo=slack&logoColor=white)](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw)
 
@@ -28,7 +28,7 @@ Then open an issue with the **Bug report** or **Feature request** template.
 
 A good bug report has:
 
-- The CucumberSwift version, the Xcode version, and the platform (iOS, macOS or tvOS, and the OS version).
+- The CucumberSwift version, the Xcode version, and the platform (iOS, macOS, tvOS or watchOS, and the OS version).
 - How you installed CucumberSwift: Swift Package Manager or Carthage.
 - A minimal `.feature` file and the step definitions that reproduce the problem. This is the most useful thing you can give us.
 - What you expected to happen and what happened instead, including the test output.
@@ -76,13 +76,13 @@ git config core.hooksPath .githooks
 
 The first commit installs the tools they run, at the versions `.mise.lint.toml` pins. In a git worktree, each branch runs its own copy of the hooks, even when the worktree's `core.hooksPath` names another checkout's `.githooks`. A branch from before a hook existed runs none.
 
-Before each commit, on what the commit changes:
+The hooks run these checks before each commit, on what the commit changes:
 
 - [Trunk](https://trunk.io)'s `trunk check` runs actionlint (with ShellCheck) on the workflows, SwiftLint on Swift files, and `.github/scripts/check_lockfiles.py` when a manifest or lockfile changes. Only new problems in what you changed count, and SwiftLint warnings don't stop a commit, as they don't fail the Xcode build. CI's `Workflow checks` job runs the same SwiftLint on every Swift file, so an error the hook missed, such as a type body that grew past its limit without its first line changing, still fails CI.
 - `mise run check-project`, when the commit could change the Xcode project (see [Regenerating](#regenerating)).
 - The Python script tests, when a script in `.github/scripts` changes.
 
-Before each push, Trunk checks every commit being pushed, and the Python script tests run. `git commit --no-verify` and `git push --no-verify` skip the hooks. CI runs the same checks anyway.
+Trunk checks every commit being pushed before each push, and the Python script tests run. `git commit --no-verify` and `git push --no-verify` skip the hooks. CI runs the same checks anyway.
 
 The tools' versions are pinned in `.mise.lint.toml`. mise reads that file only when `MISE_ENV=lint`, as the hooks set it, so CI doesn't install them. Trunk's settings are in `.trunk/trunk.yaml`: the version of the Trunk CLI and its checksums, the linters, and `telemetry: off`, so it sends no usage data or error reports. Trunk installs no git hooks of its own.
 
@@ -195,11 +195,11 @@ CucumberSwift is also a Bazel module (`MODULE.bazel`, `BUILD.bazel`). Its Bazel 
 bazelisk test //...
 ```
 
-Until CucumberSwiftExpressions is on the Bazel Central Registry, point Bazel at a copy of the release `MODULE.bazel` names, for example `--override_module=cucumberswift_expressions=../../CucumberSwiftExpressions` for a checkout of its tag.
+Point Bazel at a copy of the release that `MODULE.bazel` names until CucumberSwiftExpressions is on the Bazel Central Registry, for example `--override_module=cucumberswift_expressions=../../CucumberSwiftExpressions` for a checkout of its tag.
 
 CI's `Bazel tests` jobs run the same tests against a `git archive` of the commit, the same files that the release's source archive contains. They use the Bazel version in `.bazelversion`, and in the merge queue and on `main` also Bazel 8, the oldest version that `MODULE.bazel` allows. They fail if a suite runs fewer tests than `swift test` does.
 
-When you change the Bazel setup, keep these points in mind:
+Keep these points in mind when you change the Bazel setup:
 
 - **A new source file needs no change.** `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
 - **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in CI's `Check every feature ran` step.
@@ -304,7 +304,7 @@ mise run check-project     # regenerate, and fail if the result differs from the
 mise exec -- tuist edit    # open Project.swift in Xcode with autocompletion
 ```
 
-If your change adds, removes or renames a file, or touches `Project.swift`, run `mise run generate` and commit the regenerated `CucumberSwift.xcodeproj` with your change. A pull request whose project and manifest disagree fails CI.
+Run `mise run generate` and commit the regenerated `CucumberSwift.xcodeproj` with your change if it adds, removes or renames a file, or touches `Project.swift`. A pull request whose project and manifest disagree fails CI.
 
 To catch that before you push, turn on the [checks before each commit](#checks-before-each-commit). The pre-commit hook runs `mise run check-project` when a commit touches the manifests or the project, or adds, removes or renames a file under `Sources` or `Tests`.
 
@@ -343,9 +343,9 @@ Each of these problems has a simple fix:
 - Think about the edge cases: empty or whitespace-only input, accented characters and other Unicode, `And` and `But` steps, tags, comments, data tables and doc strings.
 - A failing step must never be reported as passing. Anything that could hide a failure is a serious bug.
 
-**Platforms.** The minimum deployment targets are iOS 13, macOS 10.15 and tvOS 13.
+**Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
-- Swift regex literals need iOS 16, macOS 13 or tvOS 16 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
+- Swift regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
 - Don't raise the deployment targets in a PR. That's a breaking change for users on older platforms, so open an issue to discuss it first.
 
 **Toolchain.** CucumberSwift builds with Xcode 16.0 (Swift 6.0) or later, the oldest Xcode that CI runs, on its macOS 15 runners. Its other runners use macOS 26. Code that `Package.swift` or the Xcode project builds may use anything Swift 6.0 has, and nothing newer without a `#if compiler(>=…)` check. The macros and the Swift Testing runner need Swift 6.1, because only `Package@swift-6.1.swift` builds them. When GitHub's runner images drop the oldest Xcode, the floor rises with the next release, and its notes say so.
@@ -398,15 +398,15 @@ We squash-merge, so the PR title becomes the commit message on `main`. Your indi
 
 ## Review
 
-When you open a PR:
+A pull request goes through these steps:
 
 1. **CI runs** the tests, builds the package with Swift Package Manager, and builds the framework with Carthage. Please fix anything it reports. A pull request runs each check on the newest Xcode. The merge queue also runs the older Xcode and Bazel versions before the change merges.
 2. **An AI reviewer ([CodeRabbit](https://www.coderabbit.ai/)) leaves a first-pass review**, usually within a few minutes. It only gives advice. It can't approve or block your PR, and its suggestions can be wrong. You don't have to address every AI comment. A maintainer will tell you which ones matter, and you're welcome to reply and disagree with one.
 3. **A maintainer reviews it.** A PR needs a maintainer's approval and green CI before it can merge, and only maintainers merge.
 
-Once it's approved, a maintainer squash-merges the PR, and the linked issue closes. Merging doesn't publish a release. Maintainers release separately, and your change ships in the next release.
+A maintainer squash-merges the PR once it's approved, and the linked issue closes. Merging doesn't publish a release. Maintainers release separately, and your change ships in the next release.
 
-If we build on your code, tests or reproduction in a different PR, we'll credit you with a `Co-authored-by:` trailer.
+We'll credit you with a `Co-authored-by:` trailer if we build on your code, tests or reproduction in a different PR.
 
 ## Using AI tools
 

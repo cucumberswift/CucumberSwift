@@ -9,7 +9,7 @@
         @ContentAndMedia {
             You need Xcode 26.4 or later, and an Xcode project with a unit test target. The step definition macros need a package trait that earlier Xcode versions can't turn on in a project. For earlier versions, see <doc:Using-Step-Definition-Macros#Before-Xcode-264>. This tutorial uses a macOS unit test target, like the sample. The steps are the same for an iOS or tvOS app's unit test target.
 
-            If your project has no unit test target yet, choose File → New → Target… and add a Unit Testing Bundle. Choose XCTest as its testing system.
+            Choose File → New → Target… and add a Unit Testing Bundle if your project has no unit test target yet. Choose XCTest as its testing system.
         }
 
         @Steps {

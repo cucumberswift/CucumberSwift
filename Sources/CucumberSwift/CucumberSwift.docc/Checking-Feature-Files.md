@@ -72,7 +72,7 @@ The plugin also checks the feature files against the target's step definitions, 
 
 > Note: CucumberSwift supports two ways to write a feature. The recommended declarative way is a feature file. Its steps describe the behaviour in Gherkin, and step definitions in `setupSteps()` match them. The imperative way is a feature written in the Swift DSL, whose steps are the code they run. Write each feature one way only. A step of one kind written inside the other is an error that fails the build.
 
-When a target mixes the two ways, the plugin reports one of two errors, and the build fails. With the macros, the compiler also reports them.
+The plugin reports one of two errors when a target mixes the two ways, and the build fails. With the macros, the compiler also reports them.
 
 #### A declarative step definition inside an imperative DSL function call
 

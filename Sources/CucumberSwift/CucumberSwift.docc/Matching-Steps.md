@@ -19,17 +19,17 @@ A step definition's pattern can be a Cucumber expression, a regular expression w
 | Converting the text | CucumberSwift converts it. A value that can't be converted fails the step. | The closure converts it. | The closure converts it. |
 | Checked when it compiles, with the step definition macros | The syntax, the number of arguments and each one's type | The syntax, the number of arguments, and that each is a `String` | The syntax, the number of arguments and each one's type, against the regex's output |
 | Two step definitions with the same pattern | Reported | Reported | Not detected |
-| Runs on | iOS 13, macOS 10.15, tvOS 13 and later | iOS 13, macOS 10.15, tvOS 13 and later | iOS 16, macOS 13, tvOS 16 and later |
+| Runs on | iOS 13, macOS 10.15, tvOS 13, watchOS 7.4 and later | iOS 13, macOS 10.15, tvOS 13, watchOS 7.4 and later | iOS 16, macOS 13, tvOS 16, watchOS 9 and later |
 
 Use a regular expression when the step needs something that a Cucumber expression can't say, such as alternatives of more than one word, lookarounds or a case-insensitive match. Prefer a regex literal to a regular expression in a string. Swift checks a regex literal's syntax when it compiles, with or without the macros. A regular expression in a string is checked only with the macros, and otherwise only when the tests run.
 
-If you need a typed value from text that no built-in parameter matches, such as a date or an airport code, write a custom parameter type instead. You keep the Cucumber expression, and every step definition can reuse the parameter type (see <doc:Matching-Steps#Matching-with-Cucumber-expressions>).
+Write a custom parameter type instead if you need a typed value from text that no built-in parameter matches, such as a date or an airport code. You keep the Cucumber expression, and every step definition can reuse the parameter type (see <doc:Matching-Steps#Matching-with-Cucumber-expressions>).
 
 CucumberSwift also suggests Cucumber expressions for undefined steps. See <doc:Matching-Steps#Step-definitions-for-undefined-steps>.
 
 ## How a string pattern is read
 
-When you pass a string to ``Given``, ``When`` or ``Then``, CucumberSwift decides from its shape whether it's a regular expression or a Cucumber expression, as other Cucumber implementations do:
+CucumberSwift decides from a string's shape whether it's a regular expression or a Cucumber expression when you pass it to ``Given``, ``When`` or ``Then``, as other Cucumber implementations do:
 
 | The string | Is read as | Example |
 |---|---|---|
@@ -43,7 +43,7 @@ A step definition whose closure takes `[String]`, such as `{ matches, _ in … m
 
 ### Upgrading to 6.0.0
 
-Before 6.0.0, CucumberSwift read a string that started with `^` or ended with `$` as a Cucumber expression, with `^` and `$` as literal characters. So a step definition with an anchored pattern matched nothing, and its step was reported as unimplemented. From 6.0.0, the string is a regular expression and matches as written.
+CucumberSwift read a string that started with `^` or ended with `$` as a Cucumber expression before 6.0.0, with `^` and `$` as literal characters. So a step definition with an anchored pattern matched nothing, and its step was reported as unimplemented. From 6.0.0, the string is a regular expression and matches as written.
 
 Most step definitions need no change. Step definitions whose closure takes `[String]` aren't affected, because they already read the string as a regular expression. For the rest, check any pattern that starts with `^` or ends with `$` but was meant literally, such as a price written as `"I owe 5$"`.
 
@@ -61,7 +61,7 @@ Each of these step definitions matches the step `the app is at the Main Menu`. T
 // a regular expression in a string
 #Given("^the app is at the Main Menu$") { }
 
-// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
+// a regex literal that needs iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time
 #Given(#/^the app is at the Main Menu$/#) { }
 ```
 }
@@ -74,13 +74,13 @@ Given("the app is at the Main Menu") { _, _ in }
 // a regular expression in a string
 Given("^the app is at the Main Menu$") { _, _ in }
 
-// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
+// a regex literal that needs iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time
 Given(#/^the app is at the Main Menu$/#) { _, _ in }
 ```
 }
 }
 
-A regex literal without the `#` delimiters, `/^…$/`, is another alternative. It needs iOS 16, macOS 13 or tvOS 16 at run time, and a target that allows bare regex literals. The Swift 6 language mode allows them, and so does the `BareSlashRegexLiterals` feature (see <doc:Matching-Steps#Matching-with-regular-expressions>):
+A regex literal without the `#` delimiters, `/^…$/`, is another alternative. It needs iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time, and a target that allows bare regex literals. The Swift 6 language mode allows them, and so does the `BareSlashRegexLiterals` feature (see <doc:Matching-Steps#Matching-with-regular-expressions>):
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -124,7 +124,7 @@ Given("I owe 5$") { _, _ in }
 
 - If the pattern isn't a valid regular expression, such as `"I owe {int}$"`, the test run stops with an error that names the pattern.
 
-To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. Both step definitions below match the step `I owe 5$`. Use only one, because several for the same step make it ambiguous. The regular expression in a string runs on every deployment target. The regex literal needs iOS 16, macOS 13 or tvOS 16:
+To match a literal `$` or `^`, write the whole pattern as a regular expression and escape the character. Both step definitions below match the step `I owe 5$`. Use only one, because several for the same step make it ambiguous. The regular expression in a string runs on every deployment target. The regex literal needs iOS 16, macOS 13, tvOS 16 or watchOS 9:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -133,7 +133,7 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 // a regular expression in a string
 #Given("^I owe 5\\$$") { }
 
-// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
+// a regex literal that needs iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time
 #Given(#/^I owe 5\$$/#) { }
 ```
 }
@@ -143,13 +143,13 @@ To match a literal `$` or `^`, write the whole pattern as a regular expression a
 // a regular expression in a string
 Given("^I owe 5\\$$") { _, _ in }
 
-// a regex literal, which needs iOS 16, macOS 13 or tvOS 16 at run time
+// a regex literal that needs iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time
 Given(#/^I owe 5\$$/#) { _, _ in }
 ```
 }
 }
 
-The bare form of the regex literal, `/^I owe 5\$$/`, also needs iOS 16, macOS 13 or tvOS 16, and a target that allows bare regex literals, as above:
+The bare form of the regex literal, `/^I owe 5\$$/`, also needs iOS 16, macOS 13, tvOS 16 or watchOS 9, and a target that allows bare regex literals, as above:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -442,7 +442,7 @@ extension Match {
 
 ## Matching with regular expressions
 
-Regular expressions can match what a Cucumber expression can't, but they're harder to read and their arguments aren't typed (see <doc:Matching-Steps#Choose-a-pattern>). If your tests run on iOS 16, macOS 13 or tvOS 16 or later, prefer a regex literal to a regular expression in a string, because the compiler checks it.
+Regular expressions can match what a Cucumber expression can't, but they're harder to read and their arguments aren't typed (see <doc:Matching-Steps#Choose-a-pattern>). If your tests run on iOS 16, macOS 13, tvOS 16 or watchOS 9 or later, prefer a regex literal to a regular expression in a string, because the compiler checks it.
 
 This step definition matches regardless of case, with `ignoresCase()`. A step definition macro takes the regex literal itself, so it can't take `ignoresCase()`. Use the function style here, and the macros for step definitions that don't need it:
 
@@ -464,7 +464,7 @@ When(#/^some (\w+) by the actor$/#.ignoresCase()) { match, _ in
 }
 ```
 
-> Important: Regex literals need iOS 16, macOS 13 or tvOS 16. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"). A Swift package's target in the Swift 5 language mode needs it set, as <doc:Running-Tests-With-Swift-Package-Manager> describes. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
+> Important: Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9. The `/…/` form also needs the Swift 6 language mode or the `BareSlashRegexLiterals` feature. Xcode turns that feature on by default ("Enable Bare Slash Regex Literals"). A Swift package's target in the Swift 5 language mode needs it set, as <doc:Running-Tests-With-Swift-Package-Manager> describes. `#/…/#` works without either. On earlier deployment targets, use a string pattern that starts with `^` instead, as described in <doc:Matching-Steps#How-a-string-pattern-is-read>.
 
 ## Step definitions for undefined steps
 
@@ -516,11 +516,11 @@ Then(#/^the display shows \"(.*?)\"$/#) { matches, _ in
 }
 }
 
-The generated regex literals are written as `#/…/#`, a form that compiles in any test target. To get `/…/` instead, return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle`. It has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target that CucumberSwift can't read. So check it in your own code, as <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions> shows. Regex literals need iOS 16, macOS 13 or tvOS 16.
+The generated regex literals are written as `#/…/#`, a form that compiles in any test target. To get `/…/` instead, return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`'s `regexLiteralStyle`. It has no effect unless `generateRegexLiterals` is on. Whether your target accepts `/…/` is a setting of your target that CucumberSwift can't read. So check it in your own code, as <doc:Running-Tests-With-Swift-Package-Manager#Paste-generated-step-definitions> shows. Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9.
 
 ### Step definition macros
 
-If your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), CucumberSwift suggests macros, as Convert to Gherkin Macros writes them and as the Swift Package Manager tabs above show.
+CucumberSwift suggests macros if your tests use the recommended step definition macros (see <doc:Using-Step-Definition-Macros>), as Convert to Gherkin Macros writes them and as the Swift Package Manager tabs above show.
 
 CucumberSwift suggests macros when the test target links the macros built with the `Macros` trait: `CucumberSwiftMacros`, or `CucumberSwiftTestingMacros` with the Swift Testing runner. Otherwise, such as with Carthage, it suggests functions. To choose yourself, set `Cucumber.generateMacros` in `setupSteps()` to `true` for macros or `false` for functions. Or set the environment variable `CUCUMBER_GENERATE_MACROS` to `YES` or `NO`. If both are set, the static variable wins. The Swift Testing runner reads the same two settings.
 

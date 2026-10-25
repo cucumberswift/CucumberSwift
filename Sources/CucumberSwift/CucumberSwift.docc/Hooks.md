@@ -129,7 +129,7 @@ An async hook's closure runs on the main actor, at the same point as a synchrono
 
 ### Feature hooks in a parallel run
 
-When scenarios run in parallel, each worker runs `BeforeFeature` and `AfterFeature` for the features it runs. When `AfterFeature` runs depends on what Xcode hands out. See <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
+Each worker runs `BeforeFeature` and `AfterFeature` for the features it runs when scenarios run in parallel. When `AfterFeature` runs depends on what Xcode hands out. See <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
 
 ### Attachments
 

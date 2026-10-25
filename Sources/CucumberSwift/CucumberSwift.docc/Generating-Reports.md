@@ -38,7 +38,7 @@ TEST_RUNNER_CUCUMBER_REPORT_PATH="$HOME/CucumberReports/report.json" xcodebuild 
 
 ### One report for a parallel run
 
-When scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), each worker is a separate process, but all the workers write one report. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
+All the workers write one report when scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), even though each worker is a separate process. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
 
 To do this, a worker locks the report each time it writes. It reads the report, adds its own features, and writes the result to a temporary file in the same folder. Then it moves that file into place and unlocks the report.
 

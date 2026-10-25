@@ -194,7 +194,7 @@ Given(#/^I have (\d+) cukes( today)?$/#) { match, _ in
 }
 ```
 
-A regex literal needs iOS 16, macOS 13 or tvOS 16 with or without the macros, so the code around it already has the `@available` that the macro needs. The command leaves a regex as it is if its syntax changes how its groups are numbered or what captures, such as `(?|…)` or the `n` and `x` options. It can't give each capture group its type then.
+A regex literal needs iOS 16, macOS 13, tvOS 16 or watchOS 9 with or without the macros, so the code around it already has the `@available` that the macro needs. The command leaves a regex as it is if its syntax changes how its groups are numbered or what captures, such as `(?|…)` or the `n` and `x` options. It can't give each capture group its type then.
 
 ### What it leaves
 
@@ -271,7 +271,7 @@ A step that fails is reported at its line in the feature file. Click the failure
 
 This holds for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than one step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
 
-Once a step fails, the rest of its scenario's steps don't run. Xcode shows them as skipped, or as skipped activities with one test per scenario.
+The rest of a scenario's steps don't run once a step fails. Xcode shows them as skipped, or as skipped activities with one test per scenario.
 
 A step that no step definition matches fails its own test, or with one test per scenario, its scenario's test. The failure message contains the step definition CucumberSwift generated for it. A step like that after a step that failed is skipped too, and its generated step definition is in the file attached to the `GenerateStepsStubsIfNecessary` test.
 

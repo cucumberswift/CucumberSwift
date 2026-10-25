@@ -56,7 +56,7 @@ extension Cucumber: StepImplementation {
 }
 ```
 
-If your test target builds in the Swift 6 language mode, declare the conformance `@retroactive`, as <doc:Matching-Steps> describes.
+Declare the conformance `@retroactive` if your test target builds in the Swift 6 language mode, as <doc:Matching-Steps> describes.
 
 ### Find the output
 

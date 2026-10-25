@@ -44,7 +44,7 @@ The table lists every setting, with the article that describes it:
 |---|---|---|---|---|---|
 | <doc:Running-Tests-In-Xcode#Test-names> | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On | XCTest and Swift Testing | None |
 | <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-one-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest and Swift Testing | None |
-| <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13 or tvOS 16 to run the regex literals it generates |
+| <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13, tvOS 16 or watchOS 9 to run the regex literals it generates |
 | <doc:Matching-Steps#Step-definition-macros> | `Cucumber.generateMacros` | `CUCUMBER_GENERATE_MACROS` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | None |
 | <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | Off | XCTest and Swift Testing | With XCTest, it depends on the platform. See the article. |
 | <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest and Swift Testing | Parallel testing on |
@@ -161,13 +161,13 @@ extension Cucumber: @retroactive StepImplementation {
 }
 }
 
-When `CUCUMBER_TAGS` is set, it takes over, and CucumberSwift doesn't call `shouldRunWith`. The Swift Testing runner calls it too, and shows a scenario that it leaves out as skipped. See <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options>.
+`CUCUMBER_TAGS` takes over when it's set, and CucumberSwift then doesn't call `shouldRunWith`. The Swift Testing runner calls it too, and shows a scenario that it leaves out as skipped. See <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options>.
 
 ### Continue after a failed assertion
 
 `continueTestingAfterFailure` sets what XCTest does when an assertion in a step fails. If your `StepImplementation` doesn't declare it, CucumberSwift uses XCTest's own `continueAfterFailure`. Its value is `true`. So by default, a failed assertion doesn't stop its step. The rest of the step's code runs, and XCTest reports every failure. A failing async step's task isn't cancelled either.
 
-If you return `false`, XCTest stops the step at its first failed assertion. With one test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
+XCTest stops the step at its first failed assertion if you return `false`. With one test per scenario, it stops the scenario's test there. An async step's task is also cancelled when it fails, and CucumberSwift waits for it to finish before going on.
 
 <!-- swift-example: members -->
 ```swift

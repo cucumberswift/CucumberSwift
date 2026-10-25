@@ -98,7 +98,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 <doc:Using-Step-Definition-Macros> describes the macros in full, with the argument that each parameter gives. <doc:Checking-Step-Definitions> describes the mistakes the compiler reports and the fixes Xcode offers. Both work the same with this runner, including localized macros such as `#ES_Dado`. `CucumberSwiftTestingMacros` has every macro that `CucumberSwiftMacros` has, and the step types they expand to, such as ``ES_Dado``, are in `CucumberSwiftTesting`.
 
-A step definition can be synchronous or `async`, and it runs on the main actor. Its pattern can be a Cucumber expression, or a regular expression in a string that starts with `^`, ends with `$`, or is written between slashes. It can also be a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>). Regex literals need iOS 16, macOS 13 or tvOS 16 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
+A step definition can be synchronous or `async`, and it runs on the main actor. Its pattern can be a Cucumber expression, or a regular expression in a string that starts with `^`, ends with `$`, or is written between slashes. It can also be a regex literal, such as `#/…/#`, with the step functions and with the macros (see <doc:Using-Step-Definition-Macros#Regex-literals>). Regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at run time. The `Step` has the step's `match`, `keyword`, `docString`, `dataTable`, `tags` and `scenario`, as with CucumberSwift.
 
 A deprecated form takes a regular expression in a `String` variable, and a closure that takes the matches as a `[String]`, as in CucumberSwift: `Given(pattern) { matches, step in … }`. As in CucumberSwift, a string literal binds to the Cucumber expression form instead, so use a variable or a regex literal.
 
@@ -281,7 +281,7 @@ The runner reports each failure on the line that caused it:
 - A step definition that throws fails on the step's line in the feature file. A hook that throws fails at the line where you wrote the hook, as with CucumberSwift.
 - A `wait(for:timeout:)` fails when its timeout passes first, or when it sees an inverted expectation fulfilled. The failure appears on the step's line in the feature file, with XCTest's message for that result, as in CucumberSwift. This also works in Swift 6.1. The step runs to its end, and the scenario's later steps don't run. To wait without holding the main actor, write `await wait(for:timeout:)`.
 
-If a step has no step definition or more than one, or its step definition or a step hook throws, the scenario's later steps don't run. Its `AfterScenario` hooks still run. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
+The scenario's later steps don't run if a step has no step definition or more than one, or if its step definition or a step hook throws. Its `AfterScenario` hooks still run. A `BeforeStep` hook that throws also skips its step, and the step's `AfterStep` hooks still run. A `BeforeScenario` hook that throws skips the scenario's steps. An `AfterScenario` or feature hook that throws stops nothing else.
 
 A hook that throws doesn't stop the later hooks of the same kind, as with CucumberSwift. A hook that throws, or fails an `#expect`, fails its scenario and feature, as with CucumberSwift. The report shows the failure on the step that is current when the hook runs. A `BeforeStep` hook fails its own step. A `BeforeScenario` hook fails the scenario's first step, and a `BeforeFeature` hook fails the first step of the feature's first scenario. The steps after it don't run. An `AfterStep`, `AfterScenario` or `AfterFeature` hook runs after the step is reported. So it leaves that step as it was, and fails the scenario or the feature.
 
@@ -385,7 +385,7 @@ Swift Testing runs the tests of a process side by side, in no order that you can
 
 A feature's `uri` is the `file://` URL of its feature file in the test bundle, as CucumberSwift writes it, even though the runner reads the feature files when the tests build. If the test bundle has no copy, as when a Swift package leaves the `Features` folder out, the URL points where the copy would be, in the bundle's `Features` folder. A hook's or an observer's `Feature.uri` is the same URL. Failures are still reported in the feature file you edit, so that Xcode shows them there.
 
-When the tests finish, the runner copies the report to `CucumberTestResultsFor<target>.json` in the documents folder, and replaces the copy from the run before, as CucumberSwift does. So the script in <doc:Generating-Reports#Automatic-reports> finds it.
+The runner copies the report to `CucumberTestResultsFor<target>.json` in the documents folder when the tests finish, and replaces the copy from the run before, as CucumberSwift does. So the script in <doc:Generating-Reports#Automatic-reports> finds it.
 
 These rules also apply to the report:
 

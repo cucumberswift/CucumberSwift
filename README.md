@@ -8,11 +8,9 @@ CucumberSwift is a lightweight Swift only Cucumber implementation for iOS, tvOS,
 
 You describe behaviour in Gherkin feature files, and match their steps with step definitions written in Swift.
 
-watchOS support is coming soon.
-
 CucumberSwift isn't published to CocoaPods from 6.0.0 on. The last version on CocoaPods is 5.0.3. It still resolves, but no newer version will be published there. Install CucumberSwift with Swift Package Manager or Carthage instead.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15 and tvOS 13 or later. Some features need a newer Xcode, and their docs name it. Start with these links:
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that its CI tests with. CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their docs name it. Start with these links:
 
 * [Docs](https://cucumberswift.github.io/CucumberSwift/documentation/cucumberswift/)
 * [Getting started](https://cucumberswift.github.io/CucumberSwift/tutorials/tutorial-table-of-contents/)
@@ -29,7 +27,7 @@ Use Slack for questions, help with using CucumberSwift, and discussion. Use [Git
 ### Contributing
 Contributions are welcome. See [CONTRIBUTING.md](/CONTRIBUTING.md) for a short guide to how it works.
 
-Before you open a PR, please link an existing issue, or open one that describes the problem or enhancement. Then we can agree on the direction before you write the code. Typo and docs fixes are exempt, so send the PR directly.
+Please link an existing issue before you open a PR, or open one that describes the problem or enhancement. Then we can agree on the direction before you write the code. Typo and docs fixes are exempt, so send the PR directly.
 
 ## Attributions
 

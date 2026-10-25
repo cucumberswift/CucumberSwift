@@ -16,6 +16,28 @@ enum DSLContainer {
     /// The labels of the arguments that come after the position: the closures that hold the container's contents.
     static let contentLabels: Set<String> = ["steps", "examples"]
 
+    /// Where the macro's opening parenthesis is, which is where the function form's `#line` and `#column` point.
+    /// The test context of swift-syntax 600 can't locate a token inside the macro, only the macro itself (601
+    /// fixed that), so there the column is counted on from the macro to the parenthesis.
+    static func location(of node: some FreestandingMacroExpansionSyntax,
+                         in context: some MacroExpansionContext) -> AbstractSourceLocation? {
+        guard let paren = node.leftParen else {
+            return context.location(of: node, at: .afterLeadingTrivia, filePathMode: .filePath)
+        }
+        if let location = context.location(of: paren, at: .afterLeadingTrivia, filePathMode: .filePath) {
+            return location
+        }
+        let start = node.positionAfterSkippingLeadingTrivia.utf8Offset
+        let distance = paren.positionAfterSkippingLeadingTrivia.utf8Offset - start
+        let before = Array(node.syntaxTextBytes.dropFirst(node.leadingTriviaLength.utf8Length).prefix(distance))
+        guard !before.contains(UInt8(ascii: "\n")), !before.contains(UInt8(ascii: "\r")),
+              let location = context.location(of: node, at: .afterLeadingTrivia, filePathMode: .filePath),
+              let column = location.column.as(IntegerLiteralExprSyntax.self).flatMap({ Int($0.literal.text) }) else {
+            return nil
+        }
+        return AbstractSourceLocation(file: location.file, line: location.line, column: "\(literal: column + distance)")
+    }
+
     /// The call with `position` added before the container's contents: before its first closure argument other
     /// than the title, which a `ScenarioOutline` can give as a closure, and before any trailing closures.
     static func expansion(of node: some FreestandingMacroExpansionSyntax,
@@ -25,8 +47,7 @@ enum DSLContainer {
         DSLPlacement.reportStepDefinitions(in: node, context: context)
         var arguments = Array(node.arguments)
         if withPosition {
-            let anchor = node.leftParen.map { Syntax($0) } ?? Syntax(node)
-            let location = context.location(of: anchor, at: .afterLeadingTrivia, filePathMode: .filePath)
+            let location = location(of: node, in: context)
             var position: [LabeledExprSyntax] = [
                 LabeledExprSyntax(label: "line", expression: location?.line ?? "#line"),
                 LabeledExprSyntax(label: "column", expression: location?.column ?? "#column")
