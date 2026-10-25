@@ -1,8 +1,11 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
-// 6.0 (Xcode 16.0), the oldest Xcode CI builds with. Only Swift 6.0 reads this manifest: Swift 6.1 and
-// later (Xcode 16.3 and later) read Package@swift-6.1.swift.
+// Swift 6.1 and later (Xcode 16.3 and later) read this manifest; Swift 6.0 reads Package@swift-6.0.swift.
+// This one adds the macros and Swift Testing, which need swift-syntax, behind the Macros trait, so a
+// package that does not turn the trait on never resolves or downloads swift-syntax. Keep everything else
+// the same as Package@swift-6.0.swift.
 
+import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
@@ -21,13 +24,47 @@ let package = Package(
         // or Fix Feature Files on the project's or package's menu in Xcode.
         .plugin(
             name: "FixFeatureFiles",
-            targets: ["Fix Feature Files"])
+            targets: ["Fix Feature Files"]),
+        // Rewrites existing step definitions as step definition macros: `swift package convert-to-gherkin-macros`,
+        // or Convert to Gherkin Macros on the project's or package's menu in Xcode. Needs the Macros trait.
+        .plugin(
+            name: "ConvertToGherkinMacros",
+            targets: ["Convert to Gherkin Macros"]),
+        // Step definition macros, checked at compile time. Needs the Macros trait.
+        .library(
+            name: "CucumberSwiftMacros",
+            targets: ["CucumberSwiftMacros"]),
+        // Runs feature files with Swift Testing, in unit test targets: the step definition API, and the
+        // runner the generated tests call.
+        .library(
+            name: "CucumberSwiftTesting",
+            targets: ["CucumberSwiftTesting"]),
+        // The step definition macros for CucumberSwiftTesting. Needs the Macros trait.
+        .library(
+            name: "CucumberSwiftTestingMacros",
+            targets: ["CucumberSwiftTestingMacros"]),
+        // Generates a Swift Testing test for each scenario in a test target's feature files.
+        .plugin(
+            name: "CucumberSwiftTestingPlugin",
+            targets: ["CucumberSwiftTestingPlugin"])
+    ],
+    // The Swift Package Index sets SPI_BUILD in its compatibility builds, so the trait is on there and the
+    // macros get a compatibility result too. It is off for everyone else.
+    traits: [
+        .trait(name: "Macros", description: "Builds the CucumberSwiftMacros product, which depends on swift-syntax."),
+        .default(enabledTraits: Context.environment["SPI_BUILD"] == nil ? [] : ["Macros"])
     ],
     dependencies: [
         .package(url: "https://github.com/cucumberswift/CucumberSwiftExpressions.git", from: "1.4.2"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
         // Test-only: used by CucumberSwiftTests and CucumberSwiftTestingTests, not by the libraries.
-        .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0")
+        .package(url: "https://github.com/kylef/JSONSchema.swift", from: "0.6.0"),
+        // Only resolved when the Macros trait is on. 600 is the oldest version the macros build with: they
+        // read TypeEffectSpecifiersSyntax.throwsClause, which 600 added. The nightly CI run builds and tests
+        // them against it. They build and pass their tests with every version up to 604; raise the upper
+        // bound once they do with the next one. A wide range lets a project use them alongside another
+        // macro package, whichever swift-syntax version that one needs.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"605.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -74,6 +111,94 @@ let package = Package(
                 ]),
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/FixFeatureFilesPlugin"),
+        // The tool the Convert to Gherkin Macros plugin runs. It builds for the Mac that builds the tests. It
+        // reads and writes Swift code with swift-syntax, so without the Macros trait it only says what to turn
+        // on. Its tests run it as a program (`--stdin`), not linked in: SwiftPM links every test target into one
+        // bundle, and a second target that links swift-syntax breaks the macros' tests with Swift 6.2's
+        // prebuilt swift-syntax. It shares StepPattern.swift with the compiler plugin, through a symlink.
+        .executableTarget(
+            name: "CucumberSwiftMacroConverterTool",
+            dependencies: [
+                "CucumberSwiftExpressions",
+                .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftParser", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ],
+            path: "Sources/CucumberSwiftMacroConverterTool"),
+        // Named as Xcode shows it on the project's or package's menu.
+        .plugin(
+            name: "Convert to Gherkin Macros",
+            capability: .command(
+                intent: .custom(
+                    verb: "convert-to-gherkin-macros",
+                    description: "Rewrites step definitions as step definition macros where the macro expands to the same step definition"),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Rewrites step definitions as step definition macros in your Swift files")
+                ]),
+            dependencies: ["CucumberSwiftMacroConverterTool"],
+            path: "Plugins/ConvertToGherkinMacrosPlugin"),
+        // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.
+        .macro(
+            name: "CucumberSwiftMacrosPlugin",
+            dependencies: [
+                "CucumberSwiftExpressions",
+                .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftDiagnostics", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ],
+            path: "Sources/CucumberSwiftMacrosPlugin"),
+        .target(
+            name: "CucumberSwiftMacros",
+            dependencies: ["CucumberSwift", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],
+            path: "Sources/CucumberSwiftMacros"),
+        // The Swift Testing runner. No XCTest, and none of CucumberSwift: a test target uses one runner or
+        // the other.
+        .target(
+            name: "CucumberSwiftTesting",
+            dependencies: ["CucumberSwiftExpressions"],
+            path: "Sources/CucumberSwiftTesting"),
+        // StepDefinitionMacros.swift and HookMacros.swift are symlinks to CucumberSwiftMacros' declarations.
+        .target(
+            name: "CucumberSwiftTestingMacros",
+            dependencies: ["CucumberSwiftTesting", "CucumberSwiftExpressions", "CucumberSwiftMacrosPlugin"],
+            path: "Sources/CucumberSwiftTestingMacros"),
+        // The tool CucumberSwiftTestingPlugin runs. It builds for the Mac that builds the tests.
+        .executableTarget(
+            name: "CucumberSwiftTestingGenerator",
+            dependencies: ["CucumberSwiftGherkin"],
+            path: "Sources/CucumberSwiftTestingGenerator"),
+        .plugin(
+            name: "CucumberSwiftTestingPlugin",
+            capability: .buildTool(),
+            dependencies: ["CucumberSwiftTestingGenerator"],
+            path: "Plugins/CucumberSwiftTestingPlugin"),
+        .testTarget(
+            name: "CucumberSwiftTestingGeneratorTests",
+            dependencies: ["CucumberSwiftTestingGenerator"]),
+        .testTarget(
+            name: "CucumberSwiftTestingTests",
+            // JSONSchema, to check the report against Cucumber's schema, as CucumberSwiftTests does.
+            dependencies: [
+                "CucumberSwiftTesting",
+                .product(name: "JSONSchema", package: "JSONSchema.swift")
+            ]),
+        .testTarget(
+            name: "CucumberSwiftMacrosTests",
+            dependencies: [
+                "CucumberSwiftMacrosPlugin",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ]),
+        .testTarget(
+            name: "CucumberSwiftMacroConverterTests",
+            // The macros, to check that what the converter writes expands to the step definition it replaced,
+            // and the expressions, to check that a regex literal's string regular expression matches alike.
+            // Not the converter: see the tool's comment.
+            dependencies: [
+                "CucumberSwiftMacrosPlugin",
+                "CucumberSwiftExpressions",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ]),
         .testTarget(
             name: "CucumberSwiftGherkinTests",
             // CucumberSwift too, to check that both read feature files alike.
@@ -93,6 +218,6 @@ let package = Package(
                 .copy("Features")
             ])
     ],
-    // Written for Swift 5. Tools version 6.0 would otherwise build every target in the Swift 6 language mode.
+    // The other targets are written for Swift 5, as Package@swift-6.0.swift builds them.
     swiftLanguageModes: [.v5]
 )
