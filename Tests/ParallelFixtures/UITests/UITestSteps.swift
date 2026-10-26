@@ -81,6 +81,22 @@ enum UITestApp {
         #endif
     }
 
+    /// Launches the app, and once more if it isn't in the foreground after the first try. While Xcode sets up
+    /// another Simulator clone, the first launch on a clone can stall and fail with "Failed to get launch
+    /// progress" (#500). So the first try expects that failure, and only that one: a crash or any other launch
+    /// error still fails the test, and so does the second try.
+    static func launch() {
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        options.issueMatcher = { $0.compactDescription.contains("Failed to get launch progress") }
+        XCTExpectFailure("The app's first launch on a Simulator clone can stall (#500)", options: options) {
+            app.launch()
+        }
+        guard app.state != .runningForeground else { return }
+        print("ParallelFixture: the app isn't in the foreground after its first launch (state \(app.state.rawValue)); launching it again (#500)")
+        app.launch()
+    }
+
     /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and
     /// back up to Add, where the app put it when it started.
     static func empty() {
@@ -156,7 +172,7 @@ extension Cucumber: StepImplementation {
             MainActor.assumeIsolated {
                 #if targetEnvironment(simulator)
                 if UITestApp.app.state == .notRunning {
-                    UITestApp.app.launch()
+                    UITestApp.launch()
                 }
                 #else
                 UITestApp.app.launch()
