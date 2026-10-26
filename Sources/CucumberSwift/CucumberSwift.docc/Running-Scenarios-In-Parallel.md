@@ -39,7 +39,7 @@ That is why <doc:Running-Tests-In-Xcode#Turn-off-parallel-testing> tells you to 
 
 ## What works and what doesn't
 
-Xcode decides how many worker processes run your tests. It splits a test target by class, so a target's tests can run in several processes. Each scenario runs once and correctly in one process or in several. Its hooks run, and it appears once in the JSON report. Step definitions can't share state between workers.
+Xcode decides how many worker processes run your tests. It distributes a test target's classes across them, so a target's tests can run in several processes. Each scenario runs once, in one process, however Xcode distributes the classes. Its hooks run, and it appears once in the JSON report. Step definitions can't share state between workers.
 
 A unit test target has a host app or it doesn't. Xcode starts a host app and loads the tests into it. You choose it in the target's **Host Application** setting. A target with no host app runs its tests in a plain test process. UI tests are the third kind. They drive your app from a separate runner.
 
@@ -101,7 +101,7 @@ xcodebuild test -scheme MyAppTests -destination 'platform=macOS' \
 ```
 
 - `-parallel-testing-enabled YES` turns parallel testing on for every test target, whatever the scheme or test plan says.
-- `-parallel-testing-worker-count 3` starts exactly 3 workers.
+- `-parallel-testing-worker-count 3` starts exactly 3 workers. A worker gets scenarios only in the targets marked ✅ above.
 - `-maximum-parallel-testing-workers 3` lets Xcode start up to 3 workers.
 
 Our testing found `.scenario` running in exactly the number of workers we passed to `-parallel-testing-worker-count`, in every target marked ✅ above.
