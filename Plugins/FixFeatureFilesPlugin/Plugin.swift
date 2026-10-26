@@ -61,9 +61,9 @@ private func fix(tool: URL, paths: [String]) throws {
     guard process.terminationStatus == 0 else { throw FixError.failed(process.terminationStatus) }
 }
 
-/// The target's folder. Swift 6.1 added `directoryURL` to `Target`. Swift 6.0 reads Package.swift,
+/// The target's folder. Swift 6.1 added `directoryURL` to `Target`. Swift 6.0 reads Package@swift-6.0.swift,
 /// whose tools version 6.0 has it only on each kind of target, and deprecates `Path`; Swift 6.1 and
-/// later read Package@swift-6.1.swift.
+/// later read Package.swift.
 private func directoryPath(of target: any SourceModuleTarget) -> String? {
 #if compiler(>=6.1)
     return target.directoryURL.path
