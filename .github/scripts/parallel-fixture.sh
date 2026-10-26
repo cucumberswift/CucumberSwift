@@ -113,7 +113,7 @@ test_failures() {
 import json, sys
 for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
-' || true
+' || return 1
   return 0
 }
 
@@ -155,6 +155,8 @@ run_unit() {
   # "Failed to get launch progress" (#500). The fixture launches the app once more itself, so this is the
   # backstop: a run where that is every failing test's only failure is repeated once too, in the same way.
   local attempt failed clones stalled
+  # A failing test's whole failure: the launch stall for the fixture app and nothing else.
+  local stall_failure='^Failed: .* -- Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*>: Timed out while requesting launch progress\.$'
   # Keeps the first attempt's log, and clears what it left, for a second attempt.
   repeat_run() {
     cp "$log" "${log%.log}-attempt-1.log"
@@ -185,7 +187,7 @@ run_unit() {
     fi
     if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" && "$status" -ne 0 ]]; then
       stalled=$(test_failures "$result" | grep '^Failed:')
-      if [[ -n "$stalled" ]] && ! echo "$stalled" | grep -qvE 'Failed to get launch progress for .*org\.cucumberswift\.ParallelFixtureApp'; then
+      if [[ -n "$stalled" ]] && ! echo "$stalled" | grep -qvE "$stall_failure"; then
         echo "::warning::The fixture app's launch stalled in every failing test (Failed to get launch progress). Running the $unit tests once more."
         echo "$stalled" | head -3 | cut -c1-300
         repeat_run
@@ -194,9 +196,10 @@ run_unit() {
     fi
     break
   done
-  # The fixture's own second launch (#500), said so that a run shows how often it is needed.
-  if grep -q "ParallelFixture: the app isn't in the foreground after its first launch" "$log"; then
-    echo "::notice::The fixture launched the app a second time in $(grep -c "ParallelFixture: the app isn't in the foreground after its first launch" "$log") scenarios of the $unit run."
+  # The fixture expects a stalled first launch (#500): XCTest logs it as an expected failure, said here so that
+  # a run shows how often it happens.
+  if grep -q "recorded an expected failure" "$log"; then
+    echo "::notice::A first app launch stalled and was expected to fail, in $(grep -c "recorded an expected failure" "$log") tests of the $unit run; the fixture launched the app again."
   fi
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
