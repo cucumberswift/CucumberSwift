@@ -83,7 +83,8 @@ enum UITestApp {
 
     /// Launches the app, and once more if it isn't in the foreground after the first try. While Xcode sets up
     /// another Simulator clone, the first launch on a clone can stall and fail with "Failed to get launch
-    /// progress" (#500). So the first try expects that failure, and only that one: a crash or any other launch
+    /// progress" or "Timed out while launching application via Xcode" (#500). So the first try expects those
+    /// failures, and only those: a crash or any other launch
     /// error still fails the test, and so does the second try. `testCase` is the test that runs the hook: with
     /// `continueAfterFailure` off, XCTest ends the test at the first recorded issue, expected or not, and then
     /// neither the second try nor the step's body would run in it, so it is on while the app launches.
@@ -93,14 +94,20 @@ enum UITestApp {
         defer { if let continueAfterFailure { testCase?.continueAfterFailure = continueAfterFailure } }
         let options = XCTExpectedFailure.Options()
         options.isStrict = false
-        options.issueMatcher = { $0.compactDescription.contains("Failed to get launch progress") }
-        XCTExpectFailure("The app's first launch on a Simulator clone can stall (#500)", options: options) {
-            app.launch()
-        }
-        guard app.state != .runningForeground else { return }
-        XCTContext.runActivity(named: "The app isn't in the foreground after its first launch (state \(app.state.rawValue)); launching it again (#500)") { _ in
-            app.launch()
-        }
+        options.issueMatcher = { AppLaunchRetry.isStall($0.compactDescription) }
+        AppLaunchRetry.launch(
+            first: {
+                XCTExpectFailure("The app's first launch on a Simulator clone can stall (#500)", options: options) {
+                    app.launch()
+                }
+            },
+            isInForeground: { app.state == .runningForeground },
+            again: {
+                XCTContext.runActivity(named: "The app isn't in the foreground after its first launch (state \(app.state.rawValue)); launching it again (#500)") { _ in
+                    app.launch()
+                }
+            }
+        )
     }
 
     /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and

@@ -156,7 +156,7 @@ run_unit() {
   # backstop: a run where that is every failing test's only failure is repeated once too, in the same way.
   local attempt failed clones stalled
   # A failing test's whole failure: the launch stall for the fixture app and nothing else.
-  local stall_failure='^Failed: .* -- Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*>: Timed out while requesting launch progress\.$'
+  local stall_failure='^Failed: .* -- (Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*>: Timed out while requesting launch progress|Failed to launch <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*> via Xcode: Timed out while launching application via Xcode)\.$'
   # Keeps the first attempt's log, and clears what it left, for a second attempt.
   repeat_run() {
     cp "$log" "${log%.log}-attempt-1.log"
@@ -188,7 +188,7 @@ run_unit() {
     if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" && "$status" -ne 0 ]]; then
       stalled=$(test_failures "$result" | grep '^Failed:')
       if [[ -n "$stalled" ]] && ! echo "$stalled" | grep -qvE "$stall_failure"; then
-        echo "::warning::The fixture app's launch stalled in every failing test (Failed to get launch progress). Running the $unit tests once more."
+        echo "::warning::The fixture app's launch stalled in every failing test (Failed to get launch progress, or Timed out while launching application via Xcode). Running the $unit tests once more."
         echo "$stalled" | head -3 | cut -c1-300
         repeat_run
         continue
@@ -224,7 +224,7 @@ run_unit() {
     # Not repeated: another run of the unit could outlast the job. A stalled app launch (#500) was repeated
     # once above, so here it failed twice.
     if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
-      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications|Failed to get launch progress'; then
+      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications|Failed to get launch progress|Timed out while launching application via Xcode'; then
       echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
     fi
   fi
