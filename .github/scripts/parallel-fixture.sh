@@ -1,7 +1,9 @@
 #!/bin/bash
 # Runs one of the parallel testing fixtures in Tests/ParallelFixtures with Xcode's parallel testing on,
 # and fails unless every scenario ran exactly once, in as many workers as the fixtures' plain XCTest
-# classes, up to two, and each feature's hooks ran as often, where and when they should (#387).
+# classes, up to two, and each feature's hooks ran as often, where and when they should (#387). Where
+# Xcode runs the tests in parallel (runs_in_parallel), the scenarios must also have run in every worker,
+# or with UNIT=feature in as many as there are features (#491).
 # Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
@@ -115,6 +117,16 @@ for failure in json.load(sys.stdin).get("testFailures", []):
     print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
 ' || return 1
   return 0
+}
+
+# Whether Xcode spreads this platform's and kind's tests over its workers, as "Running Scenarios in Parallel"
+# says and #491 measured with Xcode 26: tests without a host app everywhere, tests hosted in an app on
+# macOS, and UI tests on tvOS. Elsewhere it runs them all in one worker.
+runs_in_parallel() {
+  case "$KIND/$PLATFORM" in
+    Hostless/*|"Hosted/macOS"|"UI/tvOS Simulator") return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # Runs the tests once, handing out each $1 (scenario or feature), and checks the records. With $2 = serial,
@@ -262,13 +274,20 @@ run_unit() {
   control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
-  # Xcode may give every scenario to one Simulator clone, such as when another clone's runner is slow to start.
-  # The run still passes, but it then says nothing about the parallel case, so it is said (#375).
-  if [[ "$mode" != serial && -n "${udid:-}" ]]; then
-    local ran_in
+  # Where the docs say the scenarios run in parallel, the run fails unless they ran in every worker, or with the
+  # feature unit in as many workers as there are features (#491). Elsewhere Xcode runs every test in one worker,
+  # plain XCTest classes too, and a run in more than one is said, because the docs would then be out of date.
+  if [[ "$mode" != serial ]]; then
+    local ran_in wanted=$WORKERS
     ran_in=$(scenario_workers "$records")
-    if [[ "$ran_in" -lt "$WORKERS" ]]; then
-      echo "::warning::Only $ran_in of $WORKERS Simulator clones ran scenarios in the $unit run: a pass here does not show the parallel case."
+    [[ "$unit" = feature && "$EXPECTED_FEATURES" -lt "$wanted" ]] && wanted=$EXPECTED_FEATURES
+    if runs_in_parallel; then
+      if [[ "$ran_in" -lt "$wanted" ]]; then
+        echo "::error::Only $ran_in of $wanted workers ran scenarios in the $unit run, where they should all run some: $PLATFORM $KIND tests run in parallel." >&2
+        status=1
+      fi
+    elif [[ "$ran_in" -gt 1 ]]; then
+      echo "::notice::The scenarios ran in $ran_in workers in the $unit run. The docs say $PLATFORM $KIND tests run in one worker."
     fi
   fi
   if [[ "$mode" = serial ]]; then
