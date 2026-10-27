@@ -1,10 +1,10 @@
-# Running Tests with Bazel
+# Running tests with Bazel
 
 Run your features with `bazel test`, from an `ios_unit_test`, `macos_unit_test` or `watchos_unit_test` target.
 
 ## Overview
 
-CucumberSwift is a Bazel module. Its library builds with [rules_swift](https://github.com/bazelbuild/rules_swift), and your tests run with the test rules of [rules_apple](https://github.com/bazelbuild/rules_apple). Bazel builds and packages tests differently from Xcode, so a setup copied from an Xcode project needs these changes.
+CucumberSwift is a Bazel module. Its library builds with [rules_swift](https://github.com/bazelbuild/rules_swift), and your tests run with the test rules of [rules_apple](https://github.com/bazelbuild/rules_apple). Bazel builds and packages tests differently from Xcode, so a setup copied from an Xcode project needs the changes below.
 
 ### Add the module
 
@@ -14,25 +14,25 @@ CucumberSwift is in the [Bazel Central Registry](https://registry.bazel.build/mo
 bazel_dep(name = "cucumberswift", version = "6.7.0")
 ```
 
-Bazel adds CucumberSwiftExpressions, the module `cucumberswift_expressions`, for you. The registry lists every version you can use.
+Bazel adds CucumberSwiftExpressions (the module `cucumberswift_expressions`) for you. The registry lists every version you can use.
 
-If a release isn't in the registry yet, fetch it from GitHub with a `git_override` on its release tag:
+Fetch a release from GitHub with a `git_override` on its release tag if it isn't in the registry yet:
 
 ```starlark
 bazel_dep(name = "cucumberswift", version = "6.7.0")
 git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.7.0")
 ```
 
-Change the version and the tag together. If the release needs a CucumberSwiftExpressions version that isn't in the registry either, add `cucumberswift_expressions` the same way, at the version CucumberSwift's `MODULE.bazel` names:
+Change the version and the tag together. If the release also needs a CucumberSwiftExpressions version that isn't in the registry, add `cucumberswift_expressions` the same way. Use the version that CucumberSwift's `MODULE.bazel` names:
 
 ```starlark
 bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
 git_override(module_name = "cucumberswift_expressions", remote = "https://github.com/cucumberswift/CucumberSwiftExpressions.git", tag = "1.4.2")
 ```
 
-A `git_override` applies only in the root module, your project's `MODULE.bazel`.
+A `git_override` works only in the root module, your project's `MODULE.bazel`.
 
-Your tests also need `rules_apple` and `rules_swift`. These are the versions CucumberSwift is tested with:
+Your tests also need `rules_apple` and `rules_swift`. Our GitHub Actions CI workflow tests CucumberSwift with these versions:
 
 ```starlark
 bazel_dep(name = "apple_support", version = "2.9.1")
@@ -40,11 +40,11 @@ bazel_dep(name = "rules_apple", version = "5.2.0")
 bazel_dep(name = "rules_swift", version = "4.1.2")
 ```
 
-The module needs Bazel 8 or later. It's tested with the latest Bazel 8 release and with Bazel 9.2.0.
+The module needs Bazel 8 or later. Our CI tests it with the latest Bazel 8 release and with Bazel 9.2.0.
 
 ### Put the Features folder at the root of the test bundle
 
-CucumberSwift looks for a folder named `Features` at the root of the test bundle. Add the folder with an `apple_resource_group`, as `structured_resources`, which keeps its subfolders. Bazel keeps each file's path from your `BUILD.bazel` file's folder, so strip any folders above `Features` with `strip_structured_resources_prefixes`:
+CucumberSwift looks for a folder named `Features` at the root of the test bundle. Add the folder to an `apple_resource_group` as `structured_resources`, so that it keeps its subfolders. Bazel keeps each file's path relative to the folder of your `BUILD.bazel` file, so remove any folders above `Features` with `strip_structured_resources_prefixes`:
 
 ```starlark
 load("@rules_apple//apple:ios.bzl", "ios_unit_test")
@@ -81,13 +81,13 @@ system_sdk = use_extension("@rules_swift//swift:extensions.bzl", "system_sdk")
 system_sdk.configure_sdks(names = ["AppleTVSimulator"])
 ```
 
-If CucumberSwift finds no features, the run reports one failing test, `FoundNoFeatures`. Its message names the bundle that was searched.
+The run reports 1 failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle it searched.
 
-`CucumberSwift` is a `testonly` target, because it links XCTest. Only `testonly` targets can depend on it.
+`CucumberSwift` links XCTest, so it's a `testonly` target. Only `testonly` targets can depend on it.
 
 ### Return the test bundle from your StepImplementation
 
-Bazel puts resources in the test bundle itself, as Xcode does. Return the bundle of a class in your tests:
+Return the bundle of a class in your tests. Bazel puts resources in the test bundle itself, as Xcode does:
 
 ```swift
 extension Cucumber: StepImplementation {
@@ -102,21 +102,23 @@ extension Cucumber: StepImplementation {
 }
 ```
 
-`Bundle.module` is generated by Swift Package Manager only. Code shared with a Swift package can check `#if SWIFT_PACKAGE`, as in <doc:Running-Tests-With-Swift-Package-Manager>.
+Only Swift Package Manager generates `Bundle.module`. Code shared with a Swift package can check `#if SWIFT_PACKAGE`, as in <doc:Running-Tests-With-Swift-Package-Manager>.
 
 ### Choose scenarios with tags
 
-Bazel passes only the environment variables you name to a test. Set `CUCUMBER_TAGS` with `--test_env`:
+Pass `CUCUMBER_TAGS` to the test with `--test_env`. Bazel passes a test only the environment variables you name:
 
 ```bash
 bazel test //MyApp:MyAppFeatureTests --test_env=CUCUMBER_TAGS=smoke
 ```
 
-Every other environment variable in <doc:Settings>, such as `CUCUMBER_VERBOSE`, works the same way.
+Pass every other environment variable in <doc:Settings>, such as `CUCUMBER_VERBOSE`, the same way.
 
 ### Paste generated step definitions
 
-The step definitions CucumberSwift generates are Cucumber expressions, which compile in any test target. With `Cucumber.generateRegexLiterals` on, they are regex literals written as `#/^…$/#` instead. Set it in `setupSteps()`, or pass `--test_env=CUCUMBER_GENERATE_REGEX_LITERALS=YES` (see <doc:Matching-Steps#Generate-regex-literals-instead>). To have them written as `/^…$/` in the Swift 5 language mode, turn on bare slash regex literals in your `swift_library`:
+CucumberSwift generates step definitions as Cucumber expressions, and these compile in any test target. To get regex literals written as `#/^…$/#` instead, turn on `Cucumber.generateRegexLiterals` in `setupSteps()`, or pass `--test_env=CUCUMBER_GENERATE_REGEX_LITERALS=YES`. See <doc:Matching-Steps#Generate-regex-literals-instead>.
+
+To get them written as `/^…$/` in the Swift 5 language mode, turn on bare slash regex literals in your `swift_library`:
 
 ```starlark
 copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
