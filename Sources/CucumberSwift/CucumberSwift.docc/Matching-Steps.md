@@ -29,7 +29,7 @@ CucumberSwift also suggests Cucumber expressions for undefined steps. See <doc:M
 
 ## How a string pattern is read
 
-CucumberSwift decides from a string's shape whether it's a regular expression or a Cucumber expression when you pass it to ``Given``, ``When`` or ``Then``, as other Cucumber implementations do:
+CucumberSwift reads a string as either a regular expression or a Cucumber expression, based on its shape, when you pass it to ``Given``, ``When`` or ``Then``, as other Cucumber implementations do:
 
 | The string | Is read as | Example |
 |---|---|---|
@@ -234,7 +234,7 @@ extension Cucumber: StepImplementation {
 }
 ```
 
-Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before it starts the next one. So a step that ignores cancellation holds up the run, but never overlaps the next step.
+Cancellation is cooperative. CucumberSwift waits for a cancelled step to finish before it starts the next one. So a step that ignores cancellation delays the run, but never overlaps the next step.
 
 **UI tests.** In a UI test target, an async step or hook can query, tap and wait for elements with XCUI, as a synchronous step can. Its closure runs on the main actor, as `XCUIApplication` needs:
 

@@ -190,7 +190,7 @@ error: exhausted attempts to resolve the dependencies graph, with the following 
 This is a SwiftPM bug, fixed in Swift 6.4 ([swift-package-manager#10409](https://github.com/swiftlang/swift-package-manager/pull/10409)). Until you use Swift 6.4 or later, declare swift-syntax yourself, next to CucumberSwift, with a range that overlaps the one CucumberSwift accepts (see <doc:Using-Step-Definition-Macros#Requirements>). Nothing needs to use it. Declaring it is enough for SwiftPM to resolve it. Declare it in one of these places:
 
 - **In a Swift package**, add it to the `dependencies` of the `Package.swift` that turns the trait on, as in <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>.
-- **In an Xcode project**, add it to the project's packages, without adding any of its products to a target. In Xcode, use **File > Add Package Dependencies…**. In Tuist, add it to `Project.packages`. This holds whether the project turns the trait on itself, with Xcode 26.4 or later, or through `MacrosTrait` (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>). Declaring it in `MacrosTrait` doesn't help.
+- **In an Xcode project**, add it to the project's packages, without adding any of its products to a target. In Xcode, use **File > Add Package Dependencies…**. In Tuist, add it to `Project.packages`. This is true whether the project turns the trait on itself, with Xcode 26.4 or later, or through `MacrosTrait` (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>). Declaring it in `MacrosTrait` doesn't help.
 
 Our CI resolves and builds the Swift package setup above, swift-syntax included, from a git URL of the commit it tests.
 
@@ -253,7 +253,7 @@ The closure takes 1 argument for each parameter of a Cucumber expression, or eac
 | A capture group, in a pattern that starts with `^`, ends with `$` or is written between `/` | `String` |
 | A custom parameter type, such as `{color}` | The parameter's output type |
 
-Write the types out. Swift checks a macro's arguments before the macro runs, so it can't work them out from the pattern. If a type is wrong for a built-in parameter type, `{int}`, `{float}`, `{double}`, `{string}`, `{word}` or `{}`, the macro tells you which type to use. For a custom parameter type, the compiler checks the type against the parameter's output, and the error is Swift's own, inside the macro's expansion.
+Write the types out. Swift checks a macro's arguments before the macro runs, so it can't work them out from the pattern. If a type is wrong for a built-in parameter type, `{int}`, `{float}`, `{double}`, `{string}`, `{word}` or `{}`, the macro reports an error that names the type to use. For a custom parameter type, the compiler checks the type against the parameter's output, and the error is Swift's own, inside the macro's expansion.
 
 To read the step itself, for example its data table or doc string, add a last argument of type `Step`:
 
@@ -371,7 +371,7 @@ The first time you build a macro, Xcode stops with a warning that the macro must
 
 On a build server, nobody can answer Xcode's request to trust a macro. So pass `-skipMacroValidation` to `xcodebuild`, and `-skipPackagePluginValidation` if a target applies CucumberSwift's plugins. The same goes for a project that Tuist generates. <doc:Running-Tests-In-Xcode#Build-an-Xcode-project-on-a-build-server> has the command.
 
-### Each macro says to turn the Macros trait on
+### A macro reports that the Macros trait is off
 
 The trait isn't on for CucumberSwift, or your Xcode doesn't apply it. Turn it on as described above for your kind of project. In an Xcode project or a Tuist project, setting it on the package needs Xcode 26.4 or later. With an earlier Xcode, use the `MacrosTrait` local package (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>).
 

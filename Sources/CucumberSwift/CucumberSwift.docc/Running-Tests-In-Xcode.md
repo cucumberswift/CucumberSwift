@@ -269,7 +269,7 @@ Your step definitions, hooks and feature files don't change between the 2 layout
 
 A step that fails is reported at its line in the feature file. Click the failure in the issue navigator or the test report, and Xcode opens the feature file at that step and marks it there. The failure's call stack still leads to the line in your step definition that failed.
 
-This holds for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than 1 step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
+This is true for a failed assertion in a step definition, for a step that no step definition matches, and for a step that more than 1 step definition matches. Steps you write with the DSL have no feature file, so their failures stay in your Swift code.
 
 The rest of a scenario's steps don't run once a step fails. Xcode shows them as skipped, or as skipped activities with 1 test per scenario.
 

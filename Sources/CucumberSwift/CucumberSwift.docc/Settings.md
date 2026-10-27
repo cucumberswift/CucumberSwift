@@ -15,7 +15,7 @@ A behaviour that you can turn on or off has 2 switches:
 
 `Cucumber.parallelTesting` has a third switch with the Swift Testing runner, a compilation condition. See <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel>.
 
-The static variable wins when it is set. If it isn't set, the environment variable decides, and if neither is set, the default applies. A static variable is an optional `Bool`, so setting it back to `nil` hands the decision back to the environment variable. A setting that takes a value instead of a switch, such as `Cucumber.reportPath`, follows the same order. Its static variable is an optional `String`, and its environment variable takes text. For these settings, an empty value counts as not set.
+The static variable wins when it is set. If it isn't set, the environment variable decides, and if neither is set, the default applies. A static variable is an optional `Bool`, so setting it back to `nil` makes the environment variable apply again. A setting that takes a value instead of a switch, such as `Cucumber.reportPath`, follows the same order. Its static variable is an optional `String`, and its environment variable takes text. For these settings, an empty value counts as not set.
 
 Set the static variables in your `StepImplementation`'s `setupSteps()`. CucumberSwift calls it before it creates the tests:
 
@@ -47,7 +47,7 @@ The table lists every setting, with the article that describes it:
 | <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13, tvOS 16 or watchOS 9 to run the regex literals it generates |
 | <doc:Matching-Steps#Step-definition-macros> | `Cucumber.generateMacros` | `CUCUMBER_GENERATE_MACROS` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | None |
 | <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | Off | XCTest and Swift Testing | With XCTest, it depends on the platform. See the article. |
-| <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest and Swift Testing | Parallel testing on |
+| <doc:Running-Scenarios-In-Parallel#Xcodes-parallel-worker-logic> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest and Swift Testing | Parallel testing on |
 | <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest and Swift Testing | None |
 | <doc:Generating-Reports#Choose-where-the-report-is-written> | `Cucumber.reportPath` | `CUCUMBER_REPORT_PATH` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None |
 | <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | None | All scenarios | XCTest and Swift Testing | None |
@@ -73,7 +73,7 @@ A few settings don't follow the rules in <doc:Settings#How-a-setting-works>.
 
 See <doc:Verbose-Output>.
 
-**`Cucumber.parallelTestingUnit` takes `.scenario` or `.feature`, not on or off.** Its environment variable, `CUCUMBER_PARALLEL_TESTING_UNIT`, takes `scenario` or `feature`, in any case. CucumberSwift ignores spaces and tabs around the value, and ignores any other value, as if the variable weren't set. The static variable wins when it is set. If it isn't, the environment variable decides, and the default is `.scenario`. See <doc:Running-Scenarios-In-Parallel#What-Xcode-hands-out>.
+**`Cucumber.parallelTestingUnit` takes `.scenario` or `.feature`, not on or off.** Its environment variable, `CUCUMBER_PARALLEL_TESTING_UNIT`, takes `scenario` or `feature`, in any case. CucumberSwift ignores spaces and tabs around the value, and ignores any other value, as if the variable weren't set. The static variable wins when it is set. If it isn't, the environment variable decides, and the default is `.scenario`. See <doc:Running-Scenarios-In-Parallel#Xcodes-parallel-worker-logic>.
 
 **`StepImplementation` properties have no environment variable.** You set them by returning a value from your `StepImplementation`, next to `bundle` and `setupSteps()`. Each one is optional. CucumberSwift uses its default when you don't declare it.
 
@@ -93,7 +93,7 @@ extension Cucumber: StepImplementation {
 
 - `continueTestingAfterFailure` sets fail-fast mode. By default it's `true`, and a step runs to its end after a failed assertion. With `false`, XCTest stops a step at its first failed assertion. With Swift Testing, a failed `#expect` doesn't stop a step, so use `try #require` for the checks that must stop it. See <doc:Running-Feature-Files-With-Swift-Testing#After-a-failed-assertion>.
 - With `parallelTesting`, XCTest runs tests in separate processes, so their state is isolated. Swift Testing runs them in 1 process. Use `Scenario.state(_:)` to share state between the steps of a scenario and to keep it apart between scenarios. See <doc:Running-Feature-Files-With-Swift-Testing#Sharing-state-between-steps-in-a-scenario>.
-- The plugin finds the feature files in the test target's folder, whatever the Info.plist key `FeaturesPath` says. The runner reads `FeaturesPath` only to map the files to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Support for both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
+- The plugin finds the feature files in the test target's folder, whatever value the Info.plist key `FeaturesPath` has. The runner reads `FeaturesPath` only to map the files to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Support for both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
 
 ### Choose scenarios in code
 
@@ -161,7 +161,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 }
 
-`CUCUMBER_TAGS` takes over when it's set, and CucumberSwift then doesn't call `shouldRunWith`. The Swift Testing runner calls it too, and shows a scenario that it leaves out as skipped. See <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options>.
+CucumberSwift doesn't call `shouldRunWith` when `CUCUMBER_TAGS` is set. The Swift Testing runner calls it too, and shows a scenario that it leaves out as skipped. See <doc:Running-Feature-Files-With-Swift-Testing#Step-and-hook-options>.
 
 ### Continue after a failed assertion
 

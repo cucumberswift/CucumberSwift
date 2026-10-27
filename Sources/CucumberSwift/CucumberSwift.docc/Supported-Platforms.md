@@ -42,7 +42,7 @@ Some features need a newer Xcode or Swift than the oldest supported one. Our CI 
 | <doc:Running-Scenarios-In-Parallel> (experimental) | The article lists what has been tried on each platform | The versions our CI jobs run |
 | Regex literals in step definitions (<doc:Matching-Steps#Matching-with-regular-expressions>) | iOS 16, macOS 13, tvOS 16, watchOS 9 at run time | Swift's `@available` on the API |
 
-The article for each of these features shows its requirement as a badge at the top of the page, such as Xcode 16.3, and explains it in a "Requirements" section. A setting that needs more than the oldest supported Xcode says so in its documentation and in the "Requires" column of <doc:Settings>. An OS requirement shows as Swift's `@available` on the API.
+The article for each of these features shows its requirement as a badge at the top of the page, such as Xcode 16.3, and explains it in a "Requirements" section. The documentation of a setting that needs more than the oldest supported Xcode states the requirement and in the "Requires" column of <doc:Settings>. An OS requirement shows as Swift's `@available` on the API.
 
 ### Keeping this current
 

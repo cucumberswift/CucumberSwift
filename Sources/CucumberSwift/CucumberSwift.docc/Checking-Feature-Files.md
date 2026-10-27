@@ -63,7 +63,7 @@ The plugin checks the structure of each feature file and warns about these probl
 - **Malformed tables.** The plugin warns about a row whose number of cells differs from the first row of its table, and about a table that doesn't follow a step or `Examples`.
 - **Malformed doc strings.** The plugin warns about a doc string that doesn't follow a step, and about one that is never closed.
 
-A feature file in another language names its language in a comment, such as `# language: fr`. The plugin reads that file's headers and steps with the language's keywords, as CucumberSwift does. It checks everything except keywords, so it says nothing about a line it can't read as a header or a step. CucumberSwift and the plugin both apply the comment from its own line onwards, so put it on the first line. If CucumberSwift doesn't support the language, the plugin warns about the comment and keeps reading in the language it was reading before, as CucumberSwift does.
+A feature file in another language names its language in a comment, such as `# language: fr`. The plugin reads that file's headers and steps with the language's keywords, as CucumberSwift does. It checks everything except keywords, so it reports nothing for a line it can't read as a header or a step. CucumberSwift and the plugin both apply the comment from its own line onwards, so put it on the first line. If CucumberSwift doesn't support the language, the plugin warns about the comment and keeps reading in the language it was reading before, as CucumberSwift does.
 
 The plugin also checks the feature files against the target's step definitions, and warns about these problems:
 
