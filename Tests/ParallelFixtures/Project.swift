@@ -60,8 +60,9 @@ func targets(for family: Family) -> [Target] {
         testTarget("ParallelHostedTests\(family.suffix)", product: .unitTests,
                    sources: ["UnitTests/**", "Support/**"], hosted: true),
         testTarget("ParallelUITests\(family.suffix)", product: .uiTests,
-                   // ItemCountWait is shared with CucumberSwiftTests, which has its unit tests (#375).
-                   sources: ["UITests/**", "Support/**", "../CucumberSwiftTests/ParallelFixtures/ItemCountWait.swift"],
+                   // ItemCountWait and AppLaunchRetry are shared with CucumberSwiftTests, which has their unit tests (#375, #500).
+                   sources: ["UITests/**", "Support/**", "../CucumberSwiftTests/ParallelFixtures/ItemCountWait.swift",
+                             "../CucumberSwiftTests/ParallelFixtures/AppLaunchRetry.swift"],
                    hosted: true)
     ]
 }

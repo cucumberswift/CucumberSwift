@@ -105,6 +105,20 @@ scenario_workers() {
   return 0
 }
 
+# Prints each failing test in result bundle $1 and why, one "Failed:" line each. Prints nothing when
+# xcodebuild left no result bundle or xcresulttool can't read it, and returns 1 then.
+test_failures() {
+  local result=$1 summary
+  [[ -e "$result" ]] || return 1
+  summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) && [[ -n "$summary" ]] || return 1
+  echo "$summary" | python3 -c '
+import json, sys
+for failure in json.load(sys.stdin).get("testFailures", []):
+    print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
+' || return 1
+  return 0
+}
+
 # Whether Xcode spreads this platform's and kind's tests over its workers, as "Running Scenarios in Parallel"
 # says and #491 measured with Xcode 26: tests without a host app everywhere, tests hosted in an app on
 # macOS, and UI tests on tvOS. Elsewhere it runs them all in one worker.
@@ -148,7 +162,22 @@ run_unit() {
   # repeat is reported, the first attempt's log is kept beside the second's (parallel-test-*-attempt-1.log, which
   # the job uploads on a failure), and a failure that comes back fails the job. A failure without all three is
   # never repeated.
-  local attempt failed clones
+  #
+  # The fixture app's first launch on a clone can also stall while Xcode sets up the other clone, and fail with
+  # "Failed to get launch progress" (#500). The fixture launches the app once more itself, so this is the
+  # backstop: a run where that is every failing test's only failure is repeated once too, in the same way.
+  local attempt failed clones stalled
+  # A failing test's whole failure: the launch stall for the fixture app and nothing else.
+  local stall_failure='^Failed: .* -- (Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*>: Timed out while requesting launch progress|Failed to launch <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*> via Xcode: Timed out while launching application via Xcode)\.$'
+  # Keeps the first attempt's log, and clears what it left, for a second attempt.
+  repeat_run() {
+    cp "$log" "${log%.log}-attempt-1.log"
+    rm -rf "$records" "$result" "$(dirname "$report")"
+    mkdir -p "$records" "$(dirname "$report")"
+    for name in parallel-test-records parallel-test-report; do
+      runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+    done
+  }
   for attempt in 1 2; do
     .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
       "${parallel_flags[@]}" -resultBundlePath "$result" \
@@ -164,17 +193,26 @@ run_unit() {
       if [[ "$failed" = yes && "$clones" -lt "$WORKERS" ]]; then
         echo "::warning::A simulator clone's test runner failed to launch: only $clones of $WORKERS clones ran scenarios. Running the $unit tests once more."
         grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
-        cp "$log" "${log%.log}-attempt-1.log"
-        rm -rf "$records" "$result" "$(dirname "$report")"
-        mkdir -p "$records" "$(dirname "$report")"
-        for name in parallel-test-records parallel-test-report; do
-          runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
-        done
+        repeat_run
+        continue
+      fi
+    fi
+    if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" && "$status" -ne 0 ]]; then
+      stalled=$(test_failures "$result" | grep '^Failed:')
+      if [[ -n "$stalled" ]] && ! echo "$stalled" | grep -qvE "$stall_failure"; then
+        echo "::warning::The fixture app's launch stalled in every failing test (Failed to get launch progress, or Timed out while launching application via Xcode). Running the $unit tests once more."
+        echo "$stalled" | head -3 | cut -c1-300
+        repeat_run
         continue
       fi
     fi
     break
   done
+  # The fixture expects a stalled first launch (#500): XCTest logs it as an expected failure, said here so that
+  # a run shows how often it happens.
+  if grep -q "recorded an expected failure" "$log"; then
+    echo "::notice::A first app launch stalled and was expected to fail, in $(grep -c "recorded an expected failure" "$log") tests of the $unit run; the fixture launched the app again."
+  fi
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
   [[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
@@ -188,21 +226,17 @@ run_unit() {
   # An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
   local failures="$temp/parallel-test-failures-$unit$suffix.txt"
   : > "$failures"
-  local summary=""
   if [[ ! -e "$result" ]]; then
     echo "No test results summary: xcodebuild left no result bundle (exit status $status). See $log."
-  elif ! summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) || [[ -z "$summary" ]]; then
+  elif ! test_failures "$result" > "$failures"; then
     echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See $log."
   else
-    echo "$summary" | python3 -c '
-import json, sys
-for failure in json.load(sys.stdin).get("testFailures", []):
-    print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
-' > "$failures" || true
     head -30 "$failures"
     # XCUITest itself timing out on a busy Simulator is the environment failing, not a test, and is said so (#375).
-    # Not repeated: another run of the unit could outlast the job.
+    # Not repeated: another run of the unit could outlast the job. A stalled app launch (#500) was repeated
+    # once above, so here it failed twice.
     if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
+      | grep -vE "$stall_failure" \
       | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
       echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
     fi

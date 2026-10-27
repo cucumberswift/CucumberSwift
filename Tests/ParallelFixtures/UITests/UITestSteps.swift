@@ -81,6 +81,35 @@ enum UITestApp {
         #endif
     }
 
+    /// Launches the app, and once more if it isn't in the foreground after the first try. While Xcode sets up
+    /// another Simulator clone, the first launch on a clone can stall and fail with "Failed to get launch
+    /// progress" or "Timed out while launching application via Xcode" (#500). So the first try expects those
+    /// failures, and only those: a crash or any other launch
+    /// error still fails the test, and so does the second try. `testCase` is the test that runs the hook: with
+    /// `continueAfterFailure` off, XCTest ends the test at the first recorded issue, expected or not, and then
+    /// neither the second try nor the step's body would run in it, so it is on while the app launches.
+    static func launch(in testCase: XCTestCase?) {
+        let continueAfterFailure = testCase?.continueAfterFailure
+        testCase?.continueAfterFailure = true
+        defer { if let continueAfterFailure { testCase?.continueAfterFailure = continueAfterFailure } }
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        options.issueMatcher = { AppLaunchRetry.isStall($0.compactDescription) }
+        AppLaunchRetry.launch(
+            first: {
+                XCTExpectFailure("The app's first launch on a Simulator clone can stall (#500)", options: options) {
+                    app.launch()
+                }
+            },
+            isInForeground: { app.state == .runningForeground },
+            again: {
+                XCTContext.runActivity(named: "The app isn't in the foreground after its first launch (state \(app.state.rawValue)); launching it again (#500)") { _ in
+                    app.launch()
+                }
+            }
+        )
+    }
+
     /// Empties the cart, and waits until the app shows it empty. On tvOS the focus moves down to Empty and
     /// back up to Add, where the app put it when it started.
     static func empty() {
@@ -152,11 +181,11 @@ extension Cucumber: StepImplementation {
         // launch() would first terminate a copy left running by the scenario before, and on a simulator
         // clone with Xcode 16.4 that fails at times ("Failed to terminate", #375). On a Mac each scenario
         // launches it afresh.
-        BeforeScenario { _ in
+        BeforeScenario { scenario in
             MainActor.assumeIsolated {
                 #if targetEnvironment(simulator)
                 if UITestApp.app.state == .notRunning {
-                    UITestApp.app.launch()
+                    UITestApp.launch(in: scenario.steps.first?.testCase)
                 }
                 #else
                 UITestApp.app.launch()
