@@ -236,7 +236,8 @@ run_unit() {
     # Not repeated: another run of the unit could outlast the job. A stalled app launch (#500) was repeated
     # once above, so here it failed twice.
     if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
-      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications|Failed to get launch progress|Timed out while launching application via Xcode'; then
+      | grep -vE "$stall_failure" \
+      | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
       echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
     fi
   fi
