@@ -35,6 +35,8 @@ final class AppLaunchRetryTests: XCTestCase {
 
     func testOtherLaunchFailuresAreNotStalls() {
         XCTAssertFalse(AppLaunchRetry.isStall("Failed to launch <XCUIApplicationImpl: 0x1 app>: The app crashed on launch."))
+        XCTAssertFalse(AppLaunchRetry.isStall("Failed to get launch progress for <XCUIApplicationImpl: 0x1 app>: The app crashed on launch."))
+        XCTAssertFalse(AppLaunchRetry.isStall("Failed to launch <XCUIApplicationImpl: 0x1 app> via Xcode: The app crashed on launch."))
         XCTAssertFalse(AppLaunchRetry.isStall("Timed out while launching application via Xcode"))
         XCTAssertFalse(AppLaunchRetry.isStall("The cart did not empty"))
     }

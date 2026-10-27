@@ -11,9 +11,9 @@ import Foundation
 
 enum AppLaunchRetry {
     /// Whether a launch failure is the stall: Xcode's reply to the launch never came back in time, as it does
-    /// on a Simulator clone that Xcode is still setting up. A crash or any other launch error is not.
+    /// on a Simulator clone that Xcode is still setting up. Only the two timeouts seen so far count. A crash or any other launch error is not.
     static func isStall(_ description: String) -> Bool {
-        description.contains("Failed to get launch progress")
+        (description.contains("Failed to get launch progress") && description.contains("Timed out while requesting launch progress"))
             || (description.contains("Failed to launch") && description.contains("Timed out while launching application via Xcode"))
     }
 

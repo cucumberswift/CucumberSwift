@@ -156,7 +156,7 @@ run_unit() {
   # backstop: a run where that is every failing test's only failure is repeated once too, in the same way.
   local attempt failed clones stalled
   # A failing test's whole failure: the launch stall for the fixture app and nothing else.
-  local stall_failure='^Failed: .* -- (Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*>: Timed out while requesting launch progress|Failed to launch <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp at [^>]*> via Xcode: Timed out while launching application via Xcode)\.$'
+  local stall_failure='^Failed: .* -- (Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*>: Timed out while requesting launch progress|Failed to launch <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*> via Xcode: Timed out while launching application via Xcode)\.$'
   # Keeps the first attempt's log, and clears what it left, for a second attempt.
   repeat_run() {
     cp "$log" "${log%.log}-attempt-1.log"
