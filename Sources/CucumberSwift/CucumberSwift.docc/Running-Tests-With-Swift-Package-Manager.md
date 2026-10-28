@@ -1,14 +1,14 @@
-# Running Tests with Swift Package Manager
+# Running tests with Swift Package Manager
 
 Run your features with `swift test`, from a test target in a `Package.swift`.
 
 ## Overview
 
-The tutorials set CucumberSwift up in an Xcode project. A test target in a Swift package works too, but Swift Package Manager builds and loads tests differently from Xcode, so a setup copied from an Xcode project needs these changes.
+You can run CucumberSwift from a test target in a Swift package, not only from the Xcode project that the tutorials set up. Swift Package Manager builds and loads tests differently from Xcode, so a setup copied from an Xcode project needs the changes below.
 
 ### Declare the Features folder as a resource
 
-SwiftPM copies only the files you declare into the test bundle. Declare your `Features` folder with `.copy`, which keeps its subfolders:
+Declare your `Features` folder as a resource with `.copy`, so that it keeps its subfolders:
 
 <!-- swift-example: package-target -->
 ```swift
@@ -18,17 +18,19 @@ SwiftPM copies only the files you declare into the test bundle. Declare your `Fe
     resources: [
         .copy("Features")
     ],
-    // Checks the feature files on every build: see "Checking Feature Files While You Build".
+    // Checks the feature files on every build: see "Checking feature files while you build".
     plugins: [.plugin(name: "CucumberSwiftLint", package: "CucumberSwift")])
 ```
 
-The `CucumberSwiftLint` plugin checks your feature files and step definitions each time the target builds, and reports each problem as a warning: see <doc:Checking-Feature-Files>.
+SwiftPM copies only the files you declare into the test bundle.
 
-The folder must be named `Features`, with that capitalisation. SwiftPM generates the test bundle's `Info.plist` itself, so the `FeaturesPath` and `FeatureScenarioDelimiter` keys that an Xcode test target can set are not available: see <doc:Settings>.
+The `CucumberSwiftLint` plugin checks your feature files and step definitions each time the target builds, and reports each problem as a warning. See <doc:Checking-Feature-Files>.
+
+The folder must be named `Features`, with that capitalisation. SwiftPM generates the test bundle's `Info.plist` itself, so you can't use the `FeaturesPath` and `FeatureScenarioDelimiter` keys that an Xcode test target can set. See <doc:Settings>.
 
 ### Return Bundle.module from your StepImplementation
 
-SwiftPM puts resources in a bundle of their own, not in the test bundle, so `Bundle(for:)` does not find them. Return `Bundle.module`, the resource bundle SwiftPM generates for the target:
+Return `Bundle.module`, the resource bundle that SwiftPM generates for the target:
 
 <!-- swift-example: file features -->
 ```swift
@@ -48,31 +50,35 @@ extension Cucumber: StepImplementation {
 }
 ```
 
-`SWIFT_PACKAGE` is defined only when SwiftPM builds the code. The `#if` lets the same file build in an Xcode test target too. `Bundle.module` exists only for a target that declares resources.
+SwiftPM puts resources in a bundle of their own, not in the test bundle, so `Bundle(for:)` doesn't find them. `SWIFT_PACKAGE` is defined only when SwiftPM builds the code. The `#if` lets the same file build in an Xcode test target too. `Bundle.module` exists only for a target that declares resources.
 
-If CucumberSwift finds no features, the run reports one failing test, `FoundNoFeatures`. Its message names the bundle that was searched and what to change. The other tests in the bundle still run.
+The run reports 1 failing test, `FoundNoFeatures`, if CucumberSwift finds no features. Its message names the bundle that it searched, and what to change. The other tests in the bundle still run.
 
-### Use one StepImplementation per package
+### Use 1 StepImplementation per package
 
-SwiftPM links all of a package's test targets into one test bundle, and a bundle can use only one `extension Cucumber: StepImplementation`. With two, one of them takes effect and the other target's features never run, even though `swift test` passes.
+Put all of a package's step definitions behind 1 `StepImplementation`. SwiftPM links all of a package's test targets into 1 test bundle, and a bundle can use only 1 `extension Cucumber: StepImplementation`. With 2, only one of them takes effect, and the other target's features never run, even though `swift test` passes.
 
-Put all of a package's step definitions behind one `StepImplementation`. If you need separate ones, for example for two apps, give each its own package: a folder with a `Package.swift` whose test target depends on your main package by path.
+Give each step implementation its own package if you need separate ones, for example for 2 apps. That is a folder with a `Package.swift` whose test target depends on your main package by path.
 
 ### Don't run in parallel
 
-`swift test --parallel` runs each test that `swift test list` shows in a process of its own. Scenarios are not in that list, so none of them run, and the run still passes. Run CucumberSwift tests without `--parallel`.
+Run CucumberSwift tests without `--parallel`. `swift test --parallel` runs each test that `swift test list` shows in a process of its own. Scenarios aren't in that list, so none of them run, and the run still passes.
 
 ### Choose scenarios with tags
 
-CucumberSwift creates a test for each scenario when the suite runs. `swift test list` does not show them, and `swift test --filter` with a scenario's name runs no tests and still passes. To run some scenarios, tag them and set `CUCUMBER_TAGS`:
+To run some of your scenarios, tag them and set `CUCUMBER_TAGS`:
 
 ```bash
 CUCUMBER_TAGS=smoke swift test
 ```
 
-To see which steps ran and how each scenario ended, turn on verbose output: `CUCUMBER_VERBOSE=1 swift test`. See <doc:Verbose-Output>.
+CucumberSwift creates a test for each scenario when the suite runs, so `swift test list` doesn't show them. `swift test --filter` with a scenario's name runs no tests, and still passes.
+
+To see which steps ran and how each scenario ended, turn on verbose output with `CUCUMBER_VERBOSE=1 swift test`. See <doc:Verbose-Output>.
 
 ### Know what swift test covers
+
+`swift test` has these limits:
 
 - `swift test` builds and runs your tests on macOS. To test on iOS, tvOS or watchOS, use Xcode or `xcodebuild` with a destination.
 - CucumberSwift uses the Objective-C runtime, so it runs on Apple platforms only.
@@ -80,7 +86,9 @@ To see which steps ran and how each scenario ended, turn on verbose output: `CUC
 
 ### Paste generated step definitions
 
-For each step with no step definition, CucumberSwift reports a failure with the Swift code for one, a Cucumber expression that compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, that code is a regex literal instead, written as `#/^…$/#`, which also compiles in any test target. To have it written as `/^…$/`, your test target needs bare slash regex literals: the Swift 6 language mode, or this setting in the Swift 5 language mode (tools version 5.8 or later):
+For each step that has no step definition, CucumberSwift reports a failure with the Swift code for one. The code uses a Cucumber expression that compiles in any test target (see <doc:Matching-Steps#Step-definitions-for-undefined-steps>). With `Cucumber.generateRegexLiterals` on, the code uses a regex literal instead, written as `#/^…$/#`, a form that also compiles in any test target.
+
+To get the regex literal written as `/^…$/`, your test target needs bare slash regex literals. The Swift 6 language mode has them. In the Swift 5 language mode, with tools version 5.8 or later, add this setting:
 
 <!-- swift-example: target-arguments -->
 ```swift
@@ -89,7 +97,7 @@ swiftSettings: [
 ]
 ```
 
-Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. To follow the target's setting automatically, check it in your own code, where the compiler knows it:
+Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. To follow the target's setting automatically, check the setting in your own code, where the compiler knows it:
 
 <!-- swift-example: members -->
 ```swift
@@ -102,4 +110,4 @@ public var regexLiteralStyle: RegexLiteralStyle {
 }
 ```
 
-CucumberSwift can't make this check itself: it's compiled with its own settings, not your target's, and a built test bundle doesn't record its target's language mode or features.
+CucumberSwift can't make this check itself. It's compiled with its own settings, not your target's, and a built test bundle doesn't record its target's language mode or features.

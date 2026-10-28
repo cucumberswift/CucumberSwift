@@ -1,4 +1,4 @@
-# Checking Feature Files While You Build
+# Checking feature files while you build
 
 See mistakes in your feature files as warnings in Xcode, before you run a single test.
 
@@ -6,9 +6,9 @@ See mistakes in your feature files as warnings in Xcode, before you run a single
 
 The `CucumberSwiftLint` build tool plugin checks every `.feature` file in a target each time you build it. It reports each problem as a warning on the line where it found it, and Xcode shows those warnings in the editor and the Issue navigator. The plugin finds misspelt keywords, table rows with too many cells, doc strings that never close, and steps that no step definition matches. Without the plugin, you find these mistakes only when the tests run.
 
-![A feature file in Xcode with four warnings shown inline: an undefined step on line 8, the misspelt keyword "Thne" on line 12, a table row with one cell too many on line 21, and a doc string that is never closed on line 25.](CheckingFeatureFiles-Warnings.png)
+![A feature file in Xcode with 4 warnings shown inline: an undefined step on line 8, the misspelt keyword "Thne" on line 12, a table row with 1 cell too many on line 21, and a doc string that is never closed on line 25.](CheckingFeatureFiles-Warnings.png)
 
-The plugin's warnings never fail a build, and the plugin changes nothing about how the tests run. A step in the wrong place in a feature written in the Swift DSL is the one exception. That is an error, which fails the build, as <doc:#What-it-checks> explains.
+The plugin's warnings never fail a build, and the plugin changes nothing about how the tests run. A step in the wrong place in a feature written in the Swift DSL is the one exception. That is an error that fails the build, as <doc:#What-it-checks> explains.
 
 The plugin needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later. Carthage can't deliver Swift package plugins.
 
@@ -48,11 +48,11 @@ Xcode asks you to trust a package plugin the first time it builds a target that 
 
 The Issue navigator may also show a warning that the macro "CucumberSwiftMacrosPlugin" must be enabled. The warning appears even when your project doesn't use the macros, because the macros come in the same package. The build still succeeds. To clear the warning, click it and choose **Trust & Enable**. Xcode asks once for each project.
 
-Nobody can answer Xcode on a CI machine, so pass `-skipPackagePluginValidation` to `xcodebuild` there. `swift build` and `swift test` don't ask.
+Nobody can answer Xcode on a build server, so pass `-skipPackagePluginValidation` to `xcodebuild` there. `swift build` and `swift test` don't ask.
 
-### Keep it on in CI
+### Keep the plugin on in every build
 
-Leave the plugin on for every build, on your Mac and in CI. The plugin's warnings never fail a build, so a CI build that compiles your tests also checks every feature file. The build log lists each problem as `file:line:column: warning: …`. Xcode Cloud and most CI services show these lines with the build's other warnings. On a CI machine, pass `-skipPackagePluginValidation` to `xcodebuild`, as described above.
+Leave the plugin on for every build, on your Mac and on your build server. The plugin's warnings never fail a build, so a build that compiles your tests on your build server also checks every feature file. The build log lists each problem as `file:line:column: warning: …`. Xcode Cloud and most continuous integration services show these lines with the build's other warnings. On a build server, pass `-skipPackagePluginValidation` to `xcodebuild` (see <doc:Checking-Feature-Files#Trust-the-plugin>).
 
 ### What it checks
 
@@ -63,16 +63,16 @@ The plugin checks the structure of each feature file and warns about these probl
 - **Malformed tables.** The plugin warns about a row whose number of cells differs from the first row of its table, and about a table that doesn't follow a step or `Examples`.
 - **Malformed doc strings.** The plugin warns about a doc string that doesn't follow a step, and about one that is never closed.
 
-A feature file in another language names its language in a comment, such as `# language: fr`. The plugin reads that file's headers and steps with the language's keywords, as CucumberSwift does. It checks everything except keywords, so it says nothing about a line it can't read as a header or a step. CucumberSwift and the plugin both apply the comment from its own line onwards, so put it on the first line. If CucumberSwift doesn't support the language, the plugin warns about the comment and keeps reading in the language it was reading before, as CucumberSwift does.
+A feature file in another language names its language in a comment, such as `# language: fr`. The plugin reads that file's headers and steps with the language's keywords, as CucumberSwift does. It checks everything except keywords, so it reports nothing for a line it can't read as a header or a step. CucumberSwift and the plugin both apply the comment from its own line onwards, so put it on the first line. If CucumberSwift doesn't support the language, the plugin warns about the comment and keeps reading in the language it was reading before, as CucumberSwift does.
 
 The plugin also checks the feature files against the target's step definitions, and warns about these problems:
 
 - **Undefined steps.** The plugin warns about a step that none of the target's step definitions matches. It checks each step of a `Scenario Outline` with the values from its `Examples` filled in.
 - **Step definitions that can never match.** The plugin warns about a string pattern that starts with `^`, ends with `$` or is written between slashes but isn't a valid regular expression, and about a regex literal that doesn't compile. The warning appears on the step definition's line.
 
-> Note: CucumberSwift supports two ways to write a feature. The declarative way, which is recommended, is a feature file. Its steps describe the behaviour in Gherkin, and step definitions in `setupSteps()` match them. The imperative way is a feature written in the Swift DSL, whose steps are the code they run. Write each feature one way only. A step of one kind written inside the other is an error, which fails the build.
+> Note: CucumberSwift supports 2 ways to write a feature. The recommended declarative way is a feature file. Its steps describe the behaviour in Gherkin, and step definitions in `setupSteps()` match them. The imperative way is a feature written in the Swift DSL, whose steps are the code they run. Write each feature 1 way only. A step of 1 kind written inside the other is an error that fails the build.
 
-When a target mixes the two ways, the plugin reports one of two errors, and the build fails. With the macros, the compiler also reports them.
+The plugin reports 1 of 2 errors when a target mixes the 2 ways, and the build fails. With the macros, the compiler also reports them.
 
 #### A declarative step definition inside an imperative DSL function call
 
@@ -256,7 +256,7 @@ public func setupSteps() {
 
 The **Fix Feature Files** command applies the keywords that the plugin suggests, such as the one in "Did you mean 'Then'?". The command applies every suggestion in your feature files at once, and changes nothing else.
 
-![A feature file in Xcode with seven warnings that each suggest a keyword: "feture", "Scenario Outline" without its colon, "Gvien", "Wehn", "Thne", "scenario" in lowercase, and "Adn".](FixFeatureFiles-Before.png)
+![A feature file in Xcode with 7 warnings that each suggest a keyword: "feture", "Scenario Outline" without its colon, "Gvien", "Wehn", "Thne", "scenario" in lowercase, and "Adn".](FixFeatureFiles-Before.png)
 
 In Xcode, right-click the project or package in the Project navigator, and choose **Fix Feature Files** under CucumberSwift:
 
@@ -281,7 +281,7 @@ The command lists each line it changed, before and after, with the file's absolu
 Fixed 1 line in 1 of 4 feature files.
 ```
 
-Fixing a line can turn the lines after it into steps, which the plugin checks more closely. The command therefore checks each file again, and applies new suggestions until nothing is left to fix.
+Fixing a line can turn the lines after it into steps that the plugin checks more closely. The command therefore checks each file again, and applies new suggestions until nothing is left to fix.
 
 Text between a header and its first step is a description, where any text is allowed. The command fixes a line in a description only when the next line is a step, a table or a doc string. A line that the command doesn't fix keeps its warning, for you to fix or ignore.
 

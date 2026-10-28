@@ -1,7 +1,9 @@
 #!/bin/bash
 # Runs one of the parallel testing fixtures in Tests/ParallelFixtures with Xcode's parallel testing on,
 # and fails unless every scenario ran exactly once, in as many workers as the fixtures' plain XCTest
-# classes, up to two, and each feature's hooks ran as often, where and when they should (#387).
+# classes, up to two, and each feature's hooks ran as often, where and when they should (#387). Where
+# Xcode runs the tests in parallel (runs_in_parallel), the scenarios must also have run in every worker,
+# or with UNIT=feature in as many as there are features (#491).
 # Used by the Parallel tests jobs in CI.yml; run `mise run generate-fixtures` first.
 #
 #   PLATFORM=<iOS Simulator|tvOS Simulator|macOS|Mac Catalyst> KIND=<Hostless|Hosted|UI> \
@@ -103,6 +105,30 @@ scenario_workers() {
   return 0
 }
 
+# Prints each failing test in result bundle $1 and why, one "Failed:" line each. Prints nothing when
+# xcodebuild left no result bundle or xcresulttool can't read it, and returns 1 then.
+test_failures() {
+  local result=$1 summary
+  [[ -e "$result" ]] || return 1
+  summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) && [[ -n "$summary" ]] || return 1
+  echo "$summary" | python3 -c '
+import json, sys
+for failure in json.load(sys.stdin).get("testFailures", []):
+    print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
+' || return 1
+  return 0
+}
+
+# Whether Xcode spreads this platform's and kind's tests over its workers, as "Running Scenarios in Parallel"
+# says and #491 measured with Xcode 26: tests without a host app everywhere, tests hosted in an app on
+# macOS, and UI tests on tvOS. Elsewhere it runs them all in one worker.
+runs_in_parallel() {
+  case "$KIND/$PLATFORM" in
+    Hostless/*|"Hosted/macOS"|"UI/tvOS Simulator") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # Runs the tests once, handing out each $1 (scenario or feature), and checks the records. With $2 = serial,
 # parallel testing is off in Xcode (CucumberSwift's setting stays on), and the scenarios must run in the
 # order of the feature files: that is what XCTest's order by class name gives (#388). Under Xcode's parallel
@@ -136,7 +162,22 @@ run_unit() {
   # repeat is reported, the first attempt's log is kept beside the second's (parallel-test-*-attempt-1.log, which
   # the job uploads on a failure), and a failure that comes back fails the job. A failure without all three is
   # never repeated.
-  local attempt failed clones
+  #
+  # The fixture app's first launch on a clone can also stall while Xcode sets up the other clone, and fail with
+  # "Failed to get launch progress" (#500). The fixture launches the app once more itself, so this is the
+  # backstop: a run where that is every failing test's only failure is repeated once too, in the same way.
+  local attempt failed clones stalled
+  # A failing test's whole failure: the launch stall for the fixture app and nothing else.
+  local stall_failure='^Failed: .* -- (Failed to get launch progress for <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*>: Timed out while requesting launch progress|Failed to launch <XCUIApplicationImpl: 0x[0-9a-f]+ org\.cucumberswift\.ParallelFixtureApp(TV)? at [^>]*> via Xcode: Timed out while launching application via Xcode)\.$'
+  # Keeps the first attempt's log, and clears what it left, for a second attempt.
+  repeat_run() {
+    cp "$log" "${log%.log}-attempt-1.log"
+    rm -rf "$records" "$result" "$(dirname "$report")"
+    mkdir -p "$records" "$(dirname "$report")"
+    for name in parallel-test-records parallel-test-report; do
+      runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
+    done
+  }
   for attempt in 1 2; do
     .github/scripts/keep-package-resolved.sh xcodebuild test -project Tests/ParallelFixtures/ParallelFixtures.xcodeproj -scheme "$scheme" -destination "$destination" \
       "${parallel_flags[@]}" -resultBundlePath "$result" \
@@ -152,17 +193,26 @@ run_unit() {
       if [[ "$failed" = yes && "$clones" -lt "$WORKERS" ]]; then
         echo "::warning::A simulator clone's test runner failed to launch: only $clones of $WORKERS clones ran scenarios. Running the $unit tests once more."
         grep -E "Failed to launch app with identifier|NSMachErrorDomain" "$log" | head -3 | cut -c1-300
-        cp "$log" "${log%.log}-attempt-1.log"
-        rm -rf "$records" "$result" "$(dirname "$report")"
-        mkdir -p "$records" "$(dirname "$report")"
-        for name in parallel-test-records parallel-test-report; do
-          runner_folders "$name" | while IFS= read -r folder; do rm -rf "$folder"; done
-        done
+        repeat_run
+        continue
+      fi
+    fi
+    if [[ "$attempt" -eq 1 && "$mode" != serial && -n "${udid:-}" && "$status" -ne 0 ]]; then
+      stalled=$(test_failures "$result" | grep '^Failed:')
+      if [[ -n "$stalled" ]] && ! echo "$stalled" | grep -qvE "$stall_failure"; then
+        echo "::warning::The fixture app's launch stalled in every failing test (Failed to get launch progress, or Timed out while launching application via Xcode). Running the $unit tests once more."
+        echo "$stalled" | head -3 | cut -c1-300
+        repeat_run
         continue
       fi
     fi
     break
   done
+  # The fixture expects a stalled first launch (#500): XCTest logs it as an expected failure, said here so that
+  # a run shows how often it happens.
+  if grep -q "recorded an expected failure" "$log"; then
+    echo "::notice::A first app launch stalled and was expected to fail, in $(grep -c "recorded an expected failure" "$log") tests of the $unit run; the fixture launched the app again."
+  fi
   runner_records | while IFS= read -r folder; do cp "$folder"/* "$records"/ 2>/dev/null || true; done
   # It writes the report there too, and has only one worker, so there is nothing to merge it with.
   [[ -s "$report" ]] || cp "$(runner_folders parallel-test-report | head -1)/report.json" "$report" 2>/dev/null || true
@@ -176,21 +226,17 @@ run_unit() {
   # An aborted xcodebuild (exit 134, say) can leave no result bundle, so there is no summary to read.
   local failures="$temp/parallel-test-failures-$unit$suffix.txt"
   : > "$failures"
-  local summary=""
   if [[ ! -e "$result" ]]; then
     echo "No test results summary: xcodebuild left no result bundle (exit status $status). See $log."
-  elif ! summary=$(xcrun xcresulttool get test-results summary --path "$result" 2>/dev/null) || [[ -z "$summary" ]]; then
+  elif ! test_failures "$result" > "$failures"; then
     echo "No test results summary: xcresulttool could not read the result bundle (xcodebuild exit status $status). See $log."
   else
-    echo "$summary" | python3 -c '
-import json, sys
-for failure in json.load(sys.stdin).get("testFailures", []):
-    print("Failed:", failure.get("testName"), "--", " ".join(failure.get("failureText", "").split())[:2000])
-' > "$failures" || true
     head -30 "$failures"
     # XCUITest itself timing out on a busy Simulator is the environment failing, not a test, and is said so (#375).
-    # Not repeated: another run of the unit could outlast the job.
+    # Not repeated: another run of the unit could outlast the job. A stalled app launch (#500) was repeated
+    # once above, so here it failed twice.
     if [[ -s "$failures" && "${WITHOUT_SETTING:-}" != "YES" ]] && ! grep '^Failed:' "$failures" \
+      | grep -vE "$stall_failure" \
       | grep -qvE 'Timed out while evaluating UI query|kAXErrorIPCTimeout|Failed to get list of active applications'; then
       echo "::error::Environment failure: XCUITest timed out driving the Simulator, in every failing test of this run. Not a CucumberSwift failure." >&2
     fi
@@ -229,13 +275,20 @@ for failure in json.load(sys.stdin).get("testFailures", []):
   control=$(grep -oE "PlainXCTestControl[0-9]+.* (passed|failed) on '[^']*'" "$log" | sed -E "s/^.* on '//; s/'$//" | sort -u | wc -l | tr -d ' ')
   [[ "$control" -gt 0 ]] || control=1
   echo "Plain XCTest classes ran in $control workers"
-  # Xcode may give every scenario to one Simulator clone, such as when another clone's runner is slow to start.
-  # The run still passes, but it then says nothing about the parallel case, so it is said (#375).
-  if [[ "$mode" != serial && -n "${udid:-}" ]]; then
-    local ran_in
+  # Where the docs say the scenarios run in parallel, the run fails unless they ran in every worker, or with the
+  # feature unit in as many workers as there are features (#491). Elsewhere Xcode runs every test in one worker,
+  # plain XCTest classes too, and a run in more than one is said, because the docs would then be out of date.
+  if [[ "$mode" != serial ]]; then
+    local ran_in wanted=$WORKERS
     ran_in=$(scenario_workers "$records")
-    if [[ "$ran_in" -lt "$WORKERS" ]]; then
-      echo "::warning::Only $ran_in of $WORKERS Simulator clones ran scenarios in the $unit run: a pass here does not show the parallel case."
+    [[ "$unit" = feature && "$EXPECTED_FEATURES" -lt "$wanted" ]] && wanted=$EXPECTED_FEATURES
+    if runs_in_parallel; then
+      if [[ "$ran_in" -lt "$wanted" ]]; then
+        echo "::error::Only $ran_in of $wanted workers ran scenarios in the $unit run, where they should all run some: $PLATFORM $KIND tests run in parallel." >&2
+        status=1
+      fi
+    elif [[ "$ran_in" -gt 1 ]]; then
+      echo "::notice::The scenarios ran in $ran_in workers in the $unit run. The docs say $PLATFORM $KIND tests run in one worker."
     fi
   fi
   if [[ "$mode" = serial ]]; then

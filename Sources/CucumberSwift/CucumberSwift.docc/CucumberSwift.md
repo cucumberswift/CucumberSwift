@@ -1,37 +1,50 @@
 # ``CucumberSwift``
 
-a lightweight Cucumber implementation for iOS, tvOS, watchOS and macOS.
+Run Gherkin feature files as tests on iOS, tvOS, watchOS and macOS.
 
 ## Overview
 
-CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, watchOS and macOS. It was born out of frustration with current iOS Cucumber implementations. The whole goal is to make it easy to install and easy to use, so please feel free to give feedback.
+CucumberSwift is a lightweight Cucumber implementation for iOS, tvOS, watchOS and macOS. You describe behaviour in Gherkin feature files, and match their steps with step definitions written in Swift. CucumberSwift aims to be easy to install and easy to use, and your feedback is welcome.
 
 ### Get started
 
-Follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents> to add CucumberSwift to a test target, with Swift Package Manager or Carthage. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) are working projects, tested every night against the latest CucumberSwift release, and the documentation says what each one shows. The [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup the tutorials lead to.
+To add CucumberSwift to a test target, follow the step-by-step tutorials in <doc:Tutorial-Table-of-Contents>, with Swift Package Manager or Carthage. The [sample projects](https://cucumberswift.org/CucumberSwiftSample/documentation/cucumberswiftsample/) are working projects, tested every night against the latest CucumberSwift release. Their documentation says what each one shows. The [GettingStarted](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/GettingStarted) sample is the setup that the tutorials lead to.
 
-CucumberSwift needs Xcode 16.0 or later, the oldest Xcode its CI tests with; CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their articles name it.
+CucumberSwift needs Xcode 16.0 or later, the oldest Xcode that our GitHub Actions CI workflow tests with. Our CI runs on macOS 15 and macOS 26. Your tests can run on iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4 or later. Some features need a newer Xcode, and their articles name it.
 
-### Community & Support
+### Community and support
 
-Questions, usage help, and discussion happen on [Slack](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw) — ask in **#help**. Bugs and feature requests belong in [GitHub issues](https://github.com/cucumberswift/CucumberSwift/issues). Slack only keeps 90 days of history, so anything that settles a bug or a design decision should end up in an issue.
+Ask questions, get help and discuss CucumberSwift on [Slack](https://join.slack.com/t/cucumberswift/shared_invite/zt-4aj6p9txt-P5FpzOt7YVImZ5V4XtKJDw), in **#help**. Report bugs and request features in [GitHub issues](https://github.com/cucumberswift/CucumberSwift/issues). Slack keeps only 90 days of history, so anything that settles a bug or a design decision should end up in an issue.
 
 ## Topics
 
-### Discussions
+### Getting started
+
 - <doc:Tutorial-Table-of-Contents>
 - <doc:Running-Tests-In-Xcode>
 - <doc:Supported-Platforms>
 - <doc:Settings>
+
+### Running tests
+
 - <doc:Running-Tests-With-Swift-Package-Manager>
 - <doc:Running-Tests-With-Bazel>
 - <doc:Running-Feature-Files-With-Swift-Testing>
 - <doc:Running-Scenarios-In-Parallel>
+
+### Writing step definitions
+
 - <doc:Matching-Steps>
-- <doc:Checking-Feature-Files>
 - <doc:Using-Step-Definition-Macros>
 - <doc:Checking-Step-Definitions>
+- <doc:Hooks>
+
+### Checking and reporting
+
+- <doc:Checking-Feature-Files>
 - <doc:Generating-Reports>
 - <doc:Verbose-Output>
-- <doc:Hooks>
+
+### UI testing
+
 - <doc:CucumberSwift+UIUTest>

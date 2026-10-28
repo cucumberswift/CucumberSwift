@@ -59,7 +59,7 @@ Use Slack for questions, help with using CucumberSwift, and discussion. Use [Git
 ### Contributing
 Contributions are welcome. See [CONTRIBUTING.md](/CONTRIBUTING.md) for a short guide to how it works.
 
-Before you open a PR, please link an existing issue, or open one that describes the problem or enhancement. Then we can agree on the direction before you write the code. Typo and docs fixes are exempt, so send the PR directly.
+Please link an existing issue before you open a PR, or open one that describes the problem or enhancement. Then we can agree on the direction before you write the code. Typo and docs fixes are exempt, so send the PR directly.
 
 ## Attributions
 
