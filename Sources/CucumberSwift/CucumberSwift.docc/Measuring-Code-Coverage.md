@@ -75,10 +75,8 @@ Pass several files to `llvm-profdata merge` to see what a feature or a whole run
 
 ## Limits
 
-The Swift Testing runner runs scenarios one at a time while coverage is on, even with parallel testing turned on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. Scenarios that run at the same time add to the same coverage counters, because the counters belong to the whole test process. Coverage and parallel testing are mutually exclusive. The XCTest runner is not affected: each of Xcode's parallel workers is a process of its own.
+The Swift Testing runner runs scenarios one at a time while coverage is on, even with parallel testing turned on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. Scenarios that run at the same time add to the same coverage counters, so coverage and parallel testing are mutually exclusive. The XCTest runner is not affected.
 
-CucumberSwift measures only the binaries built with code coverage. A prebuilt framework, such as a closed-source SDK, isn't measured.
+CucumberSwift measures only the binaries built with code coverage. It does not measure a prebuilt framework, such as a closed-source SDK.
 
-Xcode runs a UI test's code in a test runner process, and the app that the test drives in a separate process. CucumberSwift runs in the test runner process, so its scenario files cover only the code in that process, not the app's. Xcode's coverage report for the whole run includes the app's code only when the app is built with code coverage.
-
-CucumberSwift writes no scenario files while the `LLVM_PROFILE_FILE` environment variable contains `%c`, which turns on the profile runtime's continuous mode. Neither Xcode nor `swift test` adds `%c`. Remove it if you set it yourself.
+CucumberSwift writes files for the code in the test process only. A UI test runs your app in another process, so the files do not include the app's code. To get the app's coverage, build the app with code coverage, set `LLVM_PROFILE_FILE` in its launch environment, and merge its files with `llvm-profdata`.
