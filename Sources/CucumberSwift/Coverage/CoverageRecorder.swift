@@ -54,13 +54,33 @@ final class CoverageRecorder {
     private var scenarios = [ScenarioRecord]()
     private var problem: String?
 
+    var manifest: Manifest {
+        Manifest(
+            run: runID,
+            startDate: startDate,
+            binaries: counters.binaries.map { Binary(path: $0.path, uuid: $0.uuid) },
+            scenarios: scenarios,
+            problem: problem
+        )
+    }
+
+    /// The coverage folder: `path` when given, else `_cucumberCoverage` in the documents folder, which on
+    /// a Simulator is inside the Simulator.
+    static func coverageFolder(path: String?) -> URL? {
+        if let path { return URL(fileURLWithPath: path, isDirectory: true) }
+        return (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))?
+            .appendingPathComponent("_cucumberCoverage", isDirectory: true)
+    }
+
     /// The run's folder, `run-<id>` inside `coverageFolder`, which this creates.
     init(coverageFolder: URL, counters: ProfileCounters = .loaded(), runID: String = UUID().uuidString, startDate: Date = Date()) {
         self.folder = coverageFolder.appendingPathComponent("run-\(runID)")
         self.runID = runID
         self.startDate = startDate
         self.counters = counters
-        if counters.binaries.isEmpty {
+        if let version = counters.unsupportedVersions.first, counters.binaries.isEmpty {
+            problem = "The profile format of this test process is version \(version), and CucumberSwift writes version \(ProfileCounters.supportedVersion), the one of Xcode 26."
+        } else if counters.binaries.isEmpty {
             problem = "No binary in the test process was built with code coverage. Turn on code coverage for the test target."
         }
         do {
@@ -82,19 +102,17 @@ final class CoverageRecorder {
         let fileName = String(format: "S%04d-L%d", scenarios.count + 1, line)
         do {
             let profiles = try counters.writeProfiles(named: fileName, in: folder, since: snapshot)
-            scenarios.append(ScenarioRecord(feature: feature, featureName: featureName, line: line, name: name,
-                                            tags: tags, profiles: profiles))
-        } catch ProfileCounters.WriteError.continuousMode {
-            problem = "LLVM_PROFILE_FILE uses %c (continuous mode), which writes only to its own file. Remove %c to measure each scenario."
+            scenarios.append(ScenarioRecord(
+                feature: feature,
+                featureName: featureName,
+                line: line,
+                name: name,
+                tags: tags,
+                profiles: profiles
+            ))
         } catch {
             problem = "Couldn't write the scenario's coverage: \(error)"
         }
-    }
-
-    var manifest: Manifest {
-        Manifest(run: runID, startDate: startDate,
-                 binaries: counters.binaries.map { Binary(path: $0.path, uuid: $0.uuid) },
-                 scenarios: scenarios, problem: problem)
     }
 
     /// Writes `manifest.json` in the run's folder. Returns its URL, or nil if it couldn't be written.
@@ -106,13 +124,5 @@ final class CoverageRecorder {
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
         return url
-    }
-
-    /// The coverage folder: `path` when given, else `_cucumberCoverage` in the documents folder, which on
-    /// a Simulator is inside the Simulator.
-    static func coverageFolder(path: String?) -> URL? {
-        if let path { return URL(fileURLWithPath: path, isDirectory: true) }
-        return (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))?
-            .appendingPathComponent("_cucumberCoverage", isDirectory: true)
     }
 }

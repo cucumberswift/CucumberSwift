@@ -12,30 +12,24 @@ import XCTest
 @testable import CucumberSwift
 
 final class CoverageRecorderTests: XCTestCase {
-    private var folder: URL!
+    private var folder = FileManager.default.temporaryDirectory
 
     override func setUpWithError() throws {
-        folder = FileManager.default.temporaryDirectory.appendingPathComponent("CoverageRecorderTests-\(UUID().uuidString)")
-        addTeardownBlock { [folder] in try? FileManager.default.removeItem(at: folder!) }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("CoverageRecorderTests-\(UUID().uuidString)")
+        self.folder = folder
+        addTeardownBlock { try? FileManager.default.removeItem(at: folder) }
     }
 
     private func counts(_ values: [UInt64]) -> [UInt8] {
         values.withUnsafeBytes { Array($0) }
     }
 
-    func testTheDifferenceIsWrittenAndTheTotalsComeBack() {
-        var live: [UInt64] = [5, 7, 2]
-        let before = counts([3, 7, 0])
-        live.withUnsafeMutableBytes { ProfileCounters.subtract(before, from: $0) }
-        XCTAssertEqual(live, [2, 0, 2])
-        live.withUnsafeMutableBytes { ProfileCounters.add(before, to: $0) }
-        XCTAssertEqual(live, [5, 7, 2])
+    func testTheDifferenceIsTheCountsThatGrew() {
+        XCTAssertEqual(ProfileCounters.difference(counts([5, 7, 2]), minus: counts([3, 7, 0])), counts([2, 0, 2]))
     }
 
     func testACounterBelowItsSnapshotCountsAsZero() {
-        var live: [UInt64] = [1]
-        live.withUnsafeMutableBytes { ProfileCounters.subtract(counts([4]), from: $0) }
-        XCTAssertEqual(live, [0])
+        XCTAssertEqual(ProfileCounters.difference(counts([1]), minus: counts([4])), counts([0]))
     }
 
     func testWithoutCoverageTheManifestSaysWhyAndListsNoScenarios() throws {
@@ -97,12 +91,18 @@ final class CoverageRecorderTests: XCTestCase {
         }
     }
 
-    func testContinuousModeIsRefusedRatherThanWrittenToTheWrongFile() throws {
+    // Xcode runs tests with the profile runtime's continuous mode, `%c` in LLVM_PROFILE_FILE, and
+    // `swift test` without it. The profile is written to memory in both, then to the scenario's file.
+    func testAProfileIsARawProfileWhateverTheRunsProfileFile() throws {
         let counters = ProfileCounters.loaded()
         try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
-        XCTAssertThrowsError(try counters.writeProfiles(named: "c", in: folder, since: counters.snapshot(),
-                                                        environment: ["LLVM_PROFILE_FILE": "%c%p.profraw"])) {
-            XCTAssertEqual($0 as? ProfileCounters.WriteError, .continuousMode)
-        }
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let files = try counters.writeProfiles(named: "raw", in: folder, since: counters.snapshot())
+        let file = try XCTUnwrap(files.first)
+        let data = try Data(contentsOf: folder.appendingPathComponent(file))
+        // The raw profile's header starts with its magic number, `\xFFlprofr\x81`, and its version.
+        let words = data.prefix(16).withUnsafeBytes { Array($0.bindMemory(to: UInt64.self)).map { UInt64(littleEndian: $0) } }
+        XCTAssertEqual(words[0], 0xFF6C_7072_6F66_7281)
+        XCTAssertEqual(words[1] & 0xFFFF_FFFF, ProfileCounters.supportedVersion)
     }
 }
