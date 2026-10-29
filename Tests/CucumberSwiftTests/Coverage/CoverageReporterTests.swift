@@ -65,4 +65,27 @@ final class CoverageReporterTests: XCTestCase {
         XCTAssertEqual(scenario.tags, ["friendly"])
         XCTAssertFalse(scenario.profiles.isEmpty)
     }
+
+    func testAProblemIsPrintedWhenTheRunEnds() throws {
+        let path = folder.path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, counters: { ProfileCounters(binaries: []) })
+        try run(reporter)
+        let recorder = try XCTUnwrap(reporter.recorder)
+        XCTAssertNotNil(recorder.manifest.problem)
+        XCTAssertEqual(recorder.manifest.scenarios, [])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("manifest.json").path))
+    }
+
+    func testARunWhoseFolderIsGoneEndsWithoutAManifest() throws {
+        let path = folder.path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, counters: { ProfileCounters(binaries: []) })
+        let cucumber = Cucumber(withString: "Feature: F\n  Scenario: S\n    Given a step")
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let scenario = try XCTUnwrap(feature.scenarios.first)
+        reporter.didStart(scenario: scenario, at: Date())
+        let recorder = try XCTUnwrap(reporter.recorder)
+        try FileManager.default.removeItem(at: recorder.folder)
+        reporter.testSuiteFinished(at: Date())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("manifest.json").path))
+    }
 }

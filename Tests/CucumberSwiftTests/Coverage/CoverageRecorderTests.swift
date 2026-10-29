@@ -32,6 +32,50 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(ProfileCounters.difference(counts([1]), minus: counts([4])), counts([0]))
     }
 
+    func testAVersionIsWrittenOnlyWhenItIsTheSupportedOneWhateverItsFlags() {
+        var counters = ProfileCounters(binaries: [])
+        XCTAssertTrue(counters.accept(version: ProfileCounters.supportedVersion))
+        XCTAssertTrue(counters.accept(version: ProfileCounters.supportedVersion | (1 << 56)))
+        XCTAssertFalse(counters.accept(version: 11 | (1 << 56)))
+        XCTAssertEqual(counters.unsupportedVersions, [11])
+    }
+
+    func testAnUnsupportedVersionIsTheManifestsProblem() {
+        let recorder = CoverageRecorder(
+            coverageFolder: folder,
+            counters: ProfileCounters(binaries: [], unsupportedVersions: [11]),
+            runID: "run"
+        )
+        XCTAssertEqual(recorder.manifest.problem, "The profile format of this test process is version 11, and CucumberSwift writes version 10, the one of Xcode 26.")
+    }
+
+    func testAFolderThatCantBeMadeIsTheManifestsProblem() throws {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("file")
+        try Data().write(to: file)
+        let recorder = CoverageRecorder(coverageFolder: file, counters: ProfileCounters(binaries: []), runID: "run")
+        XCTAssertEqual(recorder.manifest.problem?.hasPrefix("Couldn't create"), true)
+    }
+
+    func testAProfileThatCantBeWrittenIsTheManifestsProblem() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, runID: "run")
+        recorder.scenarioStarted()
+        try FileManager.default.removeItem(at: recorder.folder)
+        recorder.scenarioFinished(feature: "file:///a.feature", featureName: "A", line: 1, name: "S", tags: [])
+        XCTAssertEqual(recorder.manifest.problem?.hasPrefix("Couldn't write the scenario's coverage"), true)
+        XCTAssertEqual(recorder.manifest.scenarios, [])
+    }
+
+    func testWritingToAFolderThatDoesNotExistThrows() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        XCTAssertThrowsError(try counters.writeProfiles(named: "x", in: folder.appendingPathComponent("missing"), since: counters.snapshot())) {
+            guard case .writeFailed = $0 as? ProfileCounters.WriteError else { return XCTFail("\($0)") }
+        }
+    }
+
     func testWithoutCoverageTheManifestSaysWhyAndListsNoScenarios() throws {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), runID: "run")
         recorder.scenarioStarted()

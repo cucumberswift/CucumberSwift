@@ -140,11 +140,7 @@ struct ProfileCounters {
                   let names = image.section(segment: "__DATA", name: "__llvm_prf_names"),
                   let versionAddress = image.localSymbol("___llvm_profile_raw_version") else { continue }
             let version = versionAddress.load(as: UInt64.self)
-            // The low bytes hold the version, and the high bits flags for the kind of profile.
-            guard version & 0xFFFF_FFFF == supportedVersion else {
-                counters.unsupportedVersions.append(version & 0xFFFF_FFFF)
-                continue
-            }
+            guard counters.accept(version: version) else { continue }
             counters.binaries.append(Binary(
                 path: path,
                 uuid: image.uuid,
@@ -176,6 +172,17 @@ struct ProfileCounters {
             }
         }
         return result
+    }
+
+    /// Whether CucumberSwift writes a binary's raw profile `version`, as `__llvm_profile_raw_version` holds
+    /// it: the low bytes hold the version, and the high bits flags for the kind of profile. Remembers a
+    /// version that it doesn't write.
+    mutating func accept(version: UInt64) -> Bool {
+        guard version & 0xFFFF_FFFF == Self.supportedVersion else {
+            unsupportedVersions.append(version & 0xFFFF_FFFF)
+            return false
+        }
+        return true
     }
 
     func snapshot() -> Snapshot {

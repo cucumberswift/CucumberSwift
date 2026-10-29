@@ -15,12 +15,14 @@ import Foundation
 final class CoverageReporter: CucumberTestObserver {
     private let isEnabled: () -> Bool
     private let coveragePath: () -> String?
+    private let counters: () -> ProfileCounters
     private(set) var recorder: CoverageRecorder?
     private var hasAsked = false
 
-    init(isEnabled: @escaping () -> Bool, coveragePath: @escaping () -> String?) {
+    init(isEnabled: @escaping () -> Bool, coveragePath: @escaping () -> String?, counters: @escaping () -> ProfileCounters = { .loaded() }) {
         self.isEnabled = isEnabled
         self.coveragePath = coveragePath
+        self.counters = counters
     }
 
     func testSuiteStarted(at: Date) {}
@@ -39,7 +41,7 @@ final class CoverageReporter: CucumberTestObserver {
         if !hasAsked {
             hasAsked = true
             if isEnabled(), let folder = CoverageRecorder.coverageFolder(path: coveragePath()) {
-                recorder = CoverageRecorder(coverageFolder: folder)
+                recorder = CoverageRecorder(coverageFolder: folder, counters: counters())
             }
         }
         recorder?.scenarioStarted()
