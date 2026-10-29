@@ -85,6 +85,19 @@ enum FeatureFlags {
         return trimmed?.isEmpty == false ? trimmed : nil
     }
 
+    /// Whether each scenario's code coverage is written to a file. Off by default.
+    static var isCoverage: Bool {
+        value(Cucumber.coverage, environmentVariable: "CUCUMBER_COVERAGE", default: false)
+    }
+
+    /// Where the coverage files are written: the static variable, then `CUCUMBER_COVERAGE_PATH`. Nil when
+    /// neither is set, or is empty, so they go to their default place.
+    static var coveragePath: String? {
+        let path = Cucumber.coveragePath ?? Cucumber.shared.environment["CUCUMBER_COVERAGE_PATH"]
+        let trimmed = path?.trimmingCharacters(in: .whitespaces)
+        return trimmed?.isEmpty == false ? trimmed : nil
+    }
+
     static let storage = Storage<Bool>()
     static let stringStorage = Storage<String>()
     static let parallelTestingUnitStorage = Locked<ParallelTestingUnit?>(nil)
@@ -194,5 +207,26 @@ extension Cucumber {
     public static var reportPath: String? {
         get { FeatureFlags.stringStorage["reportPath"] }
         set { FeatureFlags.stringStorage["reportPath"] = newValue }
+    }
+
+    /// Whether CucumberSwift writes each scenario's code coverage to a file, with a manifest of the
+    /// scenarios that ran, for a coverage report. Off by default. Set this to `true`, or the environment
+    /// variable `CUCUMBER_COVERAGE` to `YES`, to turn it on, and turn on code coverage for the test target.
+    /// This variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
+    /// `setupSteps()`. See ``coveragePath`` for where the files go.
+    public static var coverage: Bool? {
+        get { FeatureFlags.storage["coverage"] }
+        set { FeatureFlags.storage["coverage"] = newValue }
+    }
+
+    /// The folder where ``coverage`` writes its files, a full path, such as `/Users/me/coverage`. Each run
+    /// writes a folder of its own in it. Without it the files go to `_cucumberCoverage` in the documents
+    /// folder, which on a Simulator is inside the Simulator. Set this, or the environment variable
+    /// `CUCUMBER_COVERAGE_PATH`, to a folder you can collect, such as one under the Mac's home folder, which
+    /// a Simulator reads as `SIMULATOR_HOST_HOME`. This variable, when set, wins over the environment
+    /// variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    public static var coveragePath: String? {
+        get { FeatureFlags.stringStorage["coveragePath"] }
+        set { FeatureFlags.stringStorage["coveragePath"] = newValue }
     }
 }

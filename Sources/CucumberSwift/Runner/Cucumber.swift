@@ -102,7 +102,8 @@ import XCTest
         // Always installed, because the reporters are built before `setupSteps()` can set
         // `Cucumber.verboseOutput`. It asks on every line whether it should print.
         // swiftlint:disable:next trailing_closure
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
+        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
+                                                 CoverageReporter(isEnabled: { FeatureFlags.isCoverage }, coveragePath: { FeatureFlags.coveragePath })]
         observers += (self as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
     }()

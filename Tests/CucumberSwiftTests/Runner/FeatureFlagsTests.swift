@@ -18,7 +18,9 @@ class FeatureFlagsTests: XCTestCase {
         "CUCUMBER_GENERATE_MACROS",
         "CUCUMBER_PARALLEL_TESTING",
         "CUCUMBER_PARALLEL_TESTING_UNIT",
-        "CUCUMBER_REPORT_PATH"
+        "CUCUMBER_REPORT_PATH",
+        "CUCUMBER_COVERAGE",
+        "CUCUMBER_COVERAGE_PATH"
     ]
 
     private static func resetFlags() {
@@ -29,6 +31,8 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.parallelTesting = nil
         Cucumber.parallelTestingUnit = nil
         Cucumber.reportPath = nil
+        Cucumber.coverage = nil
+        Cucumber.coveragePath = nil
         variables.forEach { Cucumber.shared.environment[$0] = nil }
     }
 
@@ -76,6 +80,33 @@ class FeatureFlagsTests: XCTestCase {
     func testEmptyReportPathIsIgnored() {
         Cucumber.shared.environment["CUCUMBER_REPORT_PATH"] = "  "
         XCTAssertNil(FeatureFlags.reportPath)
+    }
+
+    func testCoverageIsOffByDefault() {
+        XCTAssertFalse(FeatureFlags.isCoverage)
+    }
+
+    func testCoverageComesFromTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "yes"
+        XCTAssertTrue(FeatureFlags.isCoverage)
+        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "maybe"
+        XCTAssertFalse(FeatureFlags.isCoverage)
+    }
+
+    func testCoverageStaticVariableWinsOverTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "YES"
+        Cucumber.coverage = false
+        XCTAssertFalse(FeatureFlags.isCoverage)
+    }
+
+    func testCoveragePathComesFromTheStaticVariableThenTheEnvironmentVariable() {
+        XCTAssertNil(FeatureFlags.coveragePath)
+        Cucumber.shared.environment["CUCUMBER_COVERAGE_PATH"] = " /tmp/from-environment "
+        XCTAssertEqual(FeatureFlags.coveragePath, "/tmp/from-environment")
+        Cucumber.coveragePath = "/tmp/from-code"
+        XCTAssertEqual(FeatureFlags.coveragePath, "/tmp/from-code")
+        Cucumber.coveragePath = " "
+        XCTAssertNil(FeatureFlags.coveragePath)
     }
 
     func testParallelTestingIsOffByDefault() {

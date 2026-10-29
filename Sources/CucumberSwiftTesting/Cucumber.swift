@@ -136,7 +136,8 @@ public final class Cucumber {
         // The verbose reporter is always installed, because the reporters are built before `setupSteps()`
         // can set `Cucumber.verboseOutput`: it asks on every line whether it should print.
         // swiftlint:disable:next trailing_closure
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
+        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
+                                                 CoverageReporter(isEnabled: { CucumberSettings.isCoverage() }, coveragePath: { CucumberSettings.coveragePath() })]
         observers += (self as Any as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
     }

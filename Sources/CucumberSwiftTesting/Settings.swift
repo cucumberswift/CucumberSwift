@@ -28,6 +28,20 @@ enum CucumberSettings {
         private var storedIsSuiteSerialized = false
         private var storedGenerateRegexLiterals: Bool?
         private var flags = [String: Bool]()
+        private var storedCoveragePath: String?
+
+        var coveragePath: String? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedCoveragePath
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedCoveragePath = newValue
+            }
+        }
 
         // `lock()` and `unlock()` rather than `withLock`, which needs macOS 13, iOS 16 and tvOS 16.
         var reportPath: String? {
@@ -237,9 +251,38 @@ enum CucumberSettings {
 
     /// Whether scenarios run at the same time, read as CucumberSwift reads a feature flag: the static
     /// variable, then the environment variable `CUCUMBER_PARALLEL_TESTING`, then, the one addition, the
-    /// compilation condition of the same name, which the generated code passes as `compiled`. Off by default.
+    /// compilation condition of the same name, which the generated code passes as `compiled`. Off by default,
+    /// and always off with coverage on, because coverage counters can't tell scenarios that run at the
+    /// same time apart.
     static func runsInParallel(compiled: Bool, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+        guard !isCoverage(environment: environment) else { return false }
+        return staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+    }
+
+    /// ``Cucumber/coverage``.
+    static var staticCoverage: Bool? {
+        get { storage.flag("coverage") }
+        set { storage.setFlag("coverage", newValue) }
+    }
+
+    /// ``Cucumber/coveragePath``.
+    static var staticCoveragePath: String? {
+        get { storage.coveragePath }
+        set { storage.coveragePath = newValue }
+    }
+
+    /// Whether each scenario's code coverage is written to a file: the static variable, then
+    /// `CUCUMBER_COVERAGE`, then no, as CucumberSwift's `FeatureFlags` read it.
+    static func isCoverage(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        staticCoverage ?? FeatureFlagValue.bool(environment["CUCUMBER_COVERAGE"]) ?? false
+    }
+
+    /// Where the coverage files are written: the static variable, then `CUCUMBER_COVERAGE_PATH`. Nil when
+    /// neither is set, or is empty, so they go to their default place.
+    static func coveragePath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        let path = staticCoveragePath ?? environment["CUCUMBER_COVERAGE_PATH"]
+        let trimmed = path?.trimmingCharacters(in: .whitespaces)
+        return trimmed?.isEmpty == false ? trimmed : nil
     }
 }
 
@@ -330,5 +373,27 @@ extension Cucumber {
     nonisolated public static var generateMacros: Bool? {
         get { CucumberSettings.staticGenerateMacros }
         set { CucumberSettings.staticGenerateMacros = newValue }
+    }
+
+    /// Whether the runner writes each scenario's code coverage to a file, with a manifest of the scenarios
+    /// that ran, for a coverage report. Off by default. Set this to `true`, or the environment variable
+    /// `CUCUMBER_COVERAGE` to `YES`, to turn it on, and turn on code coverage for the test target. With
+    /// coverage on, scenarios run one at a time even with ``parallelTesting``, because coverage counters
+    /// can't tell scenarios that run at the same time apart. This variable, when set, wins over the
+    /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`. See ``coveragePath`` for
+    /// where the files go.
+    nonisolated public static var coverage: Bool? {
+        get { CucumberSettings.staticCoverage }
+        set { CucumberSettings.staticCoverage = newValue }
+    }
+
+    /// The folder where ``coverage`` writes its files, a full path, such as `/Users/me/coverage`. Each run
+    /// writes a folder of its own in it. Without it the files go to `_cucumberCoverage` in the documents
+    /// folder. Set this, or the environment variable `CUCUMBER_COVERAGE_PATH`, to write them somewhere
+    /// else. This variable, when set, wins over the environment variable. Set it in your
+    /// `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var coveragePath: String? {
+        get { CucumberSettings.staticCoveragePath }
+        set { CucumberSettings.staticCoveragePath = newValue }
     }
 }
