@@ -94,14 +94,14 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {
-        recorder?.scenarioFinished(feature: scenario.feature?.uri ?? "",
-                                   featureName: scenario.feature?.title ?? "",
-                                   line: Int(scenario.location.line),
-                                   name: scenario.title,
-                                   tags: scenario.tags,
-                                   duration: duration.converted(to: .seconds).value,
-                                   group: Self.group(of: scenario),
-                                   rule: scenario.rule)
+        recorder?.scenarioFinished(CoverageRecorder.FinishedScenario(feature: scenario.feature?.uri ?? "",
+                                                                     featureName: scenario.feature?.title ?? "",
+                                                                     line: Int(scenario.location.line),
+                                                                     name: scenario.title,
+                                                                     tags: scenario.tags,
+                                                                     duration: duration.converted(to: .seconds).value,
+                                                                     group: Self.group(of: scenario),
+                                                                     rule: scenario.rule))
     }
 
     func didFinish(step _: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {

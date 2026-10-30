@@ -59,6 +59,22 @@ final class CoverageRecorder {
         var uuid: String?
     }
 
+    /// A scenario that finished, as the runner describes it.
+    struct FinishedScenario {
+        /// The feature file's URI, as the JSON report gives it.
+        var feature: String
+        var featureName: String
+        var line: Int
+        var name: String
+        var tags: [String]
+        /// How long the scenario took, in seconds.
+        var duration: TimeInterval?
+        /// The scenario's ``CoverageScores/Scenario/group``.
+        var group: String?
+        /// The Rule the scenario is in, which is scored on its own.
+        var rule: ScenarioRule?
+    }
+
     /// A scenario that ran, and its profile files, one for each binary, in the run's folder.
     struct ScenarioRecord: Codable, Equatable {
         /// The feature file's URI, as the JSON report gives it.
@@ -189,36 +205,34 @@ final class CoverageRecorder {
     /// Writes what the scenario covered, and keeps it for its feature's scores. A scenario is named after
     /// its position in the run and its line, such as `S0003-L12`, so that its files sort in the order the
     /// scenarios ran.
-    func scenarioFinished(feature: String,
-                          featureName: String,
-                          line: Int,
-                          name: String,
-                          tags: [String],
-                          duration: TimeInterval? = nil,
-                          group: String? = nil,
-                          rule: ScenarioRule? = nil) {
+    func scenarioFinished(_ finished: FinishedScenario) {
         guard let snapshot, problem == nil else { return }
         self.snapshot = nil
-        let fileName = String(format: "S%04d-L%d", scenarios.count + 1, line)
+        let fileName = String(format: "S%04d-L%d", scenarios.count + 1, finished.line)
         let counts = counters.differences(since: snapshot)
         do {
             let profiles = try counters.writeProfiles(named: fileName, in: folder, counts: counts)
             scenarios.append(ScenarioRecord(
-                feature: feature,
-                featureName: featureName,
-                line: line,
-                name: name,
-                tags: tags,
+                feature: finished.feature,
+                featureName: finished.featureName,
+                line: finished.line,
+                name: finished.name,
+                tags: finished.tags,
                 profiles: profiles,
-                duration: duration
+                duration: finished.duration
             ))
         } catch {
             problem = "Couldn't write the scenario's coverage: \(error)"
             return
         }
         if code != nil {
-            let scenario = CoverageScores.Scenario(name: name, line: line, tags: tags, duration: duration ?? 0, regions: regions(ran: counts), group: group)
-            featureScenarios[feature, default: []].append((rule, scenario))
+            let scenario = CoverageScores.Scenario(name: finished.name,
+                                                   line: finished.line,
+                                                   tags: finished.tags,
+                                                   duration: finished.duration ?? 0,
+                                                   regions: regions(ran: counts),
+                                                   group: finished.group)
+            featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
         }
     }
 

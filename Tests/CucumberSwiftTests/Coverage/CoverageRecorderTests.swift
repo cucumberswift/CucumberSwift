@@ -73,7 +73,7 @@ final class CoverageRecorderTests: XCTestCase {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, runID: "run")
         recorder.scenarioStarted()
         try FileManager.default.removeItem(at: recorder.folder)
-        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 1, name: "S", tags: [])
+        recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: 1, name: "S", tags: []))
         XCTAssertEqual(recorder.manifest.problem?.hasPrefix("Couldn't write the scenario's coverage"), true)
         XCTAssertEqual(recorder.manifest.scenarios, [])
     }
@@ -89,7 +89,7 @@ final class CoverageRecorderTests: XCTestCase {
     func testWithoutCoverageTheManifestSaysWhyAndListsNoScenarios() throws {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), runID: "run")
         recorder.scenarioStarted()
-        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 3, name: "S", tags: [])
+        recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: 3, name: "S", tags: []))
         let url = try XCTUnwrap(recorder.writeManifest())
         XCTAssertEqual(url.path, folder.appendingPathComponent("run-run/manifest.json").path)
         let decoder = JSONDecoder()
@@ -112,7 +112,7 @@ final class CoverageRecorderTests: XCTestCase {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, runID: "run")
         recorder.scenarioStarted()
         _ = ["b", "a"].sorted()
-        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 12, name: "Sorting", tags: ["@fast"])
+        recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: 12, name: "Sorting", tags: ["@fast"]))
         recorder.writeManifest()
 
         let manifest = recorder.manifest
@@ -144,7 +144,7 @@ final class CoverageRecorderTests: XCTestCase {
 
         recorder.scenarioStarted()
         let result = Self.coveredHalf(of: 3)
-        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5)
+        recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5))
         let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1).first?.scores)
         XCTAssertEqual(result, 1)
 
@@ -169,7 +169,7 @@ final class CoverageRecorderTests: XCTestCase {
         for (line, rule) in [(20, Optional(classifying)), (4, nil), (30, ScenarioRule(title: "Adding", line: 8))] {
             recorder.scenarioStarted()
             _ = Self.coveredHalf(of: line)
-            recorder.scenarioFinished(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: [], rule: rule)
+            recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: [], rule: rule))
         }
         let parts = recorder.featureFinished(feature: featureURI, featureName: "A", line: 1)
         XCTAssertEqual(parts.map(\.rule?.title), [nil, "Adding", "Classifying"])
