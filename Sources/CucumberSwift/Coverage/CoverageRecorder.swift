@@ -123,7 +123,7 @@ final class CoverageRecorder {
 
     /// Numbers the regions of the functions the scores measure, from every binary with a coverage map.
     private func measureCode() {
-        #if canImport(Compression) && canImport(CryptoKit)
+        #if canImport(Compression)
         let mapped = counters.binaries.enumerated().filter { $0.element.map != nil }
         guard !mapped.isEmpty else {
             scoresProblem = counters.binaries.compactMap(\.mapProblem).first
@@ -156,7 +156,7 @@ final class CoverageRecorder {
     /// The regions that `counts`, from ``ProfileCounters/differences(since:)``, ran.
     func regions(ran counts: [[UInt8]]) -> Set<Int> {
         var ran = Set<Int>()
-        #if canImport(Compression) && canImport(CryptoKit)
+        #if canImport(Compression)
         for (binary, function, firstRegion) in functions where binary < counts.count {
             counts[binary].withUnsafeBytes { counts in
                 // A function that didn't run has no region that ran.

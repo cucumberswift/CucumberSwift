@@ -103,7 +103,7 @@ struct ProfileCounters {
         fileprivate let bitmap: UnsafeRawBufferPointer
         /// The profile runtime's raw profile version of this binary, as `__llvm_profile_raw_version` holds it.
         fileprivate let version: UInt64
-        #if canImport(Compression) && canImport(CryptoKit)
+        #if canImport(Compression)
         /// The binary's coverage map, which the scores need. Nil when it can't be read, as
         /// ``mapProblem`` says.
         var map: CoverageMap?
@@ -158,7 +158,7 @@ struct ProfileCounters {
                     ?? UnsafeRawBufferPointer(start: nil, count: 0),
                 version: version
             )
-            #if canImport(Compression) && canImport(CryptoKit)
+            #if canImport(Compression)
             if let covmap = image.section(segment: "__LLVM_COV", name: "__llvm_covmap"),
                let covfun = image.section(segment: "__LLVM_COV", name: "__llvm_covfun") {
                 do {

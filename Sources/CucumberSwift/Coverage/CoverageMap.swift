@@ -7,9 +7,8 @@
 //
 
 import Foundation
-#if canImport(Compression) && canImport(CryptoKit)
+#if canImport(Compression)
 import Compression
-import CryptoKit
 
 /// The coverage map that the compiler puts in a binary built with code coverage: each function's code
 /// regions, the source lines they cover, and how to compute each region's count from the binary's counters.
@@ -230,7 +229,7 @@ extension CoverageMap {
         while !reader.isAtEnd {
             guard let blob = try? decodeBlob(&reader) else { break }
             for name in blob.split(separator: 1) {
-                result[md5(Data(name))] = String(bytes: name, encoding: .utf8) ?? ""
+                result[NameHash.of(name)] = String(bytes: name, encoding: .utf8) ?? ""
             }
             // The names that follow, if any, start at the next byte that isn't padding.
             while !reader.isAtEnd, reader.bytes[reader.offset] == 0 { reader.offset += 1 }
@@ -263,7 +262,7 @@ extension CoverageMap {
             }
             // The first name is the compilation folder, which the relative names are relative to.
             let folder = list.first ?? ""
-            result[md5(Data(blob))] = list.map { $0.hasPrefix("/") || folder.isEmpty ? $0 : folder + "/" + $0 }
+            result[NameHash.of(blob)] = list.map { $0.hasPrefix("/") || folder.isEmpty ? $0 : folder + "/" + $0 }
             reader.align8()
         }
         return result
@@ -339,11 +338,6 @@ extension CoverageMap {
             default:
                 throw DecodeError.unsupportedRegion(encoded >> 3)
         }
-    }
-
-    /// The low 64 bits of the MD5 of `bytes`, as LLVM keys its names and lists.
-    private static func md5(_ bytes: Data) -> UInt64 {
-        Insecure.MD5.hash(data: bytes).withUnsafeBytes { UInt64(littleEndian: $0.loadUnaligned(as: UInt64.self)) }
     }
 }
 #endif
