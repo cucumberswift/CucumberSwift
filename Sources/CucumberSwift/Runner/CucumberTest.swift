@@ -25,6 +25,7 @@ open class CucumberTest: XCTestCase {
         featuresLoaded = false
         ParallelTesting.reset()
         ScenarioRuns.reset()
+        CoverageScoreTests.reset()
     }
     #endif
 
@@ -136,13 +137,27 @@ open class CucumberTest: XCTestCase {
             return
         }
 
-        scenarioSuites().forEach { rootSuite.addTest($0) }
+        let runs = scenariosToRun()
+        for (index, suite) in scenarioSuites(runs).enumerated() {
+            rootSuite.addTest(suite)
+            if let scores = scoreTests(after: runs[index].feature, next: runs.dropFirst(index + 1).first?.feature) {
+                rootSuite.addTest(scores)
+            }
+        }
+    }
+
+    /// With coverage on, the feature's score tests, after its last scenario, which is the one before a
+    /// scenario of another feature, `next`, or the last of all.
+    static func scoreTests(after feature: Feature, next: Feature?) -> XCTestSuite? {
+        guard next !== feature else { return nil }
+        let className = generatedTestName(feature.title) + readFeatureScenarioDelimiter() + generatedTestName("Coverage scores")
+        return CoverageScoreTests.suite(for: feature, className: className)
     }
 
     /// A suite for each scenario that will run, holding the tests of the class made for it: one for each step.
-    static func scenarioSuites() -> [XCTestSuite] {
+    static func scenarioSuites(_ runs: [ScenarioToRun] = scenariosToRun()) -> [XCTestSuite] {
         let delimiter = readFeatureScenarioDelimiter()
-        return scenariosToRun().map { run in
+        return runs.map { run in
             let (feature, scenario) = (run.feature, run.scenario)
             let className = run.prefix + generatedTestName(feature.title) + delimiter
             let childSuite = XCTestSuite(name: className + generatedTestName(scenario.title))

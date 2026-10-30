@@ -83,9 +83,14 @@ extension CucumberTest {
 
     static func addScenarioTests(to rootSuite: XCTestSuite) {
         guard let testClass = scenarioTestClass else { return }
-        for (name, scenario) in scenarioTests() {
+        let tests = scenarioTests()
+        for (index, (name, scenario)) in tests.enumerated() {
             guard let selector = addScenarioMethod(named: name, running: scenario) else { continue }
             rootSuite.addTest(testClass.init(selector: selector))
+            if let feature = scenario.feature,
+               let scores = scoreTests(after: feature, next: tests.dropFirst(index + 1).first?.scenario.feature) {
+                rootSuite.addTest(scores)
+            }
         }
     }
 

@@ -16,10 +16,21 @@ struct CoverageIssue: Equatable {
         case error
     }
 
+    /// The score the issue is about.
+    enum Kind: Equatable, CaseIterable {
+        /// A feature's or a Rule's coverage.
+        case coverage
+        /// A feature's or a Rule's redundancy.
+        case redundancy
+        /// A scenario that adds no coverage of its own.
+        case redundantScenario
+    }
+
     let severity: Severity
     let message: String
     let file: URL?
     let line: Int
+    var kind = Kind.coverage
 }
 
 /// A feature's scores as text: the summary that the run prints, and the issues for the scores past their levels.
@@ -100,14 +111,14 @@ struct CoverageReport {
             if !gaps.isEmpty {
                 message += " Not run: " + gaps.joined(separator: "; ") + "."
             }
-            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line))
+            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line, kind: .coverage))
         }
         if let redundancy = scores.redundancy,
            let severity = Self.severity(of: redundancy, warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, isLowerWorse: false) {
             let message = "\(subject) redundancy \(Self.percent(redundancy)): of the code its scenarios ran, outside the code all of them run,"
                 + " \(Self.percent(redundancy)) was run again by another scenario"
                 + " (\(Self.levels(warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, comparison: "at or above")))."
-            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line))
+            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line, kind: .redundancy))
         }
         if settings.redundancyWarningLevel != .off {
             // A Scenario Outline's examples get one warning between them, at the first, with their time.
@@ -116,7 +127,7 @@ struct CoverageReport {
                 let time = scores.scenarios.filter { $0.group == scenario.group }.reduce(0) { $0 + $1.duration }
                 let message = "Scenario adds no coverage of its own: other scenarios ran all of its code."
                     + String(format: " It took %.2fs.", time)
-                issues.append(CoverageIssue(severity: .warning, message: message, file: file, line: scenario.line))
+                issues.append(CoverageIssue(severity: .warning, message: message, file: file, line: scenario.line, kind: .redundantScenario))
             }
         }
         return issues
