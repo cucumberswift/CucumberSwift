@@ -88,4 +88,26 @@ final class CoverageReporterTests: XCTestCase {
         reporter.testSuiteFinished(at: Date())
         XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("manifest.json").path))
     }
+
+    func testAnOutlinesExamplesShareAGroupThatNoOtherScenarioHas() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Classifying
+            Background:
+                Given a calculator
+            Scenario: Zero
+                When I classify 0
+            Scenario Outline: Small numbers
+                When I classify <number>
+                Examples:
+                    | number |
+                    | 1      |
+                    | 2      |
+        """)
+        let scenarios = try XCTUnwrap(cucumber.features.first).scenarios
+        XCTAssertEqual(scenarios.count, 3)
+        let groups = scenarios.map(CoverageReporter.group(of:))
+        XCTAssertEqual(groups[1], groups[2])
+        XCTAssertNotEqual(groups[0], groups[1])
+        XCTAssertNotEqual(scenarios[1].location.line, scenarios[2].location.line)
+    }
 }

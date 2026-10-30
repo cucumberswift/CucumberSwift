@@ -105,7 +105,10 @@ import XCTest
         var observers: [CucumberTestObserver?] = [
             CucumberJSONReporter(),
             VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
-            CoverageReporter(isEnabled: { FeatureFlags.isCoverage }, coveragePath: { FeatureFlags.coveragePath })
+            CoverageReporter(isEnabled: { FeatureFlags.isCoverage },
+                             coveragePath: { FeatureFlags.coveragePath },
+                             settings: { CoverageSettings.read(environment: Cucumber.shared.environment) },
+                             record: { [weak self] in $0.record(in: self?.runningTestCase) })
         ]
         // swiftlint:enable trailing_closure
         observers += (self as? CucumberTestObservable)?.observers ?? []

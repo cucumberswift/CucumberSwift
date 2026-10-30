@@ -139,7 +139,10 @@ public final class Cucumber {
         var observers: [CucumberTestObserver?] = [
             CucumberJSONReporter(),
             VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
-            CoverageReporter(isEnabled: { CucumberSettings.isCoverage() }, coveragePath: { CucumberSettings.coveragePath() })
+            CoverageReporter(isEnabled: { CucumberSettings.isCoverage() },
+                             coveragePath: { CucumberSettings.coveragePath() },
+                             settings: { CoverageSettings.read(environment: ProcessInfo.processInfo.environment) },
+                             record: { $0.record() })
         ]
         // swiftlint:enable trailing_closure
         observers += (self as Any as? CucumberTestObservable)?.observers ?? []

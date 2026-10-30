@@ -38,4 +38,44 @@ import Testing
         #expect(!CucumberSettings.runsInParallel(compiled: true, environment: environment))
         #expect(CucumberSettings.runsInParallel(compiled: true, environment: ["CUCUMBER_PARALLEL_TESTING": "YES"]))
     }
+
+    @Test func theScoresSettingsComeFromTheStaticVariablesThenTheEnvironmentVariables() {
+        defer {
+            Cucumber.coverageWarningLevel = nil
+            Cucumber.coverageErrorLevel = nil
+            Cucumber.redundancy = nil
+            Cucumber.redundancyWarningLevel = nil
+            Cucumber.redundancyErrorLevel = nil
+            Cucumber.coverageSources = nil
+        }
+        let environment = [
+            "CUCUMBER_COVERAGE_WARNING_LEVEL": "70",
+            "CUCUMBER_COVERAGE_ERROR_LEVEL": "NO",
+            "CUCUMBER_REDUNDANCY": "YES",
+            "CUCUMBER_REDUNDANCY_WARNING_LEVEL": "20",
+            "CUCUMBER_REDUNDANCY_ERROR_LEVEL": "60",
+            "CUCUMBER_COVERAGE_SOURCES": "Sources/App,Sources/Model"
+        ]
+        #expect(CoverageSettings.read(environment: [:]) == CoverageSettings())
+        let fromEnvironment = CoverageSettings.read(environment: environment)
+        #expect(fromEnvironment.warningLevel == 70)
+        #expect(fromEnvironment.errorLevel == .off)
+        #expect(fromEnvironment.isRedundancy)
+        #expect(fromEnvironment.redundancyWarningLevel == 20)
+        #expect(fromEnvironment.redundancyErrorLevel == 60)
+        #expect(fromEnvironment.sources == ["Sources/App", "Sources/Model"])
+        Cucumber.coverageWarningLevel = .off
+        Cucumber.coverageErrorLevel = 40
+        Cucumber.redundancy = false
+        Cucumber.redundancyWarningLevel = 10
+        Cucumber.redundancyErrorLevel = .off
+        Cucumber.coverageSources = ["Sources/Core"]
+        let fromCode = CoverageSettings.read(environment: environment)
+        #expect(fromCode.warningLevel == .off)
+        #expect(fromCode.errorLevel == 40)
+        #expect(!fromCode.isRedundancy)
+        #expect(fromCode.redundancyWarningLevel == 10)
+        #expect(fromCode.redundancyErrorLevel == .off)
+        #expect(fromCode.sources == ["Sources/Core"])
+    }
 }

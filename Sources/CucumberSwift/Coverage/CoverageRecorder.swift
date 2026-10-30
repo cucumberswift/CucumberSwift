@@ -24,8 +24,20 @@ final class CoverageRecorder {
         var startDate: Date
         var binaries: [Binary]
         var scenarios: [ScenarioRecord]
+        /// Each feature's scores, in the order the features finished.
+        var features = [FeatureRecord]()
         /// Why no profile was written, when the run couldn't write any.
         var problem: String?
+        /// Why the run has no scores, when it has profiles but couldn't read a coverage map.
+        var scoresProblem: String?
+    }
+
+    /// A feature that finished, and its scores.
+    struct FeatureRecord: Codable, Equatable {
+        var feature: String
+        var featureName: String
+        var line: Int
+        var scores: CoverageScores
     }
 
     /// A binary built with code coverage. A report needs it, with the profiles, to map the counters back to
@@ -44,6 +56,8 @@ final class CoverageRecorder {
         var name: String
         var tags: [String]
         var profiles: [String]
+        /// How long the scenario took, in seconds.
+        var duration: Double?
     }
 
     let folder: URL
@@ -52,7 +66,16 @@ final class CoverageRecorder {
     private let counters: ProfileCounters
     private var snapshot: ProfileCounters.Snapshot?
     private var scenarios = [ScenarioRecord]()
+    private var features = [FeatureRecord]()
     private var problem: String?
+    private let settings: CoverageSettings
+    /// The code the scores measure, and how to work out which of it a scenario ran. Nil when no binary
+    /// has a coverage map, as ``scoresProblem`` says.
+    private(set) var code: MeasuredCode?
+    private var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
+    private(set) var scoresProblem: String?
+    /// The scenarios of each feature that hasn't finished, by its URI, for its scores.
+    private var featureScenarios = [String: [CoverageScores.Scenario]]()
 
     var manifest: Manifest {
         Manifest(
@@ -60,7 +83,9 @@ final class CoverageRecorder {
             startDate: startDate,
             binaries: counters.binaries.map { Binary(path: $0.path, uuid: $0.uuid) },
             scenarios: scenarios,
-            problem: problem
+            features: features,
+            problem: problem,
+            scoresProblem: problem == nil ? scoresProblem : nil
         )
     }
 
@@ -73,11 +98,17 @@ final class CoverageRecorder {
     }
 
     /// The run's folder, `run-<id>` inside `coverageFolder`, which this creates.
-    init(coverageFolder: URL, counters: ProfileCounters = .loaded(), runID: String = UUID().uuidString, startDate: Date = Date()) {
+    init(coverageFolder: URL,
+         counters: ProfileCounters = .loaded(),
+         settings: CoverageSettings = CoverageSettings(),
+         runID: String = UUID().uuidString,
+         startDate: Date = Date()) {
         self.folder = coverageFolder.appendingPathComponent("run-\(runID)")
         self.runID = runID
         self.startDate = startDate
         self.counters = counters
+        self.settings = settings
+        measureCode()
         if let version = counters.unsupportedVersions.first, counters.binaries.isEmpty {
             problem = "The profile format of this test process is version \(version), and CucumberSwift writes version \(ProfileCounters.supportedVersion), the one of Xcode 26."
         } else if counters.binaries.isEmpty {
@@ -90,29 +121,101 @@ final class CoverageRecorder {
         }
     }
 
+    /// Numbers the regions of the functions the scores measure, from every binary with a coverage map.
+    private func measureCode() {
+        #if canImport(Compression) && canImport(CryptoKit)
+        let mapped = counters.binaries.enumerated().filter { $0.element.map != nil }
+        guard !mapped.isEmpty else {
+            scoresProblem = counters.binaries.compactMap(\.mapProblem).first
+            return
+        }
+        // When the test bundle is the only binary, it holds the code under test too, as `swift test`
+        // builds it.
+        let testBundleHoldsAllCode = mapped.allSatisfy { $0.element.path.contains(".xctest/") }
+        var measured = [MeasuredCode.Function]()
+        for (index, binary) in mapped {
+            for function in binary.map?.functions ?? [] where !function.regions.isEmpty {
+                guard MeasuredCode.isMeasured(file: function.file,
+                                              binary: binary.path,
+                                              sources: settings.sources,
+                                              testBundleHoldsAllCode: testBundleHoldsAllCode) else { continue }
+                let first = measured.last?.regions.upperBound ?? 0
+                measured.append(MeasuredCode.Function(name: ReadableName.of(function.name),
+                                                      file: function.file,
+                                                      line: function.line,
+                                                      regions: first..<first + function.regions.count))
+                functions.append((index, function, first))
+            }
+        }
+        code = MeasuredCode(functions: measured)
+        #else
+        scoresProblem = "this platform can't read coverage maps"
+        #endif
+    }
+
+    /// The regions that `counts`, from ``ProfileCounters/differences(since:)``, ran.
+    func regions(ran counts: [[UInt8]]) -> Set<Int> {
+        var ran = Set<Int>()
+        #if canImport(Compression) && canImport(CryptoKit)
+        for (binary, function, firstRegion) in functions where binary < counts.count {
+            counts[binary].withUnsafeBytes { counts in
+                // A function that didn't run has no region that ran.
+                guard let entry = function.regions.first, function.value(entry.counter, counts: counts) > 0 else { return }
+                for (index, region) in function.regions.enumerated() where function.value(region.counter, counts: counts) > 0 {
+                    ran.insert(firstRegion + index)
+                }
+            }
+        }
+        #endif
+        return ran
+    }
+
     func scenarioStarted() {
         snapshot = problem == nil ? counters.snapshot() : nil
     }
 
-    /// Writes what the scenario covered. A scenario is named after its position in the run and its line,
-    /// such as `S0003-L12`, so that its files sort in the order the scenarios ran.
-    func scenarioFinished(feature: String, featureName: String, line: Int, name: String, tags: [String]) {
+    /// Writes what the scenario covered, and keeps it for its feature's scores. A scenario is named after
+    /// its position in the run and its line, such as `S0003-L12`, so that its files sort in the order the
+    /// scenarios ran.
+    func scenarioFinished(feature: String,
+                          featureName: String,
+                          line: Int,
+                          name: String,
+                          tags: [String],
+                          duration: TimeInterval? = nil,
+                          group: String? = nil) {
         guard let snapshot, problem == nil else { return }
         self.snapshot = nil
         let fileName = String(format: "S%04d-L%d", scenarios.count + 1, line)
+        let counts = counters.differences(since: snapshot)
         do {
-            let profiles = try counters.writeProfiles(named: fileName, in: folder, since: snapshot)
+            let profiles = try counters.writeProfiles(named: fileName, in: folder, counts: counts)
             scenarios.append(ScenarioRecord(
                 feature: feature,
                 featureName: featureName,
                 line: line,
                 name: name,
                 tags: tags,
-                profiles: profiles
+                profiles: profiles,
+                duration: duration
             ))
         } catch {
             problem = "Couldn't write the scenario's coverage: \(error)"
+            return
         }
+        if code != nil {
+            let scenario = CoverageScores.Scenario(name: name, line: line, tags: tags, duration: duration ?? 0, regions: regions(ran: counts), group: group)
+            featureScenarios[feature, default: []].append(scenario)
+        }
+    }
+
+    /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran. Nil when the run
+    /// has no scores, or none of the feature's scenarios ran.
+    func featureFinished(feature: String, featureName: String, line: Int) -> CoverageScores? {
+        guard problem == nil, let code, let ran = featureScenarios.removeValue(forKey: feature), !ran.isEmpty else { return nil }
+        let scores = CoverageScores(scenarios: ran, code: code, isRedundancy: settings.isRedundancy)
+        features.append(FeatureRecord(feature: feature, featureName: featureName, line: line, scores: scores))
+        return scores
     }
 
     /// Writes `manifest.json` in the run's folder. Returns its URL, or nil if it couldn't be written.

@@ -103,6 +103,13 @@ struct ProfileCounters {
         fileprivate let bitmap: UnsafeRawBufferPointer
         /// The profile runtime's raw profile version of this binary, as `__llvm_profile_raw_version` holds it.
         fileprivate let version: UInt64
+        #if canImport(Compression) && canImport(CryptoKit)
+        /// The binary's coverage map, which the scores need. Nil when it can't be read, as
+        /// ``mapProblem`` says.
+        var map: CoverageMap?
+        #endif
+        /// Why the binary has no coverage map.
+        var mapProblem: String?
     }
 
     /// Every binary's counters at one moment.
@@ -141,7 +148,7 @@ struct ProfileCounters {
                   let versionAddress = image.localSymbol("___llvm_profile_raw_version") else { continue }
             let version = versionAddress.load(as: UInt64.self)
             guard counters.accept(version: version) else { continue }
-            counters.binaries.append(Binary(
+            var binary = Binary(
                 path: path,
                 uuid: image.uuid,
                 counters: cnts,
@@ -150,7 +157,26 @@ struct ProfileCounters {
                 bitmap: image.section(segment: "__DATA", name: "__llvm_prf_bits", allowsEmpty: true).map { UnsafeRawBufferPointer($0) }
                     ?? UnsafeRawBufferPointer(start: nil, count: 0),
                 version: version
-            ))
+            )
+            #if canImport(Compression) && canImport(CryptoKit)
+            if let covmap = image.section(segment: "__LLVM_COV", name: "__llvm_covmap"),
+               let covfun = image.section(segment: "__LLVM_COV", name: "__llvm_covfun") {
+                do {
+                    binary.map = try CoverageMap(covmap: UnsafeRawBufferPointer(covmap),
+                                                 covfun: UnsafeRawBufferPointer(covfun),
+                                                 data: binary.data,
+                                                 counters: UnsafeRawBufferPointer(cnts),
+                                                 names: binary.names)
+                } catch {
+                    binary.mapProblem = "\(URL(fileURLWithPath: path).lastPathComponent): \(error)"
+                }
+            } else {
+                binary.mapProblem = "\(URL(fileURLWithPath: path).lastPathComponent) has no coverage map"
+            }
+            #else
+            binary.mapProblem = "this platform can't read coverage maps"
+            #endif
+            counters.binaries.append(binary)
         }
         return counters
         #else
@@ -197,10 +223,23 @@ struct ProfileCounters {
     /// project with dead code stripping on. It works in every mode of the runtime, including the
     /// continuous mode (`%c` in `LLVM_PROFILE_FILE`), and leaves the run's own profile as it is.
     func writeProfiles(named name: String, in folder: URL, since snapshot: Snapshot) throws -> [String] {
+        try writeProfiles(named: name, in: folder, counts: differences(since: snapshot))
+    }
+
+    /// What each binary's counters gained since `snapshot`, one array of bytes for each binary, empty for a
+    /// binary whose counters changed size.
+    func differences(since snapshot: Snapshot) -> [[UInt8]] {
+        zip(binaries, snapshot.counts).map { binary, before in
+            binary.counters.count == before.count ? Self.difference([UInt8](binary.counters), minus: before) : []
+        }
+    }
+
+    /// Writes `counts`, from ``differences(since:)``, as ``writeProfiles(named:in:since:)`` does.
+    func writeProfiles(named name: String, in folder: URL, counts: [[UInt8]]) throws -> [String] {
         var files = [String]()
-        for (binary, before) in zip(binaries, snapshot.counts) where binary.counters.count == before.count {
+        for (binary, gained) in zip(binaries, counts) where binary.counters.count == gained.count {
             let file = "\(name)-\(URL(fileURLWithPath: binary.path).lastPathComponent).profraw"
-            let profile = binary.rawProfile(counters: Self.difference([UInt8](binary.counters), minus: before))
+            let profile = binary.rawProfile(counters: gained)
             do {
                 try profile.write(to: folder.appendingPathComponent(file))
             } catch {

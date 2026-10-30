@@ -1,0 +1,99 @@
+//
+//  CoverageReportTests.swift
+//  CucumberSwiftTests
+//
+//  A feature's scores past their levels are warnings and errors on its feature file, with the
+//  functions whose code no scenario ran, and the run prints each feature's scores (#502).
+//
+
+import Foundation
+import XCTest
+@testable import CucumberSwift
+
+final class CoverageReportTests: XCTestCase {
+    private let code = MeasuredCode(functions: [
+        MeasuredCode.Function(name: "Calculator.classify(Int)", file: "/app/Calculator.swift", line: 15, regions: 0..<10)
+    ])
+    private let file = URL(fileURLWithPath: "/app/Features/Arithmetic.feature")
+
+    private func report(_ regions: Set<Int>, settings: CoverageSettings = CoverageSettings()) -> CoverageReport {
+        let scenarios = [
+            CoverageScores.Scenario(name: "Classifying", line: 19, tags: [], duration: 0.5, regions: regions),
+            CoverageScores.Scenario(name: "Again", line: 25, tags: [], duration: 0.25, regions: regions)
+        ]
+        return CoverageReport(scores: CoverageScores(scenarios: scenarios, code: code, isRedundancy: settings.isRedundancy), settings: settings)
+    }
+
+    func testCoverageAtOrBelowTheErrorLevelIsAnErrorNamingWhatDidntRun() throws {
+        let issues = report([0, 1, 2, 3, 4]).issues(file: file, featureLine: 1)
+        let issue = try XCTUnwrap(issues.first)
+        XCTAssertEqual(issues.count, 1)
+        XCTAssertEqual(issue.severity, .error)
+        XCTAssertEqual(issue.line, 1)
+        XCTAssertEqual(issue.file, file)
+        XCTAssertEqual(issue.message, "Feature coverage 50%: its scenarios ran 5 of the 10 regions in the 1 function they entered"
+            + " (error at or below 50%, warning at or below 80%)."
+            + " Not run: Calculator.classify(Int), 5 regions, entered by the scenarios at lines 19, 25.")
+    }
+
+    func testCoverageAtOrBelowTheWarningLevelIsAWarning() {
+        XCTAssertEqual(report(Set(0..<8)).issues(file: file, featureLine: 1).map(\.severity), [.warning])
+    }
+
+    func testCoverageAboveTheWarningLevelHasNoIssue() {
+        XCTAssertEqual(report(Set(0..<9)).issues(file: file, featureLine: 1), [])
+    }
+
+    func testALevelThatIsOffIsNotChecked() {
+        var settings = CoverageSettings()
+        settings.errorLevel = .off
+        settings.warningLevel = .off
+        XCTAssertEqual(report([0], settings: settings).issues(file: file, featureLine: 1), [])
+    }
+
+    func testRedundancyAtOrAboveItsLevelsIsAWarningOrAnErrorAndAScenarioThatAddsNothingIsAWarning() {
+        var settings = CoverageSettings()
+        settings.warningLevel = .off
+        settings.errorLevel = .off
+        settings.isRedundancy = true
+        let issues = report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1)
+        XCTAssertEqual(issues.map(\.severity), [.warning, .warning, .warning])
+        XCTAssertEqual(issues.map(\.line), [1, 19, 25])
+        XCTAssertEqual(issues[1].message, "Scenario adds no coverage of its own: other scenarios ran all of its code. It took 0.50s.")
+        settings.redundancyErrorLevel = 50
+        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1).first?.severity, .error)
+        settings.redundancyWarningLevel = .off
+        settings.redundancyErrorLevel = .off
+        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1), [])
+    }
+
+    func testTheSummaryListsEachScenariosShareAndTime() {
+        let summary = report([0, 1, 2, 3, 4]).summary(featureName: "Arithmetic")
+        XCTAssertEqual(summary, """
+        CucumberSwift coverage: Arithmetic: 50% of the code its scenarios ran (5 of 10 regions in 1 function), 50% of all measured code
+            Share  Own regions      Time  Scenario
+              25%            0     0.50s  Classifying (line 19)
+              25%            0     0.25s  Again (line 25)
+        """)
+    }
+
+    func testALevelIsANumberFrom0To100OrOff() {
+        XCTAssertEqual(CoverageLevel(" 70 "), .percent(70))
+        XCTAssertEqual(CoverageLevel("no"), .off)
+        XCTAssertEqual(CoverageLevel("OFF"), .off)
+        XCTAssertNil(CoverageLevel("101"))
+        XCTAssertNil(CoverageLevel("high"))
+        XCTAssertNil(CoverageLevel(nil))
+        let level: CoverageLevel = 60
+        XCTAssertEqual(level, .percent(60))
+    }
+
+    func testANameIsShortenedToItsTypeFunctionAndParameters() {
+        XCTAssertEqual(ReadableName.shortened("Calculator.Calculator.classify(Swift.Int) -> Swift.String"), "Calculator.classify(Int)")
+        XCTAssertEqual(ReadableName.shortened("Calculator.Calculator.divide(_: Swift.Int, by: Swift.Int) throws -> Swift.Int"),
+                       "Calculator.divide(_: Int, by: Int)")
+        XCTAssertEqual(ReadableName.shortened("App.Model.apply((Swift.Int) -> Swift.Int) -> ()"), "Model.apply((Int) -> Int)")
+        XCTAssertEqual(ReadableName.shortened("closure #1 in App.Model.load()"), "closure #1 in App.Model.load()")
+        XCTAssertEqual(ReadableName.of("main"), "main")
+    }
+}

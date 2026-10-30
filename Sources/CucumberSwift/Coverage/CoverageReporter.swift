@@ -8,31 +8,52 @@
 
 import Foundation
 
-/// Writes each scenario's code coverage when ``Cucumber/coverage`` is on, through ``CoverageRecorder``.
+/// Writes each scenario's code coverage when ``Cucumber/coverage`` is on, through ``CoverageRecorder``, and
+/// reports each feature's scores when it finishes: it prints them, and records a warning or an error on the
+/// feature file for a score past its level.
 ///
 /// The runner always installs it, because it builds its observers before `setupSteps()` can turn coverage
-/// on. It reads whether coverage is on when the first scenario starts.
+/// on. It reads whether coverage is on, and the settings, when the first scenario starts.
 final class CoverageReporter: CucumberTestObserver {
     private let isEnabled: () -> Bool
     private let coveragePath: () -> String?
+    private let settings: () -> CoverageSettings
+    private let record: (CoverageIssue) -> Void
     private let counters: () -> ProfileCounters
+    private let output: (String) -> Void
     private(set) var recorder: CoverageRecorder?
+    private var readSettings = CoverageSettings()
     private var hasAsked = false
 
-    init(isEnabled: @escaping () -> Bool, coveragePath: @escaping () -> String?, counters: @escaping () -> ProfileCounters = { .loaded() }) {
+    /// The lines of the scenario's steps, which the examples of a Scenario Outline share, and no two other
+    /// scenarios do.
+    static func group(of scenario: Scenario) -> String {
+        guard !scenario.steps.isEmpty else { return "line \(scenario.location.line)" }
+        return scenario.steps.map { "\($0.location.line)" }.joined(separator: ",")
+    }
+
+    init(isEnabled: @escaping () -> Bool,
+         coveragePath: @escaping () -> String?,
+         settings: @escaping () -> CoverageSettings = { CoverageSettings() },
+         record: @escaping (CoverageIssue) -> Void = { _ in },
+         counters: @escaping () -> ProfileCounters = { .loaded() },
+         output: @escaping (String) -> Void = { print($0) }) {
         self.isEnabled = isEnabled
         self.coveragePath = coveragePath
+        self.settings = settings
+        self.record = record
         self.counters = counters
+        self.output = output
     }
 
     func testSuiteStarted(at: Date) {}
 
     func testSuiteFinished(at: Date) {
         guard let recorder, let manifest = recorder.writeManifest() else { return }
-        if let problem = recorder.manifest.problem {
-            print("CucumberSwift coverage: \(problem)")
+        if let problem = recorder.manifest.problem ?? recorder.manifest.scoresProblem.map({ "No scores: \($0)." }) {
+            output("CucumberSwift coverage: \(problem)")
         }
-        print("CucumberSwift coverage: \(recorder.manifest.scenarios.count) scenarios in \(manifest.deletingLastPathComponent().path)")
+        output("CucumberSwift coverage: \(recorder.manifest.scenarios.count) scenarios in \(manifest.deletingLastPathComponent().path)")
     }
 
     func didStart(feature: Feature, at date: Date) {}
@@ -41,7 +62,8 @@ final class CoverageReporter: CucumberTestObserver {
         if !hasAsked {
             hasAsked = true
             if isEnabled(), let folder = CoverageRecorder.coverageFolder(path: coveragePath()) {
-                recorder = CoverageRecorder(coverageFolder: folder, counters: counters())
+                readSettings = settings()
+                recorder = CoverageRecorder(coverageFolder: folder, counters: counters(), settings: readSettings)
             }
         }
         recorder?.scenarioStarted()
@@ -49,14 +71,23 @@ final class CoverageReporter: CucumberTestObserver {
 
     func didStart(step: Step, at date: Date) {}
 
-    func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {}
+    func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+        guard let scores = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) else {
+            return
+        }
+        let report = CoverageReport(scores: scores, settings: readSettings)
+        output(report.summary(featureName: feature.title))
+        report.issues(file: feature.coverageIssueFile, featureLine: Int(feature.location.line)).forEach(record)
+    }
 
     func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
         recorder?.scenarioFinished(feature: scenario.feature?.uri ?? "",
                                    featureName: scenario.feature?.title ?? "",
                                    line: Int(scenario.location.line),
                                    name: scenario.title,
-                                   tags: scenario.tags)
+                                   tags: scenario.tags,
+                                   duration: duration.converted(to: .seconds).value,
+                                   group: Self.group(of: scenario))
     }
 
     func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {}

@@ -14,6 +14,14 @@ import XCTest
 final class CoverageRecorderTests: XCTestCase {
     private var folder = FileManager.default.temporaryDirectory
 
+    /// A function with two branches, for a scenario to run one of.
+    private static func coveredHalf(of value: Int) -> Int {
+        if value < 10 {
+            return 1
+        }
+        return 2
+    }
+
     override func setUpWithError() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("CoverageRecorderTests-\(UUID().uuidString)")
         self.folder = folder
@@ -118,6 +126,35 @@ final class CoverageRecorderTests: XCTestCase {
             XCTAssertGreaterThan(size ?? 0, 0, profile)
         }
         XCTAssertEqual(manifest.binaries.map(\.path), counters.binaries.map(\.path))
+    }
+
+    func testTheCoverageMapFindsTheCodeAScenarioRanAndScoresItsFeature() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        XCTAssertEqual(counters.binaries.compactMap(\.mapProblem), [])
+        // Only this file's code counts, so that the scores don't depend on the rest of the bundle.
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        let code = try XCTUnwrap(recorder.code)
+        let measured = code.functions.first { $0.name.contains("coveredHalf") }
+        XCTAssertNotNil(measured, "\(code.functions.map(\.name))")
+
+        recorder.scenarioStarted()
+        let result = Self.coveredHalf(of: 3)
+        recorder.scenarioFinished(feature: "file:///Features/a.feature", featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5)
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: "file:///Features/a.feature", featureName: "A", line: 1))
+        XCTAssertEqual(result, 1)
+
+        // The scenario entered only `coveredHalf(of:)`: this test was running before it started. It took
+        // one of the function's two branches, and the other is the function's only region that didn't run.
+        let gap = try XCTUnwrap(scores.gaps.first { $0.function == measured?.name }, "\(scores.gaps)")
+        XCTAssertEqual(gap.regionsNotRun, 1)
+        XCTAssertEqual(gap.enteredBy, [4])
+        XCTAssertEqual(scores.functionsRun, 1)
+        XCTAssertEqual(scores.coveredRegions, scores.regionsInFunctionsRun - 1)
+        XCTAssertEqual(recorder.manifest.features.map(\.scores), [scores])
+        XCTAssertEqual(recorder.manifest.scenarios.first?.duration, 0.5)
     }
 
     func testWritingAProfileKeepsTheCountersTotals() throws {
