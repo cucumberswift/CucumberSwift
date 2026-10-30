@@ -94,8 +94,8 @@ final class CoverageScoresTests: XCTestCase {
         let packageTests = Self.path("b", "AppPackageTests.xctest", "Contents", "MacOS", "AppPackageTests")
         let model = Self.path("me", "App", "Sources", "App", "Model.swift")
         let checkout = Self.path("DD", "SourcePackages", "checkouts", "Lib", "Lib.swift")
-        func measured(_ file: String, binary: String = app, sources: [String] = [], all: Bool = false) -> Bool {
-            MeasuredCode.isMeasured(file: file, binary: binary, sources: sources, testBundleHoldsAllCode: all)
+        func measured(_ file: String, binary: String? = nil, sources: [String] = [], all: Bool = false) -> Bool {
+            MeasuredCode.isMeasured(file: file, binary: binary ?? app, sources: sources, testBundleHoldsAllCode: all)
         }
         XCTAssertTrue(measured(model))
         XCTAssertFalse(measured(checkout))

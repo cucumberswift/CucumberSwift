@@ -146,16 +146,14 @@ final class CoverageMapTests: XCTestCase {
             data.storeBytes(of: relative, toByteOffset: record + 16, as: Int.self)
         }
         let nameBytes = names ?? Self.blob(Array("$s4Calc3runyyF".utf8) + [1] + Array("main".utf8), compressed: true)
-        return try covmap.withUnsafeBytes { covmap in
-            try covfun.withUnsafeBytes { covfun in
-                try nameBytes.withUnsafeBytes { names in
-                    try CoverageMap(covmap: covmap,
-                                    covfun: covfun,
-                                    data: UnsafeRawBufferPointer(data),
-                                    counters: UnsafeRawBufferPointer(counters),
-                                    names: names)
-                }
-            }
+        // The sections in one buffer, one after another, as a binary holds them.
+        let sections = covmap + covfun + nameBytes
+        return try sections.withUnsafeBytes { sections in
+            try CoverageMap(covmap: UnsafeRawBufferPointer(rebasing: sections[..<covmap.count]),
+                            covfun: UnsafeRawBufferPointer(rebasing: sections[covmap.count..<covmap.count + covfun.count]),
+                            data: UnsafeRawBufferPointer(data),
+                            counters: UnsafeRawBufferPointer(counters),
+                            names: UnsafeRawBufferPointer(rebasing: sections[(covmap.count + covfun.count)...]))
         }
     }
 
