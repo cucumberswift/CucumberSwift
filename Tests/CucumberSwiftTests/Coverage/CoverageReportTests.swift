@@ -30,7 +30,7 @@ final class CoverageReportTests: XCTestCase {
     }
 
     func testCoverageAtOrBelowTheErrorLevelIsAnErrorNamingWhatDidntRun() throws {
-        let issues = report([0, 1, 2, 3, 4]).issues(file: file, featureLine: 1)
+        let issues = report([0, 1, 2, 3, 4]).issues(file: file, line: 1, subject: "Feature")
         let issue = try XCTUnwrap(issues.first)
         XCTAssertEqual(issues.count, 1)
         XCTAssertEqual(issue.severity, .error)
@@ -42,18 +42,18 @@ final class CoverageReportTests: XCTestCase {
     }
 
     func testCoverageAtOrBelowTheWarningLevelIsAWarning() {
-        XCTAssertEqual(report(Set(0..<8)).issues(file: file, featureLine: 1).map(\.severity), [.warning])
+        XCTAssertEqual(report(Set(0..<8)).issues(file: file, line: 1, subject: "Feature").map(\.severity), [.warning])
     }
 
     func testCoverageAboveTheWarningLevelHasNoIssue() {
-        XCTAssertEqual(report(Set(0..<9)).issues(file: file, featureLine: 1), [])
+        XCTAssertEqual(report(Set(0..<9)).issues(file: file, line: 1, subject: "Feature"), [])
     }
 
     func testALevelThatIsOffIsNotChecked() {
         var settings = CoverageSettings()
         settings.errorLevel = .off
         settings.warningLevel = .off
-        XCTAssertEqual(report([0], settings: settings).issues(file: file, featureLine: 1), [])
+        XCTAssertEqual(report([0], settings: settings).issues(file: file, line: 1, subject: "Feature"), [])
     }
 
     func testRedundancyAtOrAboveItsLevelsIsAWarningOrAnErrorAndAScenarioThatAddsNothingIsAWarning() {
@@ -61,19 +61,19 @@ final class CoverageReportTests: XCTestCase {
         settings.warningLevel = .off
         settings.errorLevel = .off
         settings.isRedundancy = true
-        let issues = report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1)
+        let issues = report(Set(0..<10), settings: settings).issues(file: file, line: 1, subject: "Feature")
         XCTAssertEqual(issues.map(\.severity), [.warning, .warning, .warning])
         XCTAssertEqual(issues.map(\.line), [1, 19, 25])
         XCTAssertEqual(issues[1].message, "Scenario adds no coverage of its own: other scenarios ran all of its code. It took 0.50s.")
         settings.redundancyErrorLevel = 50
-        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1).first?.severity, .error)
+        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, line: 1, subject: "Feature").first?.severity, .error)
         settings.redundancyWarningLevel = .off
         settings.redundancyErrorLevel = .off
-        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, featureLine: 1), [])
+        XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, line: 1, subject: "Feature"), [])
     }
 
     func testTheSummaryListsEachScenariosShareAndTime() {
-        let summary = report([0, 1, 2, 3, 4]).summary(featureName: "Arithmetic")
+        let summary = report([0, 1, 2, 3, 4]).summary(name: "Arithmetic")
         XCTAssertEqual(summary, """
         CucumberSwift coverage: Arithmetic: 50% of the code its scenarios ran (5 of 10 regions in 1 function), 50% of all measured code
             Share  Own regions      Time  Scenario
@@ -100,5 +100,11 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertEqual(ReadableName.shortened("App.Model.apply((Swift.Int) -> Swift.Int) -> ()"), "Model.apply((Int) -> Int)")
         XCTAssertEqual(ReadableName.shortened("closure #1 in App.Model.load()"), "closure #1 in App.Model.load()")
         XCTAssertEqual(ReadableName.of("main"), "main")
+    }
+
+    func testARulesIssuesNameTheRuleAndAreAtItsLine() throws {
+        let issue = try XCTUnwrap(report([0, 1, 2, 3, 4]).issues(file: file, line: 12, subject: "Rule").first)
+        XCTAssertEqual(issue.line, 12)
+        XCTAssertTrue(issue.message.hasPrefix("Rule coverage 50%: its scenarios ran 5 of the 10 regions"), issue.message)
     }
 }

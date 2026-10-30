@@ -27,10 +27,16 @@ public class Feature: Taggable, Positionable {
         tags = header.tags
         for content in node.scenarioContents(featureTags: tags, uri: uri) {
             switch content {
-                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes):
-                    scenarios.append(Scenario(with: scenarioNode, tags: inheritedTags, stepNodes: backgroundStepNodes))
-                case let .outline(_, _, examples):
-                    scenarios.append(contentsOf: examples.map { Scenario(example: $0) })
+                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes, rule):
+                    let scenario = Scenario(with: scenarioNode, tags: inheritedTags, stepNodes: backgroundStepNodes)
+                    scenario.rule = rule.map(ScenarioRule.init)
+                    scenarios.append(scenario)
+                case let .outline(_, _, examples, rule):
+                    scenarios.append(contentsOf: examples.map {
+                        let scenario = Scenario(example: $0)
+                        scenario.rule = rule.map(ScenarioRule.init)
+                        return scenario
+                    })
             }
         }
         scenarios.forEach { $0.feature = self }

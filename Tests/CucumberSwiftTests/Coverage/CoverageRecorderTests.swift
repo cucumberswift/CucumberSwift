@@ -145,7 +145,7 @@ final class CoverageRecorderTests: XCTestCase {
         recorder.scenarioStarted()
         let result = Self.coveredHalf(of: 3)
         recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5)
-        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1))
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1).first?.scores)
         XCTAssertEqual(result, 1)
 
         // The scenario entered only `coveredHalf(of:)`: this test was running before it started. It took
@@ -157,6 +157,24 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(scores.coveredRegions, scores.regionsInFunctionsRun - 1)
         XCTAssertEqual(recorder.manifest.features.map(\.scores), [scores])
         XCTAssertEqual(recorder.manifest.scenarios.first?.duration, 0.5)
+    }
+
+    func testEachRuleIsScoredOnItsOwnAfterTheScenariosOutsideARule() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        let classifying = ScenarioRule(title: "Classifying", line: 10)
+        for (line, rule) in [(20, Optional(classifying)), (4, nil), (30, ScenarioRule(title: "Adding", line: 8))] {
+            recorder.scenarioStarted()
+            _ = Self.coveredHalf(of: line)
+            recorder.scenarioFinished(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: [], rule: rule)
+        }
+        let parts = recorder.featureFinished(feature: featureURI, featureName: "A", line: 1)
+        XCTAssertEqual(parts.map(\.rule?.title), [nil, "Adding", "Classifying"])
+        XCTAssertEqual(parts.map { $0.scores.scenarios.map(\.line) }, [[4], [30], [20]])
+        XCTAssertEqual(recorder.manifest.features.map(\.ruleLine), [nil, 8, 10])
     }
 
     func testWritingAProfileKeepsTheCountersTotals() throws {

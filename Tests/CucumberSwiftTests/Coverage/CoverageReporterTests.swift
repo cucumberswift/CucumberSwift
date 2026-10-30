@@ -110,4 +110,25 @@ final class CoverageReporterTests: XCTestCase {
         XCTAssertNotEqual(groups[0], groups[1])
         XCTAssertNotEqual(scenarios[1].location.line, scenarios[2].location.line)
     }
+
+    func testAScenarioInARuleKnowsTheRuleAndOneOutsideDoesNot() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Arithmetic
+            Scenario: Adding
+                Given a calculator
+            Rule: Classifying
+                Scenario: Small numbers
+                    Given a calculator
+                Scenario Outline: More numbers
+                    When I classify <number>
+                    Examples:
+                        | number |
+                        | 1      |
+        """)
+        let scenarios = try XCTUnwrap(cucumber.features.first).scenarios
+        XCTAssertEqual(scenarios.count, 3)
+        XCTAssertNil(scenarios[0].rule)
+        XCTAssertEqual(scenarios[1].rule, ScenarioRule(title: "Classifying", line: 4))
+        XCTAssertEqual(scenarios[2].rule, ScenarioRule(title: "Classifying", line: 4))
+    }
 }

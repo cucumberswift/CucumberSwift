@@ -80,12 +80,17 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
-        guard let scores = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) else {
-            return
+        let parts = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) ?? []
+        for part in parts {
+            let report = CoverageReport(scores: part.scores, settings: readSettings)
+            if let rule = part.rule {
+                output(report.summary(name: "\(feature.title) › \(rule.title)"))
+                report.issues(file: feature.coverageIssueFile, line: rule.line, subject: "Rule").forEach(record)
+            } else {
+                output(report.summary(name: feature.title))
+                report.issues(file: feature.coverageIssueFile, line: Int(feature.location.line), subject: "Feature").forEach(record)
+            }
         }
-        let report = CoverageReport(scores: scores, settings: readSettings)
-        output(report.summary(featureName: feature.title))
-        report.issues(file: feature.coverageIssueFile, featureLine: Int(feature.location.line)).forEach(record)
     }
 
     func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {
@@ -95,7 +100,8 @@ final class CoverageReporter: CucumberTestObserver {
                                    name: scenario.title,
                                    tags: scenario.tags,
                                    duration: duration.converted(to: .seconds).value,
-                                   group: Self.group(of: scenario))
+                                   group: Self.group(of: scenario),
+                                   rule: scenario.rule)
     }
 
     func didFinish(step _: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {

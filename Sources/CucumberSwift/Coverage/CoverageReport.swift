@@ -66,8 +66,8 @@ struct CoverageReport {
         text.count >= width ? text : String(repeating: " ", count: width - text.count) + text
     }
 
-    func summary(featureName: String) -> String {
-        var header = "CucumberSwift coverage: \(featureName): \(Self.percent(scores.coverage)) of the code its scenarios ran"
+    func summary(name: String) -> String {
+        var header = "CucumberSwift coverage: \(name): \(Self.percent(scores.coverage)) of the code its scenarios ran"
             + " (\(scores.coveredRegions) of \(scores.regionsInFunctionsRun) regions in \(Self.count(scores.functionsRun, "function"))),"
             + " \(Self.percent(scores.coverageOfAllCode)) of all measured code"
         if let redundancy = scores.redundancy {
@@ -84,10 +84,12 @@ struct CoverageReport {
         return lines.joined(separator: "\n")
     }
 
-    func issues(file: URL?, featureLine: Int) -> [CoverageIssue] {
+    /// The issues for the scores past their levels: at `line`, the line of the `subject`, "Feature" or
+    /// "Rule", that the scores are for, and at the line of each scenario that adds nothing of its own.
+    func issues(file: URL?, line: Int, subject: String) -> [CoverageIssue] {
         var issues = [CoverageIssue]()
         if let severity = Self.severity(of: scores.coverage, warning: settings.warningLevel, error: settings.errorLevel, isLowerWorse: true) {
-            var message = "Feature coverage \(Self.percent(scores.coverage)): its scenarios ran \(scores.coveredRegions) of the"
+            var message = "\(subject) coverage \(Self.percent(scores.coverage)): its scenarios ran \(scores.coveredRegions) of the"
                 + " \(scores.regionsInFunctionsRun) regions in the \(Self.count(scores.functionsRun, "function")) they entered"
                 + " (\(Self.levels(warning: settings.warningLevel, error: settings.errorLevel, comparison: "at or below")))."
             let gaps = scores.gaps.prefix(Self.gapsShown).map { gap in
@@ -98,14 +100,14 @@ struct CoverageReport {
             if !gaps.isEmpty {
                 message += " Not run: " + gaps.joined(separator: "; ") + "."
             }
-            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: featureLine))
+            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line))
         }
         if let redundancy = scores.redundancy,
            let severity = Self.severity(of: redundancy, warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, isLowerWorse: false) {
-            let message = "Feature redundancy \(Self.percent(redundancy)): of the code its scenarios ran, outside the code all of them run,"
+            let message = "\(subject) redundancy \(Self.percent(redundancy)): of the code its scenarios ran, outside the code all of them run,"
                 + " \(Self.percent(redundancy)) was run again by another scenario"
                 + " (\(Self.levels(warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, comparison: "at or above")))."
-            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: featureLine))
+            issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line))
         }
         if settings.redundancyWarningLevel != .off {
             // A Scenario Outline's examples get one warning between them, at the first, with their time.

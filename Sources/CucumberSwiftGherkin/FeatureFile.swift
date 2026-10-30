@@ -60,6 +60,10 @@ extension FeatureFile {
         public let steps: [Step]
         /// A Scenario Outline's examples, one for each row of its Examples tables. `nil` for a Scenario.
         public let examples: [Example]?
+        /// The title of the Rule the scenario is in, or `nil` when it isn't in one.
+        public let ruleTitle: String?
+        /// The line of the Rule the scenario is in, or `nil` when it isn't in one.
+        public let ruleLine: Int?
     }
 
     /// One row of a Scenario Outline's Examples table, which CucumberSwift runs as a scenario of its own.
@@ -143,7 +147,7 @@ extension FeatureFile.Feature {
         let featureTags = header.tags
         scenarios = node.scenarioContents(featureTags: featureTags, uri: uri).map { content in
             switch content {
-                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes):
+                case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes, rule):
                     let scenarioHeader = NodeHeader(scenarioNode.tokens)
                     let stepNodes = backgroundStepNodes + scenarioNode.children.compactMap { $0 as? AST.StepNode }
                     return FeatureFile.Scenario(
@@ -152,8 +156,9 @@ extension FeatureFile.Feature {
                         tags: inheritedTags + scenarioHeader.tags,
                         position: scenarioNode.tokens.first?.position ?? .start,
                         steps: .init(stepNodes),
-                        examples: nil)
-                case let .outline(outlineNode, inheritedTags, examples):
+                        examples: nil,
+                        rule: rule)
+                case let .outline(outlineNode, inheritedTags, examples, rule):
                     let outlineStepNodes = outlineNode.children.compactMap { $0 as? AST.StepNode }
                     let description = ScenarioOutlineParser.extractOutlineDescription(outlineNode, stepNodes: outlineStepNodes)
                     return FeatureFile.Scenario(
@@ -162,7 +167,8 @@ extension FeatureFile.Feature {
                         tags: ScenarioOutlineParser.tags(of: outlineNode, featureTags: inheritedTags),
                         position: outlineNode.tokens.first?.position ?? .start,
                         steps: [],
-                        examples: examples.map(FeatureFile.Example.init))
+                        examples: examples.map(FeatureFile.Example.init),
+                        rule: rule)
             }
         }
     }
@@ -175,7 +181,8 @@ extension FeatureFile.Scenario {
         tags: [String],
         position: Lexer.Position,
         steps: [FeatureFile.Step],
-        examples: [FeatureFile.Example]?
+        examples: [FeatureFile.Example]?,
+        rule: AST.RuleNode?
     ) {
         self.title = title
         self.description = description
@@ -184,6 +191,8 @@ extension FeatureFile.Scenario {
         column = Int(position.column)
         self.steps = steps
         self.examples = examples
+        ruleTitle = rule.map { NodeHeader($0.tokens).title }
+        ruleLine = rule.map { Int($0.tokens.first?.position.line ?? 0) }
     }
 }
 

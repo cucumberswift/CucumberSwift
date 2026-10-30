@@ -135,6 +135,8 @@ final class FeatureFileTests: XCTestCase {
               Then a step
         """)
         XCTAssertEqual(feature.scenarios.first?.steps.map(\.text), ["the feature's background", "the rule's background", "a step"])
+        XCTAssertEqual(feature.scenarios.first?.ruleTitle, "R")
+        XCTAssertEqual(feature.scenarios.first?.ruleLine, 5)
     }
 
     func testALocalizedFeatureFileIsReadInItsLanguage() throws {

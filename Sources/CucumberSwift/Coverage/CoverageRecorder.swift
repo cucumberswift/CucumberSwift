@@ -32,12 +32,24 @@ final class CoverageRecorder {
         var scoresProblem: String?
     }
 
-    /// A feature that finished, and its scores.
+    /// The scores of a feature that finished: of its scenarios that aren't in a Rule, or of one of its
+    /// Rules, which has scores of its own.
     struct FeatureRecord: Codable, Equatable {
         var feature: String
         var featureName: String
         var line: Int
+        /// The title of the Rule these scores are for, or `nil` for the feature's scenarios outside a Rule.
+        var rule: String?
+        /// The line of the Rule these scores are for.
+        var ruleLine: Int?
         var scores: CoverageScores
+    }
+
+    /// The scores of one part of a feature: the scenarios in `rule`, or, when it is `nil`, the scenarios
+    /// that aren't in a Rule.
+    struct PartScores: Equatable {
+        let rule: ScenarioRule?
+        let scores: CoverageScores
     }
 
     /// A binary built with code coverage. A report needs it, with the profiles, to map the counters back to
@@ -75,7 +87,7 @@ final class CoverageRecorder {
     private var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
     private(set) var scoresProblem: String?
     /// The scenarios of each feature that hasn't finished, by its URI, for its scores.
-    private var featureScenarios = [String: [CoverageScores.Scenario]]()
+    private var featureScenarios = [String: [(rule: ScenarioRule?, scenario: CoverageScores.Scenario)]]()
 
     var manifest: Manifest {
         Manifest(
@@ -183,7 +195,8 @@ final class CoverageRecorder {
                           name: String,
                           tags: [String],
                           duration: TimeInterval? = nil,
-                          group: String? = nil) {
+                          group: String? = nil,
+                          rule: ScenarioRule? = nil) {
         guard let snapshot, problem == nil else { return }
         self.snapshot = nil
         let fileName = String(format: "S%04d-L%d", scenarios.count + 1, line)
@@ -205,17 +218,22 @@ final class CoverageRecorder {
         }
         if code != nil {
             let scenario = CoverageScores.Scenario(name: name, line: line, tags: tags, duration: duration ?? 0, regions: regions(ran: counts), group: group)
-            featureScenarios[feature, default: []].append(scenario)
+            featureScenarios[feature, default: []].append((rule, scenario))
         }
     }
 
-    /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran. Nil when the run
-    /// has no scores, or none of the feature's scenarios ran.
-    func featureFinished(feature: String, featureName: String, line: Int) -> CoverageScores? {
-        guard problem == nil, let code, let ran = featureScenarios.removeValue(forKey: feature), !ran.isEmpty else { return nil }
-        let scores = CoverageScores(scenarios: ran, code: code, isRedundancy: settings.isRedundancy)
-        features.append(FeatureRecord(feature: feature, featureName: featureName, line: line, scores: scores))
-        return scores
+    /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran: one for its
+    /// scenarios outside a Rule, first, then one for each Rule, in the order of their lines. Empty when the
+    /// run has no scores, or none of the feature's scenarios ran.
+    func featureFinished(feature: String, featureName: String, line: Int) -> [PartScores] {
+        guard problem == nil, let code, let ran = featureScenarios.removeValue(forKey: feature) else { return [] }
+        let rules = Set(ran.compactMap(\.rule)).sorted { $0.line < $1.line }
+        let parts: [ScenarioRule?] = (ran.contains { $0.rule == nil } ? [nil] : []) + rules
+        return parts.map { rule in
+            let scores = CoverageScores(scenarios: ran.filter { $0.rule == rule }.map(\.scenario), code: code, isRedundancy: settings.isRedundancy)
+            features.append(FeatureRecord(feature: feature, featureName: featureName, line: line, rule: rule?.title, ruleLine: rule?.line, scores: scores))
+            return PartScores(rule: rule, scores: scores)
+        }
     }
 
     /// Writes `manifest.json` in the run's folder. Returns its URL, or nil if it couldn't be written.

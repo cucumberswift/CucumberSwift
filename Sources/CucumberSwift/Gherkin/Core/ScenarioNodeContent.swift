@@ -7,12 +7,12 @@ import Foundation
 
 /// A scenario of a feature, as CucumberSwift runs it.
 enum ScenarioNodeContent {
-    /// A Scenario, the tags it inherits (the feature's, then its Rule's), and the Background steps that
-    /// run before it: the feature's, then its Rule's.
-    case scenario(AST.ScenarioNode, inheritedTags: [String], backgroundStepNodes: [AST.StepNode])
-    /// A Scenario Outline, the tags it inherits, and its examples. Each example runs as a scenario of its
-    /// own, after the Background's steps, with the inherited tags before its own.
-    case outline(AST.ScenarioOutlineNode, inheritedTags: [String], examples: [OutlineExample])
+    /// A Scenario, the tags it inherits (the feature's, then its Rule's), the Background steps that
+    /// run before it (the feature's, then its Rule's), and its Rule, if it is in one.
+    case scenario(AST.ScenarioNode, inheritedTags: [String], backgroundStepNodes: [AST.StepNode], rule: AST.RuleNode?)
+    /// A Scenario Outline, the tags it inherits, its examples, and its Rule, if it is in one. Each example
+    /// runs as a scenario of its own, after the Background's steps, with the inherited tags before its own.
+    case outline(AST.ScenarioOutlineNode, inheritedTags: [String], examples: [OutlineExample], rule: AST.RuleNode?)
 }
 
 extension AST.FeatureNode {
@@ -25,21 +25,23 @@ extension AST.FeatureNode {
     private static func scenarioContents(of parent: AST.Node,
                                          inheritedTags: [String],
                                          backgroundSteps: [AST.StepNode],
+                                         rule: AST.RuleNode? = nil,
                                          uri: String) -> [ScenarioNodeContent] {
         parent.children.flatMap { node -> [ScenarioNodeContent] in
             if let scenarioNode = node as? AST.ScenarioNode {
-                return [.scenario(scenarioNode, inheritedTags: inheritedTags, backgroundStepNodes: backgroundSteps)]
+                return [.scenario(scenarioNode, inheritedTags: inheritedTags, backgroundStepNodes: backgroundSteps, rule: rule)]
             } else if let outlineNode = node as? AST.ScenarioOutlineNode {
                 let examples = ScenarioOutlineParser.examples(
                     of: outlineNode,
                     featureTags: inheritedTags,
                     backgroundStepNodes: backgroundSteps,
                     uri: uri)
-                return [.outline(outlineNode, inheritedTags: inheritedTags, examples: examples)]
+                return [.outline(outlineNode, inheritedTags: inheritedTags, examples: examples, rule: rule)]
             } else if let ruleNode = node as? AST.RuleNode {
                 return scenarioContents(of: ruleNode,
                                         inheritedTags: inheritedTags + NodeHeader(ruleNode.tokens).tags,
                                         backgroundSteps: backgroundSteps + Self.backgroundSteps(of: ruleNode),
+                                        rule: ruleNode,
                                         uri: uri)
             }
             return []
