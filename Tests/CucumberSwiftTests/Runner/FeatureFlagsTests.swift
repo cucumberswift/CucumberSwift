@@ -100,11 +100,13 @@ class FeatureFlagsTests: XCTestCase {
     }
 
     func testCoveragePathComesFromTheStaticVariableThenTheEnvironmentVariable() {
+        let fromEnvironment = FileManager.default.temporaryDirectory.appendingPathComponent("from-environment").path
+        let fromCode = FileManager.default.temporaryDirectory.appendingPathComponent("from-code").path
         XCTAssertNil(FeatureFlags.coveragePath)
-        Cucumber.shared.environment["CUCUMBER_COVERAGE_PATH"] = " /tmp/from-environment "
-        XCTAssertEqual(FeatureFlags.coveragePath, "/tmp/from-environment")
-        Cucumber.coveragePath = "/tmp/from-code"
-        XCTAssertEqual(FeatureFlags.coveragePath, "/tmp/from-code")
+        Cucumber.shared.environment["CUCUMBER_COVERAGE_PATH"] = " \(fromEnvironment) "
+        XCTAssertEqual(FeatureFlags.coveragePath, fromEnvironment)
+        Cucumber.coveragePath = fromCode
+        XCTAssertEqual(FeatureFlags.coveragePath, fromCode)
         Cucumber.coveragePath = " "
         XCTAssertNil(FeatureFlags.coveragePath)
     }

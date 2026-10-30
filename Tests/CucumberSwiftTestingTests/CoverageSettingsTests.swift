@@ -24,12 +24,14 @@ import Testing
     @Test func theCoveragePathComesFromTheStaticVariableThenTheEnvironmentVariable() {
         defer { Cucumber.coveragePath = nil }
         let key = "CUCUMBER_COVERAGE_PATH"
+        let fromEnvironment = FileManager.default.temporaryDirectory.appendingPathComponent("env").path
+        let fromCode = FileManager.default.temporaryDirectory.appendingPathComponent("code").path
         #expect(CucumberSettings.coveragePath(environment: [:]) == nil)
-        #expect(CucumberSettings.coveragePath(environment: [key: " /tmp/env "]) == "/tmp/env")
-        Cucumber.coveragePath = "/tmp/code"
-        #expect(CucumberSettings.coveragePath(environment: [key: "/tmp/env"]) == "/tmp/code")
+        #expect(CucumberSettings.coveragePath(environment: [key: " \(fromEnvironment) "]) == fromEnvironment)
+        Cucumber.coveragePath = fromCode
+        #expect(CucumberSettings.coveragePath(environment: [key: fromEnvironment]) == fromCode)
         Cucumber.coveragePath = " "
-        #expect(CucumberSettings.coveragePath(environment: [key: "/tmp/env"]) == nil)
+        #expect(CucumberSettings.coveragePath(environment: [key: fromEnvironment]) == nil)
     }
 
     // Through the environment only: other suites set `Cucumber.parallelTesting` while this one runs.

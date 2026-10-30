@@ -49,23 +49,15 @@ enum NameHash {
 
         var state = State(a: 0x6745_2301, b: 0xEFCD_AB89, c: 0x98BA_DCFE, d: 0x1032_5476)
         message.withUnsafeBytes { buffer in
-            shifts.withUnsafeBufferPointer { shifts in
-                constants.withUnsafeBufferPointer { constants in
-                    for chunk in stride(from: 0, to: buffer.count, by: 64) {
-                        state = round(state, chunk: buffer, at: chunk, shifts: shifts, constants: constants)
-                    }
-                }
+            for chunk in stride(from: 0, to: buffer.count, by: 64) {
+                state = round(state, chunk: buffer, at: chunk)
             }
         }
         return [state.a, state.b, state.c, state.d]
     }
 
     /// The state after one 64-byte chunk of the message, the chunk at `offset` in `buffer`.
-    private static func round(_ state: State,
-                              chunk buffer: UnsafeRawBufferPointer,
-                              at offset: Int,
-                              shifts: UnsafeBufferPointer<UInt32>,
-                              constants: UnsafeBufferPointer<UInt32>) -> State {
+    private static func round(_ state: State, chunk buffer: UnsafeRawBufferPointer, at offset: Int) -> State {
         var (a, b, c, d) = (state.a, state.b, state.c, state.d)
         for step in 0..<64 {
             let mixed: UInt32

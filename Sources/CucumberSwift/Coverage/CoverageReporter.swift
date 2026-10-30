@@ -35,7 +35,9 @@ final class CoverageReporter: CucumberTestObserver {
     init(isEnabled: @escaping () -> Bool,
          coveragePath: @escaping () -> String?,
          settings: @escaping () -> CoverageSettings = { CoverageSettings() },
-         record: @escaping (CoverageIssue) -> Void = { _ in },
+         record: @escaping (CoverageIssue) -> Void = { _ in
+             // Without a way to record issues, the scores are only printed.
+         },
          counters: @escaping () -> ProfileCounters = { .loaded() },
          output: @escaping (String) -> Void = { print($0) }) {
         self.isEnabled = isEnabled
@@ -46,9 +48,11 @@ final class CoverageReporter: CucumberTestObserver {
         self.output = output
     }
 
-    func testSuiteStarted(at: Date) {}
+    func testSuiteStarted(at _: Date) {
+        // Coverage starts with the first scenario, once `setupSteps()` has set the settings.
+    }
 
-    func testSuiteFinished(at: Date) {
+    func testSuiteFinished(at _: Date) {
         guard let recorder, let manifest = recorder.writeManifest() else { return }
         if let problem = recorder.manifest.problem ?? recorder.manifest.scoresProblem.map({ "No scores: \($0)." }) {
             output("CucumberSwift coverage: \(problem)")
@@ -56,9 +60,11 @@ final class CoverageReporter: CucumberTestObserver {
         output("CucumberSwift coverage: \(recorder.manifest.scenarios.count) scenarios in \(manifest.deletingLastPathComponent().path)")
     }
 
-    func didStart(feature: Feature, at date: Date) {}
+    func didStart(feature _: Feature, at _: Date) {
+        // A feature's scores come from its scenarios, which each start their own measurement.
+    }
 
-    func didStart(scenario: Scenario, at date: Date) {
+    func didStart(scenario _: Scenario, at _: Date) {
         if !hasAsked {
             hasAsked = true
             if isEnabled(), let folder = CoverageRecorder.coverageFolder(path: coveragePath()) {
@@ -69,9 +75,11 @@ final class CoverageReporter: CucumberTestObserver {
         recorder?.scenarioStarted()
     }
 
-    func didStart(step: Step, at date: Date) {}
+    func didStart(step _: Step, at _: Date) {
+        // Coverage is measured for each scenario, not each step.
+    }
 
-    func didFinish(feature: Feature, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+    func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
         guard let scores = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) else {
             return
         }
@@ -80,7 +88,7 @@ final class CoverageReporter: CucumberTestObserver {
         report.issues(file: feature.coverageIssueFile, featureLine: Int(feature.location.line)).forEach(record)
     }
 
-    func didFinish(scenario: Scenario, result: Reporter.Result, duration: Measurement<UnitDuration>) {
+    func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {
         recorder?.scenarioFinished(feature: scenario.feature?.uri ?? "",
                                    featureName: scenario.feature?.title ?? "",
                                    line: Int(scenario.location.line),
@@ -90,5 +98,7 @@ final class CoverageReporter: CucumberTestObserver {
                                    group: Self.group(of: scenario))
     }
 
-    func didFinish(step: Step, result: Reporter.Result, duration: Measurement<UnitDuration>) {}
+    func didFinish(step _: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
+        // Coverage is measured for each scenario, not each step.
+    }
 }

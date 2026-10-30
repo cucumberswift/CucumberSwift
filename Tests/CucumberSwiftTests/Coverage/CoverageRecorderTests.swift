@@ -13,6 +13,8 @@ import XCTest
 
 final class CoverageRecorderTests: XCTestCase {
     private var folder = FileManager.default.temporaryDirectory
+    /// A feature file's URI, as the runners give it.
+    private let featureURI = FileManager.default.temporaryDirectory.appendingPathComponent("a.feature").absoluteString
 
     /// A function with two branches, for a scenario to run one of.
     private static func coveredHalf(of value: Int) -> Int {
@@ -71,7 +73,7 @@ final class CoverageRecorderTests: XCTestCase {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, runID: "run")
         recorder.scenarioStarted()
         try FileManager.default.removeItem(at: recorder.folder)
-        recorder.scenarioFinished(feature: "file:///a.feature", featureName: "A", line: 1, name: "S", tags: [])
+        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 1, name: "S", tags: [])
         XCTAssertEqual(recorder.manifest.problem?.hasPrefix("Couldn't write the scenario's coverage"), true)
         XCTAssertEqual(recorder.manifest.scenarios, [])
     }
@@ -87,7 +89,7 @@ final class CoverageRecorderTests: XCTestCase {
     func testWithoutCoverageTheManifestSaysWhyAndListsNoScenarios() throws {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), runID: "run")
         recorder.scenarioStarted()
-        recorder.scenarioFinished(feature: "file:///Features/a.feature", featureName: "A", line: 3, name: "S", tags: [])
+        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 3, name: "S", tags: [])
         let url = try XCTUnwrap(recorder.writeManifest())
         XCTAssertEqual(url.path, folder.appendingPathComponent("run-run/manifest.json").path)
         let decoder = JSONDecoder()
@@ -101,7 +103,7 @@ final class CoverageRecorderTests: XCTestCase {
     func testTheDefaultFolderIsInTheDocumentsFolder() throws {
         let documents = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         XCTAssertEqual(CoverageRecorder.coverageFolder(path: nil), documents.appendingPathComponent("_cucumberCoverage", isDirectory: true))
-        XCTAssertEqual(CoverageRecorder.coverageFolder(path: "/tmp/coverage")?.path, "/tmp/coverage")
+        XCTAssertEqual(CoverageRecorder.coverageFolder(path: folder.path)?.path, folder.path)
     }
 
     func testAScenarioWritesAProfileForEachBinaryBuiltWithCoverage() throws {
@@ -110,7 +112,7 @@ final class CoverageRecorderTests: XCTestCase {
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, runID: "run")
         recorder.scenarioStarted()
         _ = ["b", "a"].sorted()
-        recorder.scenarioFinished(feature: "file:///Features/a.feature", featureName: "A", line: 12, name: "Sorting", tags: ["@fast"])
+        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 12, name: "Sorting", tags: ["@fast"])
         recorder.writeManifest()
 
         let manifest = recorder.manifest
@@ -142,8 +144,8 @@ final class CoverageRecorderTests: XCTestCase {
 
         recorder.scenarioStarted()
         let result = Self.coveredHalf(of: 3)
-        recorder.scenarioFinished(feature: "file:///Features/a.feature", featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5)
-        let scores = try XCTUnwrap(recorder.featureFinished(feature: "file:///Features/a.feature", featureName: "A", line: 1))
+        recorder.scenarioFinished(feature: featureURI, featureName: "A", line: 4, name: "Small", tags: [], duration: 0.5)
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1))
         XCTAssertEqual(result, 1)
 
         // The scenario entered only `coveredHalf(of:)`: this test was running before it started. It took

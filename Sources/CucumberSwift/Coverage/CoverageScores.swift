@@ -28,6 +28,13 @@ struct MeasuredCode: Equatable {
         return folder.path + "/"
     }()
 
+    /// The folders whose files are dependencies', wherever they are in a file's path: the packages that
+    /// SwiftPM and Xcode check out, the build folders, and CocoaPods' and Carthage's folders.
+    static let dependencyFolders: Set<String> = ["checkouts", "SourcePackages", ".build", "DerivedData", "Pods", "Carthage"]
+
+    /// The folder of a package's tests, by SwiftPM's convention.
+    static let testsFolder = "Tests"
+
     let functions: [Function]
 
     var regionCount: Int { functions.last?.regions.upperBound ?? 0 }
@@ -42,10 +49,10 @@ struct MeasuredCode: Equatable {
     static func isMeasured(file: String, binary: String, sources: [String], testBundleHoldsAllCode: Bool) -> Bool {
         guard !file.isEmpty else { return false }
         if !sources.isEmpty { return sources.contains { file.contains($0) } }
-        let dependencies = ["/checkouts/", "/SourcePackages/", "/.build/", "/DerivedData/", "/Pods/", "/Carthage/"]
-        guard !dependencies.contains(where: file.contains), !file.hasPrefix(cucumberSwiftFolder) else { return false }
-        if testBundleHoldsAllCode { return !file.contains("/Tests/") }
-        return !binary.contains(".xctest/")
+        let folders = Set(URL(fileURLWithPath: file).pathComponents.dropLast())
+        guard folders.isDisjoint(with: dependencyFolders), !file.hasPrefix(cucumberSwiftFolder) else { return false }
+        if testBundleHoldsAllCode { return !folders.contains(testsFolder) }
+        return !URL(fileURLWithPath: binary).pathComponents.contains { $0.hasSuffix(".xctest") }
     }
 
     /// The function that region `region` belongs to.

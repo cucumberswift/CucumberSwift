@@ -12,9 +12,14 @@ import XCTest
 
 final class CoverageReportTests: XCTestCase {
     private let code = MeasuredCode(functions: [
-        MeasuredCode.Function(name: "Calculator.classify(Int)", file: "/app/Calculator.swift", line: 15, regions: 0..<10)
+        MeasuredCode.Function(name: "Calculator.classify(Int)", file: CoverageReportTests.path("app", "Calculator.swift"), line: 15, regions: 0..<10)
     ])
-    private let file = URL(fileURLWithPath: "/app/Features/Arithmetic.feature")
+    private let file = URL(fileURLWithPath: CoverageReportTests.path("app", "Features", "Arithmetic.feature"))
+
+    /// A path in the temporary folder, from its folders and file name.
+    private static func path(_ parts: String...) -> String {
+        parts.reduce(FileManager.default.temporaryDirectory) { $0.appendingPathComponent($1) }.path
+    }
 
     private func report(_ regions: Set<Int>, settings: CoverageSettings = CoverageSettings()) -> CoverageReport {
         let scenarios = [
