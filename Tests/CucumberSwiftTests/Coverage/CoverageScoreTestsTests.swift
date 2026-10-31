@@ -89,9 +89,10 @@ final class CoverageScoreTestsTests: XCTestCase {
         for case let test as XCTestCase in suite.tests {
             test.invokeTest()
         }
-        // Once, before the first records the feature's issues.
-        XCTAssertEqual(finished.count, 1)
-        XCTAssertTrue(finished.first === feature)
+        // Each finishes the feature before it records, so that any of them run alone does. A feature finishes
+        // only once, which `Cucumber.finish` makes sure of.
+        XCTAssertEqual(finished.count, suite.tests.count)
+        XCTAssertTrue(finished.allSatisfy { $0 === feature })
     }
 
     func testAParallelRunScoresNothingWhateverItHandsOut() {
@@ -102,5 +103,19 @@ final class CoverageScoreTestsTests: XCTestCase {
         XCTAssertNotNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
         Cucumber.parallelTesting = false
         XCTAssertNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
+    }
+
+    func testALaterScoreTestRunOnItsOwnFinishesTheFeatureAndKeepsTheOtherKinds() throws {
+        Cucumber.coverage = true
+        let feature = try feature()
+        var finished = 0
+        let suite = try XCTUnwrap(CoverageScoreTests.suite(for: feature, className: "Adding|CoverageScoresOnly") { _ in finished += 1 })
+        CoverageScoreTests.receive(issue(.coverage), in: nil)
+        CoverageScoreTests.receive(issue(.redundantScenario, line: 2), in: nil)
+        // A test plan that runs only the last score test, Redundant scenarios.
+        let last = try XCTUnwrap(suite.tests.last as? XCTestCase)
+        last.invokeTest()
+        XCTAssertEqual(finished, 1)
+        XCTAssertEqual(CoverageScoreTests.heldKinds(for: URL(string: uri)), [.coverage])
     }
 }

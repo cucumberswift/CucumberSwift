@@ -98,6 +98,14 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertNil(CoverageLevel(nil))
         let level: CoverageLevel = 60
         XCTAssertEqual(level, .percent(60))
+        // The edges: anything else isn't a level, so the default applies.
+        XCTAssertEqual(CoverageLevel("0"), .percent(0))
+        XCTAssertEqual(CoverageLevel("100"), .percent(100))
+        XCTAssertEqual(CoverageLevel("off"), .off)
+        XCTAssertEqual(CoverageLevel("false"), .off)
+        for text in ["101", "-1", "", "   ", "7 0", "abc", "٧٠", "70%"] {
+            XCTAssertNil(CoverageLevel(text), text)
+        }
     }
 
     func testANameIsShortenedToItsTypeFunctionAndParameters() {

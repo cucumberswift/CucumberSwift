@@ -38,7 +38,9 @@ final class CoverageIssuesTests: XCTestCase {
 
     func testWithoutATestTheIssueIsPrinted() {
         // Nothing to record it in, as when a parallel worker finishes its features after its last test.
-        CoverageIssue(severity: .error, message: "Feature coverage 44%", file: file, line: 1).record(in: nil)
+        var printed = [String]()
+        CoverageIssue(severity: .error, message: "Feature coverage 44%", file: file, line: 1).record(in: nil) { printed.append($0) }
+        XCTAssertEqual(printed, ["\(file.path):1: error: Feature coverage 44%"])
     }
 
     func testAFeatureFilesIssuesGoToItsURI() throws {

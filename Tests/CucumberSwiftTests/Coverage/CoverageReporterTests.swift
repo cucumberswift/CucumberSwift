@@ -68,10 +68,15 @@ final class CoverageReporterTests: XCTestCase {
 
     func testAProblemIsPrintedWhenTheRunEnds() throws {
         let path = folder.path
-        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, counters: { ProfileCounters(binaries: []) })
+        var printed = [String]()
+        let reporter = CoverageReporter(isEnabled: { true },
+                                        coveragePath: { path },
+                                        counters: { ProfileCounters(binaries: []) },
+                                        output: { printed.append($0) })
         try run(reporter)
         let recorder = try XCTUnwrap(reporter.recorder)
-        XCTAssertNotNil(recorder.manifest.problem)
+        let problem = try XCTUnwrap(recorder.manifest.problem)
+        XCTAssertEqual(printed, ["CucumberSwift coverage: \(problem)", "CucumberSwift coverage: 0 scenarios in \(recorder.folder.path)"])
         XCTAssertEqual(recorder.manifest.scenarios, [])
         XCTAssertTrue(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("manifest.json").path))
     }

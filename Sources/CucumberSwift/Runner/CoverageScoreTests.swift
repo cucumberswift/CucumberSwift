@@ -49,14 +49,19 @@ enum CoverageScoreTests {
         state.withLock { $0 = State() }
     }
 
+    /// The kinds of the issues held for the score tests of the feature at `file`.
+    static func heldKinds(for file: URL?) -> [CoverageIssue.Kind] {
+        state.snapshot.held[file?.absoluteString ?? ""]?.map(\.kind) ?? []
+    }
+
     /// Whether the score tests of the feature at `file` haven't run yet.
     static func isWaiting(for file: URL?) -> Bool {
         state.snapshot.waiting.contains(file?.absoluteString ?? "")
     }
 
-    /// The feature's score tests, named `className`, or nil with coverage off. The first finishes the
-    /// feature with `finish` first, for a feature whose last scenario a tag left out, and so never
-    /// finished.
+    /// The feature's score tests, named `className`, or nil with coverage off. Each finishes the feature
+    /// with `finish` first, for a feature whose last scenario a tag left out, and so never finished, and
+    /// for a test plan that runs only some of the score tests. A feature finishes only once.
     static func suite(for feature: Feature,
                       className: String,
                       finish: @escaping (Feature) -> Void = { Cucumber.shared.finishIfStarted($0) }) -> XCTestSuite? {
@@ -66,7 +71,7 @@ enum CoverageScoreTests {
         let selectors = kinds.map { kind in
             TestCaseGenerator.addTestMethod(testCase: testClass,
                                             method: TestCaseMethod(withName: CucumberTest.generatedTestName(testName(kind))) {
-                                                if kind == kinds.first { finish(feature) }
+                                                finish(feature)
                                                 record(kind, of: key, isLast: kind == kinds.last)
                                             })
         }
@@ -91,15 +96,15 @@ enum CoverageScoreTests {
         }
     }
 
-    /// Records the feature's issues of `kind` in the running test. The last of the feature's score tests
-    /// lets later issues of the feature go to the test that is running.
+    /// Records the feature's issues of `kind` in the running test, and keeps the other kinds for their
+    /// tests. The last of the feature's score tests lets later issues of the feature go to the test that is
+    /// running.
     private static func record(_ kind: CoverageIssue.Kind, of key: String, isLast: Bool) {
         let issues = state.withLock { state -> [CoverageIssue] in
             let all = state.held[key] ?? []
             state.held[key] = all.filter { $0.kind != kind }
             if isLast {
                 state.waiting.remove(key)
-                state.held[key] = nil
             }
             return all.filter { $0.kind == kind }
         }
