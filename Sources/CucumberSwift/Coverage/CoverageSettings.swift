@@ -93,7 +93,8 @@ struct CoverageSettings: Equatable {
     var warningLevel: CoverageLevel = 80
     /// A feature whose coverage is at or below this gets an error, which fails a test.
     var errorLevel: CoverageLevel = 50
-    var isRedundancy = false
+    /// On by default. It has no effect with coverage off, which scores nothing.
+    var isRedundancy = true
     /// A feature whose redundancy is at or above this gets a warning, and so does each scenario that adds
     /// no coverage of its own.
     var redundancyWarningLevel: CoverageLevel = 30
@@ -110,7 +111,7 @@ struct CoverageSettings: Equatable {
         }
         settings.warningLevel = level("warning", warningLevelVariable, settings.warningLevel)
         settings.errorLevel = level("error", errorLevelVariable, settings.errorLevel)
-        settings.isRedundancy = storage.redundancy ?? FeatureFlagValue.bool(environment[redundancyVariable]) ?? false
+        settings.isRedundancy = storage.redundancy ?? FeatureFlagValue.bool(environment[redundancyVariable]) ?? true
         settings.redundancyWarningLevel = level("redundancyWarning", redundancyWarningLevelVariable, settings.redundancyWarningLevel)
         settings.redundancyErrorLevel = level("redundancyError", redundancyErrorLevelVariable, settings.redundancyErrorLevel)
         settings.sources = (storage.sources ?? environment[sourcesVariable].map { $0.components(separatedBy: ",") } ?? [])

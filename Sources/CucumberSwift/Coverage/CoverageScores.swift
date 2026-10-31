@@ -145,7 +145,35 @@ struct CoverageScores: Codable, Equatable {
     /// The regions the feature's scenarios ran, of all the code coverage measures, from 0 to 100.
     var coverageOfAllCode: Double { percent(coveredRegions, of: measuredRegions) }
 
-    // swiftlint:disable:next function_body_length
+    /// The redundancy of `scenarios`, from 0 to 100, and the groups whose scenarios run no code that
+    /// another group doesn't run too.
+    private static func redundancy(of scenarios: [Scenario]) -> (score: Double, groupsAddingNothing: Set<String>) {
+        // A Scenario Outline's examples are one group, so that rows that run the same code with other data
+        // don't count as redundant.
+        var groups = [String: Set<Int>]()
+        for scenario in scenarios where !scenario.tags.contains(redundantTag) {
+            groups[scenario.group, default: []].formUnion(scenario.regions)
+        }
+        var groupRuns = [Int: Int]()
+        for regions in groups.values {
+            for region in regions { groupRuns[region, default: 0] += 1 }
+        }
+        // With three or more groups, the code every one of them runs, such as their shared setup, doesn't
+        // count. With two, it would hide two scenarios that run the same code.
+        if groups.count >= 3 {
+            groupRuns = groupRuns.filter { $0.value < groups.count }
+        }
+        let runsCounted = groupRuns.values.reduce(0, +)
+        let repeated = groupRuns.values.reduce(0) { $0 + $1 - 1 }
+        let score = runsCounted == 0 ? 0 : 100 * Double(repeated) / Double(runsCounted)
+        guard groups.count >= 2 else { return (score, []) }
+        let addingNothing = groups.filter { _, regions in
+            let counted = regions.filter { groupRuns[$0] != nil }
+            return !counted.isEmpty && counted.allSatisfy { (groupRuns[$0] ?? 0) > 1 }
+        }
+        return (score, Set(addingNothing.keys))
+    }
+
     init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool) {
         var runs = [Int: Int]()
         for scenario in scenarios {
@@ -158,36 +186,15 @@ struct CoverageScores: Codable, Equatable {
         measuredRegions = code.regionCount
         self.functionsRun = functionsRun.count
 
-        // A Scenario Outline's examples are one group, so that rows that run the same code with other data
-        // don't count as redundant.
-        let counted = scenarios.filter { !$0.tags.contains(Self.redundantTag) }
-        var groups = [String: Set<Int>]()
-        for scenario in counted { groups[scenario.group, default: []].formUnion(scenario.regions) }
-        var groupRuns = [Int: Int]()
-        for regions in groups.values {
-            for region in regions { groupRuns[region, default: 0] += 1 }
-        }
-        // With three or more groups, the code every one of them runs, such as their shared setup, doesn't
-        // count. With two, it would hide two scenarios that run the same code.
-        if groups.count >= 3 {
-            groupRuns = groupRuns.filter { $0.value < groups.count }
-        }
-        if isRedundancy {
-            let runsCounted = groupRuns.values.reduce(0, +)
-            let repeated = groupRuns.values.reduce(0) { $0 + $1 - 1 }
-            redundancy = runsCounted == 0 ? 0 : 100 * Double(repeated) / Double(runsCounted)
-        } else {
-            redundancy = nil
-        }
+        // Redundancy is measured only with its score on.
+        let measured = isRedundancy ? Self.redundancy(of: scenarios) : nil
+        redundancy = measured?.score
 
         let total = regionsInFunctionsRun
         self.scenarios = scenarios.map { scenario in
             let own = scenario.regions.filter { runs[$0] == 1 }.count
             let share = scenario.regions.reduce(0.0) { $0 + 1 / Double(runs[$1] ?? 1) }
-            let group = scenario.tags.contains(Self.redundantTag) ? [] : groups[scenario.group] ?? []
-            let groupRegions = group.filter { groupRuns[$0] != nil }
-            let addsNothing = isRedundancy && groups.count >= 2 && !groupRegions.isEmpty
-                && groupRegions.allSatisfy { (groupRuns[$0] ?? 0) > 1 }
+            let addsNothing = !scenario.tags.contains(Self.redundantTag) && measured?.groupsAddingNothing.contains(scenario.group) == true
             return ScenarioScore(name: scenario.name,
                                  line: scenario.line,
                                  duration: scenario.duration,

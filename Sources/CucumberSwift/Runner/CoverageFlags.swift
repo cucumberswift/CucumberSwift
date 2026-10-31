@@ -8,11 +8,11 @@ import Foundation
 
 extension Cucumber {
     /// The coverage at or below which a feature gets a warning, in percent: 80 by default. A feature's
-    /// coverage is the code its scenarios ran, of the code in the functions they entered. Set this to a
-    /// number, or to ``CoverageLevel/off`` for no warning, or the environment variable
-    /// `CUCUMBER_COVERAGE_WARNING_LEVEL` to a number or `NO`. This variable, when set, wins over the
-    /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`. See
-    /// <doc:Measuring-Code-Coverage>.
+    /// coverage is measured by how much of the code under test that its scenarios executed, as a
+    /// percentage of the code in the covered functions. Set this to a number, or to ``CoverageLevel/off``
+    /// for no warning, or the environment variable `CUCUMBER_COVERAGE_WARNING_LEVEL` to a number or `NO`.
+    /// This variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
+    /// `setupSteps()`. See <doc:Measuring-Code-Coverage>.
     public static var coverageWarningLevel: CoverageLevel? {
         get { CoverageSettings.storage.level("warning") }
         set { CoverageSettings.storage.setLevel("warning", newValue) }
@@ -28,8 +28,9 @@ extension Cucumber {
     }
 
     /// Whether each feature also gets a redundancy score, with ``coverage`` on: how much of the code its
-    /// scenarios ran more than one of them ran. Off by default. Set this to `true`, or the environment
-    /// variable `CUCUMBER_REDUNDANCY` to `YES`, to turn it on. This variable, when set, wins over the
+    /// scenarios ran more than one of them ran. On by default, and with coverage off it has no effect. Set
+    /// this to `false`, or the environment variable `CUCUMBER_REDUNDANCY` to `NO`, to score coverage only.
+    /// This variable, when set, wins over the
     /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`. See
     /// <doc:Measuring-Code-Coverage>.
     public static var redundancy: Bool? {

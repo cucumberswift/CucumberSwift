@@ -53,6 +53,12 @@ final class CoverageScoresTests: XCTestCase {
         XCTAssertEqual(scores.scenarios.map(\.addsNothing), [true, true])
     }
 
+    func testWithRedundancyOffNothingAboutItIsMeasured() {
+        let scores = CoverageScores(scenarios: [scenario(4, [0, 1]), scenario(9, [0, 1])], code: code, isRedundancy: false)
+        XCTAssertNil(scores.redundancy)
+        XCTAssertEqual(scores.scenarios.map(\.addsNothing), [false, false])
+    }
+
     func testWithThreeScenariosTheCodeAllOfThemRunDoesNotCount() throws {
         // Region 0 is shared setup that every scenario runs; only regions 4 and 5 are run twice.
         let scores = CoverageScores(scenarios: [scenario(4, [0, 4]), scenario(9, [0, 4, 5]), scenario(14, [0, 5, 8])], code: code, isRedundancy: true)

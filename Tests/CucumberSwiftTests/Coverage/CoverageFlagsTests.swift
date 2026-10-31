@@ -26,7 +26,7 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertEqual(settings, CoverageSettings())
         XCTAssertEqual(settings.warningLevel, 80)
         XCTAssertEqual(settings.errorLevel, 50)
-        XCTAssertFalse(settings.isRedundancy)
+        XCTAssertTrue(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 30)
         XCTAssertEqual(settings.redundancyErrorLevel, .off)
         XCTAssertEqual(settings.sources, [])
@@ -36,14 +36,14 @@ final class CoverageFlagsTests: XCTestCase {
         let settings = CoverageSettings.read(environment: [
             "CUCUMBER_COVERAGE_WARNING_LEVEL": "70",
             "CUCUMBER_COVERAGE_ERROR_LEVEL": "NO",
-            "CUCUMBER_REDUNDANCY": "YES",
+            "CUCUMBER_REDUNDANCY": "NO",
             "CUCUMBER_REDUNDANCY_WARNING_LEVEL": "20",
             "CUCUMBER_REDUNDANCY_ERROR_LEVEL": "60",
             "CUCUMBER_COVERAGE_SOURCES": "Sources/App, Sources/Model ,"
         ])
         XCTAssertEqual(settings.warningLevel, 70)
         XCTAssertEqual(settings.errorLevel, .off)
-        XCTAssertTrue(settings.isRedundancy)
+        XCTAssertFalse(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 20)
         XCTAssertEqual(settings.redundancyErrorLevel, 60)
         XCTAssertEqual(settings.sources, ["Sources/App", "Sources/Model"])

@@ -11,6 +11,13 @@ import XCTest
 @testable import CucumberSwift
 
 final class CoverageReportTests: XCTestCase {
+    /// The default settings without the redundancy score, for the tests of the coverage score.
+    private static let coverageOnly: CoverageSettings = {
+        var settings = CoverageSettings()
+        settings.isRedundancy = false
+        return settings
+    }()
+
     private let code = MeasuredCode(functions: [
         MeasuredCode.Function(name: "Calculator.classify(Int)", file: CoverageReportTests.path("app", "Calculator.swift"), line: 15, regions: 0..<10)
     ])
@@ -21,7 +28,7 @@ final class CoverageReportTests: XCTestCase {
         parts.reduce(FileManager.default.temporaryDirectory) { $0.appendingPathComponent($1) }.path
     }
 
-    private func report(_ regions: Set<Int>, settings: CoverageSettings = CoverageSettings()) -> CoverageReport {
+    private func report(_ regions: Set<Int>, settings: CoverageSettings = CoverageReportTests.coverageOnly) -> CoverageReport {
         let scenarios = [
             CoverageScores.Scenario(name: "Classifying", line: 19, tags: [], duration: 0.5, regions: regions),
             CoverageScores.Scenario(name: "Again", line: 25, tags: [], duration: 0.25, regions: regions)
@@ -50,7 +57,7 @@ final class CoverageReportTests: XCTestCase {
     }
 
     func testALevelThatIsOffIsNotChecked() {
-        var settings = CoverageSettings()
+        var settings = Self.coverageOnly
         settings.errorLevel = .off
         settings.warningLevel = .off
         XCTAssertEqual(report([0], settings: settings).issues(file: file, line: 1, subject: "Feature"), [])
