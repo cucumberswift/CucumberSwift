@@ -135,8 +135,16 @@ public final class Cucumber {
     func makeReporters() -> [CucumberTestObserver] {
         // The verbose reporter is always installed, because the reporters are built before `setupSteps()`
         // can set `Cucumber.verboseOutput`: it asks on every line whether it should print.
-        // swiftlint:disable:next trailing_closure
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
+        // swiftlint:disable trailing_closure
+        var observers: [CucumberTestObserver?] = [
+            CucumberJSONReporter(),
+            VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
+            CoverageReporter(isEnabled: { CucumberSettings.isCoverage() },
+                             coveragePath: { CucumberSettings.coveragePath() },
+                             settings: { CoverageSettings.read(environment: ProcessInfo.processInfo.environment) },
+                             record: { $0.record() })
+        ]
+        // swiftlint:enable trailing_closure
         observers += (self as Any as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
     }
@@ -530,9 +538,11 @@ extension Cucumber {
     /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
     /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
     /// in time, the scenarios run one at a time and this says so once, without failing the run.
-    private func reportParallelTestingSetTooLate(at location: SourceLocation) {
+    /// With coverage on, scenarios run one at a time because of coverage, whenever parallel testing was
+    /// set, so there is nothing to say.
+    func reportParallelTestingSetTooLate(at location: SourceLocation, isCoverage: Bool = CucumberSettings.isCoverage()) {
         guard !hasReportedParallelTestingTooLate, CucumberSettings.staticParallelTesting == true,
-              CucumberSettings.isSuiteSerialized else { return }
+              CucumberSettings.isSuiteSerialized, !isCoverage else { return }
         hasReportedParallelTestingTooLate = true
         let message = """
             Cucumber.parallelTesting was set to true, but scenarios run one at a time: Swift Testing decided that before \

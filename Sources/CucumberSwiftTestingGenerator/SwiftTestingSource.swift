@@ -24,6 +24,9 @@ enum SwiftTestingSource {
         let line: Int
         let column: Int
         let steps: [FeatureFile.Step]
+        /// The title and line of the Rule the scenario is in, which the coverage scores need.
+        var ruleTitle: String?
+        var ruleLine: Int?
     }
 
     /// The constants that the tests run, in the order of the tests.
@@ -158,7 +161,9 @@ enum SwiftTestingSource {
                 tags: scenario.tags,
                 line: scenario.line,
                 column: scenario.column,
-                steps: scenario.steps)
+                steps: scenario.steps,
+                ruleTitle: scenario.ruleTitle,
+                ruleLine: scenario.ruleLine)
             let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
                     @Test(\(displayName).serialized, .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) },
@@ -167,7 +172,13 @@ enum SwiftTestingSource {
             """
         }
         let arguments = examples.map { example in
-            let parts = ScenarioParts(title: example.title, tags: example.tags, line: example.line, column: example.column, steps: example.steps)
+            let parts = ScenarioParts(title: example.title,
+                                      tags: example.tags,
+                                      line: example.line,
+                                      column: example.column,
+                                      steps: example.steps,
+                                      ruleTitle: scenario.ruleTitle,
+                                      ruleLine: scenario.ruleLine)
             return "    CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 8) + ")"
         }
         let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
@@ -191,6 +202,8 @@ enum SwiftTestingSource {
             + pad + "    testBundle: CucumberSwiftTesting.cucumberTestBundle(of: CucumberFeaturesBundle.self),\n"
             + pad + "    line: \(parts.line),\n"
             + pad + "    column: \(parts.column),\n"
+            // Only a scenario in a Rule has these, so the code for one that isn't stays as it was.
+            + (parts.ruleLine.map { pad + "    ruleTitle: \(literal(parts.ruleTitle ?? "")),\n" + pad + "    ruleLine: \($0),\n" } ?? "")
             + pad + "    steps: [\n"
             + stepLines.joined(separator: ",\n") + (stepLines.isEmpty ? "" : "\n")
             + pad + "    ])"

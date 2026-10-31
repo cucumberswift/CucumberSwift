@@ -135,6 +135,8 @@ final class FeatureFileTests: XCTestCase {
               Then a step
         """)
         XCTAssertEqual(feature.scenarios.first?.steps.map(\.text), ["the feature's background", "the rule's background", "a step"])
+        XCTAssertEqual(feature.scenarios.first?.ruleTitle, "R")
+        XCTAssertEqual(feature.scenarios.first?.ruleLine, 5)
     }
 
     func testALocalizedFeatureFileIsReadInItsLanguage() throws {
@@ -315,5 +317,9 @@ extension FeatureFileTests {
         XCTAssertEqual(examples.map(\.tags), [["feature", "rule", "outline", "small"], ["feature", "rule", "outline", "small"]])
         XCTAssertEqual(examples[1].steps.map(\.text), ["the feature's background", "the rule's background", "I eat 2 cucumbers"])
         XCTAssertEqual(feature.scenarios[3].steps.map(\.text), ["the feature's background", "a third step"])
+        // Each scenario names its Rule, at the Rule keyword's line rather than its tag's, for the coverage
+        // scores (#502).
+        XCTAssertEqual(feature.scenarios.map(\.ruleTitle), ["R", "R", "R", "Untagged"])
+        XCTAssertEqual(feature.scenarios.map(\.ruleLine), [7, 7, 7, 28])
     }
 }

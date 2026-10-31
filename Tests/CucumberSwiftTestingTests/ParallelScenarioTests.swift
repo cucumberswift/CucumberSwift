@@ -146,6 +146,19 @@ extension CucumberTests {
         #expect(Cucumber.shared.hasReportedParallelTestingTooLate)
     }
 
+    // Coverage runs the scenarios one at a time on its own, so the setting didn't come too late (#502).
+    @Test func parallelTestingIsNotTooLateWhenCoverageRunsTheScenariosOneAtATime() {
+        defer {
+            Cucumber.parallelTesting = nil
+            CucumberSettings.isSuiteSerialized = false
+        }
+        Cucumber.shared.hasReportedParallelTestingTooLate = false
+        CucumberSettings.isSuiteSerialized = true
+        Cucumber.parallelTesting = true
+        Cucumber.shared.reportParallelTestingSetTooLate(at: #_sourceLocation, isCoverage: true)
+        #expect(!Cucumber.shared.hasReportedParallelTestingTooLate)
+    }
+
     @Test func parallelTestingThatCameTooLateIsSaidForAStepCaseToo() async throws {
         defer {
             Cucumber.parallelTesting = nil

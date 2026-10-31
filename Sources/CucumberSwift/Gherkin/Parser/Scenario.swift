@@ -8,6 +8,7 @@
 
 import Foundation
 import XCTest
+
 public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var title = ""
     public internal(set)  var tags = [String]()
@@ -18,6 +19,8 @@ public class Scenario: NSObject, Taggable, Positionable {
     public private(set)  var endLocation: Lexer.Position
     internal var startDate = Date()
     let internalState = ScenarioState()
+    /// The Rule the scenario is in, if it is in one, which the coverage scores score on its own.
+    var rule: ScenarioRule?
 
     init(with node: AST.ScenarioNode, tags: [String], stepNodes: [AST.StepNode]) {
         location = node.tokens.first?.position ?? .start
@@ -97,5 +100,11 @@ public class Scenario: NSObject, Taggable, Positionable {
             "description": desc,
             "steps": []
         ]
+    }
+}
+
+extension ScenarioRule {
+    init(_ node: AST.RuleNode) {
+        self.init(title: NodeHeader(node.tokens).title, line: node.keywordLine)
     }
 }

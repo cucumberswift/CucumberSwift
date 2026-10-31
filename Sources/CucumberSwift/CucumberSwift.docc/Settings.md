@@ -40,24 +40,49 @@ The environment variables take `YES`, `TRUE` or `1` to turn a behaviour on, and 
 
 The table lists every setting, with the article that describes it:
 
-| Setting | In code | Environment variable | Default | Runs with | Requires |
-|---|---|---|---|---|---|
-| <doc:Running-Tests-In-Xcode#Test-names> | `Cucumber.readableTestNames` | `CUCUMBER_READABLE_TEST_NAMES` | On | XCTest and Swift Testing | None |
-| <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-1-test-per-scenario> | `Cucumber.oneTestPerScenario` | `CUCUMBER_ONE_TEST_PER_SCENARIO` | Off: a test per step | XCTest and Swift Testing | None |
-| <doc:Matching-Steps#Generate-regex-literals-instead> | `Cucumber.generateRegexLiterals` | `CUCUMBER_GENERATE_REGEX_LITERALS` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13, tvOS 16 or watchOS 9 to run the regex literals it generates |
-| <doc:Matching-Steps#Step-definition-macros> | `Cucumber.generateMacros` | `CUCUMBER_GENERATE_MACROS` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | None |
-| <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTesting` | `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | Off | XCTest and Swift Testing | With XCTest, it depends on the platform. See the article. |
-| <doc:Running-Scenarios-In-Parallel#Xcodes-parallel-worker-logic> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> | `Cucumber.parallelTestingUnit` | `CUCUMBER_PARALLEL_TESTING_UNIT` | `.scenario` | XCTest and Swift Testing | Parallel testing on |
-| <doc:Verbose-Output> | `Cucumber.verboseOutput`, `StepImplementation.verbose` | `CUCUMBER_VERBOSE` | Off | XCTest and Swift Testing | None |
-| <doc:Generating-Reports#Choose-where-the-report-is-written> | `Cucumber.reportPath` | `CUCUMBER_REPORT_PATH` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None |
-| <doc:Settings#Choose-scenarios-in-code> | `StepImplementation.shouldRunWith(scenario:tags:)` | None | All scenarios | XCTest and Swift Testing | None |
-| <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> | None | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | None |
-| <doc:Settings#Continue-after-a-failed-assertion> | `StepImplementation.continueTestingAfterFailure` | None | On | XCTest and Swift Testing | None |
-| <doc:Hooks> | `StepImplementation.reverseOrderForAfterHooks` | None | Off | XCTest and Swift Testing | None |
-| <doc:Matching-Steps#Async-steps> | `StepImplementation.asyncStepTimeout` | None | 60 seconds | XCTest and Swift Testing | None |
-| <doc:Matching-Steps#Generate-regex-literals-instead> | `StepImplementation.regexLiteralStyle` | None | `#/…/#` | XCTest and Swift Testing | None |
-| <doc:Settings#Where-the-feature-files-are> | Info.plist `FeaturesPath` | None | `Features` | XCTest and Swift Testing, in an Xcode test target | None |
-| <doc:Settings#Test-name-delimiter> | Info.plist `FeatureScenarioDelimiter` | None | ` › `, or `\|` with readable test names off | XCTest, in an Xcode test target | None |
+| Setting flag / env var | Default | Runs with | Requires | Reference |
+|---|---|---|---|---|
+| `Cucumber.readableTestNames` | On | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Test-names> |
+| `CUCUMBER_READABLE_TEST_NAMES` | ^ | ^ | ^ | ^ |
+| `Cucumber.oneTestPerScenario` | Off: a test per step | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Choose-a-test-per-step-or-1-test-per-scenario> |
+| `CUCUMBER_ONE_TEST_PER_SCENARIO` | ^ | ^ | ^ | ^ |
+| `Cucumber.generateRegexLiterals` | Off: Cucumber expressions | XCTest and Swift Testing | iOS 16, macOS 13, tvOS 16 or watchOS 9 to run the regex literals it generates | <doc:Matching-Steps#Generate-regex-literals-instead> |
+| `CUCUMBER_GENERATE_REGEX_LITERALS` | ^ | ^ | ^ | ^ |
+| `Cucumber.generateMacros` | Macros when the test target links the step definition macros, functions otherwise | XCTest and Swift Testing | None | <doc:Matching-Steps#Step-definition-macros> |
+| `CUCUMBER_GENERATE_MACROS` | ^ | ^ | ^ | ^ |
+| `Cucumber.parallelTesting` | Off | XCTest and Swift Testing | With XCTest, it depends on the platform. See the article. | <doc:Running-Scenarios-In-Parallel> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> |
+| `CUCUMBER_PARALLEL_TESTING`, or a compilation condition of that name with Swift Testing | ^ | ^ | ^ | ^ |
+| `Cucumber.parallelTestingUnit` | `.scenario` | XCTest and Swift Testing | Parallel testing on | <doc:Running-Scenarios-In-Parallel#Xcodes-parallel-worker-logic> (experimental), and <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> |
+| `CUCUMBER_PARALLEL_TESTING_UNIT` | ^ | ^ | ^ | ^ |
+| `Cucumber.verboseOutput` | Off | XCTest and Swift Testing | None | <doc:Verbose-Output> |
+| `StepImplementation.verbose` | ^ | ^ | ^ | ^ |
+| `CUCUMBER_VERBOSE` | ^ | ^ | ^ | ^ |
+| `Cucumber.reportPath` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None | <doc:Generating-Reports#Choose-where-the-report-is-written> |
+| `CUCUMBER_REPORT_PATH` | ^ | ^ | ^ | ^ |
+| `Cucumber.coverage` | Off | XCTest and Swift Testing | Code coverage on for the test target. With Swift Testing, scenarios run one at a time. | <doc:Measuring-Code-Coverage> |
+| `CUCUMBER_COVERAGE` | ^ | ^ | ^ | ^ |
+| `Cucumber.coveragePath` | `_cucumberCoverage` in the documents folder | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-where-the-files-go> |
+| `CUCUMBER_COVERAGE_PATH` | ^ | ^ | ^ | ^ |
+| `Cucumber.coverageWarningLevel` | 80 | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Set-the-levels> |
+| `CUCUMBER_COVERAGE_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
+| `Cucumber.coverageErrorLevel` | 50 | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Set-the-levels> |
+| `CUCUMBER_COVERAGE_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
+| `Cucumber.coverageSources` | Your code, without your dependencies and tests | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-the-code-to-measure> |
+| `CUCUMBER_COVERAGE_SOURCES` | ^ | ^ | ^ | ^ |
+| `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `CUCUMBER_REDUNDANCY` | ^ | ^ | ^ | ^ |
+| `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `CUCUMBER_REDUNDANCY_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
+| `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `CUCUMBER_REDUNDANCY_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
+| `StepImplementation.shouldRunWith(scenario:tags:)` | All scenarios | XCTest and Swift Testing | None | <doc:Settings#Choose-scenarios-in-code> |
+| `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> |
+| `StepImplementation.continueTestingAfterFailure` | On | XCTest and Swift Testing | None | <doc:Settings#Continue-after-a-failed-assertion> |
+| `StepImplementation.reverseOrderForAfterHooks` | Off | XCTest and Swift Testing | None | <doc:Hooks> |
+| `StepImplementation.asyncStepTimeout` | 60 seconds | XCTest and Swift Testing | None | <doc:Matching-Steps#Async-steps> |
+| `StepImplementation.regexLiteralStyle` | `#/…/#` | XCTest and Swift Testing | None | <doc:Matching-Steps#Generate-regex-literals-instead> |
+| Info.plist `FeaturesPath` | `Features` | XCTest and Swift Testing, in an Xcode test target | None | <doc:Settings#Where-the-feature-files-are> |
+| Info.plist `FeatureScenarioDelimiter` | ` › `, or `\|` with readable test names off | XCTest, in an Xcode test target | None | <doc:Settings#Test-name-delimiter> |
 
 The "Requires" column lists what a setting needs beyond the Xcode versions in <doc:Supported-Platforms>. The Swift Testing runner reads the settings marked "Swift Testing" and ignores the others. <doc:Settings#Settings-that-work-differently> lists where it differs, and <doc:Running-Feature-Files-With-Swift-Testing> describes the runner.
 

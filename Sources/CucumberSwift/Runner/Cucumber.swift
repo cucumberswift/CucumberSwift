@@ -94,15 +94,23 @@ import XCTest
     }
 
     var hookedFeatures       = [Feature]()
-    /// In a parallel run, the started features whose `AfterFeature` hooks have run.
+    /// The features whose `AfterFeature` hooks have run, so that none finishes twice.
     var finishedFeatures     = [Feature]()
     var hookedScenarios      = [Scenario]()
     var failedScenarios      = [Scenario]()
     lazy var reporters: [CucumberTestObserver] = {
         // Always installed, because the reporters are built before `setupSteps()` can set
         // `Cucumber.verboseOutput`. It asks on every line whether it should print.
-        // swiftlint:disable:next trailing_closure
-        var observers: [CucumberTestObserver?] = [CucumberJSONReporter(), VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false })]
+        // swiftlint:disable trailing_closure
+        var observers: [CucumberTestObserver?] = [
+            CucumberJSONReporter(),
+            VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
+            CoverageReporter(isEnabled: { FeatureFlags.isCoverage },
+                             coveragePath: { FeatureFlags.coveragePath },
+                             settings: { CoverageScoreTests.settings() },
+                             record: { [weak self] in CoverageScoreTests.receive($0, in: self?.runningTestCase) })
+        ]
+        // swiftlint:enable trailing_closure
         observers += (self as? CucumberTestObservable)?.observers ?? []
         return observers.compactMap { $0 }
     }()
@@ -200,11 +208,11 @@ import XCTest
     /// Runs the feature's `AfterFeature` hooks and tells the reporters it finished. In a parallel run, only
     /// for a feature this worker started, and once.
     func finish(_ feature: Feature) {
+        guard !finishedFeatures.contains(where: { $0 === feature }) else { return }
         if ParallelTesting.defersFeatureEnds {
-            guard hookedFeatures.contains(where: { $0 === feature }),
-                  !finishedFeatures.contains(where: { $0 === feature }) else { return }
-            finishedFeatures.append(feature)
+            guard hookedFeatures.contains(where: { $0 === feature }) else { return }
         }
+        finishedFeatures.append(feature)
         Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
         let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
         reporters.forEach { $0.didFinish(feature: feature,
@@ -212,6 +220,14 @@ import XCTest
                                          duration: Measurement(value: Date().timeIntervalSince(feature.startDate),
                                                                unit: .seconds))
         }
+    }
+
+    /// Finishes the feature if it started and hasn't finished. Its last scenario finishes it, so this
+    /// matters when a tag left that scenario out, as for the feature's coverage score tests, which need
+    /// its scores.
+    func finishIfStarted(_ feature: Feature) {
+        guard hookedFeatures.contains(where: { $0 === feature }) else { return }
+        finish(feature)
     }
 
     /// In a parallel run, finishes each feature this worker started and hasn't finished, in the order it

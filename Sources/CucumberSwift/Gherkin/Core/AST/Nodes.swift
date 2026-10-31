@@ -31,3 +31,14 @@ extension AST {
     class ScenarioOutlineNode: Node { }
     class StepNode: Node { }
 }
+
+extension AST.RuleNode {
+    /// The line of the `Rule:` keyword. A tagged Rule's tags come first, on lines of their own.
+    var keywordLine: Int {
+        let keyword = tokens.first { token in
+            if case .scope = token { return true }
+            return false
+        }
+        return Int((keyword ?? tokens.first)?.position.line ?? 0)
+    }
+}

@@ -43,6 +43,7 @@ Ask questions, get help and discuss CucumberSwift on [Slack](https://join.slack.
 
 - <doc:Checking-Feature-Files>
 - <doc:Generating-Reports>
+- <doc:Measuring-Code-Coverage>
 - <doc:Verbose-Output>
 
 ### UI testing
