@@ -33,14 +33,14 @@ enum CoverageScoreTests {
         }
     }
 
-    /// The coverage settings for the XCTest runner. With parallel testing handing out scenarios, a
-    /// feature's scenarios run in different workers, so no worker has a whole feature to score, and
-    /// a feature can end after the worker's last test, where an error couldn't fail a test.
+    /// The coverage settings for the XCTest runner. With parallel testing, a feature can end after its
+    /// worker's last test, where an error couldn't fail a test: when Xcode hands out its scenarios to
+    /// different workers, or runs only some of its tests. The runner then scores nothing.
     static func settings(environment: [String: String] = Cucumber.shared.environment) -> CoverageSettings {
         var settings = CoverageSettings.read(environment: environment)
-        if FeatureFlags.isParallelTesting, FeatureFlags.parallelTestingUnit == .scenario {
-            settings.scoresOffReason = "parallel testing runs a feature's scenarios in different workers, so no worker has a whole "
-                + "feature to score. Set Cucumber.parallelTestingUnit to .feature to score each feature."
+        if FeatureFlags.isParallelTesting {
+            settings.scoresOffReason = "with parallel testing, a feature can end after its worker's last test, where a score's error "
+                + "couldn't fail a test. Turn parallel testing off to score each feature."
         }
         return settings
     }

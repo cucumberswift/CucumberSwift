@@ -94,14 +94,13 @@ final class CoverageScoreTestsTests: XCTestCase {
         XCTAssertTrue(finished.first === feature)
     }
 
-    func testAParallelRunThatHandsOutScenariosScoresNothing() {
+    func testAParallelRunScoresNothingWhateverItHandsOut() {
         Cucumber.parallelTesting = true
         Cucumber.parallelTestingUnit = .scenario
         XCTAssertNotNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
         Cucumber.parallelTestingUnit = .feature
-        XCTAssertNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
+        XCTAssertNotNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
         Cucumber.parallelTesting = false
-        Cucumber.parallelTestingUnit = .scenario
         XCTAssertNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
     }
 }
