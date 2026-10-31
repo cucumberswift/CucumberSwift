@@ -29,8 +29,15 @@ enum ReadableName {
     }
 
     /// A demangled name without its module, the `Swift.` of standard types, or what follows its
-    /// parameters, such as `throws` and its result type.
+    /// parameters, such as `throws` and its result type. A closure is named after the function it is in,
+    /// such as `closure in Calculator.classify(Int)`, so that two closures in different functions don't
+    /// read the same.
     static func shortened(_ name: String) -> String {
+        // A closure's name is `closure #1 (Int) -> Int in Module.f(Int) -> String`. The last ` in ` comes
+        // before the outermost function, for a closure in a closure too.
+        if name.hasPrefix("closure "), let range = name.range(of: " in ", options: .backwards) {
+            return "closure in " + shortened(String(name[range.upperBound...]))
+        }
         var name = name
         if let open = name.firstIndex(of: "(") {
             var depth = 0
@@ -43,7 +50,8 @@ enum ReadableName {
                 }
             }
         }
-        name = name.replacingOccurrences(of: "Swift.", with: "")
+        // The standard library's module, and not the end of another module's name, such as CucumberSwift.
+        name = name.replacingOccurrences(of: "(?<![A-Za-z0-9_])Swift\\.", with: "", options: .regularExpression)
         // The module is the first part of the name, when the name has another before its parameters.
         let beforeParameters = name.split(separator: "(", maxSplits: 1).first.map(String.init) ?? name
         if let dot = beforeParameters.firstIndex(of: "."), !beforeParameters.contains(" ") {

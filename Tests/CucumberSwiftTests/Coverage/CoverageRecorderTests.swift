@@ -59,6 +59,14 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(recorder.manifest.problem, "The profile format of this test process is version 11, and CucumberSwift writes version 10, the one of Xcode 26.")
     }
 
+    func testWithScoresOffTheRecorderMeasuresNoCodeAndSaysWhy() {
+        var settings = CoverageSettings()
+        settings.scoresOffReason = "parallel testing"
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), settings: settings, runID: "run")
+        XCTAssertNil(recorder.code)
+        XCTAssertEqual(recorder.scoresProblem, "parallel testing")
+    }
+
     func testAFolderThatCantBeMadeIsTheManifestsProblem() throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let file = folder.appendingPathComponent("file")

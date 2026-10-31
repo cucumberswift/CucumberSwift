@@ -105,6 +105,6 @@ public class Scenario: NSObject, Taggable, Positionable {
 
 extension ScenarioRule {
     init(_ node: AST.RuleNode) {
-        self.init(title: NodeHeader(node.tokens).title, line: Int(node.tokens.first?.position.line ?? 0))
+        self.init(title: NodeHeader(node.tokens).title, line: node.keywordLine)
     }
 }

@@ -79,6 +79,24 @@ final class CoverageScoresTests: XCTestCase {
         XCTAssertEqual(scores.scenarios.map(\.addsNothing), [false, false])
     }
 
+    func testAScenarioTaggedRedundantInAFeatureFileIsLeftOut() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Adding
+            Scenario: Adding
+                Given a calculator
+            @redundant
+            Scenario: Adding again
+                Given a calculator
+        """)
+        let parsed = try XCTUnwrap(cucumber.features.first).scenarios
+        // The parser keeps the tag without its `@`.
+        XCTAssertEqual(parsed[1].tags, ["redundant"])
+        let scenarios = parsed.map { CoverageScores.Scenario(name: $0.title, line: Int($0.location.line), tags: $0.tags, duration: 1, regions: [0, 1]) }
+        let scores = CoverageScores(scenarios: scenarios, code: code, isRedundancy: true)
+        XCTAssertEqual(try XCTUnwrap(scores.redundancy), 0)
+        XCTAssertEqual(scores.scenarios.map(\.addsNothing), [false, false])
+    }
+
     func testTheGapsAreTheFunctionsEnteredWithRegionsNotRunMostFirst() {
         let scores = CoverageScores(scenarios: [scenario(4, [0, 1, 2]), scenario(9, [8])], code: code, isRedundancy: false)
         XCTAssertEqual(scores.gaps, [

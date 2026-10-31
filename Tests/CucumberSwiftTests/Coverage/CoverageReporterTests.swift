@@ -116,6 +116,7 @@ final class CoverageReporterTests: XCTestCase {
         Feature: Arithmetic
             Scenario: Adding
                 Given a calculator
+            @numbers
             Rule: Classifying
                 Scenario: Small numbers
                     Given a calculator
@@ -128,7 +129,8 @@ final class CoverageReporterTests: XCTestCase {
         let scenarios = try XCTUnwrap(cucumber.features.first).scenarios
         XCTAssertEqual(scenarios.count, 3)
         XCTAssertNil(scenarios[0].rule)
-        XCTAssertEqual(scenarios[1].rule, ScenarioRule(title: "Classifying", line: 4))
-        XCTAssertEqual(scenarios[2].rule, ScenarioRule(title: "Classifying", line: 4))
+        // The Rule's line is its keyword's, not its tag's.
+        XCTAssertEqual(scenarios[1].rule, ScenarioRule(title: "Classifying", line: 5))
+        XCTAssertEqual(scenarios[2].rule, ScenarioRule(title: "Classifying", line: 5))
     }
 }

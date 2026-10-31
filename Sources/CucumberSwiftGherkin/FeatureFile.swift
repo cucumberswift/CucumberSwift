@@ -192,7 +192,7 @@ extension FeatureFile.Scenario {
         self.steps = steps
         self.examples = examples
         ruleTitle = rule.map { NodeHeader($0.tokens).title }
-        ruleLine = rule.map { Int($0.tokens.first?.position.line ?? 0) }
+        ruleLine = rule?.keywordLine
     }
 }
 

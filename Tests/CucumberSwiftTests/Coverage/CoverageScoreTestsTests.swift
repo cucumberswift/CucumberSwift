@@ -20,6 +20,8 @@ final class CoverageScoreTestsTests: XCTestCase {
 
     override func tearDown() {
         Cucumber.coverage = nil
+        Cucumber.parallelTesting = nil
+        Cucumber.parallelTestingUnit = nil
         CoverageScoreTests.reset()
         super.tearDown()
     }
@@ -77,5 +79,29 @@ final class CoverageScoreTestsTests: XCTestCase {
         let first = try feature()
         XCTAssertNil(CucumberTest.scoreTests(after: first, next: first))
         XCTAssertNotNil(CucumberTest.scoreTests(after: first, next: nil))
+    }
+
+    func testTheScoreTestsFinishAFeatureWhoseLastScenarioATagLeftOut() throws {
+        Cucumber.coverage = true
+        let feature = try feature()
+        var finished = [Feature]()
+        let suite = try XCTUnwrap(CoverageScoreTests.suite(for: feature, className: "Adding|CoverageScoresFinish") { finished.append($0) })
+        for case let test as XCTestCase in suite.tests {
+            test.invokeTest()
+        }
+        // Once, before the first records the feature's issues.
+        XCTAssertEqual(finished.count, 1)
+        XCTAssertTrue(finished.first === feature)
+    }
+
+    func testAParallelRunThatHandsOutScenariosScoresNothing() {
+        Cucumber.parallelTesting = true
+        Cucumber.parallelTestingUnit = .scenario
+        XCTAssertNotNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
+        Cucumber.parallelTestingUnit = .feature
+        XCTAssertNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
+        Cucumber.parallelTesting = false
+        Cucumber.parallelTestingUnit = .scenario
+        XCTAssertNil(CoverageScoreTests.settings(environment: [:]).scoresOffReason)
     }
 }

@@ -105,7 +105,11 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertEqual(ReadableName.shortened("Calculator.Calculator.divide(_: Swift.Int, by: Swift.Int) throws -> Swift.Int"),
                        "Calculator.divide(_: Int, by: Int)")
         XCTAssertEqual(ReadableName.shortened("App.Model.apply((Swift.Int) -> Swift.Int) -> ()"), "Model.apply((Int) -> Int)")
-        XCTAssertEqual(ReadableName.shortened("closure #1 in App.Model.load()"), "closure #1 in App.Model.load()")
+        XCTAssertEqual(ReadableName.shortened("closure #1 (Swift.Int) -> Swift.Int in Calc.Calculator.classify(Swift.Int) -> Swift.String"),
+                       "closure in Calculator.classify(Int)")
+        XCTAssertEqual(ReadableName.shortened("closure #2 () -> () in closure #1 () -> () in App.Model.load() -> ()"), "closure in Model.load()")
+        // Only the standard library's `Swift.`, not the end of a module's name.
+        XCTAssertEqual(ReadableName.shortened("CucumberSwift.Cucumber.run(CucumberSwift.Step) -> ()"), "Cucumber.run(CucumberSwift.Step)")
         XCTAssertEqual(ReadableName.of("main"), "main")
     }
 

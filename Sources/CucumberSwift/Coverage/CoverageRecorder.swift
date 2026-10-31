@@ -151,6 +151,10 @@ final class CoverageRecorder {
 
     /// Numbers the regions of the functions the scores measure, from every binary with a coverage map.
     private func measureCode() {
+        if let reason = settings.scoresOffReason {
+            scoresProblem = reason
+            return
+        }
         #if canImport(Compression)
         let mapped = counters.binaries.enumerated().filter { $0.element.map != nil }
         guard !mapped.isEmpty else {

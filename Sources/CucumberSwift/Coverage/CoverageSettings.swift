@@ -100,6 +100,8 @@ struct CoverageSettings: Equatable {
     var redundancyWarningLevel: CoverageLevel = 30
     /// A feature whose redundancy is at or above this gets an error.
     var redundancyErrorLevel: CoverageLevel = .off
+    /// Why the runner scores nothing, though it writes the coverage files, or nil when it scores.
+    var scoresOffReason: String?
     /// Parts of the paths of the files to measure. Empty to measure the default files.
     var sources = [String]()
 

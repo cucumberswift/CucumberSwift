@@ -84,6 +84,12 @@ struct CoverageScores: Codable, Equatable {
         /// they share. Every other scenario has a group of its own.
         let group: String
 
+        /// Whether the scenario is tagged `@redundant`. The parser keeps a tag without its `@`, and a tag
+        /// written in code may have one.
+        var isTaggedRedundant: Bool {
+            tags.contains { $0.hasPrefix("@") ? $0.dropFirst() == CoverageScores.redundantTag : $0 == CoverageScores.redundantTag }
+        }
+
         init(name: String, line: Int, tags: [String], duration: TimeInterval, regions: Set<Int>, group: String? = nil) {
             self.name = name
             self.line = line
@@ -125,7 +131,7 @@ struct CoverageScores: Codable, Equatable {
 
     /// A scenario tagged with this is left out of the redundancy score: one you keep on purpose though
     /// other scenarios run its code, such as a test for a bug that came back.
-    static let redundantTag = "@redundant"
+    static let redundantTag = "redundant"
 
     /// The regions the scenarios ran, of the regions in the functions they entered.
     let coveredRegions: Int
@@ -151,7 +157,7 @@ struct CoverageScores: Codable, Equatable {
         // A Scenario Outline's examples are one group, so that rows that run the same code with other data
         // don't count as redundant.
         var groups = [String: Set<Int>]()
-        for scenario in scenarios where !scenario.tags.contains(redundantTag) {
+        for scenario in scenarios where !scenario.isTaggedRedundant {
             groups[scenario.group, default: []].formUnion(scenario.regions)
         }
         var groupRuns = [Int: Int]()
@@ -194,7 +200,7 @@ struct CoverageScores: Codable, Equatable {
         self.scenarios = scenarios.map { scenario in
             let own = scenario.regions.filter { runs[$0] == 1 }.count
             let share = scenario.regions.reduce(0.0) { $0 + 1 / Double(runs[$1] ?? 1) }
-            let addsNothing = !scenario.tags.contains(Self.redundantTag) && measured?.groupsAddingNothing.contains(scenario.group) == true
+            let addsNothing = !scenario.isTaggedRedundant && measured?.groupsAddingNothing.contains(scenario.group) == true
             return ScenarioScore(name: scenario.name,
                                  line: scenario.line,
                                  duration: scenario.duration,

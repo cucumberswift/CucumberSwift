@@ -33,6 +33,18 @@ enum CoverageScoreTests {
         }
     }
 
+    /// The coverage settings for the XCTest runner. With parallel testing handing out scenarios, a
+    /// feature's scenarios run in different workers, so no worker has a whole feature to score, and
+    /// a feature can end after the worker's last test, where an error couldn't fail a test.
+    static func settings(environment: [String: String] = Cucumber.shared.environment) -> CoverageSettings {
+        var settings = CoverageSettings.read(environment: environment)
+        if FeatureFlags.isParallelTesting, FeatureFlags.parallelTestingUnit == .scenario {
+            settings.scoresOffReason = "parallel testing runs a feature's scenarios in different workers, so no worker has a whole "
+                + "feature to score. Set Cucumber.parallelTestingUnit to .feature to score each feature."
+        }
+        return settings
+    }
+
     static func reset() {
         state.withLock { $0 = State() }
     }
@@ -42,14 +54,19 @@ enum CoverageScoreTests {
         state.snapshot.waiting.contains(file?.absoluteString ?? "")
     }
 
-    /// The feature's score tests, named `className`, or nil with coverage off.
-    static func suite(for feature: Feature, className: String) -> XCTestSuite? {
+    /// The feature's score tests, named `className`, or nil with coverage off. The first finishes the
+    /// feature with `finish` first, for a feature whose last scenario a tag left out, and so never
+    /// finished.
+    static func suite(for feature: Feature,
+                      className: String,
+                      finish: @escaping (Feature) -> Void = { Cucumber.shared.finishIfStarted($0) }) -> XCTestSuite? {
         guard FeatureFlags.isCoverage, let key = feature.coverageIssueFile?.absoluteString,
               let testClass = TestCaseGenerator.makeClass(className: className) else { return nil }
         let kinds = CoverageIssue.Kind.allCases
         let selectors = kinds.map { kind in
             TestCaseGenerator.addTestMethod(testCase: testClass,
                                             method: TestCaseMethod(withName: CucumberTest.generatedTestName(testName(kind))) {
+                                                if kind == kinds.first { finish(feature) }
                                                 record(kind, of: key, isLast: kind == kinds.last)
                                             })
         }
