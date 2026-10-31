@@ -72,6 +72,17 @@ struct CoverageReport {
         "\(count) \(noun)\(count == 1 ? "" : "s")"
     }
 
+    /// The time the redundant scenarios took, of all the scenarios' time, such as ", about 0.42 s of 1.26 s
+    /// in redundant scenarios", or nothing with the redundancy score off.
+    static func wasted(_ scores: CoverageScores) -> String {
+        guard let wasted = scores.wastedTime else { return "" }
+        return ", about \(seconds(wasted)) of \(seconds(scores.duration)) in redundant scenarios"
+    }
+
+    static func seconds(_ value: TimeInterval) -> String {
+        String(format: "%.2f s", value)
+    }
+
     /// `text` with spaces before it, to `width` characters.
     static func padded(_ text: String, _ width: Int) -> String {
         text.count >= width ? text : String(repeating: " ", count: width - text.count) + text
@@ -82,7 +93,7 @@ struct CoverageReport {
             + " (\(scores.coveredRegions) of \(scores.regionsInFunctionsRun) regions in \(Self.count(scores.functionsRun, "function"))),"
             + " \(Self.percent(scores.coverageOfAllCode)) of all measured code"
         if let redundancy = scores.redundancy {
-            header += ", redundancy \(Self.percent(redundancy))"
+            header += ", redundancy \(Self.percent(redundancy))\(Self.wasted(scores))"
         }
         var lines = [header, "    Share  Own regions      Time  Scenario"]
         for scenario in scores.scenarios {
@@ -99,6 +110,9 @@ struct CoverageReport {
     /// "Rule", that the scores are for, and at the line of each scenario that adds nothing of its own.
     func issues(file: URL?, line: Int, subject: String) -> [CoverageIssue] {
         var issues = [CoverageIssue]()
+        // Scenarios that ran no measured code, such as a UI test's, whose app runs in another process, have
+        // nothing to score.
+        guard scores.regionsInFunctionsRun > 0 else { return [] }
         if let severity = Self.severity(of: scores.coverage, warning: settings.warningLevel, error: settings.errorLevel, isLowerWorse: true) {
             var message = "\(subject) coverage \(Self.percent(scores.coverage)): its scenarios ran \(scores.coveredRegions) of the"
                 + " \(scores.regionsInFunctionsRun) regions in the \(Self.count(scores.functionsRun, "function")) they entered"
@@ -115,8 +129,8 @@ struct CoverageReport {
         }
         if let redundancy = scores.redundancy,
            let severity = Self.severity(of: redundancy, warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, isLowerWorse: false) {
-            let message = "\(subject) redundancy \(Self.percent(redundancy)): of the code its scenarios ran, outside the code all of them run,"
-                + " \(Self.percent(redundancy)) was run again by another scenario"
+            let message = "\(subject) redundancy \(Self.percent(redundancy)): \(Self.percent(redundancy)) of its scenarios run no code,"
+                + " after their Background steps, that other scenarios don't run\(Self.wasted(scores))"
                 + " (\(Self.levels(warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, comparison: "at or above")))."
             issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line, kind: .redundancy))
         }
@@ -125,7 +139,7 @@ struct CoverageReport {
             var warned = Set<String>()
             for scenario in scores.scenarios where scenario.addsNothing && warned.insert(scenario.group).inserted {
                 let time = scores.scenarios.filter { $0.group == scenario.group }.reduce(0) { $0 + $1.duration }
-                let message = "Scenario adds no coverage of its own: other scenarios ran all of its code."
+                let message = "Scenario adds no coverage of its own: other scenarios run all of the code it runs after its Background steps."
                     + String(format: " It took %.2fs.", time)
                 issues.append(CoverageIssue(severity: .warning, message: message, file: file, line: scenario.line, kind: .redundantScenario))
             }

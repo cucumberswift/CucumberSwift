@@ -150,6 +150,8 @@ final class SwiftTestingSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(#"text: "I eat 6 cukes","#), source)
         // Each example names its Rule, for the coverage scores, which score a Rule on its own (#502).
         XCTAssertEqual(source.components(separatedBy: #"ruleTitle: "R","#).count - 1, 2, source)
+        // Each example has the feature's and the Rule's Background steps (#504).
+        XCTAssertEqual(source.components(separatedBy: "backgroundStepCount: 2,").count - 1, 2, source)
     }
 
     // A scenario outside a Rule names none, so its generated code is as it was before Rules had scores.
@@ -161,6 +163,7 @@ final class SwiftTestingSourceTests: XCTestCase {
         """)
         XCTAssertFalse(source.contains("ruleTitle:"), source)
         XCTAssertFalse(source.contains("ruleLine:"), source)
+        XCTAssertFalse(source.contains("backgroundStepCount:"), source)
     }
 
     func testEditingAFeatureFileMovesNoTest() {

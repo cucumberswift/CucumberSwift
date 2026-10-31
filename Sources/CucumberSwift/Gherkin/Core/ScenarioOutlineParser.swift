@@ -20,6 +20,8 @@ struct OutlineExample {
     let position: Lexer.Position
     /// The Background's steps, then the outline's steps with the row's values filled in.
     let stepNodes: [AST.StepNode]
+    /// How many of ``stepNodes`` are the Background's.
+    let backgroundStepCount: Int
 }
 
 enum ScenarioOutlineParser {
@@ -203,7 +205,8 @@ enum ScenarioOutlineParser {
                 description: outline.description,
                 tags: tags,
                 position: line.first?.position ?? .start,
-                stepNodes: stepNodes))
+                stepNodes: stepNodes,
+                backgroundStepCount: outline.backgroundStepNodes.count))
         }
         return examples
     }

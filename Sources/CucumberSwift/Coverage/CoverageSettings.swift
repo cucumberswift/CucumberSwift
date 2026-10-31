@@ -102,6 +102,9 @@ struct CoverageSettings: Equatable {
     var redundancyErrorLevel: CoverageLevel = .off
     /// Why the runner scores nothing, though it writes the coverage files, or nil when it scores.
     var scoresOffReason: String?
+    /// Whether the runner writes a coverage file for each scenario and the manifest. With `auto` coverage it
+    /// writes them only when the coverage folder is set, so that a run doesn't leave files unasked.
+    var isWritingFiles = true
     /// Parts of the paths of the files to measure. Empty to measure the default files.
     var sources = [String]()
 

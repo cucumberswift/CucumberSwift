@@ -185,6 +185,30 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(recorder.manifest.features.map(\.ruleLine), [nil, 8, 10])
     }
 
+    func testTheCodeRunBeforeTheBackgroundFinishedIsLeftOutOfTheRedundancy() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        // Two scenarios that run the same branch, the first in its Background and the second in its own step.
+        for (line, inBackground) in [(4, true), (9, false)] {
+            recorder.scenarioStarted()
+            if inBackground {
+                _ = Self.coveredHalf(of: 1)
+                recorder.backgroundFinished()
+            } else {
+                recorder.backgroundFinished()
+                _ = Self.coveredHalf(of: 1)
+            }
+            recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: []))
+        }
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1).first?.scores)
+        // The first scenario's run of the branch was setup, so the second's isn't redundant.
+        XCTAssertEqual(scores.redundancy, 0)
+        XCTAssertGreaterThan(scores.coveredRegions, 0)
+    }
+
     func testWritingAProfileKeepsTheCountersTotals() throws {
         let counters = ProfileCounters.loaded()
         try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")

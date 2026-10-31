@@ -38,6 +38,7 @@ enum CoverageScoreTests {
     /// different workers, or runs only some of its tests. The runner then scores nothing.
     static func settings(environment: [String: String] = Cucumber.shared.environment) -> CoverageSettings {
         var settings = CoverageSettings.read(environment: environment)
+        settings.isWritingFiles = FeatureFlags.coverageSetting == true || FeatureFlags.coveragePath != nil
         if FeatureFlags.isParallelTesting {
             settings.scoresOffReason = "with parallel testing, a feature can end after its worker's last test, where a score's error "
                 + "couldn't fail a test. Turn parallel testing off to score each feature."

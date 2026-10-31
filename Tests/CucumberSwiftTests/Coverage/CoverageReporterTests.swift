@@ -138,4 +138,26 @@ final class CoverageReporterTests: XCTestCase {
         XCTAssertEqual(scenarios[1].rule, ScenarioRule(title: "Classifying", line: 5))
         XCTAssertEqual(scenarios[2].rule, ScenarioRule(title: "Classifying", line: 5))
     }
+
+    func testAScenarioKnowsHowManyOfItsStepsAreItsBackgrounds() throws {
+        let cucumber = Cucumber(withString: """
+        Feature: Arithmetic
+            Background:
+                Given a calculator
+            Scenario: Adding
+                When I add 2 and 3
+            Rule: Classifying
+                Background:
+                    Given a clear display
+                Scenario Outline: Naming
+                    When I classify <number>
+                    Examples:
+                        | number |
+                        | 1      |
+                        | 2      |
+        """)
+        let scenarios = try XCTUnwrap(cucumber.features.first).scenarios
+        XCTAssertEqual(scenarios.map(\.backgroundStepCount), [1, 2, 2])
+        XCTAssertEqual(scenarios.map(\.steps.count), [2, 3, 3])
+    }
 }

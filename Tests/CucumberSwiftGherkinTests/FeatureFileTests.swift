@@ -321,5 +321,8 @@ extension FeatureFileTests {
         // scores (#502).
         XCTAssertEqual(feature.scenarios.map(\.ruleTitle), ["R", "R", "R", "Untagged"])
         XCTAssertEqual(feature.scenarios.map(\.ruleLine), [7, 7, 7, 28])
+        // How many of each scenario's steps are its Backgrounds', which the redundancy score leaves out.
+        XCTAssertEqual(feature.scenarios.map(\.backgroundStepCount), [2, 2, 0, 1])
+        XCTAssertEqual(examples.map(\.backgroundStepCount), [2, 2])
     }
 }

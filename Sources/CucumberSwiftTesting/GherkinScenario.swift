@@ -108,6 +108,8 @@ public struct GherkinScenario: Sendable {
     public let ruleTitle: String?
     /// The line of the Rule the scenario is in, or `nil` when it isn't in one.
     public let ruleLine: Int?
+    /// How many of ``steps`` are the Background's: the feature's, then the Rule's.
+    public let backgroundStepCount: Int
     /// The Background's steps, then the scenario's.
     public let steps: [GherkinStep]
     /// Which scenario of the Swift DSL this is, or `nil` for one from a feature file. The examples of a
@@ -130,6 +132,7 @@ public struct GherkinScenario: Sendable {
         column: Int,
         ruleTitle: String? = nil,
         ruleLine: Int? = nil,
+        backgroundStepCount: Int = 0,
         steps: [GherkinStep]
     ) {
         self.featureTitle = featureTitle
@@ -144,6 +147,7 @@ public struct GherkinScenario: Sendable {
         self.column = column
         self.ruleTitle = ruleTitle
         self.ruleLine = ruleLine
+        self.backgroundStepCount = backgroundStepCount
         self.steps = steps
     }
 }

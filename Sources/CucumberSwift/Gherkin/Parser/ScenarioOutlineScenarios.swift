@@ -14,6 +14,7 @@ extension Scenario {
             description: example.description,
             tags: example.tags,
             position: example.position)
+        backgroundStepCount = example.backgroundStepCount
     }
 }
 

@@ -64,6 +64,9 @@ extension FeatureFile {
         public let ruleTitle: String?
         /// The line of the Rule the scenario is in, or `nil` when it isn't in one.
         public let ruleLine: Int?
+        /// How many of ``steps`` are the Background's: the feature's, then the Rule's. 0 for a Scenario
+        /// Outline: each of its ``examples`` has its own.
+        public let backgroundStepCount: Int
     }
 
     /// One row of a Scenario Outline's Examples table, which CucumberSwift runs as a scenario of its own.
@@ -79,6 +82,8 @@ extension FeatureFile {
         /// The feature's and the Rule's Background steps, then the outline's, with the row's values in
         /// place of the `<placeholders>`.
         public let steps: [Step]
+        /// How many of ``steps`` are the Background's.
+        public let backgroundStepCount: Int
     }
 
     public struct Step: Equatable, Sendable {
@@ -157,7 +162,8 @@ extension FeatureFile.Feature {
                         position: scenarioNode.tokens.first?.position ?? .start,
                         steps: .init(stepNodes),
                         examples: nil,
-                        rule: rule)
+                        rule: rule,
+                        backgroundStepCount: backgroundStepNodes.count)
                 case let .outline(outlineNode, inheritedTags, examples, rule):
                     let outlineStepNodes = outlineNode.children.compactMap { $0 as? AST.StepNode }
                     let description = ScenarioOutlineParser.extractOutlineDescription(outlineNode, stepNodes: outlineStepNodes)
@@ -168,7 +174,8 @@ extension FeatureFile.Feature {
                         position: outlineNode.tokens.first?.position ?? .start,
                         steps: [],
                         examples: examples.map(FeatureFile.Example.init),
-                        rule: rule)
+                        rule: rule,
+                        backgroundStepCount: 0)
             }
         }
     }
@@ -182,7 +189,8 @@ extension FeatureFile.Scenario {
         position: Lexer.Position,
         steps: [FeatureFile.Step],
         examples: [FeatureFile.Example]?,
-        rule: AST.RuleNode?
+        rule: AST.RuleNode?,
+        backgroundStepCount: Int
     ) {
         self.title = title
         self.description = description
@@ -193,6 +201,7 @@ extension FeatureFile.Scenario {
         self.examples = examples
         ruleTitle = rule.map { NodeHeader($0.tokens).title }
         ruleLine = rule?.keywordLine
+        self.backgroundStepCount = backgroundStepCount
     }
 }
 
@@ -203,6 +212,7 @@ extension FeatureFile.Example {
         line = Int(example.position.line)
         column = Int(example.position.column)
         steps = .init(example.stepNodes)
+        backgroundStepCount = example.backgroundStepCount
     }
 }
 

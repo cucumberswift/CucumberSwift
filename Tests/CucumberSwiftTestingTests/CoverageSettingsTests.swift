@@ -14,11 +14,22 @@ import Testing
     @Test func coverageIsReadAsCucumberSwiftReadsAFeatureFlag() {
         defer { Cucumber.coverage = nil }
         let key = "CUCUMBER_COVERAGE"
-        #expect(!CucumberSettings.isCoverage(environment: [:]))
         #expect(CucumberSettings.isCoverage(environment: [key: "yes"]))
-        #expect(!CucumberSettings.isCoverage(environment: [key: "maybe"]))
+        #expect(!CucumberSettings.isCoverage(environment: [key: "no"]))
         Cucumber.coverage = false
         #expect(!CucumberSettings.isCoverage(environment: [key: "YES"]))
+    }
+
+    // Through the environment only: other suites set `Cucumber.parallelTesting` while this one runs.
+    @Test func autoCoverageMeasuresABuildWithCoverageUnlessParallelTestingIsOn() {
+        #expect(CucumberSettings.coverageSetting(environment: [:]) == nil)
+        #expect(CucumberSettings.coverageSetting(environment: ["CUCUMBER_COVERAGE": "AUTO"]) == nil)
+        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: false))
+        #expect(CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: true))
+        var said = [String]()
+        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "YES"], isInstrumented: true) { said.append($0) })
+        // With auto coverage, parallel testing wins.
+        #expect(CucumberSettings.runsInParallel(compiled: false, environment: ["CUCUMBER_PARALLEL_TESTING": "YES"]))
     }
 
     @Test func theCoveragePathComesFromTheStaticVariableThenTheEnvironmentVariable() {

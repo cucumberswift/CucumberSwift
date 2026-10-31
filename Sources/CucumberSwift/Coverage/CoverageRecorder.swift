@@ -93,6 +93,8 @@ final class CoverageRecorder {
     private let startDate: Date
     private let counters: ProfileCounters
     private var snapshot: ProfileCounters.Snapshot?
+    /// What the counters gained during the running scenario's Background steps.
+    private var setupCounts: [[UInt8]]?
     private var scenarios = [ScenarioRecord]()
     private var features = [FeatureRecord]()
     private var problem: String?
@@ -142,6 +144,7 @@ final class CoverageRecorder {
         } else if counters.binaries.isEmpty {
             problem = "No binary in the test process was built with code coverage. Turn on code coverage for the test target."
         }
+        guard settings.isWritingFiles else { return }
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         } catch {
@@ -204,6 +207,14 @@ final class CoverageRecorder {
 
     func scenarioStarted() {
         snapshot = problem == nil ? counters.snapshot() : nil
+        setupCounts = nil
+    }
+
+    /// Notes the code the running scenario ran so far: its Background steps, which have just finished.
+    /// The redundancy leaves that code out.
+    func backgroundFinished() {
+        guard let snapshot, code != nil else { return }
+        setupCounts = counters.differences(since: snapshot)
     }
 
     /// Writes what the scenario covered, and keeps it for its feature's scores. A scenario is named after
@@ -215,7 +226,7 @@ final class CoverageRecorder {
         let fileName = String(format: "S%04d-L%d", scenarios.count + 1, finished.line)
         let counts = counters.differences(since: snapshot)
         do {
-            let profiles = try counters.writeProfiles(named: fileName, in: folder, counts: counts)
+            let profiles = settings.isWritingFiles ? try counters.writeProfiles(named: fileName, in: folder, counts: counts) : []
             scenarios.append(ScenarioRecord(
                 feature: finished.feature,
                 featureName: finished.featureName,
@@ -235,7 +246,8 @@ final class CoverageRecorder {
                                                    tags: finished.tags,
                                                    duration: finished.duration ?? 0,
                                                    regions: regions(ran: counts),
-                                                   group: finished.group)
+                                                   group: finished.group,
+                                                   setupRegions: setupCounts.map(regions(ran:)) ?? [])
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
         }
     }
@@ -257,6 +269,7 @@ final class CoverageRecorder {
     /// Writes `manifest.json` in the run's folder. Returns its URL, or nil if it couldn't be written.
     @discardableResult
     func writeManifest() -> URL? {
+        guard settings.isWritingFiles else { return nil }
         let url = folder.appendingPathComponent("manifest.json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

@@ -27,6 +27,8 @@ enum SwiftTestingSource {
         /// The title and line of the Rule the scenario is in, which the coverage scores need.
         var ruleTitle: String?
         var ruleLine: Int?
+        /// How many of the steps are the Background's, which the redundancy score leaves out.
+        var backgroundStepCount = 0
     }
 
     /// The constants that the tests run, in the order of the tests.
@@ -163,7 +165,8 @@ enum SwiftTestingSource {
                 column: scenario.column,
                 steps: scenario.steps,
                 ruleTitle: scenario.ruleTitle,
-                ruleLine: scenario.ruleLine)
+                ruleLine: scenario.ruleLine,
+                backgroundStepCount: scenario.backgroundStepCount)
             let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
                     @Test(\(displayName).serialized, .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) },
@@ -178,7 +181,8 @@ enum SwiftTestingSource {
                                       column: example.column,
                                       steps: example.steps,
                                       ruleTitle: scenario.ruleTitle,
-                                      ruleLine: scenario.ruleLine)
+                                      ruleLine: scenario.ruleLine,
+                                      backgroundStepCount: example.backgroundStepCount)
             return "    CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 8) + ")"
         }
         let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
@@ -204,6 +208,8 @@ enum SwiftTestingSource {
             + pad + "    column: \(parts.column),\n"
             // Only a scenario in a Rule has these, so the code for one that isn't stays as it was.
             + (parts.ruleLine.map { pad + "    ruleTitle: \(literal(parts.ruleTitle ?? "")),\n" + pad + "    ruleLine: \($0),\n" } ?? "")
+            // Only a scenario with a Background has this, so the code for one without stays as it was.
+            + (parts.backgroundStepCount > 0 ? pad + "    backgroundStepCount: \(parts.backgroundStepCount),\n" : "")
             + pad + "    steps: [\n"
             + stepLines.joined(separator: ",\n") + (stepLines.isEmpty ? "" : "\n")
             + pad + "    ])"

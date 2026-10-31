@@ -21,6 +21,9 @@ public class Scenario: NSObject, Taggable, Positionable {
     let internalState = ScenarioState()
     /// The Rule the scenario is in, if it is in one, which the coverage scores score on its own.
     var rule: ScenarioRule?
+    /// How many of ``steps`` are its Background's: its feature's, then its Rule's. The redundancy score
+    /// leaves out the code they run.
+    var backgroundStepCount = 0
 
     init(with node: AST.ScenarioNode, tags: [String], stepNodes: [AST.StepNode]) {
         location = node.tokens.first?.position ?? .start
@@ -33,6 +36,7 @@ public class Scenario: NSObject, Taggable, Positionable {
         self.tags = tags + header.tags
         steps ?= node.children.compactMap { $0 as? AST.StepNode }.map { Step(with: $0) }
         steps.insert(contentsOf: stepNodes.map { Step(with: $0) }, at: 0)
+        backgroundStepCount = stepNodes.count
         setupSteps()
         endLocation ?= steps.last?.location
     }

@@ -141,7 +141,11 @@ public final class Cucumber {
             VerboseReporter(isEnabled: { [weak self] in self?.isVerbose ?? false }),
             CoverageReporter(isEnabled: { CucumberSettings.isCoverage() },
                              coveragePath: { CucumberSettings.coveragePath() },
-                             settings: { CoverageSettings.read(environment: ProcessInfo.processInfo.environment) },
+                             settings: {
+                                 var settings = CoverageSettings.read(environment: ProcessInfo.processInfo.environment)
+                                 settings.isWritingFiles = CucumberSettings.coverageSetting() == true || CucumberSettings.coveragePath() != nil
+                                 return settings
+                             },
                              record: { $0.record() })
         ]
         // swiftlint:enable trailing_closure

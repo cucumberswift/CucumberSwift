@@ -252,11 +252,17 @@ enum CucumberSettings {
     /// Whether scenarios run at the same time, read as CucumberSwift reads a feature flag: the static
     /// variable, then the environment variable `CUCUMBER_PARALLEL_TESTING`, then, the one addition, the
     /// compilation condition of the same name, which the generated code passes as `compiled`. Off by default,
-    /// and always off with coverage on, because coverage counters can't tell scenarios that run at the
-    /// same time apart.
+    /// and always off with coverage set on, because coverage counters can't tell scenarios that run at the
+    /// same time apart. With `auto` coverage, parallel testing wins, and coverage stays off.
     static func runsInParallel(compiled: Bool, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        guard !isCoverage(environment: environment) else { return false }
-        return staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+        storage.setFlag("compiledParallelTesting", compiled)
+        guard coverageSetting(environment: environment) != true else { return false }
+        return isParallelTestingRequested(compiled: compiled, environment: environment)
+    }
+
+    /// Whether parallel testing is asked for, whatever coverage says.
+    static func isParallelTestingRequested(compiled: Bool, environment: [String: String]) -> Bool {
+        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
     }
 
     /// ``Cucumber/coverage``.
@@ -271,10 +277,26 @@ enum CucumberSettings {
         set { storage.coveragePath = newValue }
     }
 
-    /// Whether each scenario's code coverage is written to a file: the static variable, then
-    /// `CUCUMBER_COVERAGE`, then no, as CucumberSwift's `FeatureFlags` read it.
-    static func isCoverage(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        staticCoverage ?? FeatureFlagValue.bool(environment["CUCUMBER_COVERAGE"]) ?? false
+    /// Whether coverage is set on or off: the static variable, then `CUCUMBER_COVERAGE`. Nil for `auto`, the
+    /// default, as `AUTO` or no value gives, as CucumberSwift's `FeatureFlags` read it.
+    static func coverageSetting(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool? {
+        staticCoverage ?? FeatureFlagValue.bool(environment["CUCUMBER_COVERAGE"])
+    }
+
+    /// Whether the runner measures each scenario's code coverage. With `auto`, when the test process was
+    /// built with code coverage and parallel testing isn't asked for: then it says once why coverage is off.
+    static func isCoverage(environment: [String: String] = ProcessInfo.processInfo.environment,
+                           isInstrumented: Bool = ProfileCounters.isInstrumented,
+                           output: (String) -> Void = { print($0) }) -> Bool {
+        if let setting = coverageSetting(environment: environment) { return setting }
+        guard isInstrumented else { return false }
+        guard isParallelTestingRequested(compiled: storage.flag("compiledParallelTesting") ?? false, environment: environment) else { return true }
+        if storage.flag("saidCoverageIsOff") != true {
+            storage.setFlag("saidCoverageIsOff", true)
+            output("CucumberSwift coverage: off, because parallel testing is on. Set CUCUMBER_COVERAGE to YES to measure coverage, "
+                + "with the scenarios run one at a time.")
+        }
+        return false
     }
 
     /// Where the coverage files are written: the static variable, then `CUCUMBER_COVERAGE_PATH`. Nil when
@@ -375,13 +397,14 @@ extension Cucumber {
         set { CucumberSettings.staticGenerateMacros = newValue }
     }
 
-    /// Whether the runner writes each scenario's code coverage to a file, with a manifest of the scenarios
-    /// that ran, for a coverage report. Off by default. Set this to `true`, or the environment variable
-    /// `CUCUMBER_COVERAGE` to `YES`, to turn it on, and turn on code coverage for the test target. With
-    /// coverage on, scenarios run one at a time even with ``parallelTesting``, because coverage counters
-    /// can't tell scenarios that run at the same time apart. This variable, when set, wins over the
-    /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`. See ``coveragePath`` for
-    /// where the files go.
+    /// Whether the runner measures each scenario's code coverage, and scores each feature. `nil`, the
+    /// default, is `auto`: the runner measures when the test target was built with code coverage and
+    /// parallel testing is off, and writes the coverage files only when ``coveragePath`` is set. Set this to
+    /// `true`, or the environment variable `CUCUMBER_COVERAGE` to `YES`, to measure and write the files, and
+    /// to `false` or `NO` to measure nothing. `AUTO` gives `auto`. Set on, coverage runs the scenarios one at
+    /// a time even with ``parallelTesting``, because coverage counters can't tell scenarios that run at the
+    /// same time apart. This variable, when set, wins over the environment variable. Set it in your
+    /// `StepImplementation`'s `setupSteps()`. See <doc:Measuring-Code-Coverage>.
     nonisolated public static var coverage: Bool? {
         get { CucumberSettings.staticCoverage }
         set { CucumberSettings.staticCoverage = newValue }

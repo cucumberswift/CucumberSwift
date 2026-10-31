@@ -63,15 +63,19 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertEqual(report([0], settings: settings).issues(file: file, line: 1, subject: "Feature"), [])
     }
 
-    func testRedundancyAtOrAboveItsLevelsIsAWarningOrAnErrorAndAScenarioThatAddsNothingIsAWarning() {
+    func testRedundancyAtOrAboveItsLevelsIsAWarningOrAnErrorAndARedundantScenarioIsAWarning() {
         var settings = CoverageSettings()
         settings.warningLevel = .off
         settings.errorLevel = .off
         settings.isRedundancy = true
+        // The two scenarios run the same code, so the later one is redundant: 50% of them.
         let issues = report(Set(0..<10), settings: settings).issues(file: file, line: 1, subject: "Feature")
-        XCTAssertEqual(issues.map(\.severity), [.warning, .warning, .warning])
-        XCTAssertEqual(issues.map(\.line), [1, 19, 25])
-        XCTAssertEqual(issues[1].message, "Scenario adds no coverage of its own: other scenarios ran all of its code. It took 0.50s.")
+        XCTAssertEqual(issues.map(\.severity), [.warning, .warning])
+        XCTAssertEqual(issues.map(\.line), [1, 25])
+        XCTAssertEqual(issues[0].message, "Feature redundancy 50%: 50% of its scenarios run no code, after their Background steps, that other "
+            + "scenarios don't run, about 0.25 s of 0.75 s in redundant scenarios (warning at or above 30%).")
+        XCTAssertEqual(issues[1].message, "Scenario adds no coverage of its own: other scenarios run all of the code it runs after its "
+            + "Background steps. It took 0.25s.")
         settings.redundancyErrorLevel = 50
         XCTAssertEqual(report(Set(0..<10), settings: settings).issues(file: file, line: 1, subject: "Feature").first?.severity, .error)
         settings.redundancyWarningLevel = .off
@@ -125,5 +129,11 @@ final class CoverageReportTests: XCTestCase {
         let issue = try XCTUnwrap(report([0, 1, 2, 3, 4]).issues(file: file, line: 12, subject: "Rule").first)
         XCTAssertEqual(issue.line, 12)
         XCTAssertTrue(issue.message.hasPrefix("Rule coverage 50%: its scenarios ran 5 of the 10 regions"), issue.message)
+    }
+
+    func testScenariosThatRanNoMeasuredCodeGetNoIssue() {
+        let scenarios = [CoverageScores.Scenario(name: "Tapping", line: 3, tags: [], duration: 1, regions: [])]
+        let report = CoverageReport(scores: CoverageScores(scenarios: scenarios, code: code, isRedundancy: true), settings: CoverageSettings())
+        XCTAssertEqual(report.issues(file: file, line: 1, subject: "Feature"), [])
     }
 }
