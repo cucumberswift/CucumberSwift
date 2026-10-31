@@ -39,7 +39,7 @@ The XCTest runner records a feature's issues in tests of its own, which run afte
 - `Redundancy`, for the redundancy warning or error.
 - `Redundant scenarios`, for the warnings on the scenarios that add no coverage of their own.
 
-An error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, a feature's scenarios can run in different workers, so its issues are recorded in the test that is running when the feature ends. The Swift Testing runner records them on the feature's suite.
+An error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner records the issues on the feature's suite.
 
 ### Turn it on in code
 
@@ -212,7 +212,7 @@ The manifest lists the binaries, each scenario that ran with its feature, name, 
       "line" : 12,
       "name" : "Pay with a gift card",
       "profiles" : [ "S0001-L12-MyAppTests.profraw" ],
-      "tags" : [ "@payments" ]
+      "tags" : [ "payments" ]
     }
   ],
   "version" : 1
