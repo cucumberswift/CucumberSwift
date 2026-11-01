@@ -15,6 +15,14 @@ import XCTest
 final class CoverageReporterTests: XCTestCase {
     private var folder = FileManager.default.temporaryDirectory
 
+    /// A function with two branches, for a step to run one of.
+    private static func branch(of value: Int) -> Int {
+        if value < 10 {
+            return 1
+        }
+        return 2
+    }
+
     override func setUpWithError() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("CoverageReporterTests-\(UUID().uuidString)")
         self.folder = folder
@@ -40,14 +48,6 @@ final class CoverageReporterTests: XCTestCase {
         reporter.didFinish(feature: feature, result: .passed, duration: duration)
         reporter.testSuiteFinished(at: Date())
         return Int(scenario.location.line)
-    }
-
-    /// A function with two branches, for a step to run one of.
-    private static func branch(of value: Int) -> Int {
-        if value < 10 {
-            return 1
-        }
-        return 2
     }
 
     func testTheReporterLeavesTheBackgroundsStepsOutOfTheRedundantSteps() throws {
