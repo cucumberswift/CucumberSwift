@@ -218,6 +218,7 @@ final class CoverageRecorderTests: XCTestCase {
         var settings = CoverageSettings()
         settings.sources = ["CoverageRecorderTests.swift"]
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        try XCTSkipIf(recorder.code?.functions.isEmpty ?? true, "This test file wasn't built with code coverage.")
         // Two scenarios that run the same branch, the first in its Background and the second in its own step.
         for (line, inBackground) in [(4, true), (9, false)] {
             recorder.scenarioStarted()
@@ -242,6 +243,7 @@ final class CoverageRecorderTests: XCTestCase {
         var settings = CoverageSettings()
         settings.sources = ["CoverageRecorderTests.swift"]
         let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        try XCTSkipIf(recorder.code?.functions.isEmpty ?? true, "This test file wasn't built with code coverage.")
         for line in [4, 9] {
             recorder.scenarioStarted()
             // Line 1 is the Background's step, which isn't compared.

@@ -51,13 +51,12 @@ final class CoverageReporterTests: XCTestCase {
     }
 
     func testTheReporterLeavesTheBackgroundsStepsOutOfTheRedundantSteps() throws {
-        try XCTSkipIf(ProfileCounters.loaded().binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageReporterTests.swift"]
+        let probe = CoverageRecorder(coverageFolder: folder, settings: settings)
+        try XCTSkipIf(probe.code?.functions.isEmpty ?? true, "This test file wasn't built with code coverage.")
         let path = folder.path
-        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: {
-            var settings = CoverageSettings()
-            settings.sources = ["CoverageReporterTests.swift"]
-            return settings
-        })
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: { settings })
         let cucumber = Cucumber(withString: """
         Feature: Greeting
             Background:
