@@ -50,6 +50,33 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(counters.unsupportedVersions, [11])
     }
 
+    /// Folders in `folder` named `names`, each created `age` seconds before now.
+    private func makeFolders(_ names: [String], age: TimeInterval) throws {
+        for name in names {
+            let url = folder.appendingPathComponent(name)
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+            try FileManager.default.setAttributes([.creationDate: Date().addingTimeInterval(-age)], ofItemAtPath: url.path)
+        }
+    }
+
+    private func folderNames() throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted()
+    }
+
+    func testARunInTheDefaultFolderDeletesTheRunsThatStartedAnHourBeforeIt() throws {
+        try makeFolders(["run-old", "notes"], age: 2 * CoverageRecorder.earlierRunAge)
+        // A worker of the same parallel run, which started moments before.
+        try makeFolders(["run-sibling"], age: 5)
+        _ = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), runID: "new", removesEarlierRuns: true)
+        XCTAssertEqual(try folderNames(), ["notes", "run-new", "run-sibling"])
+    }
+
+    func testARunInAFolderYouSetKeepsTheEarlierRuns() throws {
+        try makeFolders(["run-old"], age: 2 * CoverageRecorder.earlierRunAge)
+        _ = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), runID: "new")
+        XCTAssertEqual(try folderNames(), ["run-new", "run-old"])
+    }
+
     func testAnUnsupportedVersionIsTheManifestsProblem() {
         let recorder = CoverageRecorder(
             coverageFolder: folder,
@@ -183,6 +210,53 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(parts.map(\.rule?.title), [nil, "Adding", "Classifying"])
         XCTAssertEqual(parts.map { $0.scores.scenarios.map(\.line) }, [[4], [30], [20]])
         XCTAssertEqual(recorder.manifest.features.map(\.ruleLine), [nil, 8, 10])
+    }
+
+    func testTheCodeRunBeforeTheBackgroundFinishedIsLeftOutOfTheRedundancy() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        // Two scenarios that run the same branch, the first in its Background and the second in its own step.
+        for (line, inBackground) in [(4, true), (9, false)] {
+            recorder.scenarioStarted()
+            if inBackground {
+                _ = Self.coveredHalf(of: 1)
+                recorder.backgroundFinished()
+            } else {
+                recorder.backgroundFinished()
+                _ = Self.coveredHalf(of: 1)
+            }
+            recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: []))
+        }
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1).first?.scores)
+        // The first scenario's run of the branch was in the Background, so the second's isn't redundant.
+        XCTAssertEqual(scores.redundancy, 0)
+        XCTAssertGreaterThan(scores.coveredRegions, 0)
+    }
+
+    func testTwoScenariosWhoseStepsRunTheSameCodeAreRedundantButTheBackgroundsStepsAreNot() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        for line in [4, 9] {
+            recorder.scenarioStarted()
+            // Line 1 is the Background's step, which isn't compared.
+            recorder.stepStarted()
+            _ = Self.coveredHalf(of: 20)
+            recorder.stepFinished(line: 1, isBackground: true)
+            recorder.backgroundFinished()
+            recorder.stepStarted()
+            _ = Self.coveredHalf(of: 1)
+            recorder.stepFinished(line: line + 1, isBackground: false)
+            recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: line, name: "S\(line)", tags: []))
+        }
+        let scores = try XCTUnwrap(recorder.featureFinished(feature: featureURI, featureName: "A", line: 1).first?.scores)
+        XCTAssertEqual(scores.redundantSteps.map(\.line), [5, 10])
+        XCTAssertEqual(scores.redundantSteps.map(\.similarTo), [10, 5])
     }
 
     func testWritingAProfileKeepsTheCountersTotals() throws {

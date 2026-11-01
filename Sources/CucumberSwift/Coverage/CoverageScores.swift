@@ -73,6 +73,26 @@ struct MeasuredCode: Equatable {
 /// much of what they covered more than one of them covered, lower is better. With each scenario's share
 /// of the coverage, its time, and the functions whose code no scenario ran.
 struct CoverageScores: Codable, Equatable {
+    /// The regions one of a scenario's steps after its Background ran.
+    struct StepRun: Equatable {
+        let line: Int
+        let regions: Set<Int>
+    }
+
+    /// A redundant step outside the Background: some of the code it runs, in functions that other
+    /// scenarios run in exactly the same way.
+    struct RedundantStep: Codable, Equatable {
+        /// The step's line.
+        let line: Int
+        /// The share of the regions the step ran that are in those functions, from 0 to 100.
+        let percent: Double
+        /// The line of the step in another scenario that runs most of the same code.
+        let similarTo: Int
+        /// Whether the two steps' scenarios run exactly the same code after the Background, so that they differ
+        /// only in their values, and a Scenario Outline fits better than a Background.
+        let suggestsOutline: Bool
+    }
+
     /// A scenario as the scores see it.
     struct Scenario {
         let name: String
@@ -83,6 +103,16 @@ struct CoverageScores: Codable, Equatable {
         /// The scenarios of one Scenario Outline, its examples, have the same group: the lines of the steps
         /// they share. Every other scenario has a group of its own.
         let group: String
+        /// The regions the scenario ran during its Background steps: code shared by every scenario, which the redundancy
+        /// leaves out. They still count toward the coverage.
+        let backgroundRegions: Set<Int>
+        /// The regions each of its steps after the Background ran.
+        let steps: [StepRun]
+
+        /// The regions the redundancy counts: those the scenario ran after its Background steps.
+        var countedRegions: Set<Int> {
+            regions.subtracting(backgroundRegions)
+        }
 
         /// Whether the scenario is tagged `@redundant`. The parser keeps a tag without its `@`, and a tag
         /// written in code may have one.
@@ -90,13 +120,22 @@ struct CoverageScores: Codable, Equatable {
             tags.contains { $0.hasPrefix("@") ? $0.dropFirst() == CoverageScores.redundantTag : $0 == CoverageScores.redundantTag }
         }
 
-        init(name: String, line: Int, tags: [String], duration: TimeInterval, regions: Set<Int>, group: String? = nil) {
+        init(name: String,
+             line: Int,
+             tags: [String],
+             duration: TimeInterval,
+             regions: Set<Int>,
+             group: String? = nil,
+             backgroundRegions: Set<Int> = [],
+             steps: [StepRun] = []) {
             self.name = name
             self.line = line
             self.tags = tags
             self.duration = duration
             self.regions = regions
             self.group = group ?? "line \(line)"
+            self.backgroundRegions = backgroundRegions
+            self.steps = steps
         }
     }
 
@@ -112,11 +151,19 @@ struct CoverageScores: Codable, Equatable {
         /// alone ran it, and is split evenly between the scenarios that ran it otherwise. The shares add
         /// up to the coverage.
         let share: Double
-        /// Whether every region the scenario ran was also run by another scenario, outside its Scenario
-        /// Outline. Only set with the redundancy score on.
+        /// Whether the scenario is redundant: other scenarios kept run all the code it runs after its
+        /// Background steps. Only set with the redundancy score on.
         let addsNothing: Bool
+        /// The scenario's time when it is redundant, and 0 otherwise. Nil with the redundancy score off.
+        let wastedTime: TimeInterval?
         /// The scenario's ``Scenario/group``.
         let group: String
+    }
+
+    /// What the redundancy score measured: the score, and the redundant groups.
+    private struct Redundancy {
+        let score: Double
+        let redundantGroups: Set<String>
     }
 
     /// A function the feature entered, with regions none of its scenarios ran.
@@ -139,10 +186,15 @@ struct CoverageScores: Codable, Equatable {
     /// All the regions that coverage measures, whether a scenario entered their function or not.
     let measuredRegions: Int
     let functionsRun: Int
-    /// Nil with the redundancy score off.
+    /// The share of the scenarios that are redundant, from 0 to 100, counting a Scenario Outline's examples
+    /// as one. Nil with the redundancy score off.
     let redundancy: Double?
+    /// The time the redundant scenarios took. Nil with the redundancy score off.
+    let wastedTime: TimeInterval?
     let scenarios: [ScenarioScore]
     let gaps: [Gap]
+    /// The redundant steps, by line. Empty with the redundancy score off.
+    let redundantSteps: [RedundantStep]
 
     /// The feature's coverage, from 0 to 100: the regions its scenarios ran, of the regions in the
     /// functions they entered.
@@ -151,33 +203,90 @@ struct CoverageScores: Codable, Equatable {
     /// The regions the feature's scenarios ran, of all the code coverage measures, from 0 to 100.
     var coverageOfAllCode: Double { percent(coveredRegions, of: measuredRegions) }
 
-    /// The redundancy of `scenarios`, from 0 to 100, and the groups whose scenarios run no code that
-    /// another group doesn't run too.
-    private static func redundancy(of scenarios: [Scenario]) -> (score: Double, groupsAddingNothing: Set<String>) {
-        // A Scenario Outline's examples are one group, so that rows that run the same code with other data
-        // don't count as redundant.
+    /// The seconds all the scenarios took.
+    var duration: TimeInterval { scenarios.reduce(0) { $0 + $1.duration } }
+
+    /// The redundant groups of `scenarios`, and their share of the groups, from 0 to 100. A group is a
+    /// scenario, or a Scenario Outline's examples together, and its code is what its scenarios ran after their
+    /// Background steps.
+    ///
+    /// A group is redundant when the groups kept run all of its code. Every group whose code the other
+    /// groups don't all run is kept. Of the rest, which the other groups cover, each is kept in the order of
+    /// the feature file unless the groups kept so far run its code: so order only decides between groups that
+    /// cover each other, such as two that run the same code, and the later one is redundant.
+    private static func redundancy(of scenarios: [Scenario]) -> Redundancy {
+        var order = [String]()
         var groups = [String: Set<Int>]()
         for scenario in scenarios where !scenario.isTaggedRedundant {
-            groups[scenario.group, default: []].formUnion(scenario.regions)
+            if groups[scenario.group] == nil { order.append(scenario.group) }
+            groups[scenario.group, default: []].formUnion(scenario.countedRegions)
         }
-        var groupRuns = [Int: Int]()
-        for regions in groups.values {
-            for region in regions { groupRuns[region, default: 0] += 1 }
+        // A group with no code of its own beyond its Background has nothing to judge.
+        let judged = order.filter { groups[$0]?.isEmpty == false }
+        func others(than group: String) -> Set<Int> {
+            judged.filter { $0 != group }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
         }
-        // With three or more groups, the code every one of them runs, such as their shared setup, doesn't
-        // count. With two, it would hide two scenarios that run the same code.
-        if groups.count >= 3 {
-            groupRuns = groupRuns.filter { $0.value < groups.count }
+        let covered = Set(judged.filter { (groups[$0] ?? []).isSubset(of: others(than: $0)) })
+        var kept = judged.filter { !covered.contains($0) }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
+        var redundant = Set<String>()
+        for group in judged where covered.contains(group) {
+            let regions = groups[group] ?? []
+            if regions.isSubset(of: kept) {
+                redundant.insert(group)
+            } else {
+                kept.formUnion(regions)
+            }
         }
-        let runsCounted = groupRuns.values.reduce(0, +)
-        let repeated = groupRuns.values.reduce(0) { $0 + $1 - 1 }
-        let score = runsCounted == 0 ? 0 : 100 * Double(repeated) / Double(runsCounted)
-        guard groups.count >= 2 else { return (score, []) }
-        let addingNothing = groups.filter { _, regions in
-            let counted = regions.filter { groupRuns[$0] != nil }
-            return !counted.isEmpty && counted.allSatisfy { (groupRuns[$0] ?? 0) > 1 }
+        let score = judged.isEmpty ? 0 : 100 * Double(redundant.count) / Double(judged.count)
+        return Redundancy(score: score, redundantGroups: redundant)
+    }
+
+    /// The steps outside the Background that run, in the same way as other scenarios do, functions that
+    /// belong in the Background: the redundant steps.
+    ///
+    /// A function is run the same way when two or more scenarios, a Scenario Outline's examples counting as
+    /// one, ran exactly the same regions of it in their steps. A function that scenarios run with different
+    /// inputs, such as `sum` with positive and with negative numbers, runs different regions, so it isn't
+    /// a redundant step.
+    private static func redundantSteps(of scenarios: [Scenario], code: MeasuredCode) -> [RedundantStep] {
+        var groups = [String: [Int: Set<Int>]]()
+        for scenario in scenarios where !scenario.isTaggedRedundant {
+            for step in scenario.steps {
+                groups[scenario.group, default: [:]][step.line, default: []].formUnion(step.regions)
+            }
         }
-        return (score, Set(addingNothing.keys))
+        guard groups.count >= 2 else { return [] }
+        func byFunction(_ regions: Set<Int>) -> [Range<Int>: Set<Int>] {
+            var result = [Range<Int>: Set<Int>]()
+            for region in regions {
+                if let function = code.function(of: region) { result[function.regions, default: []].insert(region) }
+            }
+            return result
+        }
+        let allRegions = groups.mapValues { $0.values.reduce(into: Set<Int>()) { $0.formUnion($1) } }
+        let functionRuns = groups.mapValues { byFunction($0.values.reduce(into: Set<Int>()) { $0.formUnion($1) }) }
+        // For each function, how many groups ran each set of its regions.
+        var sameWay = [Range<Int>: [Set<Int>: Int]]()
+        for runs in functionRuns.values {
+            for (function, regions) in runs { sameWay[function, default: [:]][regions, default: 0] += 1 }
+        }
+        var found = [Int: RedundantStep]()
+        for (group, steps) in groups {
+            for (line, regions) in steps where !regions.isEmpty {
+                var repeated = Set<Int>()
+                for (function, ran) in byFunction(regions) {
+                    let count = functionRuns[group]?[function].flatMap { sameWay[function]?[$0] } ?? 0
+                    if count >= 2 { repeated.formUnion(ran) }
+                }
+                let similar = groups.filter { $0.key != group }
+                    .flatMap { other in other.value.map { (group: other.key, line: $0.key, shared: $0.value.intersection(repeated).count) } }
+                    .max { ($0.shared, $1.line) < ($1.shared, $0.line) }
+                guard let similar, similar.shared > 0 else { continue }
+                found[line] = RedundantStep(line: line, percent: 100 * Double(repeated.count) / Double(regions.count), similarTo: similar.line,
+                                          suggestsOutline: allRegions[group] == allRegions[similar.group])
+            }
+        }
+        return found.values.sorted { $0.line < $1.line }
     }
 
     init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool) {
@@ -195,12 +304,19 @@ struct CoverageScores: Codable, Equatable {
         // Redundancy is measured only with its score on.
         let measured = isRedundancy ? Self.redundancy(of: scenarios) : nil
         redundancy = measured?.score
+        // A redundant scenario's whole time is wasted: removing it would test no less code.
+        let wasted = scenarios.map { scenario in
+            measured.map { $0.redundantGroups.contains(scenario.group) && !scenario.isTaggedRedundant ? scenario.duration : 0 }
+        }
+        wastedTime = measured == nil ? nil : wasted.reduce(0) { $0 + ($1 ?? 0) }
+
+        redundantSteps = isRedundancy ? Self.redundantSteps(of: scenarios, code: code) : []
 
         let total = regionsInFunctionsRun
-        self.scenarios = scenarios.map { scenario in
+        self.scenarios = zip(scenarios, wasted).map { scenario, wastedTime in
             let own = scenario.regions.filter { runs[$0] == 1 }.count
             let share = scenario.regions.reduce(0.0) { $0 + 1 / Double(runs[$1] ?? 1) }
-            let addsNothing = !scenario.isTaggedRedundant && measured?.groupsAddingNothing.contains(scenario.group) == true
+            let addsNothing = !scenario.isTaggedRedundant && measured?.redundantGroups.contains(scenario.group) == true
             return ScenarioScore(name: scenario.name,
                                  line: scenario.line,
                                  duration: scenario.duration,
@@ -208,6 +324,7 @@ struct CoverageScores: Codable, Equatable {
                                  ownRegions: own,
                                  share: total == 0 ? 0 : 100 * share / Double(total),
                                  addsNothing: addsNothing,
+                                 wastedTime: wastedTime,
                                  group: scenario.group)
         }
 

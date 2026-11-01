@@ -133,6 +133,19 @@ struct ProfileCounters {
     /// CucumberSwift doesn't write.
     private(set) var unsupportedVersions = [UInt64]()
 
+    /// Whether a binary loaded now was built with code coverage. It only looks for the counters' section,
+    /// so it is cheap: `auto` coverage asks it before deciding to measure.
+    static var isInstrumented: Bool {
+        #if canImport(MachO)
+        for index in 0..<_dyld_image_count() {
+            guard let header = _dyld_get_image_header(index), header.pointee.magic == MH_MAGIC_64 else { continue }
+            let image = MachImage(header: UnsafeRawPointer(header), slide: _dyld_get_image_vmaddr_slide(index))
+            if image.section(segment: "__DATA", name: "__llvm_prf_cnts") != nil { return true }
+        }
+        #endif
+        return false
+    }
+
     /// The binaries loaded now that were built with code coverage. Empty when none was, or on a platform
     /// without Mach-O.
     static func loaded() -> ProfileCounters {

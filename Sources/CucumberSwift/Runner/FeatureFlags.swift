@@ -85,9 +85,16 @@ enum FeatureFlags {
         return trimmed?.isEmpty == false ? trimmed : nil
     }
 
-    /// Whether each scenario's code coverage is written to a file. Off by default.
+    /// Whether coverage is set on or off: the static variable, then `CUCUMBER_COVERAGE`. Nil for `auto`, the
+    /// default, as `AUTO` or no value gives.
+    static var coverageSetting: Bool? {
+        Cucumber.coverage ?? bool(Cucumber.shared.environment["CUCUMBER_COVERAGE"])
+    }
+
+    /// Whether CucumberSwift measures each scenario's code coverage. With `auto`, when the test process
+    /// was built with code coverage.
     static var isCoverage: Bool {
-        value(Cucumber.coverage, environmentVariable: "CUCUMBER_COVERAGE", default: false)
+        coverageSetting ?? ProfileCounters.isInstrumented
     }
 
     /// Where the coverage files are written: the static variable, then `CUCUMBER_COVERAGE_PATH`. Nil when
@@ -209,11 +216,12 @@ extension Cucumber {
         set { FeatureFlags.stringStorage["reportPath"] = newValue }
     }
 
-    /// Whether CucumberSwift writes each scenario's code coverage to a file, with a manifest of the
-    /// scenarios that ran, for a coverage report. Off by default. Set this to `true`, or the environment
-    /// variable `CUCUMBER_COVERAGE` to `YES`, to turn it on, and turn on code coverage for the test target.
-    /// This variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
-    /// `setupSteps()`. See ``coveragePath`` for where the files go.
+    /// Whether CucumberSwift measures each scenario's code coverage, and scores each feature. `nil`, the
+    /// default, is `auto`: CucumberSwift measures when the test target was built with code coverage, and
+    /// writes the coverage files only when ``coveragePath`` is set. Set this to `true`, or the environment
+    /// variable `CUCUMBER_COVERAGE` to `YES`, to measure and write the files, and to `false` or `NO` to
+    /// measure nothing. `AUTO` gives `auto`. This variable, when set, wins over the environment variable.
+    /// Set it in your `StepImplementation`'s `setupSteps()`. See <doc:Measuring-Code-Coverage>.
     public static var coverage: Bool? {
         get { FeatureFlags.storage["coverage"] }
         set { FeatureFlags.storage["coverage"] = newValue }

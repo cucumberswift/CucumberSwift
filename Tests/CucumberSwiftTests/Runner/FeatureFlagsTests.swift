@@ -82,15 +82,19 @@ class FeatureFlagsTests: XCTestCase {
         XCTAssertNil(FeatureFlags.reportPath)
     }
 
-    func testCoverageIsOffByDefault() {
-        XCTAssertFalse(FeatureFlags.isCoverage)
+    func testCoverageIsAutoByDefaultOnWhenTheTestsAreBuiltWithCoverage() {
+        XCTAssertNil(FeatureFlags.coverageSetting)
+        XCTAssertEqual(FeatureFlags.isCoverage, ProfileCounters.isInstrumented)
     }
 
     func testCoverageComesFromTheEnvironmentVariable() {
         Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "yes"
         XCTAssertTrue(FeatureFlags.isCoverage)
-        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "maybe"
+        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "no"
         XCTAssertFalse(FeatureFlags.isCoverage)
+        // Anything else, such as AUTO, is auto.
+        Cucumber.shared.environment["CUCUMBER_COVERAGE"] = "AUTO"
+        XCTAssertNil(FeatureFlags.coverageSetting)
     }
 
     func testCoverageStaticVariableWinsOverTheEnvironmentVariable() {

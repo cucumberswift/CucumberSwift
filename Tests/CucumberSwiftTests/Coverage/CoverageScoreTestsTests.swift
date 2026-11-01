@@ -49,6 +49,8 @@ final class CoverageScoreTestsTests: XCTestCase {
         Cucumber.coverage = true
         let suite = try XCTUnwrap(CoverageScoreTests.suite(for: try feature(), className: "Adding|CoverageScoresKinds"))
         XCTAssertEqual(suite.tests.count, CoverageIssue.Kind.allCases.count)
+        // Coverage, and Redundancy with the warnings on the scenarios that add no coverage of their own (#504).
+        XCTAssertEqual(CoverageIssue.Kind.allCases.map(CoverageScoreTests.testName), ["Coverage", "Redundancy"])
         XCTAssertTrue(CoverageScoreTests.isWaiting(for: URL(string: uri)))
     }
 
@@ -57,7 +59,7 @@ final class CoverageScoreTestsTests: XCTestCase {
         let suite = try XCTUnwrap(CoverageScoreTests.suite(for: try feature(), className: "Adding|CoverageScoresRun"))
         // Held for the score tests, so that the test running now doesn't record them.
         CoverageScoreTests.receive(issue(.coverage), in: nil)
-        CoverageScoreTests.receive(issue(.redundantScenario, line: 2), in: nil)
+        CoverageScoreTests.receive(issue(.redundancy, line: 2), in: nil)
         // Each score test records its warnings in the test that runs it, here this one.
         for case let test as XCTestCase in suite.tests {
             test.invokeTest()
@@ -111,8 +113,8 @@ final class CoverageScoreTestsTests: XCTestCase {
         var finished = 0
         let suite = try XCTUnwrap(CoverageScoreTests.suite(for: feature, className: "Adding|CoverageScoresOnly") { _ in finished += 1 })
         CoverageScoreTests.receive(issue(.coverage), in: nil)
-        CoverageScoreTests.receive(issue(.redundantScenario, line: 2), in: nil)
-        // A test plan that runs only the last score test, Redundant scenarios.
+        CoverageScoreTests.receive(issue(.redundancy, line: 2), in: nil)
+        // A test plan that runs only the last score test, Redundancy.
         let last = try XCTUnwrap(suite.tests.last as? XCTestCase)
         last.invokeTest()
         XCTAssertEqual(finished, 1)

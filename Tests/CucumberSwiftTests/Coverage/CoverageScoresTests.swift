@@ -47,10 +47,25 @@ final class CoverageScoresTests: XCTestCase {
         XCTAssertEqual(scores.scenarios.map(\.ownRegions), [2, 1, 1])
     }
 
-    func testTheRedundancyIsTheRepeatedPartOfWhatTheScenariosRan() throws {
+    func testOfTwoScenariosThatRunTheSameCodeTheLaterIsRedundant() throws {
         let scores = CoverageScores(scenarios: [scenario(4, [0, 1]), scenario(9, [0, 1])], code: code, isRedundancy: true)
         XCTAssertEqual(try XCTUnwrap(scores.redundancy), 50)
-        XCTAssertEqual(scores.scenarios.map(\.addsNothing), [true, true])
+        XCTAssertEqual(scores.scenarios.map(\.addsNothing), [false, true])
+    }
+
+    func testAScenarioWhoseCodeOtherScenariosRunBetweenThemIsRedundantWhereverItIs() throws {
+        // The first runs regions 0 and 1, which the second and third run between them.
+        for order in [[0, 1, 2], [1, 0, 2], [1, 2, 0]] {
+            let all = [scenario(4, [0, 1]), scenario(9, [0, 2]), scenario(14, [1, 3])]
+            let scores = CoverageScores(scenarios: order.map { all[$0] }, code: code, isRedundancy: true)
+            XCTAssertEqual(scores.scenarios.filter(\.addsNothing).map(\.line), [4], "\(order)")
+        }
+    }
+
+    func testScenariosThatEachTestADifferentBranchAreNotRedundant() throws {
+        // Each enters the same function, region 8, and runs a branch of its own.
+        let scores = CoverageScores(scenarios: [scenario(4, [8, 9]), scenario(9, [8, 10]), scenario(14, [8, 11])], code: code, isRedundancy: true)
+        XCTAssertEqual(try XCTUnwrap(scores.redundancy), 0)
     }
 
     func testWithRedundancyOffNothingAboutItIsMeasured() {
@@ -59,12 +74,80 @@ final class CoverageScoresTests: XCTestCase {
         XCTAssertEqual(scores.scenarios.map(\.addsNothing), [false, false])
     }
 
-    func testWithThreeScenariosTheCodeAllOfThemRunDoesNotCount() throws {
-        // Region 0 is shared setup that every scenario runs; only regions 4 and 5 are run twice.
-        let scores = CoverageScores(scenarios: [scenario(4, [0, 4]), scenario(9, [0, 4, 5]), scenario(14, [0, 5, 8])], code: code, isRedundancy: true)
-        XCTAssertEqual(try XCTUnwrap(scores.redundancy), 100 * 2 / 5.0, accuracy: 0.0001)
-        // The second scenario's regions 4 and 5 are each run by another scenario too.
-        XCTAssertEqual(scores.scenarios.map(\.addsNothing), [true, true, false])
+    func testTheCodeABackgroundRunsIsLeftOutOfTheRedundancyButNotTheCoverage() throws {
+        // The first scenario only checks what its Background set up, region 0, which the second runs too.
+        let inBackground = CoverageScores(scenarios: [
+            CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 1, regions: [0], backgroundRegions: [0]),
+            CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 1, regions: [0, 1])
+        ], code: code, isRedundancy: true)
+        XCTAssertEqual(try XCTUnwrap(inBackground.redundancy), 0)
+        XCTAssertEqual(inBackground.scenarios.map(\.addsNothing), [false, false])
+        XCTAssertEqual(inBackground.coveredRegions, 2)
+        // Run in the scenario's own steps, the same code makes it redundant.
+        let inSteps = CoverageScores(scenarios: [scenario(4, [0]), scenario(9, [0, 1])], code: code, isRedundancy: true)
+        XCTAssertEqual(inSteps.scenarios.map(\.addsNothing), [true, false])
+    }
+
+    /// A scenario with steps, each at a line with the regions it ran.
+    private func scenario(_ line: Int, steps: [Int: Set<Int>], group: String? = nil) -> CoverageScores.Scenario {
+        CoverageScores.Scenario(name: "Scenario \(line)", line: line, tags: [], duration: 1, regions: steps.values.reduce(into: []) { $0.formUnion($1) },
+                                group: group, steps: steps.sorted { $0.key < $1.key }.map { CoverageScores.StepRun(line: $0.key, regions: $0.value) })
+    }
+
+    func testStepsOfDifferentScenariosThatRunAFunctionTheSameWayAreRedundant() throws {
+        // Both click through `add`'s regions 0 to 2 (the profile menu), and then run their own `classify` branch.
+        let scores = CoverageScores(scenarios: [
+            scenario(4, steps: [5: [0, 1, 2, 8], 6: [9]]),
+            scenario(10, steps: [11: [0, 1, 2, 10], 12: [11]])
+        ], code: code, isRedundancy: true)
+        XCTAssertEqual(scores.redundantSteps.map(\.line), [5, 11])
+        XCTAssertEqual(scores.redundantSteps.map(\.similarTo), [11, 5])
+        XCTAssertEqual(scores.redundantSteps[0].percent, 75)
+        // The scenarios run different `classify` branches, so they don't differ only in their values.
+        XCTAssertEqual(scores.redundantSteps.map(\.suggestsOutline), [false, false])
+    }
+
+    func testStepsOfScenariosThatRunExactlyTheSameCodeSuggestAScenarioOutline() {
+        let scores = CoverageScores(scenarios: [
+            scenario(4, steps: [5: [0, 1, 2]]),
+            scenario(10, steps: [11: [0, 1, 2]])
+        ], code: code, isRedundancy: true)
+        XCTAssertEqual(scores.redundantSteps.map(\.suggestsOutline), [true, true])
+    }
+
+    func testOneFunctionRunWithDifferentInputsIsNotARedundantStep() {
+        // The same function, `add`, runs its positive branch in one scenario and its negative branch in the other.
+        let scores = CoverageScores(scenarios: [
+            scenario(4, steps: [5: [0, 1]]),
+            scenario(10, steps: [11: [0, 2]])
+        ], code: code, isRedundancy: true)
+        XCTAssertEqual(scores.redundantSteps, [])
+    }
+
+    func testAnOutlinesExamplesAreOneScenarioForRedundantSteps() {
+        let scores = CoverageScores(scenarios: [
+            scenario(4, steps: [3: [0, 1]], group: "3"),
+            scenario(5, steps: [3: [0, 1]], group: "3")
+        ], code: code, isRedundancy: true)
+        XCTAssertEqual(scores.redundantSteps, [])
+    }
+
+    func testNoRedundantStepsWithRedundancyOff() {
+        let scores = CoverageScores(scenarios: [scenario(4, steps: [5: [0]]), scenario(10, steps: [11: [0]])], code: code, isRedundancy: false)
+        XCTAssertEqual(scores.redundantSteps, [])
+    }
+
+    func testTheWastedTimeIsTheRedundantScenariosTime() throws {
+        let scores = CoverageScores(scenarios: [
+            CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 2, regions: [0, 1]),
+            CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 4, regions: [0, 1]),
+            CoverageScores.Scenario(name: "C", line: 14, tags: ["redundant"], duration: 8, regions: [0, 1])
+        ], code: code, isRedundancy: true)
+        // B repeats A, and C is left out.
+        XCTAssertEqual(scores.scenarios.map(\.wastedTime), [0, 4, 0])
+        XCTAssertEqual(scores.wastedTime, 4)
+        XCTAssertEqual(scores.duration, 14)
+        XCTAssertNil(CoverageScores(scenarios: [scenario(4, [0])], code: code, isRedundancy: false).wastedTime)
     }
 
     func testAnOutlinesExamplesAreComparedWithTheOtherScenariosNotWithEachOther() throws {

@@ -85,6 +85,7 @@ struct CoverageSettings: Equatable {
     static let redundancyVariable = "CUCUMBER_REDUNDANCY"
     static let redundancyWarningLevelVariable = "CUCUMBER_REDUNDANCY_WARNING_LEVEL"
     static let redundancyErrorLevelVariable = "CUCUMBER_REDUNDANCY_ERROR_LEVEL"
+    static let redundantStepWarningLevelVariable = "CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL"
     static let sourcesVariable = "CUCUMBER_COVERAGE_SOURCES"
 
     static let storage = Storage()
@@ -100,6 +101,9 @@ struct CoverageSettings: Equatable {
     var redundancyWarningLevel: CoverageLevel = 30
     /// A feature whose redundancy is at or above this gets an error.
     var redundancyErrorLevel: CoverageLevel = .off
+    /// A step outside the Background gets a warning when this share of the code it runs is redundant: the
+    /// functions that other scenarios run in exactly the same way.
+    var redundantStepWarningLevel: CoverageLevel = 50
     /// Why the runner scores nothing, though it writes the coverage files, or nil when it scores.
     var scoresOffReason: String?
     /// Parts of the paths of the files to measure. Empty to measure the default files.
@@ -116,6 +120,7 @@ struct CoverageSettings: Equatable {
         settings.isRedundancy = storage.redundancy ?? FeatureFlagValue.bool(environment[redundancyVariable]) ?? true
         settings.redundancyWarningLevel = level("redundancyWarning", redundancyWarningLevelVariable, settings.redundancyWarningLevel)
         settings.redundancyErrorLevel = level("redundancyError", redundancyErrorLevelVariable, settings.redundancyErrorLevel)
+        settings.redundantStepWarningLevel = level("redundantStepWarning", redundantStepWarningLevelVariable, settings.redundantStepWarningLevel)
         settings.sources = (storage.sources ?? environment[sourcesVariable].map { $0.components(separatedBy: ",") } ?? [])
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
