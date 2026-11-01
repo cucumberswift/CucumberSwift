@@ -37,9 +37,10 @@ import Testing
     }
 
     @Test func aDSLFeaturesBackgroundStepsAreCountedAsTheScenariosBackground() {
-        let gherkin = GherkinScenario(featureTitle: "F", featureTags: [], title: "S", tags: [], file: "/Features/F.swift", line: 3, column: 1, steps: [])
+        let file = "\(#filePath)"
+        let gherkin = GherkinScenario(featureTitle: "F", featureTags: [], title: "S", tags: [], file: file, line: 3, column: 1, steps: [])
         let scenario = Scenario(gherkin)
-        let step = DSLStep(keyword: .given, text: "a calculator", line: 2, column: 1, file: "/Features/F.swift") {}
+        let step = DSLStep(keyword: .given, text: "a calculator", line: 2, column: 1, file: file) {}
         scenario.prependDSLSteps([step, step])
         #expect(scenario.backgroundStepCount == 2)
         #expect(scenario.steps.count == 2)
