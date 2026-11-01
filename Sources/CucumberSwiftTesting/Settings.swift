@@ -260,11 +260,6 @@ enum CucumberSettings {
         return isParallelTestingRequested(compiled: compiled, environment: environment)
     }
 
-    /// Whether parallel testing is asked for, whatever coverage says.
-    static func isParallelTestingRequested(compiled: Bool, environment: [String: String]) -> Bool {
-        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
-    }
-
     /// ``Cucumber/coverage``.
     static var staticCoverage: Bool? {
         get { storage.flag("coverage") }
@@ -275,6 +270,11 @@ enum CucumberSettings {
     static var staticCoveragePath: String? {
         get { storage.coveragePath }
         set { storage.coveragePath = newValue }
+    }
+
+    /// Whether parallel testing is asked for, whatever coverage says.
+    static func isParallelTestingRequested(compiled: Bool, environment: [String: String]) -> Bool {
+        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
     }
 
     /// Whether coverage is set on or off: the static variable, then `CUCUMBER_COVERAGE`. Nil for `auto`, the

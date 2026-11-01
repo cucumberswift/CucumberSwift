@@ -77,7 +77,7 @@ final class CoverageScoresTests: XCTestCase {
     func testTheCodeABackgroundRunsIsLeftOutOfTheRedundancyButNotTheCoverage() throws {
         // The first scenario only checks what its Background set up, region 0, which the second runs too.
         let inBackground = CoverageScores(scenarios: [
-            CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 1, regions: [0], backgroundRegions: [0]),
+            scenario(4, [0]).with(backgroundRegions: [0]),
             CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 1, regions: [0, 1])
         ], code: code, isRedundancy: true)
         XCTAssertEqual(try XCTUnwrap(inBackground.redundancy), 0)
@@ -90,8 +90,9 @@ final class CoverageScoresTests: XCTestCase {
 
     /// A scenario with steps, each at a line with the regions it ran.
     private func scenario(_ line: Int, steps: [Int: Set<Int>], group: String? = nil) -> CoverageScores.Scenario {
-        CoverageScores.Scenario(name: "Scenario \(line)", line: line, tags: [], duration: 1, regions: steps.values.reduce(into: []) { $0.formUnion($1) },
-                                group: group, steps: steps.sorted { $0.key < $1.key }.map { CoverageScores.StepRun(line: $0.key, regions: $0.value) })
+        let regions = steps.values.reduce(into: Set<Int>()) { $0.formUnion($1) }
+        let runs = steps.sorted { $0.key < $1.key }.map { CoverageScores.StepRun(line: $0.key, regions: $0.value) }
+        return CoverageScores.Scenario(name: "Scenario \(line)", line: line, tags: [], duration: 1, regions: regions, group: group).with(steps: runs)
     }
 
     func testStepsOfDifferentScenariosThatRunAFunctionTheSameWayAreRedundant() throws {

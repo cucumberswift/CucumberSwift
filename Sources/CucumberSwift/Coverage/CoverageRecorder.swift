@@ -88,6 +88,10 @@ final class CoverageRecorder {
         var duration: Double?
     }
 
+    /// How long before a run starts the runs it deletes with `removesEarlierRuns` started, at least. The
+    /// workers of one parallel run start seconds apart, so none deletes another's folder.
+    static let earlierRunAge: TimeInterval = 60 * 60
+
     let folder: URL
     let runID: String
     private let startDate: Date
@@ -129,10 +133,6 @@ final class CoverageRecorder {
         return (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))?
             .appendingPathComponent("_cucumberCoverage", isDirectory: true)
     }
-
-    /// How long before a run starts the runs it deletes with `removesEarlierRuns` started, at least. The
-    /// workers of one parallel run start seconds apart, so none deletes another's folder.
-    static let earlierRunAge: TimeInterval = 60 * 60
 
     /// Deletes the folders of the runs in `coverageFolder` that were created more than ``earlierRunAge``
     /// before `date`.
@@ -284,9 +284,9 @@ final class CoverageRecorder {
                                                    tags: finished.tags,
                                                    duration: finished.duration ?? 0,
                                                    regions: regions(ran: counts),
-                                                   group: finished.group,
-                                                   backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [],
-                                                   steps: stepRuns)
+                                                   group: finished.group)
+                .with(backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [])
+                .with(steps: stepRuns)
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
         }
     }

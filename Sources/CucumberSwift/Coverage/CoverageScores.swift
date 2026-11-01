@@ -105,9 +105,9 @@ struct CoverageScores: Codable, Equatable {
         let group: String
         /// The regions the scenario ran during its Background steps: code shared by every scenario, which the redundancy
         /// leaves out. They still count toward the coverage.
-        let backgroundRegions: Set<Int>
+        private(set) var backgroundRegions = Set<Int>()
         /// The regions each of its steps after the Background ran.
-        let steps: [StepRun]
+        private(set) var steps = [StepRun]()
 
         /// The regions the redundancy counts: those the scenario ran after its Background steps.
         var countedRegions: Set<Int> {
@@ -125,17 +125,27 @@ struct CoverageScores: Codable, Equatable {
              tags: [String],
              duration: TimeInterval,
              regions: Set<Int>,
-             group: String? = nil,
-             backgroundRegions: Set<Int> = [],
-             steps: [StepRun] = []) {
+             group: String? = nil) {
             self.name = name
             self.line = line
             self.tags = tags
             self.duration = duration
             self.regions = regions
             self.group = group ?? "line \(line)"
-            self.backgroundRegions = backgroundRegions
-            self.steps = steps
+        }
+
+        /// This scenario with the regions it ran during its Background steps.
+        func with(backgroundRegions: Set<Int>) -> Scenario {
+            var copy = self
+            copy.backgroundRegions = backgroundRegions
+            return copy
+        }
+
+        /// This scenario with the regions each of its steps after the Background ran.
+        func with(steps: [StepRun]) -> Scenario {
+            var copy = self
+            copy.steps = steps
+            return copy
         }
     }
 
@@ -282,8 +292,9 @@ struct CoverageScores: Codable, Equatable {
                     .flatMap { other in other.value.map { (group: other.key, line: $0.key, shared: $0.value.intersection(repeated).count) } }
                     .max { ($0.shared, $1.line) < ($1.shared, $0.line) }
                 guard let similar, similar.shared > 0 else { continue }
-                found[line] = RedundantStep(line: line, percent: 100 * Double(repeated.count) / Double(regions.count), similarTo: similar.line,
-                                          suggestsOutline: allRegions[group] == allRegions[similar.group])
+                let percent = 100 * Double(repeated.count) / Double(regions.count)
+                let isOutline = allRegions[group] == allRegions[similar.group]
+                found[line] = RedundantStep(line: line, percent: percent, similarTo: similar.line, suggestsOutline: isOutline)
             }
         }
         return found.values.sorted { $0.line < $1.line }

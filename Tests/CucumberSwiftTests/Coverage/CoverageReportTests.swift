@@ -36,6 +36,13 @@ final class CoverageReportTests: XCTestCase {
         return CoverageReport(scores: CoverageScores(scenarios: scenarios, code: code, isRedundancy: settings.isRedundancy), settings: settings)
     }
 
+    /// A scenario whose steps, each at a line, ran the given regions.
+    private func stepped(_ line: Int, _ steps: [(line: Int, regions: Set<Int>)]) -> CoverageScores.Scenario {
+        let regions = steps.reduce(into: Set<Int>()) { $0.formUnion($1.regions) }
+        let scenario = CoverageScores.Scenario(name: "Scenario \(line)", line: line, tags: [], duration: 1, regions: regions)
+        return scenario.with(steps: steps.map { CoverageScores.StepRun(line: $0.line, regions: $0.regions) })
+    }
+
     func testCoverageAtOrBelowTheErrorLevelIsAnErrorNamingWhatDidntRun() throws {
         let issues = report([0, 1, 2, 3, 4]).issues(file: file, line: 1, subject: "Feature")
         let issue = try XCTUnwrap(issues.first)
@@ -101,10 +108,8 @@ final class CoverageReportTests: XCTestCase {
         settings.errorLevel = .off
         settings.redundancyWarningLevel = .off
         let scenarios = [
-            CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 1, regions: [0, 1, 2, 3],
-                                    steps: [.init(line: 5, regions: [0, 1, 2, 3])]),
-            CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 1, regions: [0, 1, 2, 3],
-                                    steps: [.init(line: 10, regions: [0, 1, 2, 3])])
+            stepped(4, [(5, [0, 1, 2, 3])]),
+            stepped(9, [(10, [0, 1, 2, 3])])
         ]
         let report = CoverageReport(scores: CoverageScores(scenarios: scenarios, code: code, isRedundancy: true), settings: settings)
         let issues = report.issues(file: file, line: 1, subject: "Feature")
@@ -126,10 +131,8 @@ final class CoverageReportTests: XCTestCase {
             MeasuredCode.Function(name: "read(Int)", file: file.path, line: 9, regions: 4..<10)
         ])
         let scenarios = [
-            CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 1, regions: [0, 1, 2, 3, 4],
-                                    steps: [.init(line: 5, regions: [0, 1, 2, 3]), .init(line: 6, regions: [4])]),
-            CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 1, regions: [0, 1, 2, 3, 8],
-                                    steps: [.init(line: 10, regions: [0, 1, 2, 3]), .init(line: 11, regions: [8])])
+            stepped(4, [(5, [0, 1, 2, 3]), (6, [4])]),
+            stepped(9, [(10, [0, 1, 2, 3]), (11, [8])])
         ]
         let report = CoverageReport(scores: CoverageScores(scenarios: scenarios, code: twoFunctions, isRedundancy: true), settings: settings)
         let message = try XCTUnwrap(report.issues(file: file, line: 1, subject: "Feature").first?.message)
