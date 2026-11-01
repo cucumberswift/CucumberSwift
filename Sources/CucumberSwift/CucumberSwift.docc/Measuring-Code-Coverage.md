@@ -4,13 +4,15 @@ Score each feature's scenarios on how much of your code they test, and how much 
 
 ## Overview
 
-CucumberSwift measures the code that each scenario runs, and scores each feature when its last scenario finishes. Turn it on with the `CUCUMBER_COVERAGE` environment variable:
+CucumberSwift measures the code that each scenario runs, and scores each feature when its last scenario finishes. Build the test target with code coverage, and CucumberSwift measures it:
 
 ```bash
-CUCUMBER_COVERAGE=YES swift test --enable-code-coverage
+swift test --enable-code-coverage
 ```
 
-Coverage is off by default. It needs the test target built with code coverage: the **Code Coverage** option of the scheme or test plan in Xcode, or `swift test --enable-code-coverage`. Without it, CucumberSwift prints the cause at the end of the run and scores nothing.
+In Xcode, turn on the **Code Coverage** option of the scheme or test plan.
+
+The `CUCUMBER_COVERAGE` environment variable and `Cucumber.coverage` default to `auto`, which is `nil` for `Cucumber.coverage`. With `auto`, CucumberSwift measures coverage when the test binary is built with code coverage, and does nothing, with no message, when it isn't. Set the variable to `YES` or `true` to always measure, and print the cause at the end of the run if the target has no code coverage. Set it to `NO` or `false` to never measure.
 
 CucumberSwift prints each feature's scores when the feature finishes:
 
@@ -33,17 +35,16 @@ Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
 
 ### Find the issues in your tests
 
-The XCTest runner records a feature's issues in tests of its own, which run after the feature's scenarios. Their suite is named after the feature, such as `Checkout › Coverage scores`, and has 3 tests:
+The XCTest runner records a feature's issues in tests of its own, which run after the feature's scenarios. Their suite is named after the feature, such as `Checkout › Coverage scores`, and has 2 tests:
 
 - `Coverage`, for the coverage warning or error.
-- `Redundancy`, for the redundancy warning or error.
-- `Redundant scenarios`, for the warnings on the scenarios that add no coverage of their own.
+- `Redundancy`, for the redundancy warning or error, and the warnings on the scenarios that add no coverage of their own.
 
 An error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner records the issues on the feature's suite.
 
-### Turn it on in code
+### Set it in code
 
-Set `Cucumber.coverage` to `true` in `setupSteps()`. It wins over the environment variable:
+Set `Cucumber.coverage` to `true` or `false` in `setupSteps()`. It wins over the environment variable:
 
 ```swift
 extension Cucumber: StepImplementation {
@@ -88,52 +89,45 @@ The feature's scores here count only "Adding two numbers", and the Rule's only "
 
 ## Set the levels
 
-Set each level to a percentage, or to `.off` for no warning or no error. A feature gets a coverage warning or error when its coverage, rounded to a whole percentage, is at or below the level, and a redundancy warning or error when its redundancy is at or above the level. Each setting has an environment variable too, which takes a number from 0 to 100, or `NO`. The comments in these examples give each setting's environment variable and default.
+Set each level to a percentage, or to `.off` for no warning or no error. A feature gets a coverage warning or error when its coverage, rounded to a whole percentage, is at or below the level, and a redundancy warning or error when its redundancy is at or above the level. Each setting has an environment variable too, which takes a number from 0 to 100, or `NO`. The first example's comments give each setting's environment variable and default, and a line that sets a default is commented out.
 
 ### Use the defaults
 
-The defaults balance feedback and failures. A warning at 80% coverage points to the features that leave code untested, and an error at 50% fails only the features whose scenarios miss most of the code they enter. The redundancy score warns at 30% and doesn't fail, because a feature can repeat code on purpose, such as to test boundary values. These lines set every level to its default, so `Cucumber.coverage = true` alone does the same:
+The defaults balance feedback and failures. A warning at 80% coverage points to the features that leave code untested, and an error at 50% fails only the features whose scenarios miss most of the code they enter. The redundancy score warns at 30% and never fails by default, because a feature can repeat code on purpose, such as to test boundary values. A build with code coverage uses every default below without any setting, so each line here is commented out:
 
 ```swift
 public func setupSteps() {
-    Cucumber.coverage = true                // CUCUMBER_COVERAGE, default off
-    Cucumber.coverageWarningLevel = 80      // CUCUMBER_COVERAGE_WARNING_LEVEL, default 80
-    Cucumber.coverageErrorLevel = 50        // CUCUMBER_COVERAGE_ERROR_LEVEL, default 50
-    Cucumber.redundancy = true              // CUCUMBER_REDUNDANCY, default on
-    Cucumber.redundancyWarningLevel = 30    // CUCUMBER_REDUNDANCY_WARNING_LEVEL, default 30
-    Cucumber.redundancyErrorLevel = .off    // CUCUMBER_REDUNDANCY_ERROR_LEVEL, default off
+    // Cucumber.coverage = nil                 // CUCUMBER_COVERAGE, default auto
+    // Cucumber.coverageWarningLevel = 80      // CUCUMBER_COVERAGE_WARNING_LEVEL, default 80
+    // Cucumber.coverageErrorLevel = 50        // CUCUMBER_COVERAGE_ERROR_LEVEL, default 50
+    // Cucumber.redundancy = true              // CUCUMBER_REDUNDANCY, default on
+    // Cucumber.redundancyWarningLevel = 30    // CUCUMBER_REDUNDANCY_WARNING_LEVEL, default 30
+    // Cucumber.redundancyErrorLevel = .off    // CUCUMBER_REDUNDANCY_ERROR_LEVEL, default off
+    // Cucumber.redundantStepWarningLevel = 50 // CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL, default 50
     // Your steps
 }
 ```
 
 ### Warn without failing
 
-Turn the error levels off to see both scores as warnings without failing a test, such as while you add scenarios to an existing suite:
+Turn the coverage error level off to see both scores as warnings without failing a test, such as while you add scenarios to an existing suite. The redundancy never fails by default, so this is the only line to change:
 
 ```swift
 public func setupSteps() {
-    Cucumber.coverage = true                // CUCUMBER_COVERAGE, default off
-    Cucumber.coverageWarningLevel = 80      // CUCUMBER_COVERAGE_WARNING_LEVEL, default 80
-    Cucumber.coverageErrorLevel = .off      // CUCUMBER_COVERAGE_ERROR_LEVEL, default 50
-    Cucumber.redundancy = true              // CUCUMBER_REDUNDANCY, default on
-    Cucumber.redundancyWarningLevel = 30    // CUCUMBER_REDUNDANCY_WARNING_LEVEL, default 30
-    Cucumber.redundancyErrorLevel = .off    // CUCUMBER_REDUNDANCY_ERROR_LEVEL, default off
+    Cucumber.coverageErrorLevel = .off
     // Your steps
 }
 ```
 
-### Allow no redundancy
+### Eliminate redundant steps
 
-Set the redundancy's error level to 1% to fail every feature with a scenario that runs code another scenario runs, and raise the coverage levels with it. This strict mode suits a suite whose scenarios are slow, where each one must test code that no other one tests:
+Set the redundancy's error level to 1% to fail every feature that has a redundant scenario, and raise the coverage levels with it. This strict mode suits a suite whose scenarios are slow, where each one must test code that no other one tests:
 
 ```swift
 public func setupSteps() {
-    Cucumber.coverage = true                // CUCUMBER_COVERAGE, default off
-    Cucumber.coverageWarningLevel = 90      // CUCUMBER_COVERAGE_WARNING_LEVEL, default 80
-    Cucumber.coverageErrorLevel = 80        // CUCUMBER_COVERAGE_ERROR_LEVEL, default 50
-    Cucumber.redundancy = true              // CUCUMBER_REDUNDANCY, default on
-    Cucumber.redundancyWarningLevel = 30    // CUCUMBER_REDUNDANCY_WARNING_LEVEL, default 30
-    Cucumber.redundancyErrorLevel = 1       // CUCUMBER_REDUNDANCY_ERROR_LEVEL, default off
+    Cucumber.coverageWarningLevel = 90
+    Cucumber.coverageErrorLevel = 80
+    Cucumber.redundancyErrorLevel = 1
     // Your steps
 }
 ```
@@ -142,37 +136,141 @@ The warning level stays on in strict mode, because it also puts a warning on eac
 
 ## Find redundant scenarios
 
-Each feature's redundancy score shows which scenarios test nothing that another scenario doesn't already test. Such a scenario costs time on every run and adds no coverage, so you can merge it into another scenario or remove it.
+CucumberSwift marks a scenario as redundant when the other scenarios run all the code it runs. Such a scenario costs time on every run and adds no coverage, so you can merge it into a Scenario Outline or remove it.
 
-The summary adds the redundancy after the coverage, and marks each scenario that runs no code of its own:
+A scenario is redundant when the scenarios that are kept run all the code it runs after its `Background`. CucumberSwift first keeps every scenario that the others don't cover. Only scenarios that cover each other, such as two duplicates, are settled by their order in the feature file, and the later one is redundant.
+
+CucumberSwift compares the code that runs, not the values you pass in. The Coverage sample's `Adding.feature` has 3 scenarios that add positive numbers through `add`, a function without branches, so they run the same code:
+
+```gherkin
+Feature: Adding
+  The calculator adds whole numbers.
+
+  Background:
+    Given a calculator
+
+  Scenario: Adding two numbers
+    When I add 2 and 3
+    Then the display shows "5"
+
+  Scenario: Adding two other numbers
+    When I add 4 and 4
+    Then the display shows "8"
+
+  Scenario: Adding ones
+    When I add 1 and 1
+    Then the display shows "2"
+
+  Scenario: Adding two negative numbers
+    When I add -2 and -3
+    Then the display shows "minus 5"
+```
+
+The summary adds the redundancy and the wasted time after the coverage, and marks each redundant scenario:
 
 ```
-CucumberSwift coverage: Subtracting: 100% of the code its scenarios ran (4 of 4 regions in 2 functions), 15% of all measured code, redundancy 33%
+CucumberSwift coverage: Adding: 100% of the code its scenarios ran (4 of 4 regions in 2 functions), 12% of all measured code, redundancy 50%, about 0.03 s of 0.16 s in redundant scenarios
     Share  Own regions      Time  Scenario
-      29%            0     0.01s  Subtracting a larger number (line 6, adds no coverage of its own)
-      42%            1     0.02s  Subtracting a smaller number (line 11)
-      29%            0     0.01s  Subtracting another larger number (line 16, adds no coverage of its own)
+      21%            0     0.12s  Adding two numbers (line 7)
+      21%            0     0.01s  Adding two other numbers (line 11, adds no coverage of its own)
+      21%            0     0.01s  Adding ones (line 15, adds no coverage of its own)
+      38%            1     0.01s  Adding two negative numbers (line 19)
 ```
 
-A feature's redundancy is the share of the code its scenarios ran that another scenario ran again. A feature at or above 30% gets a warning on its `Feature:` line. Each scenario that adds no coverage of its own gets a warning on its line, with its time:
+The first scenario is kept, and the next two are redundant. The negative-numbers scenario runs code of its own, so it is kept too. A feature's redundancy is the share of its scenarios that are redundant, here 2 of 4. A feature at or above 30% gets a warning on its `Feature:` line. The wasted time is the total time of the redundant scenarios, such as "about 4.2 s of 12.6 s". The manifest records the time of each scenario and each feature.
+
+Each redundant scenario gets a warning on its line, with its time. Both warnings are in the feature's `Redundancy` test:
 
 ```
-Scenario adds no coverage of its own: other scenarios ran all of its code. It took 0.40s.
+Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took 0.01 s. Consider a Scenario Outline for other values, or remove it.
 ```
 
-Some repetition is deliberate, so the score leaves out 3 kinds:
+The warnings suggest a Scenario Outline because the scenarios differ only in their values. Write one Scenario Outline for the positive numbers, and its examples count as one scenario:
+
+```gherkin
+Scenario Outline: Adding positive numbers
+  When I add <first> and <second>
+  Then the display shows "<sum>"
+
+  Examples:
+    | first | second | sum |
+    | 2     | 3      | 5   |
+    | 4     | 4      | 8   |
+    | 1     | 1      | 2   |
+```
+
+Xcode shows the warnings on the feature and on each scenario. The sample sets the redundancy's error level to 40%, so the feature line is an error here. By default it is a warning, and it never fails a test. The screenshot also shows a warning on each `When` step, which <doc:#Find-redundant-steps> explains:
+
+![The Adding feature file in Xcode with a redundancy error on the Feature line, warnings on 2 scenarios, and warnings on 3 When steps. Each When step says 100% of its code is repeated by another step, and suggests a Scenario Outline for different values.](RedundantSteps-ScenarioOutline.png)
+
+### Put shared code in a Background
+
+Put the steps that every scenario needs in a `Background`. CucumberSwift leaves out of the redundancy the code that a scenario runs during its Background steps, including the code that those steps call. That code still counts toward the coverage. The `Given a calculator` step in the feature above is an example.
+
+### Find redundant steps
+
+CucumberSwift also marks redundant steps, because two steps with different text can run the same code. A step is redundant when other scenarios run its code in exactly the same way. Each redundant step gets a warning on its line that gives the share of its code that another step repeats.
+
+Take the Coverage sample's `Memory.feature`, where both `When` steps open the memory before they read or clear it:
+
+```gherkin
+Feature: Memory
+  The calculator keeps numbers in memory.
+
+  Background:
+    Given a calculator
+
+  Scenario: Reading the memory
+    When I read the memory
+    Then the display shows "0"
+
+  Scenario: Clearing the memory
+    When I clear the memory
+    Then the display shows "3"
+```
+
+The warnings suggest moving the code that opens the memory into the `Background`:
+
+```
+Redundant step. 75% of the code in this step is repeated by the step at line 12. Consider moving it to the Background.
+Redundant step. 60% of the code in this step is repeated by the step at line 8. Consider moving it to the Background.
+```
+
+Xcode shows the warning on each step, and lists both under the feature's `Redundancy` test:
+
+![The Memory feature file in Xcode with a warning on each of its 2 When steps, "I read the memory" and "I clear the memory". They say that 75% and 60% of the code in the step is repeated by the other step, and suggest moving it to the Background.](RedundantSteps-Background.png)
+
+A step that opens the memory in the `Background` removes both warnings, and each `When` step then only reads or clears it.
+
+The steps of scenarios that run exactly the same code after the Background, as in `Adding.feature`, get a warning too, and it suggests a Scenario Outline in place of the Background:
+
+```
+Redundant step. 100% of the code in this step is repeated by the step at line 12. Consider a Scenario Outline for different values.
+```
+
+CucumberSwift compares function by function. A function that two scenarios run with exactly the same regions counts as redundant. A function that they run with different inputs does not, because each input runs different regions: `sum` with positive numbers and with negative numbers runs different branches.
+
+A step gets a warning at 50% or more. Set `Cucumber.redundantStepWarningLevel` to another percentage, or to `.off`. The environment variable `CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL` takes a number from 0 to 100, or `NO`. These warnings are in the feature's `Redundancy` test, and they don't change the feature's redundancy.
+
+Some repetition is deliberate, so the score leaves out 3 more kinds:
 
 - A Scenario Outline's examples count as one scenario, so rows that run the same code with other values aren't redundant.
-- In a feature with 3 or more scenarios, code that every scenario runs, such as the setup its `Background` runs, doesn't count.
 - A scenario tagged `@redundant` doesn't count. Use the tag for a scenario you keep on purpose, such as a test for a bug that came back.
+- A scenario with no steps of its own after the Background has nothing to compare.
 
 Set the redundancy's levels as <doc:#Set-the-levels> shows. Setting its warning level to `.off` also turns off the warnings on scenarios. The score is on whenever coverage is, and `Cucumber.redundancy = false` or `CUCUMBER_REDUNDANCY=NO` turns it off.
 
 ## Choose the code to measure
 
-CucumberSwift measures every source file built with code coverage, except your dependencies' files, CucumberSwift's own, and your tests'. Your tests' files are the test bundle's when your app or framework has a binary of its own, as in an Xcode project. With `swift test`, the test bundle contains all the code, and the files in a `Tests` folder are left out instead.
+CucumberSwift measures your app's own code by default, so you don't need to set anything. It measures every source file built with code coverage, except 3 kinds of files:
 
-Set `Cucumber.coverageSources` to measure only the files whose path contains one of its strings:
+- Your dependencies' files, such as the packages that SwiftPM and Xcode check out, and the files in `Pods` and `Carthage`.
+- CucumberSwift's own files.
+- Your tests' files.
+
+Your tests' files are the test bundle's when your app or framework has a binary of its own, as in an Xcode project. With `swift test`, the test bundle contains all the code, so CucumberSwift leaves out the files in a `Tests` folder instead.
+
+Set `Cucumber.coverageSources` only to measure fewer files, such as one module of a large app. It measures only the files whose path contains one of its strings:
 
 ```swift
 public func setupSteps() {
@@ -186,13 +284,13 @@ The environment variable `CUCUMBER_COVERAGE_SOURCES` takes the strings separated
 
 ## Choose where the files go
 
-CucumberSwift also writes each scenario's coverage to a file, for a coverage report of your own. It writes the files to `_cucumberCoverage` in the documents folder. On a Simulator, that folder is inside the Simulator. Set `CUCUMBER_COVERAGE_PATH`, or `Cucumber.coveragePath`, to a folder you can collect, such as one under your home folder:
+CucumberSwift also writes each scenario's coverage to a file, for a coverage report of your own, whenever it measures coverage. It writes the files to `_cucumberCoverage` in the documents folder. On a Simulator, that folder is inside the Simulator. Each run first deletes the run folders in that default folder that started more than an hour earlier. Set `CUCUMBER_COVERAGE_PATH`, or `Cucumber.coveragePath`, to a folder you can collect, such as one under your home folder:
 
 ```bash
 CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$HOME/coverage" swift test --enable-code-coverage
 ```
 
-Each run writes a folder of its own, `run-<id>`, in that folder. The runs of a suite split across several machines can then be collected in one folder without overwriting each other.
+Each run writes a folder of its own, `run-<id>`, in that folder. The runs of a suite split across several machines can then be collected in one folder without overwriting each other. A folder that you set is never cleared.
 
 ## What a run writes
 
@@ -228,7 +326,9 @@ xcrun llvm-cov report /path/to/MyAppTests.xctest/Contents/MacOS/MyAppTests -inst
 
 ## Limits
 
-The Swift Testing runner runs scenarios one at a time while coverage is on, even with parallel testing turned on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. Scenarios that run at the same time add to the same coverage counters, so coverage and parallel testing are mutually exclusive. The XCTest runner is not affected.
+The Swift Testing runner runs scenarios one at a time while coverage is on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. Scenarios that run at the same time add to the same coverage counters, so coverage and parallel testing are mutually exclusive. With `auto`, coverage stays off when you turn on parallel testing, and CucumberSwift prints one line that says why. An explicit `true` runs the scenarios one at a time. The XCTest runner is not affected.
+
+A feature whose scenarios run no measured code, such as a UI test whose app runs in another process, gets no coverage or redundancy issue.
 
 The warnings need Xcode 26 with XCTest, and Swift 6.3 with Swift Testing. With an earlier version, CucumberSwift prints each warning instead, and still records the errors.
 

@@ -52,6 +52,8 @@ public final class Scenario {
     let internalState = ScenarioState()
     /// The Rule the scenario is in, if it is in one, which the coverage scores score on its own.
     let rule: ScenarioRule?
+    /// How many of ``steps`` are its Background's. The redundancy score leaves out the code they run.
+    private(set) var backgroundStepCount: Int
     /// What a scenario written in the Swift DSL runs, until its feature hands it to the runner.
     var dslSteps = [DSLStep]()
     /// A scenario's description in the Swift DSL.
@@ -65,6 +67,7 @@ public final class Scenario {
         self.feature = feature ?? Feature(scenario)
         location = Location(line: scenario.line, column: scenario.column)
         rule = scenario.ruleLine.map { ScenarioRule(title: scenario.ruleTitle ?? "", line: $0) }
+        backgroundStepCount = scenario.backgroundStepCount
         steps = scenario.steps.map { Step($0, in: self) }
     }
 
@@ -99,6 +102,7 @@ public final class Scenario {
     /// Puts a Background's steps before a scenario's own, in the Swift DSL.
     func prependDSLSteps(_ background: [DSLStep]) {
         dslSteps.insert(contentsOf: background, at: 0)
+        backgroundStepCount += background.count
         steps = DSLStep.gherkinSteps(dslSteps).map { Step($0, in: self) }
     }
 }

@@ -24,12 +24,16 @@ final class CoverageReporter: CucumberTestObserver {
     private(set) var recorder: CoverageRecorder?
     private var readSettings = CoverageSettings()
     private var hasAsked = false
+    /// The running scenario's steps that finished, and how many of its steps are its Background's.
+    private var finishedSteps = 0
+    private var backgroundStepCount = 0
 
-    /// The lines of the scenario's steps, which the examples of a Scenario Outline share, and no two other
-    /// scenarios do.
+    /// The lines of the scenario's steps after its Background, which the examples of a Scenario Outline
+    /// share, and no two other scenarios do.
     static func group(of scenario: Scenario) -> String {
-        guard !scenario.steps.isEmpty else { return "line \(scenario.location.line)" }
-        return scenario.steps.map { "\($0.location.line)" }.joined(separator: ",")
+        let steps = scenario.steps.dropFirst(scenario.backgroundStepCount)
+        guard !steps.isEmpty else { return "line \(scenario.location.line)" }
+        return steps.map { "\($0.location.line)" }.joined(separator: ",")
     }
 
     init(isEnabled: @escaping () -> Bool,
@@ -53,30 +57,36 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func testSuiteFinished(at _: Date) {
-        guard let recorder, let manifest = recorder.writeManifest() else { return }
+        guard let recorder else { return }
+        let manifest = recorder.writeManifest()
         if let problem = recorder.manifest.problem ?? recorder.manifest.scoresProblem.map({ "No scores: \($0)." }) {
             output("CucumberSwift coverage: \(problem)")
         }
-        output("CucumberSwift coverage: \(recorder.manifest.scenarios.count) scenarios in \(manifest.deletingLastPathComponent().path)")
+        if let manifest {
+            output("CucumberSwift coverage: \(recorder.manifest.scenarios.count) scenarios in \(manifest.deletingLastPathComponent().path)")
+        }
     }
 
     func didStart(feature _: Feature, at _: Date) {
         // A feature's scores come from its scenarios, which each start their own measurement.
     }
 
-    func didStart(scenario _: Scenario, at _: Date) {
+    func didStart(scenario: Scenario, at _: Date) {
         if !hasAsked {
             hasAsked = true
-            if isEnabled(), let folder = CoverageRecorder.coverageFolder(path: coveragePath()) {
+            let path = coveragePath()
+            if isEnabled(), let folder = CoverageRecorder.coverageFolder(path: path) {
                 readSettings = settings()
-                recorder = CoverageRecorder(coverageFolder: folder, counters: counters(), settings: readSettings)
+                recorder = CoverageRecorder(coverageFolder: folder, counters: counters(), settings: readSettings, removesEarlierRuns: path == nil)
             }
         }
+        finishedSteps = 0
+        backgroundStepCount = scenario.backgroundStepCount
         recorder?.scenarioStarted()
     }
 
     func didStart(step _: Step, at _: Date) {
-        // Coverage is measured for each scenario, not each step.
+        recorder?.stepStarted()
     }
 
     func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
@@ -104,7 +114,12 @@ final class CoverageReporter: CucumberTestObserver {
                                                                      rule: scenario.rule))
     }
 
-    func didFinish(step _: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
-        // Coverage is measured for each scenario, not each step.
+    func didFinish(step: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
+        // The Background's steps come first, so its last one is the scenario's step at that count.
+        recorder?.stepFinished(line: Int(step.location.line), isBackground: finishedSteps < backgroundStepCount)
+        finishedSteps += 1
+        if finishedSteps == backgroundStepCount {
+            recorder?.backgroundFinished()
+        }
     }
 }

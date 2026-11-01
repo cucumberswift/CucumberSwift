@@ -64,6 +64,9 @@ extension FeatureFile {
         public let ruleTitle: String?
         /// The line of the Rule the scenario is in, or `nil` when it isn't in one.
         public let ruleLine: Int?
+        /// How many of ``steps`` are the Background's: the feature's, then the Rule's. 0 for a Scenario
+        /// Outline: each of its ``examples`` has its own.
+        public fileprivate(set) var backgroundStepCount = 0
     }
 
     /// One row of a Scenario Outline's Examples table, which CucumberSwift runs as a scenario of its own.
@@ -79,6 +82,8 @@ extension FeatureFile {
         /// The feature's and the Rule's Background steps, then the outline's, with the row's values in
         /// place of the `<placeholders>`.
         public let steps: [Step]
+        /// How many of ``steps`` are the Background's.
+        public let backgroundStepCount: Int
     }
 
     public struct Step: Equatable, Sendable {
@@ -150,7 +155,7 @@ extension FeatureFile.Feature {
                 case let .scenario(scenarioNode, inheritedTags, backgroundStepNodes, rule):
                     let scenarioHeader = NodeHeader(scenarioNode.tokens)
                     let stepNodes = backgroundStepNodes + scenarioNode.children.compactMap { $0 as? AST.StepNode }
-                    return FeatureFile.Scenario(
+                    var scenario = FeatureFile.Scenario(
                         title: scenarioHeader.title,
                         description: scenarioHeader.description,
                         tags: inheritedTags + scenarioHeader.tags,
@@ -158,6 +163,8 @@ extension FeatureFile.Feature {
                         steps: .init(stepNodes),
                         examples: nil,
                         rule: rule)
+                    scenario.backgroundStepCount = backgroundStepNodes.count
+                    return scenario
                 case let .outline(outlineNode, inheritedTags, examples, rule):
                     let outlineStepNodes = outlineNode.children.compactMap { $0 as? AST.StepNode }
                     let description = ScenarioOutlineParser.extractOutlineDescription(outlineNode, stepNodes: outlineStepNodes)
@@ -203,6 +210,7 @@ extension FeatureFile.Example {
         line = Int(example.position.line)
         column = Int(example.position.column)
         steps = .init(example.stepNodes)
+        backgroundStepCount = example.backgroundStepCount
     }
 }
 

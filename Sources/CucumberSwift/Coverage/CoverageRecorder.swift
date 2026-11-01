@@ -88,11 +88,20 @@ final class CoverageRecorder {
         var duration: Double?
     }
 
+    /// How long before a run starts the runs it deletes with `removesEarlierRuns` started, at least. The
+    /// workers of one parallel run start seconds apart, so none deletes another's folder.
+    static let earlierRunAge: TimeInterval = 60 * 60
+
     let folder: URL
     let runID: String
     private let startDate: Date
     private let counters: ProfileCounters
     private var snapshot: ProfileCounters.Snapshot?
+    /// What the counters gained during the running scenario's Background steps.
+    private var backgroundCounts: [[UInt8]]?
+    private var stepSnapshot: ProfileCounters.Snapshot?
+    /// The regions each of the running scenario's steps after its Background ran.
+    private var stepRuns = [CoverageScores.StepRun]()
     private var scenarios = [ScenarioRecord]()
     private var features = [FeatureRecord]()
     private var problem: String?
@@ -125,12 +134,30 @@ final class CoverageRecorder {
             .appendingPathComponent("_cucumberCoverage", isDirectory: true)
     }
 
-    /// The run's folder, `run-<id>` inside `coverageFolder`, which this creates.
+    /// Deletes the folders of the runs in `coverageFolder` that were created more than ``earlierRunAge``
+    /// before `date`.
+    static func removeRuns(in coverageFolder: URL, before date: Date) {
+        let fileManager = FileManager.default
+        let folders = (try? fileManager.contentsOfDirectory(at: coverageFolder, includingPropertiesForKeys: [.creationDateKey])) ?? []
+        for folder in folders where folder.lastPathComponent.hasPrefix("run-") {
+            guard let created = try? folder.resourceValues(forKeys: [.creationDateKey]).creationDate,
+                  created < date.addingTimeInterval(-earlierRunAge) else { continue }
+            try? fileManager.removeItem(at: folder)
+        }
+    }
+
+    /// The run's folder, `run-<id>` inside `coverageFolder`, which this creates. With `removesEarlierRuns`,
+    /// it first deletes the folders that earlier runs left there, as in the default coverage folder, which
+    /// nothing else empties. A folder that you set may collect several runs to merge, and is left as it is.
     init(coverageFolder: URL,
          counters: ProfileCounters = .loaded(),
          settings: CoverageSettings = CoverageSettings(),
          runID: String = UUID().uuidString,
-         startDate: Date = Date()) {
+         startDate: Date = Date(),
+         removesEarlierRuns: Bool = false) {
+        if removesEarlierRuns {
+            Self.removeRuns(in: coverageFolder, before: startDate)
+        }
         self.folder = coverageFolder.appendingPathComponent("run-\(runID)")
         self.runID = runID
         self.startDate = startDate
@@ -204,6 +231,28 @@ final class CoverageRecorder {
 
     func scenarioStarted() {
         snapshot = problem == nil ? counters.snapshot() : nil
+        backgroundCounts = nil
+        stepSnapshot = nil
+        stepRuns = []
+    }
+
+    func stepStarted() {
+        stepSnapshot = problem == nil && code != nil ? counters.snapshot() : nil
+    }
+
+    /// Notes the regions the step at `line` ran, unless it is one of the Background's.
+    func stepFinished(line: Int, isBackground: Bool) {
+        guard let snapshot = stepSnapshot else { return }
+        stepSnapshot = nil
+        guard !isBackground else { return }
+        stepRuns.append(CoverageScores.StepRun(line: line, regions: regions(ran: counters.differences(since: snapshot))))
+    }
+
+    /// Notes the code the running scenario ran so far: its Background steps, which have just finished.
+    /// The redundancy leaves that code out.
+    func backgroundFinished() {
+        guard let snapshot, code != nil else { return }
+        backgroundCounts = counters.differences(since: snapshot)
     }
 
     /// Writes what the scenario covered, and keeps it for its feature's scores. A scenario is named after
@@ -236,6 +285,8 @@ final class CoverageRecorder {
                                                    duration: finished.duration ?? 0,
                                                    regions: regions(ran: counts),
                                                    group: finished.group)
+                .with(backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [])
+                .with(steps: stepRuns)
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
         }
     }

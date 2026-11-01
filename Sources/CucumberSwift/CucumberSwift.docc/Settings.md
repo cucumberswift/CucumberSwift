@@ -59,7 +59,7 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_VERBOSE` | ^ | ^ | ^ | ^ |
 | `Cucumber.reportPath` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None | <doc:Generating-Reports#Choose-where-the-report-is-written> |
 | `CUCUMBER_REPORT_PATH` | ^ | ^ | ^ | ^ |
-| `Cucumber.coverage` | Off | XCTest and Swift Testing | Code coverage on for the test target. With Swift Testing, scenarios run one at a time. | <doc:Measuring-Code-Coverage> |
+| `Cucumber.coverage` | Auto | XCTest and Swift Testing | Code coverage on for the test target. With Swift Testing, scenarios run one at a time. | <doc:Measuring-Code-Coverage> |
 | `CUCUMBER_COVERAGE` | ^ | ^ | ^ | ^ |
 | `Cucumber.coveragePath` | `_cucumberCoverage` in the documents folder | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-where-the-files-go> |
 | `CUCUMBER_COVERAGE_PATH` | ^ | ^ | ^ | ^ |
@@ -75,6 +75,8 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_REDUNDANCY_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
 | `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
 | `CUCUMBER_REDUNDANCY_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
+| `Cucumber.redundantStepWarningLevel` | 50 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-steps> |
+| `CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
 | `StepImplementation.shouldRunWith(scenario:tags:)` | All scenarios | XCTest and Swift Testing | None | <doc:Settings#Choose-scenarios-in-code> |
 | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> |
 | `StepImplementation.continueTestingAfterFailure` | On | XCTest and Swift Testing | None | <doc:Settings#Continue-after-a-failed-assertion> |

@@ -57,6 +57,17 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("redundancyError", newValue) }
     }
 
+    /// The share of the code a step outside the Background runs, at or above which the step gets a warning, in
+    /// percent: 50 by default. A step is redundant when other scenarios run the same code in exactly the same
+    /// way, such as a step that belongs in the Background. Set this to a number, or to ``CoverageLevel/off``,
+    /// or the environment variable `CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL` to a number or `NO`. This
+    /// variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
+    /// `setupSteps()`. See <doc:Measuring-Code-Coverage>.
+    public static var redundantStepWarningLevel: CoverageLevel? {
+        get { CoverageSettings.storage.level("redundantStepWarning") }
+        set { CoverageSettings.storage.setLevel("redundantStepWarning", newValue) }
+    }
+
     /// The source files the scores measure, as parts of their paths, such as `["Sources/MyApp"]`. Without
     /// it they measure every file built with code coverage except your dependencies' and your tests'. Set
     /// this, or the environment variable `CUCUMBER_COVERAGE_SOURCES` to the parts separated by commas. This

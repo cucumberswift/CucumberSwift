@@ -29,7 +29,6 @@ enum CoverageScoreTests {
         switch kind {
             case .coverage: "Coverage"
             case .redundancy: "Redundancy"
-            case .redundantScenario: "Redundant scenarios"
         }
     }
 
