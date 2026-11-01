@@ -76,10 +76,8 @@ final class CoverageScoresTests: XCTestCase {
 
     func testTheCodeABackgroundRunsIsLeftOutOfTheRedundancyButNotTheCoverage() throws {
         // The first scenario only checks what its Background set up, region 0, which the second runs too.
-        let inBackground = CoverageScores(scenarios: [
-            scenario(4, [0]).with(backgroundRegions: [0]),
-            CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 1, regions: [0, 1])
-        ], code: code, isRedundancy: true)
+        let scenarios = [scenario(4, [0]).with(backgroundRegions: [0]), scenario(9, [0, 1])]
+        let inBackground = CoverageScores(scenarios: scenarios, code: code, isRedundancy: true)
         XCTAssertEqual(try XCTUnwrap(inBackground.redundancy), 0)
         XCTAssertEqual(inBackground.scenarios.map(\.addsNothing), [false, false])
         XCTAssertEqual(inBackground.coveredRegions, 2)
