@@ -95,10 +95,11 @@ final class CoverageScoresTests: XCTestCase {
 
     func testStepsOfDifferentScenariosThatRunAFunctionTheSameWayAreRedundant() throws {
         // Both click through `add`'s regions 0 to 2 (the profile menu), and then run their own `classify` branch.
-        let scores = CoverageScores(scenarios: [
+        let scoresScenarios = [
             scenario(4, steps: [5: [0, 1, 2, 8], 6: [9]]),
             scenario(10, steps: [11: [0, 1, 2, 10], 12: [11]])
-        ], code: code, isRedundancy: true)
+        ]
+        let scores = CoverageScores(scenarios: scoresScenarios, code: code, isRedundancy: true)
         XCTAssertEqual(scores.redundantSteps.map(\.line), [5, 11])
         XCTAssertEqual(scores.redundantSteps.map(\.similarTo), [11, 5])
         XCTAssertEqual(scores.redundantSteps[0].percent, 75)
@@ -107,27 +108,30 @@ final class CoverageScoresTests: XCTestCase {
     }
 
     func testStepsOfScenariosThatRunExactlyTheSameCodeSuggestAScenarioOutline() {
-        let scores = CoverageScores(scenarios: [
+        let scoresScenarios = [
             scenario(4, steps: [5: [0, 1, 2]]),
             scenario(10, steps: [11: [0, 1, 2]])
-        ], code: code, isRedundancy: true)
+        ]
+        let scores = CoverageScores(scenarios: scoresScenarios, code: code, isRedundancy: true)
         XCTAssertEqual(scores.redundantSteps.map(\.suggestsOutline), [true, true])
     }
 
     func testOneFunctionRunWithDifferentInputsIsNotARedundantStep() {
         // The same function, `add`, runs its positive branch in one scenario and its negative branch in the other.
-        let scores = CoverageScores(scenarios: [
+        let scoresScenarios = [
             scenario(4, steps: [5: [0, 1]]),
             scenario(10, steps: [11: [0, 2]])
-        ], code: code, isRedundancy: true)
+        ]
+        let scores = CoverageScores(scenarios: scoresScenarios, code: code, isRedundancy: true)
         XCTAssertEqual(scores.redundantSteps, [])
     }
 
     func testAnOutlinesExamplesAreOneScenarioForRedundantSteps() {
-        let scores = CoverageScores(scenarios: [
+        let scoresScenarios = [
             scenario(4, steps: [3: [0, 1]], group: "3"),
             scenario(5, steps: [3: [0, 1]], group: "3")
-        ], code: code, isRedundancy: true)
+        ]
+        let scores = CoverageScores(scenarios: scoresScenarios, code: code, isRedundancy: true)
         XCTAssertEqual(scores.redundantSteps, [])
     }
 
@@ -137,11 +141,12 @@ final class CoverageScoresTests: XCTestCase {
     }
 
     func testTheWastedTimeIsTheRedundantScenariosTime() throws {
-        let scores = CoverageScores(scenarios: [
+        let scoresScenarios = [
             CoverageScores.Scenario(name: "A", line: 4, tags: [], duration: 2, regions: [0, 1]),
             CoverageScores.Scenario(name: "B", line: 9, tags: [], duration: 4, regions: [0, 1]),
             CoverageScores.Scenario(name: "C", line: 14, tags: ["redundant"], duration: 8, regions: [0, 1])
-        ], code: code, isRedundancy: true)
+        ]
+        let scores = CoverageScores(scenarios: scoresScenarios, code: code, isRedundancy: true)
         // B repeats A, and C is left out.
         XCTAssertEqual(scores.scenarios.map(\.wastedTime), [0, 4, 0])
         XCTAssertEqual(scores.wastedTime, 4)
