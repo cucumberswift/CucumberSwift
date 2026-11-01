@@ -42,6 +42,53 @@ final class CoverageReporterTests: XCTestCase {
         return Int(scenario.location.line)
     }
 
+    /// A function with two branches, for a step to run one of.
+    private static func branch(of value: Int) -> Int {
+        if value < 10 {
+            return 1
+        }
+        return 2
+    }
+
+    func testTheReporterLeavesTheBackgroundsStepsOutOfTheRedundantSteps() throws {
+        try XCTSkipIf(ProfileCounters.loaded().binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        let path = folder.path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: {
+            var settings = CoverageSettings()
+            settings.sources = ["CoverageReporterTests.swift"]
+            return settings
+        })
+        let cucumber = Cucumber(withString: """
+        Feature: Greeting
+            Background:
+                Given a greeting
+            Scenario: Waving once
+                When I wave
+            Scenario: Waving twice
+                When I wave again
+        """)
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let duration = Measurement(value: 1, unit: UnitDuration.seconds)
+        var stepLines = [Int]()
+        for scenario in feature.scenarios {
+            reporter.didStart(scenario: scenario, at: Date())
+            for (index, step) in scenario.steps.enumerated() {
+                reporter.didStart(step: step, at: Date())
+                // The Background's step runs one branch, and each scenario's own step the other.
+                _ = Self.branch(of: index < scenario.backgroundStepCount ? 20 : 1)
+                reporter.didFinish(step: step, result: .passed, duration: duration)
+                if index >= scenario.backgroundStepCount { stepLines.append(Int(step.location.line)) }
+            }
+            reporter.didFinish(scenario: scenario, result: .passed, duration: duration)
+        }
+        reporter.didFinish(feature: feature, result: .passed, duration: duration)
+
+        let scores = try XCTUnwrap(reporter.recorder?.manifest.features.first?.scores)
+        // Only the scenarios' own steps are compared, and each repeats the other's.
+        XCTAssertEqual(scores.redundantSteps.map(\.line), stepLines)
+        XCTAssertEqual(scores.redundantSteps.map(\.similarTo), stepLines.reversed())
+    }
+
     func testWithCoverageOffNothingIsWritten() throws {
         let path = folder.path
         let reporter = CoverageReporter(isEnabled: { false }, coveragePath: { path })

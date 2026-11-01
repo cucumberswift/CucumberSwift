@@ -20,19 +20,29 @@ import Testing
         #expect(!CucumberSettings.isCoverage(environment: [key: "YES"]))
     }
 
-    // Through the environment only: other suites set `Cucumber.parallelTesting` while this one runs.
+    // The static variable is passed in, because other suites set `Cucumber.parallelTesting` while this one runs.
     @Test func autoCoverageMeasuresABuildWithCoverageUnlessParallelTestingIsOn() {
         #expect(CucumberSettings.coverageSetting(environment: [:]) == nil)
         #expect(CucumberSettings.coverageSetting(environment: ["CUCUMBER_COVERAGE": "AUTO"]) == nil)
-        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: false))
-        #expect(CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: true))
+        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: false, staticParallelSetting: nil))
+        #expect(CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "NO"], isInstrumented: true, staticParallelSetting: nil))
         var said = [String]()
-        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "YES"], isInstrumented: true) { said.append($0) })
-        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "YES"], isInstrumented: true) { said.append($0) })
+        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "YES"], isInstrumented: true, staticParallelSetting: nil) { said.append($0) })
+        #expect(!CucumberSettings.isCoverage(environment: ["CUCUMBER_PARALLEL_TESTING": "YES"], isInstrumented: true, staticParallelSetting: nil) { said.append($0) })
         // One line a run, which an earlier test may have printed already.
         #expect(said.count <= 1)
         // With auto coverage, parallel testing wins.
-        #expect(CucumberSettings.runsInParallel(compiled: false, environment: ["CUCUMBER_PARALLEL_TESTING": "YES"]))
+        let environment = ["CUCUMBER_PARALLEL_TESTING": "YES"]
+        #expect(CucumberSettings.isParallelTestingRequested(compiled: false, environment: environment, staticSetting: nil))
+    }
+
+    @Test func aDSLFeaturesBackgroundStepsAreCountedAsTheScenariosBackground() {
+        let gherkin = GherkinScenario(featureTitle: "F", featureTags: [], title: "S", tags: [], file: "/Features/F.swift", line: 3, column: 1, steps: [])
+        let scenario = Scenario(gherkin)
+        let step = DSLStep(keyword: .given, text: "a calculator", line: 2, column: 1, file: "/Features/F.swift", body: {})
+        scenario.prependDSLSteps([step, step])
+        #expect(scenario.backgroundStepCount == 2)
+        #expect(scenario.steps.count == 2)
     }
 
     @Test func theCoveragePathComesFromTheStaticVariableThenTheEnvironmentVariable() {
@@ -48,7 +58,7 @@ import Testing
         #expect(CucumberSettings.coveragePath(environment: [key: fromEnvironment]) == nil)
     }
 
-    // Through the environment only: other suites set `Cucumber.parallelTesting` while this one runs.
+    // The static variable is passed in, because other suites set `Cucumber.parallelTesting` while this one runs.
     @Test func coverageRunsScenariosOneAtATimeEvenWithParallelTesting() {
         let environment = ["CUCUMBER_COVERAGE": "YES", "CUCUMBER_PARALLEL_TESTING": "YES"]
         #expect(!CucumberSettings.runsInParallel(compiled: true, environment: environment))

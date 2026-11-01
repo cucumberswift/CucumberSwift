@@ -218,7 +218,7 @@ extension Cucumber {
 
     /// Whether CucumberSwift measures each scenario's code coverage, and scores each feature. `nil`, the
     /// default, is `auto`: CucumberSwift measures when the test target was built with code coverage, and
-    /// writes the coverage files only when ``coveragePath`` is set. Set this to `true`, or the environment
+    /// writes the coverage files to ``coveragePath``, or to `_cucumberCoverage` in the documents folder. Set this to `true`, or the environment
     /// variable `CUCUMBER_COVERAGE` to `YES`, to measure and write the files, and to `false` or `NO` to
     /// measure nothing. `AUTO` gives `auto`. This variable, when set, wins over the environment variable.
     /// Set it in your `StepImplementation`'s `setupSteps()`. See <doc:Measuring-Code-Coverage>.

@@ -273,8 +273,10 @@ enum CucumberSettings {
     }
 
     /// Whether parallel testing is asked for, whatever coverage says.
-    static func isParallelTestingRequested(compiled: Bool, environment: [String: String]) -> Bool {
-        staticParallelTesting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
+    static func isParallelTestingRequested(compiled: Bool,
+                                           environment: [String: String],
+                                           staticSetting: Bool? = staticParallelTesting) -> Bool {
+        staticSetting ?? FeatureFlagValue.bool(environment[parallelTestingEnvironmentKey]) ?? compiled
     }
 
     /// Whether coverage is set on or off: the static variable, then `CUCUMBER_COVERAGE`. Nil for `auto`, the
@@ -287,10 +289,12 @@ enum CucumberSettings {
     /// built with code coverage and parallel testing isn't asked for: then it says once why coverage is off.
     static func isCoverage(environment: [String: String] = ProcessInfo.processInfo.environment,
                            isInstrumented: Bool = ProfileCounters.isInstrumented,
+                           staticParallelSetting: Bool? = staticParallelTesting,
                            output: (String) -> Void = { print($0) }) -> Bool {
         if let setting = coverageSetting(environment: environment) { return setting }
         guard isInstrumented else { return false }
-        guard isParallelTestingRequested(compiled: storage.flag("compiledParallelTesting") ?? false, environment: environment) else { return true }
+        let compiled = storage.flag("compiledParallelTesting") ?? false
+        guard isParallelTestingRequested(compiled: compiled, environment: environment, staticSetting: staticParallelSetting) else { return true }
         if storage.flag("saidCoverageIsOff") != true {
             storage.setFlag("saidCoverageIsOff", true)
             output("CucumberSwift coverage: off, because parallel testing is on. Set CUCUMBER_COVERAGE to YES to measure coverage, "
@@ -399,7 +403,8 @@ extension Cucumber {
 
     /// Whether the runner measures each scenario's code coverage, and scores each feature. `nil`, the
     /// default, is `auto`: the runner measures when the test target was built with code coverage and
-    /// parallel testing is off, and writes the coverage files only when ``coveragePath`` is set. Set this to
+    /// parallel testing is off, and writes the coverage files to ``coveragePath``, or to `_cucumberCoverage` in
+    /// the documents folder. Set this to
     /// `true`, or the environment variable `CUCUMBER_COVERAGE` to `YES`, to measure and write the files, and
     /// to `false` or `NO` to measure nothing. `AUTO` gives `auto`. Set on, coverage runs the scenarios one at
     /// a time even with ``parallelTesting``, because coverage counters can't tell scenarios that run at the
