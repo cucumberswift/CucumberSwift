@@ -137,13 +137,17 @@ struct ProfileCounters {
     /// so it is cheap: `auto` coverage asks it before deciding to measure.
     static var isInstrumented: Bool {
         #if canImport(MachO)
-        for index in 0..<_dyld_image_count() {
-            guard let header = _dyld_get_image_header(index), header.pointee.magic == MH_MAGIC_64 else { continue }
-            let image = MachImage(header: UnsafeRawPointer(header), slide: _dyld_get_image_vmaddr_slide(index))
-            if image.section(segment: "__DATA", name: "__llvm_prf_cnts") != nil { return true }
+        return (0..<_dyld_image_count()).contains { index in
+            _dyld_get_image_header(index).map { header in
+                // Only 64-bit images, as `loaded()` reads.
+                header.pointee.magic == MH_MAGIC_64
+                    && MachImage(header: UnsafeRawPointer(header), slide: _dyld_get_image_vmaddr_slide(index))
+                        .section(segment: "__DATA", name: "__llvm_prf_cnts") != nil
+            } ?? false
         }
-        #endif
+        #else
         return false
+        #endif
     }
 
     /// The binaries loaded now that were built with code coverage. Empty when none was, or on a platform

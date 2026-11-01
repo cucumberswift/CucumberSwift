@@ -17,6 +17,7 @@ final class CoverageFlagsTests: XCTestCase {
         Cucumber.redundancy = nil
         Cucumber.redundancyWarningLevel = nil
         Cucumber.redundancyErrorLevel = nil
+        Cucumber.redundantStepWarningLevel = nil
         Cucumber.coverageSources = nil
         super.tearDown()
     }
@@ -29,6 +30,7 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertTrue(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 30)
         XCTAssertEqual(settings.redundancyErrorLevel, .off)
+        XCTAssertEqual(settings.redundantStepWarningLevel, 50)
         XCTAssertEqual(settings.sources, [])
     }
 
@@ -39,6 +41,7 @@ final class CoverageFlagsTests: XCTestCase {
             "CUCUMBER_REDUNDANCY": "NO",
             "CUCUMBER_REDUNDANCY_WARNING_LEVEL": "20",
             "CUCUMBER_REDUNDANCY_ERROR_LEVEL": "60",
+            "CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL": "40",
             "CUCUMBER_COVERAGE_SOURCES": "Sources/App, Sources/Model ,"
         ])
         XCTAssertEqual(settings.warningLevel, 70)
@@ -46,6 +49,7 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertFalse(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 20)
         XCTAssertEqual(settings.redundancyErrorLevel, 60)
+        XCTAssertEqual(settings.redundantStepWarningLevel, 40)
         XCTAssertEqual(settings.sources, ["Sources/App", "Sources/Model"])
     }
 
@@ -55,6 +59,7 @@ final class CoverageFlagsTests: XCTestCase {
         Cucumber.redundancy = false
         Cucumber.redundancyWarningLevel = 10
         Cucumber.redundancyErrorLevel = .off
+        Cucumber.redundantStepWarningLevel = .off
         Cucumber.coverageSources = ["Sources/Core"]
         let settings = CoverageSettings.read(environment: [
             "CUCUMBER_COVERAGE_WARNING_LEVEL": "70",
@@ -62,6 +67,7 @@ final class CoverageFlagsTests: XCTestCase {
             "CUCUMBER_REDUNDANCY": "YES",
             "CUCUMBER_REDUNDANCY_WARNING_LEVEL": "20",
             "CUCUMBER_REDUNDANCY_ERROR_LEVEL": "60",
+            "CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL": "40",
             "CUCUMBER_COVERAGE_SOURCES": "Sources/App"
         ])
         XCTAssertEqual(Cucumber.coverageWarningLevel, .off)
@@ -69,12 +75,14 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertEqual(Cucumber.redundancy, false)
         XCTAssertEqual(Cucumber.redundancyWarningLevel, 10)
         XCTAssertEqual(Cucumber.redundancyErrorLevel, .off)
+        XCTAssertEqual(Cucumber.redundantStepWarningLevel, .off)
         XCTAssertEqual(Cucumber.coverageSources, ["Sources/Core"])
         XCTAssertEqual(settings.warningLevel, .off)
         XCTAssertEqual(settings.errorLevel, 40)
         XCTAssertFalse(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 10)
         XCTAssertEqual(settings.redundancyErrorLevel, .off)
+        XCTAssertEqual(settings.redundantStepWarningLevel, .off)
         XCTAssertEqual(settings.sources, ["Sources/Core"])
     }
 }
