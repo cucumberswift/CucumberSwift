@@ -48,7 +48,7 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("redundancyWarning", newValue) }
     }
 
-    /// The redundancy at or above which a feature gets an error, which fails its suite, in percent:
+    /// The redundancy at or above which a feature gets an error, which is printed as an error and fails no test, in percent:
     /// off by default. Set this to a number, or the environment variable `CUCUMBER_REDUNDANCY_ERROR_LEVEL`
     /// to a number or `NO`. This variable, when set, wins over the environment variable. Set it in your
     /// `StepImplementation`'s `setupSteps()`.

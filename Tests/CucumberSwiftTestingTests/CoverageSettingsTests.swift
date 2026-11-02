@@ -11,6 +11,8 @@ import Testing
 @testable import CucumberSwiftTesting
 
 @Suite(.serialized) struct CoverageSettingsTests {
+    private static let folder = FileManager.default.temporaryDirectory
+
     @Test func coverageIsReadAsCucumberSwiftReadsAFeatureFlag() {
         defer { Cucumber.coverage = nil }
         let key = "CUCUMBER_COVERAGE"
@@ -111,8 +113,6 @@ import Testing
         #expect(fromCode.redundantStepWarningLevel == .off)
         #expect(fromCode.sources == ["Sources/Core"])
     }
-
-    private static let folder = FileManager.default.temporaryDirectory
 
     // 6.8.0 failed a feature at or below 50% by default, which turned a project's tests red on upgrading (#507).
     @Test func byDefaultLowCoverageOnlyWarnsUntilAnErrorLevelIsSet() {

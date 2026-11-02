@@ -31,7 +31,7 @@ A feature whose coverage is at or below 80% gets a warning on its `Feature:` lin
 Feature coverage 71%: its scenarios ran 15 of the 21 regions in the 6 functions they entered (warning at or below 80%). Not run: Calculator.classify(Int), 5 regions, entered by the scenario at line 19; Calculator.divide(_: Int, by: Int), 1 region, entered by the scenario at line 14.
 ```
 
-A warning doesn't fail a test. To fail the features with low coverage, set an error level, as <doc:#Warn-without-failing> shows. Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
+A warning doesn't fail a test. To fail the features with low coverage, set an error level, as <doc:#Fail-a-test-on-low-coverage> shows. Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
 
 ### Find the issues in your tests
 
@@ -40,7 +40,7 @@ The XCTest runner records a feature's issues in tests of its own, which run afte
 - `Coverage`, for the coverage warning or error.
 - `Redundancy`, for the redundancy warning or error, and the warnings on the scenarios that add no coverage of their own.
 
-An error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test.
+With the XCTest runner, an error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test.
 
 ### Set it in code
 
@@ -108,11 +108,9 @@ public func setupSteps() {
 }
 ```
 
-### Warn without failing
+### Fail a test on low coverage
 
-Both scores only warn by default, so a feature's score tests pass whatever its scores. You see the scores without failing a test, such as while you add scenarios to an existing suite.
-
-Set the coverage error level to fail the features whose coverage is at or below it. With 50, a feature fails when its scenarios miss most of the code they enter, as CucumberSwift 6.8.0 did by default:
+Coverage only warns by default. Setting the coverage error level makes the XCTest runner fail a feature's `Coverage` test when the feature's coverage is at or below the level. With 50, a feature fails when its scenarios miss most of the code they enter, as CucumberSwift 6.8.0 did by default:
 
 ```swift
 public func setupSteps() {
@@ -121,9 +119,11 @@ public func setupSteps() {
 }
 ```
 
+The Swift Testing runner prints the error and fails no test.
+
 ### Eliminate redundant steps
 
-Set the redundancy's error level to 1% to fail every feature that has a redundant scenario, and raise the coverage levels with it. This strict mode suits a suite whose scenarios are slow, where each one must test code that no other one tests:
+Set the redundancy's error level to 1% to make the XCTest runner fail every feature that has a redundant scenario, and raise the coverage levels with it. This strict mode suits a suite whose scenarios are slow, where each one must test code that no other one tests:
 
 ```swift
 public func setupSteps() {
