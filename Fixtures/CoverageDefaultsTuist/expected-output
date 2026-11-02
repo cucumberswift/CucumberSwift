@@ -1,0 +1,5 @@
+# Lines `mise run test-fixtures` expects in this fixture's test output. They show that CucumberSwift
+# measured the coverage and scored the Grading feature, and that its Coverage test passed although the
+# feature is below 50%: with the default settings, coverage only warns (#507).
+CucumberSwift coverage: Grading: 
+Test Case '-[Grading › Coverage scores Coverage]' passed

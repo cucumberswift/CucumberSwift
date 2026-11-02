@@ -92,8 +92,9 @@ struct CoverageSettings: Equatable {
 
     /// A feature whose coverage is at or below this gets a warning.
     var warningLevel: CoverageLevel = 80
-    /// A feature whose coverage is at or below this gets an error, which fails a test.
-    var errorLevel: CoverageLevel = 50
+    /// A feature whose coverage is at or below this gets an error, which fails a test. Off by default, so
+    /// that coverage only warns until a project sets a level (#507).
+    var errorLevel: CoverageLevel = .off
     /// On by default. It has no effect with coverage off, which scores nothing.
     var isRedundancy = true
     /// A feature whose redundancy is at or above this gets a warning, and so does each scenario that adds
