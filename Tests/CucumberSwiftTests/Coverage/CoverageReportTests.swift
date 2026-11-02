@@ -44,7 +44,9 @@ final class CoverageReportTests: XCTestCase {
     }
 
     func testCoverageAtOrBelowTheErrorLevelIsAnErrorNamingWhatDidntRun() throws {
-        let issues = report([0, 1, 2, 3, 4]).issues(file: file, line: 1, subject: "Feature")
+        var settings = Self.coverageOnly
+        settings.errorLevel = 50
+        let issues = report([0, 1, 2, 3, 4], settings: settings).issues(file: file, line: 1, subject: "Feature")
         let issue = try XCTUnwrap(issues.first)
         XCTAssertEqual(issues.count, 1)
         XCTAssertEqual(issue.severity, .error)
@@ -53,6 +55,18 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertEqual(issue.message, "Feature coverage 50%: its scenarios ran 5 of the 10 regions in the 1 function they entered"
             + " (error at or below 50%, warning at or below 80%)."
             + " Not run: Calculator.classify(Int), 5 regions, entered by the scenarios at lines 19, 25.")
+    }
+
+    // 6.8.0 failed a feature at or below 50% by default, which turned a project's tests red on upgrading (#507).
+    func testByDefaultLowCoverageOnlyWarnsUntilAnErrorLevelIsSet() {
+        defer { Cucumber.coverageErrorLevel = nil }
+        var settings = CoverageSettings.read(environment: [:])
+        settings.isRedundancy = false
+        XCTAssertEqual(report([0], settings: settings).issues(file: file, line: 1, subject: "Feature").map(\.severity), [.warning])
+        Cucumber.coverageErrorLevel = 50
+        settings = CoverageSettings.read(environment: [:])
+        settings.isRedundancy = false
+        XCTAssertEqual(report([0], settings: settings).issues(file: file, line: 1, subject: "Feature").map(\.severity), [.error])
     }
 
     func testCoverageAtOrBelowTheWarningLevelIsAWarning() {

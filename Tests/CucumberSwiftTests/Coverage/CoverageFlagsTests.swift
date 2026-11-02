@@ -26,7 +26,8 @@ final class CoverageFlagsTests: XCTestCase {
         let settings = CoverageSettings.read(environment: [:])
         XCTAssertEqual(settings, CoverageSettings())
         XCTAssertEqual(settings.warningLevel, 80)
-        XCTAssertEqual(settings.errorLevel, 50)
+        // Off, so that coverage only warns until a project sets a level (#507).
+        XCTAssertEqual(settings.errorLevel, .off)
         XCTAssertTrue(settings.isRedundancy)
         XCTAssertEqual(settings.redundancyWarningLevel, 30)
         XCTAssertEqual(settings.redundancyErrorLevel, .off)

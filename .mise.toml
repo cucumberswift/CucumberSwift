@@ -53,7 +53,8 @@ description = "Build and test every project in Fixtures/"
 # CucumberSwiftLint plugin must show that the plugin ran: its stamps are deleted first, since the
 # plugin only runs when its inputs change, and the build must make new ones. A Swift package fixture
 # that uses the plugin and has no expected-warnings also runs Fix Feature Files, which must change
-# nothing. A fixture with expected-failures must fail its tests, with each failure it lists.
+# nothing. A fixture with expected-failures must fail its tests, with each failure it lists. A fixture
+# with expected-output must print each line it lists, such as a test that must have run.
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either. Its Swift files are put back as they were afterwards.
@@ -142,6 +143,10 @@ for fixture in Fixtures/*/; do
     echo "$name: the tests failed with every expected failure."
   elif [ "$status" -ne 0 ]; then
     exit "$status"
+  fi
+  if [ -f "$fixture/expected-output" ]; then
+    expect_all "$fixture/expected-output" "$log"
+    echo "$name: the output has every line in expected-output."
   fi
   if grep -qs CucumberSwiftLint "$fixture/Package.swift" "$fixture/Project.swift"; then
     if [ -z "$(find "$build" -name '*.lint-stamp' 2>/dev/null)" ]; then

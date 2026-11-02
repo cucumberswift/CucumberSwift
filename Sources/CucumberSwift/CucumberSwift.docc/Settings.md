@@ -65,7 +65,7 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_COVERAGE_PATH` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageWarningLevel` | 80 | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Set-the-levels> |
 | `CUCUMBER_COVERAGE_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
-| `Cucumber.coverageErrorLevel` | 50 | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Set-the-levels> |
+| `Cucumber.coverageErrorLevel` | Off | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Set-the-levels> |
 | `CUCUMBER_COVERAGE_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageSources` | Your code, without your dependencies and tests | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-the-code-to-measure> |
 | `CUCUMBER_COVERAGE_SOURCES` | ^ | ^ | ^ | ^ |
