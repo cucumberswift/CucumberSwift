@@ -18,8 +18,8 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("warning", newValue) }
     }
 
-    /// The coverage at or below which a feature gets an error, which fails its `Coverage` score test, in percent: 50
-    /// by default. Set this to a number, or to ``CoverageLevel/off`` for no error, or the environment
+    /// The coverage at or below which a feature gets an error, which fails its `Coverage` score test, in percent: off
+    /// by default, so that coverage only warns. Set this to a number, such as 50, or the environment
     /// variable `CUCUMBER_COVERAGE_ERROR_LEVEL` to a number or `NO`. This variable, when set, wins over the
     /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
     public static var coverageErrorLevel: CoverageLevel? {
