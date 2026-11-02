@@ -12,7 +12,7 @@ test again, this fixture fails.
 `GradesSwiftTests` runs the same feature with Swift Testing, through `CucumberSwiftTesting`. In Xcode, the
 Swift Testing runner used to crash the test process at the first coverage warning, and Xcode still reported
 success (cucumberswift/CucumberSwift#509). `expected-output` lists the lines that show the tests ran and
-printed the feature's scores.
+printed the feature's scores, and that the run's total is 2 tests, because the crash made Xcode run the bundle again with 0.
 
 The scheme sets `CUCUMBER_COVERAGE_SOURCES` to the framework's folder. CucumberSwift never measures the
 files in its own package folder, and this fixture is inside it. A project that depends on CucumberSwift
