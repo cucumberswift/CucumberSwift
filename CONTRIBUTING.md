@@ -246,6 +246,14 @@ A fixture follows these rules:
 The fixtures check these things:
 
 - **No warnings from CucumberSwift, other than the expected ones.** `mise run test-fixtures` fails on any warning from CucumberSwift that a fixture's `expected-warnings` doesn't list. That includes CucumberSwiftLint's warnings, a warning in a macro's expansion or in the library, the plugins or the tools, and SwiftPM's warnings about the package. `.github/scripts/fixture-warnings.sh` separates them from the fixture's own warnings. Our CI's other fixture runs use the same script.
+- **Every fixture runs at least the tests it lists.** Each fixture has an `expected-tests` file with the fewest tests that each test framework must run, for example:
+
+  ```text
+  XCTest: 6
+  Swift Testing: 3
+  ```
+
+  `mise run test-fixtures` and `mise run test-carthage` fail a fixture that runs fewer tests, or runs tests of a framework that the file doesn't list. The error names the fixture and both counts. A test run can exit with success after running no tests at all, and this check fails it. `.github/scripts/fixture_tests.py` adds up the summaries that `swift test` and `xcodebuild` print. With the XCTest runner, each step of a scenario is a test. When you add tests to a fixture, raise its counts.
 - **`StepDefinitionMacrosPackage` uses every feature together**, as a project does: the lint plugin, macros and plain step definitions, localized ones too, a commented-out step definition, and feature files in English and Spanish with tables, doc strings and outlines. It has no `LintCheck.feature`, so it must build with no warnings from CucumberSwift at all, and the task runs Fix Feature Files on it, and the command must change nothing. The task then runs Convert to Gherkin Macros on it. The command's report must have each line of its `expected-conversion`, and its tests must pass again on the converted step definitions, before the task puts its Swift files back. A pull request that adds a user-facing feature also uses it in this fixture.
 - **`BrokenFeaturesPackage` is broken on purpose.** Its feature files have a misspelt keyword, an undefined step, an uneven table and an unsupported language, run by both runners. Its tests must fail, with every failure in its `expected-failures` and every warning in its `expected-warnings`. When CucumberSwift's messages change, update the expectations, not the feature files.
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
