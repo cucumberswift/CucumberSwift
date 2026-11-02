@@ -25,13 +25,13 @@ CucumberSwift coverage: Arithmetic: 71% of the code its scenarios ran (15 of 21 
       19%            4     0.02s  Classifying a small number (line 19)
 ```
 
-A feature whose coverage is at or below 80% gets a warning on its `Feature:` line, and one at or below 50% gets an error. Xcode shows them in the feature file, with the functions whose code no scenario ran:
+A feature whose coverage is at or below 80% gets a warning on its `Feature:` line. Xcode shows it in the feature file, with the functions whose code no scenario ran:
 
 ```
-Feature coverage 71%: its scenarios ran 15 of the 21 regions in the 6 functions they entered (error at or below 50%, warning at or below 80%). Not run: Calculator.classify(Int), 5 regions, entered by the scenario at line 19; Calculator.divide(_: Int, by: Int), 1 region, entered by the scenario at line 14.
+Feature coverage 71%: its scenarios ran 15 of the 21 regions in the 6 functions they entered (warning at or below 80%). Not run: Calculator.classify(Int), 5 regions, entered by the scenario at line 19; Calculator.divide(_: Int, by: Int), 1 region, entered by the scenario at line 14.
 ```
 
-Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
+A warning doesn't fail a test. To fail the features with low coverage, set an error level, as <doc:#Warn-without-failing> shows. Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
 
 ### Find the issues in your tests
 
@@ -85,7 +85,7 @@ Feature: Arithmetic
       Then the display shows "small"
 ```
 
-The feature's scores here count only "Adding two numbers", and the Rule's only "Naming seven". A feature with Rules can then have a coverage warning on one Rule and a coverage error on another. The summary names the Rule after its feature, such as `Arithmetic › Numbers have names`.
+The feature's scores here count only "Adding two numbers", and the Rule's only "Naming seven". A feature with Rules can then have a coverage warning on one Rule and none on another. The summary names the Rule after its feature, such as `Arithmetic › Numbers have names`.
 
 ## Set the levels
 
@@ -93,13 +93,13 @@ Set each level to a percentage, or to `.off` for no warning or no error. A featu
 
 ### Use the defaults
 
-The defaults balance feedback and failures. A warning at 80% coverage points to the features that leave code untested, and an error at 50% fails only the features whose scenarios miss most of the code they enter. The redundancy score warns at 30% and never fails by default, because a feature can repeat code on purpose, such as to test boundary values. A build with code coverage uses every default below without any setting, so each line here is commented out:
+The defaults warn and never fail a test. A warning at 80% coverage points to the features that leave code untested, and a warning at 30% redundancy points to the scenarios that repeat code. Neither score fails by default, because a feature can repeat code on purpose, such as to test boundary values, and an existing suite can take time to reach a coverage level. A build with code coverage uses every default below without any setting, so each line here is commented out:
 
 ```swift
 public func setupSteps() {
     // Cucumber.coverage = nil                 // CUCUMBER_COVERAGE, default auto
     // Cucumber.coverageWarningLevel = 80      // CUCUMBER_COVERAGE_WARNING_LEVEL, default 80
-    // Cucumber.coverageErrorLevel = 50        // CUCUMBER_COVERAGE_ERROR_LEVEL, default 50
+    // Cucumber.coverageErrorLevel = .off      // CUCUMBER_COVERAGE_ERROR_LEVEL, default off
     // Cucumber.redundancy = true              // CUCUMBER_REDUNDANCY, default on
     // Cucumber.redundancyWarningLevel = 30    // CUCUMBER_REDUNDANCY_WARNING_LEVEL, default 30
     // Cucumber.redundancyErrorLevel = .off    // CUCUMBER_REDUNDANCY_ERROR_LEVEL, default off
@@ -110,11 +110,13 @@ public func setupSteps() {
 
 ### Warn without failing
 
-Turn the coverage error level off to see both scores as warnings without failing a test, such as while you add scenarios to an existing suite. The redundancy never fails by default, so this is the only line to change:
+Both scores only warn by default, so a feature's score tests pass whatever its scores. You see the scores without failing a test, such as while you add scenarios to an existing suite.
+
+Set the coverage error level to fail the features whose coverage is at or below it. With 50, a feature fails when its scenarios miss most of the code they enter, as CucumberSwift 6.8.0 did by default:
 
 ```swift
 public func setupSteps() {
-    Cucumber.coverageErrorLevel = .off
+    Cucumber.coverageErrorLevel = 50
     // Your steps
 }
 ```
