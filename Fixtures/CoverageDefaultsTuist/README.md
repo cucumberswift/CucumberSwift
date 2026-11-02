@@ -1,6 +1,6 @@
 # Coverage scores with the default levels
 
-A macOS framework, `Grades`, tested by `GradesXCTests` with CucumberSwift and XCTest. The scheme turns
+A macOS framework, `Grades`, tested by `GradesXCTests` with CucumberSwift and XCTest, and by `GradesSwiftTests` with Swift Testing. The scheme turns
 **Code Coverage** on for the framework, as a project does in its scheme or test plan, and leaves
 CucumberSwift's coverage levels at their defaults.
 
@@ -9,8 +9,10 @@ The `Grading` feature covers less than half of the code it enters. CucumberSwift
 `expected-output` lists the lines that show both. If coverage stops scoring, or a low score fails the
 test again, this fixture fails.
 
-This fixture has no Swift Testing target. In an Xcode project with Code Coverage on, the Swift Testing
-runner crashes the test process when it reports a coverage warning (cucumberswift/CucumberSwift#509).
+`GradesSwiftTests` runs the same feature with Swift Testing, through `CucumberSwiftTesting`. In Xcode, the
+Swift Testing runner used to crash the test process at the first coverage warning, and Xcode still reported
+success (cucumberswift/CucumberSwift#509). `expected-output` lists the lines that show the tests ran and
+printed the feature's scores.
 
 The scheme sets `CUCUMBER_COVERAGE_SOURCES` to the framework's folder. CucumberSwift never measures the
 files in its own package folder, and this fixture is inside it. A project that depends on CucumberSwift

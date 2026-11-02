@@ -3,3 +3,5 @@
 # feature is below 50%: with the default settings, coverage only warns (#507).
 CucumberSwift coverage: Grading: 
 Test Case '-[Grading › Coverage scores Coverage]' passed
+✔ Test "A high score" with 2 test cases passed
+Grading.feature:1: warning: Feature coverage

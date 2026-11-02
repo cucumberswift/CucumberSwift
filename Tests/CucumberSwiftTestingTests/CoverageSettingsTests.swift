@@ -128,4 +128,12 @@ import Testing
         Cucumber.coverageErrorLevel = 50
         #expect(severities() == [.error])
     }
+
+    // Xcode stops the test process when a suite records an issue, which the runner did at a feature's end (#509).
+    @Test func aCoverageIssueIsPrintedWithItsLocationNotRecorded() {
+        var lines = [String]()
+        let issue = CoverageIssue(severity: .warning, message: "Feature coverage 38%", file: URL(fileURLWithPath: "/App/Basket.feature"), line: 1, kind: .coverage)
+        issue.record { lines.append($0) }
+        #expect(lines == ["/App/Basket.feature:1: warning: Feature coverage 38%"])
+    }
 }
