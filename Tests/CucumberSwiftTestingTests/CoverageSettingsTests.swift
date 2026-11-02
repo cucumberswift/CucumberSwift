@@ -112,16 +112,20 @@ import Testing
         #expect(fromCode.sources == ["Sources/Core"])
     }
 
+    private static let folder = FileManager.default.temporaryDirectory
+
     // 6.8.0 failed a feature at or below 50% by default, which turned a project's tests red on upgrading (#507).
     @Test func byDefaultLowCoverageOnlyWarnsUntilAnErrorLevelIsSet() {
         defer { Cucumber.coverageErrorLevel = nil }
-        let code = MeasuredCode(functions: [MeasuredCode.Function(name: "Basket.add(Int)", file: "/App/Basket.swift", line: 1, regions: 0..<10)])
+        let code = MeasuredCode(functions: [
+            MeasuredCode.Function(name: "Basket.add(Int)", file: Self.folder.appendingPathComponent("Basket.swift").path, line: 1, regions: 0..<10)
+        ])
         let scenario = CoverageScores.Scenario(name: "Adding", line: 3, tags: [], duration: 1, regions: [0])
         func severities() -> [CoverageIssue.Severity] {
             var settings = CoverageSettings.read(environment: [:])
             settings.isRedundancy = false
             let report = CoverageReport(scores: CoverageScores(scenarios: [scenario], code: code, isRedundancy: false), settings: settings)
-            return report.issues(file: URL(fileURLWithPath: "/App/Basket.feature"), line: 1, subject: "Feature").map(\.severity)
+            return report.issues(file: Self.folder.appendingPathComponent("Basket.feature"), line: 1, subject: "Feature").map(\.severity)
         }
         #expect(CoverageSettings().errorLevel == .off)
         #expect(severities() == [.warning])
@@ -130,10 +134,12 @@ import Testing
     }
 
     // Xcode stops the test process when a suite records an issue, which the runner did at a feature's end (#509).
-    @Test func aCoverageIssueIsPrintedWithItsLocationNotRecorded() {
+    @Test(arguments: [(CoverageIssue.Severity.warning, "warning"), (.error, "error")])
+    func aCoverageIssueIsPrintedWithItsLocationNotRecorded(severity: CoverageIssue.Severity, label: String) {
         var lines = [String]()
-        let issue = CoverageIssue(severity: .warning, message: "Feature coverage 38%", file: URL(fileURLWithPath: "/App/Basket.feature"), line: 1, kind: .coverage)
+        let file = Self.folder.appendingPathComponent("Basket.feature")
+        let issue = CoverageIssue(severity: severity, message: "Feature coverage 38%", file: file, line: 1, kind: .coverage)
         issue.record { lines.append($0) }
-        #expect(lines == ["/App/Basket.feature:1: warning: Feature coverage 38%"])
+        #expect(lines == ["\(file.path):1: \(label): Feature coverage 38%"])
     }
 }
