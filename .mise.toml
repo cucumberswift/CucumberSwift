@@ -54,9 +54,11 @@ description = "Build and test every project in Fixtures/"
 # plugin only runs when its inputs change, and the build must make new ones. A Swift package fixture
 # that uses the plugin and has no expected-warnings also runs Fix Feature Files, which must change
 # nothing. A fixture with expected-failures must fail its tests, with each failure it lists.
+# A fixture must run at least as many XCTest and Swift Testing tests as its expected-tests lists, since
+# a run can exit with success having run none (.github/scripts/fixture_tests.py).
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
-# warnings from CucumberSwift either. Its Swift files are put back as they were afterwards.
+# warnings from CucumberSwift either, and run as many tests as expected-tests lists. Its Swift files are put back as they were afterwards.
 # FIXTURES, a comma-separated list of folder names in Fixtures/, runs only those fixtures, such as
 # FIXTURES=SwiftTestingPackage mise run test-fixtures. A name that isn't a fixture is an error, so
 # that a typo fails instead of passing with nothing run.
@@ -143,6 +145,7 @@ for fixture in Fixtures/*/; do
   elif [ "$status" -ne 0 ]; then
     exit "$status"
   fi
+  python3 .github/scripts/fixture_tests.py "$fixture" "$log"
   if grep -qs CucumberSwiftLint "$fixture/Package.swift" "$fixture/Project.swift"; then
     if [ -z "$(find "$build" -name '*.lint-stamp' 2>/dev/null)" ]; then
       echo "error: $name: uses the CucumberSwiftLint plugin, but the plugin didn't run"
@@ -183,11 +186,12 @@ for fixture in Fixtures/*/; do
     with_xcode swift test --package-path "$fixture" > "$conversion_log" 2>&1 || converted_status=$?
     cat "$conversion_log"
     cat "$conversion_log" >> "$log"
-    rm -f "$conversion_log"
     if [ "$converted_status" -ne 0 ]; then
       echo "error: $name: its tests failed once Convert to Gherkin Macros had converted it"
       exit "$converted_status"
     fi
+    python3 .github/scripts/fixture_tests.py "$fixture" "$conversion_log"
+    rm -f "$conversion_log"
     tar -xf "$originals" -C "$fixture"
     trap - EXIT
     rm -f "$originals"
@@ -206,6 +210,7 @@ done
 description = "Build the framework with Carthage and test a project that uses it"
 # Builds Carthage/Build/CucumberSwift.xcframework as `carthage update` does for a consumer, then
 # runs Fixtures/CarthageXCFramework, an iOS test target that links and embeds it, on a simulator.
+# The fixture must run as many tests as its expected-tests lists.
 # See "Fixtures" in CONTRIBUTING.md.
 run = '''
 set -eu
@@ -248,6 +253,7 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
   echo "The fixture's scenario did not run all its steps"
   exit 1
 fi
+python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
 '''
 
 [tasks.test-docs-examples]
