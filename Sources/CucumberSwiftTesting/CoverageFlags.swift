@@ -18,7 +18,7 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("warning", newValue) }
     }
 
-    /// The coverage at or below which a feature gets an error, which fails its suite, in percent: off
+    /// The coverage at or below which a feature gets an error, which is printed as an error and fails no test, in percent: off
     /// by default, so that coverage only warns. Set this to a number, such as 50, or the environment
     /// variable `CUCUMBER_COVERAGE_ERROR_LEVEL` to a number or `NO`. This variable, when set, wins over the
     /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
