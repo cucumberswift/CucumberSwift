@@ -54,6 +54,12 @@ struct MutationTestingPlugin: CommandPlugin {
         }
     }
 
+    /// The folder the reports go to: the value of `--output` when the user passed one, else `fallback`.
+    private static func outputFolder(passed: [String], default fallback: URL) -> URL {
+        guard let index = passed.firstIndex(of: "--output"), passed.indices.contains(index + 1) else { return fallback }
+        return URL(fileURLWithPath: passed[index + 1])
+    }
+
     func performCommand(context: PluginContext, arguments: [String]) async throws {
         try Self.requireValues(in: arguments)
         var extractor = ArgumentExtractor(arguments)
@@ -72,9 +78,8 @@ struct MutationTestingPlugin: CommandPlugin {
         // ignores. The reports go there unless the user chose a place. The copy does not: that folder's path has a
         // space in it ("Mutation Testing"), and Swift Testing finds no tests in a package whose path has one. The tool
         // picks a folder for the copy itself.
-        if !passed.contains("--output") {
-            toolArguments += ["--output", context.pluginWorkDirectoryURL.appending(path: "reports").path]
-        }
+        let output = Self.outputFolder(passed: passed, default: context.pluginWorkDirectoryURL.appending(path: "reports"))
+        if !passed.contains("--output") { toolArguments += ["--output", output.path] }
         toolArguments += passed
         if dryRun { toolArguments.append("--dry-run") }
         toolArguments.append("--disable-prebuilts")
@@ -86,5 +91,9 @@ struct MutationTestingPlugin: CommandPlugin {
         process.waitUntilExit()
         guard process.terminationStatus != 2 else { throw MutationError.notSetUp }
         guard process.terminationStatus == 0 else { throw MutationError.failed(process.terminationStatus) }
+        // Each survivor as a warning at its line, so Xcode shows it in the source file.
+        for warning in SurvivorWarning.read(report: output.appending(path: "mutation-report.json"), root: root) {
+            Diagnostics.warning(warning.message, file: warning.file, line: warning.line)
+        }
     }
 }

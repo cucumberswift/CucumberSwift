@@ -22,6 +22,9 @@ struct CoverageIssue: Equatable {
         case coverage
         /// A feature's or a Rule's redundancy, and each scenario that adds no coverage of its own.
         case redundancy
+        /// A feature's Mutation score, and each scenario that runs a mutant that no test detected, with
+        /// ``Cucumber/mutationReport`` set.
+        case mutation
     }
 
     let severity: Severity

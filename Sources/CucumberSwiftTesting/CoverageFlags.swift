@@ -78,6 +78,16 @@ extension Cucumber {
         set { CoverageSettings.storage.sources = newValue }
     }
 
+    /// The report of a `swift package mutation-test` run, `mutation-report.json`, as a full path. With it, and
+    /// coverage on, each feature gets a Mutation score: of the mutants in the code its scenarios run, the share
+    /// that a test detected, with a warning on each scenario that runs a mutant no test detected. Set this, or
+    /// the environment variable `CUCUMBER_MUTATION_REPORT`. This variable, when set, wins over the environment
+    /// variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var mutationReport: String? {
+        get { CoverageSettings.storage.mutationReport }
+        set { CoverageSettings.storage.mutationReport = newValue }
+    }
+
     /// Whether the Swift Testing runner records each feature's coverage and redundancy issues on the
     /// feature's suite, where an error fails the suite, instead of printing them: off by default. Set this
     /// to `true`, or the environment variable `CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES` to `YES`. This

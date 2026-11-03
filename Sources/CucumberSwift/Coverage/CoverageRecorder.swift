@@ -229,6 +229,25 @@ final class CoverageRecorder {
         return ran
     }
 
+    /// The numbers of the measured regions that hold `line` of the file whose path ends with `file`: the
+    /// innermost ones, the regions with the fewest lines, so that a line inside an `if` belongs to the `if`'s
+    /// region and not to the whole function's. Empty when no measured code is at that line.
+    func regions(file: String, line: Int) -> Set<Int> {
+        var found = [(span: Int, region: Int)]()
+        for (_, function, firstRegion) in functions where function.file == file || function.file.hasSuffix("/" + file) {
+            for (index, region) in function.regions.enumerated() where region.lineStart <= line && line <= region.lineEnd {
+                found.append((region.lineEnd - region.lineStart, firstRegion + index))
+            }
+        }
+        guard let smallest = found.map(\.span).min() else { return [] }
+        return Set(found.filter { $0.span == smallest }.map(\.region))
+    }
+
+    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
+    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
+        featureScenarios[feature]?.map(\.scenario) ?? []
+    }
+
     func scenarioStarted() {
         snapshot = problem == nil ? counters.snapshot() : nil
         backgroundCounts = nil

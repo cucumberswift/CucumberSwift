@@ -23,6 +23,8 @@ final class CoverageReporter: CucumberTestObserver {
     private let output: (String) -> Void
     private(set) var recorder: CoverageRecorder?
     private var readSettings = CoverageSettings()
+    /// The mutation report, read once, when the first feature with a Mutation score finishes.
+    private var mutationReport: Result<MutationReport, MutationReport.ReadError>?
     private var hasAsked = false
     /// The running scenario's steps that finished, and how many of its steps are its Background's.
     private var finishedSteps = 0
@@ -90,6 +92,7 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
+        reportMutation(of: feature)
         let parts = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) ?? []
         for part in parts {
             let report = CoverageReport(scores: part.scores, settings: readSettings)
@@ -101,6 +104,28 @@ final class CoverageReporter: CucumberTestObserver {
                 report.issues(file: feature.coverageIssueFile, line: Int(feature.location.line), subject: "Feature").forEach(record)
             }
         }
+    }
+
+    /// Prints the feature's Mutation score and records its issues, with a mutation report set. It reads the
+    /// feature's scenarios from the recorder, so it runs before the recorder finishes the feature.
+    private func reportMutation(of feature: Feature) {
+        guard let path = readSettings.mutationReport, let recorder, recorder.code != nil else { return }
+        if mutationReport == nil {
+            mutationReport = MutationReport.read(path: path)
+            if case .failure(let error) = mutationReport { output("CucumberSwift mutation: no Mutation score: \(error.message).") }
+        }
+        guard case .success(let report) = mutationReport else { return }
+        guard let findings = MutationFindings.make(report: report,
+                                                   scenarios: recorder.scenarios(of: feature.uri),
+                                                   regions: recorder.regions(file:line:),
+                                                   file: feature.coverageIssueFile,
+                                                   featureLine: Int(feature.location.line)) else {
+            output("CucumberSwift mutation: \(feature.title): no mutant in the code its scenarios run")
+            return
+        }
+        output("CucumberSwift mutation: \(feature.title): \(CoverageReport.percent(findings.percent)) "
+            + "(\(findings.detected) of \(findings.counted) mutants in the code its scenarios run detected)")
+        findings.issues.forEach(record)
     }
 
     func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {

@@ -48,10 +48,20 @@ final class CoverageScoreTestsTests: XCTestCase {
     func testAFeaturesScoreTestsAreATestForEachKindOfIssue() throws {
         Cucumber.coverage = true
         let suite = try XCTUnwrap(CoverageScoreTests.suite(for: try feature(), className: "Adding|CoverageScoresKinds"))
-        XCTAssertEqual(suite.tests.count, CoverageIssue.Kind.allCases.count)
         // Coverage, and Redundancy with the warnings on the scenarios that add no coverage of their own (#504).
-        XCTAssertEqual(CoverageIssue.Kind.allCases.map(CoverageScoreTests.testName), ["Coverage", "Redundancy"])
+        // Mutation only with a mutation report.
+        XCTAssertEqual(suite.tests.count, 2)
+        XCTAssertEqual(CoverageIssue.Kind.allCases.map(CoverageScoreTests.testName), ["Coverage", "Redundancy", "Mutation"])
         XCTAssertTrue(CoverageScoreTests.isWaiting(for: URL(string: uri)))
+    }
+
+    func testWithAMutationReportAFeatureAlsoHasAMutationTest() throws {
+        Cucumber.coverage = true
+        Cucumber.mutationReport = "/tmp/mutation-report.json"
+        defer { Cucumber.mutationReport = nil }
+        let suite = try XCTUnwrap(CoverageScoreTests.suite(for: try feature(), className: "Adding|CoverageScoresMutation"))
+        XCTAssertEqual(suite.tests.count, 3)
+        XCTAssertTrue(suite.tests.last?.name.contains("Mutation") ?? false, suite.tests.map(\.name).joined(separator: ", "))
     }
 
     func testTheScoreTestsRecordTheFeaturesIssuesAndThenLetLaterOnesThrough() throws {
