@@ -30,6 +30,11 @@ let package = Package(
         .plugin(
             name: "ConvertToGherkinMacros",
             targets: ["Convert to Gherkin Macros"]),
+        // Mutation testing: changes the code under test in a temporary copy, runs the tests, and reports the
+        // changes that no scenario noticed: `swift package mutation-test`. Needs the Macros trait.
+        .plugin(
+            name: "CucumberSwiftMutationTesting",
+            targets: ["Mutation Testing"]),
         // Step definition macros, checked at compile time. Needs the Macros trait.
         .library(
             name: "CucumberSwiftMacros",
@@ -136,6 +141,32 @@ let package = Package(
                 ]),
             dependencies: ["CucumberSwiftMacroConverterTool"],
             path: "Plugins/ConvertToGherkinMacrosPlugin"),
+        // What the mutation testing tool does without swift-syntax: the work folder and its lock, running the
+        // tests, the verdicts and the reports. Not a product. Its tests link it, which they can't do with the tool.
+        .target(
+            name: "CucumberSwiftMutation",
+            path: "Sources/CucumberSwiftMutation"),
+        // The tool the Mutation Testing plugin runs. It builds for the Mac that builds the tests. It finds the
+        // mutants with swift-syntax, so without the Macros trait it only says what to turn on. Its tests run it
+        // as a program (`--discover`), for the reason the converter's do.
+        .executableTarget(
+            name: "CucumberSwiftMutationTestingTool",
+            dependencies: [
+                "CucumberSwiftMutation",
+                .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftParser", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+            ],
+            path: "Sources/CucumberSwiftMutationTestingTool"),
+        // Named as Xcode shows it on the package's menu.
+        .plugin(
+            name: "Mutation Testing",
+            capability: .command(
+                intent: .custom(
+                    verb: "mutation-test",
+                    description: "Changes the code under test in a temporary copy and reports the changes that no scenario noticed"),
+                permissions: []),
+            dependencies: ["CucumberSwiftMutationTestingTool"],
+            path: "Plugins/MutationTestingPlugin"),
         // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.
         .macro(
             name: "CucumberSwiftMacrosPlugin",
@@ -203,6 +234,9 @@ let package = Package(
             name: "CucumberSwiftGherkinTests",
             // CucumberSwift too, to check that both read feature files alike.
             dependencies: ["CucumberSwiftGherkin", "CucumberSwift"]),
+        .testTarget(
+            name: "CucumberSwiftMutationTests",
+            dependencies: ["CucumberSwiftMutation"]),
         .testTarget(
             name: "CucumberSwiftLintToolTests",
             dependencies: ["CucumberSwiftLintTool"]),
