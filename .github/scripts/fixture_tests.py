@@ -27,7 +27,7 @@ Swift Testing runner, each scenario or outline is a test.
 The check fails, with a message that names the fixture and both counts, when a
 framework ran fewer tests than its line gives, or ran tests the file does not
 list. It also fails when the fixture has no expected-tests file, or the file
-lists nothing or has a line it cannot read.
+lists nothing, lists 0 tests or has a line it cannot read.
 
 Only the standard library is used.
 """
@@ -63,6 +63,10 @@ def read_expected(path):
                     f"expected-tests line {number} isn't `XCTest: <count>` "
                     f"or `Swift Testing: <count>`: {line}")
             framework = match.group(1)
+            if int(match.group(2)) == 0:
+                raise ExpectedTestsError(
+                    f"expected-tests line {number} lists 0 {framework} tests, "
+                    f"which any run passes: {line}")
             if framework in expected:
                 raise ExpectedTestsError(
                     f"expected-tests lists {framework} twice")

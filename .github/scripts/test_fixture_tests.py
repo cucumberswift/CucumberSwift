@@ -153,6 +153,10 @@ class ReadExpectedTests(unittest.TestCase):
                 with self.assertRaisesRegex(fixture_tests.ExpectedTestsError, "line 1"):
                     fixture_tests.read_expected(self.write(line + "\n"))
 
+    def test_a_minimum_of_0_tests_is_an_error(self):
+        with self.assertRaisesRegex(fixture_tests.ExpectedTestsError, "line 2 lists 0"):
+            fixture_tests.read_expected(self.write("XCTest: 6\nSwift Testing: 0\n"))
+
     def test_a_framework_listed_twice_is_an_error(self):
         with self.assertRaisesRegex(fixture_tests.ExpectedTestsError, "twice"):
             fixture_tests.read_expected(self.write("XCTest: 1\nXCTest: 2\n"))
