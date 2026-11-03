@@ -66,9 +66,12 @@ final class MutationOptionsTests: XCTestCase {
     }
 
     func testReadsEveryOption() throws {
-        let options = try MutationOptions.parse(["--root", "/p", "--sources", "Sources/A", "--sources", "Sources/B", "--max-mutants", "10",
-                                                 "--timeout-multiplier", "5", "--minimum-timeout", "12", "--baseline-runs", "1",
-                                                 "--work-dir", "/w", "--output", "/o", "--swift", "/bin/swift", "--dry-run", "--disable-prebuilts"])
+        let arguments = [
+            "--root", "/p", "--sources", "Sources/A", "--sources", "Sources/B", "--max-mutants", "10",
+            "--timeout-multiplier", "5", "--minimum-timeout", "12", "--baseline-runs", "1",
+            "--work-dir", "/w", "--output", "/o", "--swift", "/bin/swift", "--dry-run", "--disable-prebuilts"
+        ]
+        let options = try MutationOptions.parse(arguments)
         XCTAssertEqual(options.sources, ["Sources/A", "Sources/B"])
         XCTAssertEqual(options.maxMutants, 10)
         XCTAssertEqual(options.timeoutMultiplier, 5)

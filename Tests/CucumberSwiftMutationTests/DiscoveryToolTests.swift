@@ -10,13 +10,20 @@ import XCTest
 /// Runs the tool built next to the test bundle as a program, because linking swift-syntax into a second test target
 /// breaks the macros' tests with Swift 6.2's prebuilt swift-syntax.
 final class DiscoveryToolTests: XCTestCase {
+    /// What the tool exited with and printed.
+    private struct Launched {
+        let status: Int32
+        let output: String
+        let error: String
+    }
+
     private var tool: URL {
         let bundle = Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }
         return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwiftMutationTestingTool") }
             ?? URL(fileURLWithPath: "CucumberSwiftMutationTestingTool")
     }
 
-    private func launch(_ arguments: [String], input: String = "") throws -> (status: Int32, output: String, error: String) {
+    private func launch(_ arguments: [String], input: String = "") throws -> Launched {
         let process = Process()
         process.executableURL = tool
         process.arguments = arguments
@@ -30,7 +37,11 @@ final class DiscoveryToolTests: XCTestCase {
         let output = stdout.fileHandleForReading.readDataToEndOfFile()
         let error = stderr.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        return (process.terminationStatus, String(decoding: output, as: UTF8.self), String(decoding: error, as: UTF8.self))
+        return Launched(
+            status: process.terminationStatus,
+            output: String(bytes: output, encoding: .utf8) ?? "",
+            error: String(bytes: error, encoding: .utf8) ?? ""
+        )
     }
 
     #if Macros

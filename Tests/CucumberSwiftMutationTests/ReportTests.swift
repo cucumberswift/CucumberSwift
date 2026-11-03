@@ -7,16 +7,24 @@ import XCTest
 @testable import CucumberSwiftMutation
 
 final class ReportTests: XCTestCase {
-    private func mutant(_ id: Int, replacement: String = ">") -> Mutant {
-        Mutant(id: id, file: "Sources/Voting/Voting.swift", line: 1, column: 45, endLine: 1, endColumn: 47, offset: 44, length: 2,
-               original: ">=", replacement: replacement, mutator: "RelationalOperator")
-    }
+    private let cucumberReport = """
+    [{"name":"Voting","elements":[
+      {"name":"An adult can vote","steps":[
+        {"keyword":"Given ","name":"a person aged 30","result":{"status":"passed"}},
+        {"keyword":"Then ","name":"the person can vote","result":{"status":"failed"}}]},
+      {"name":"A child cannot vote","steps":[
+        {"keyword":"Given ","name":"a person aged 5","result":{"status":"passed"}},
+        {"keyword":"Then ","name":"the person cannot vote","result":{"status":"passed"}}]}]}]
+    """
 
     private func results() -> [MutantResult] {
-        [MutantResult(mutant: mutant(1, replacement: "<"), verdict: .killed(by: ["An adult can vote :: Then the person can vote"]), duration: 3),
-         MutantResult(mutant: mutant(2), verdict: .survived, duration: 3),
-         MutantResult(mutant: mutant(3, replacement: "=="), verdict: .unviable, duration: 1),
-         MutantResult(mutant: mutant(4, replacement: "!="), verdict: .timedOut, duration: 30)]
+        let killedBy = ["An adult can vote :: Then the person can vote"]
+        return [
+            MutantResult(mutant: Mutant.fixture(id: 1, replacement: "<"), verdict: .killed(by: killedBy), duration: 3),
+            MutantResult(mutant: Mutant.fixture(id: 2), verdict: .survived, duration: 3),
+            MutantResult(mutant: Mutant.fixture(id: 3, replacement: "=="), verdict: .unviable, duration: 1),
+            MutantResult(mutant: Mutant.fixture(id: 4, replacement: "!="), verdict: .timedOut, duration: 30)
+        ]
     }
 
     func testTheScoreCountsKilledAndTimedOutAsDetectedAndLeavesOutWhatDidNotBuild() {
@@ -28,7 +36,7 @@ final class ReportTests: XCTestCase {
 
     func testNoScoreWhenNothingWasCounted() {
         XCTAssertNil(MutationScore([]).percent)
-        XCTAssertNil(MutationScore([MutantResult(mutant: mutant(1), verdict: .unviable, duration: 1)]).percent)
+        XCTAssertNil(MutationScore([MutantResult(mutant: Mutant.fixture(id: 1), verdict: .unviable, duration: 1)]).percent)
     }
 
     func testTheStrykerReportHasTheFieldsItsSchemaRequires() throws {
@@ -49,23 +57,13 @@ final class ReportTests: XCTestCase {
         XCTAssertEqual(start, ["line": 1, "column": 45])
     }
 
-    private let cucumberReport = """
-    [{"name":"Voting","elements":[
-      {"name":"An adult can vote","steps":[
-        {"keyword":"Given ","name":"a person aged 30","result":{"status":"passed"}},
-        {"keyword":"Then ","name":"the person can vote","result":{"status":"failed"}}]},
-      {"name":"A child cannot vote","steps":[
-        {"keyword":"Given ","name":"a person aged 5","result":{"status":"passed"}},
-        {"keyword":"Then ","name":"the person cannot vote","result":{"status":"passed"}}]}]}]
-    """
-
     private func steps(of annotated: CucumberReportAnnotator.Annotated) throws -> [[String: Any]] {
         let features = try XCTUnwrap(JSONSerialization.jsonObject(with: annotated.data) as? [[String: Any]])
         return try (features[0]["elements"] as? [[String: Any]] ?? []).flatMap { try XCTUnwrap($0["steps"] as? [[String: Any]]) }
     }
 
     func testAKilledMutantIsNotedOnTheFailedStep() throws {
-        let result = MutantResult(mutant: mutant(1, replacement: "<"), verdict: .killed(by: []), duration: 1)
+        let result = MutantResult(mutant: Mutant.fixture(id: 1, replacement: "<"), verdict: .killed(by: []), duration: 1)
         let annotated = try XCTUnwrap(CucumberReportAnnotator.annotate(Data(cucumberReport.utf8), result: result))
         XCTAssertEqual(annotated.failedSteps, ["An adult can vote :: Then the person can vote"])
         let noted = try steps(of: annotated).map { ($0["embeddings"] as? [[String: String]])?.count ?? 0 }
@@ -73,7 +71,7 @@ final class ReportTests: XCTestCase {
     }
 
     func testTheNoteIsJSONThatNamesTheMutantItsPlaceAndItsStatus() throws {
-        let result = MutantResult(mutant: mutant(1, replacement: "<"), verdict: .killed(by: []), duration: 1)
+        let result = MutantResult(mutant: Mutant.fixture(id: 1, replacement: "<"), verdict: .killed(by: []), duration: 1)
         let annotated = try XCTUnwrap(CucumberReportAnnotator.annotate(Data(cucumberReport.utf8), result: result))
         let embedding = try XCTUnwrap(try steps(of: annotated)[1]["embeddings"] as? [[String: String]])
         XCTAssertEqual(embedding[0]["mime_type"], "application/json")
@@ -85,14 +83,14 @@ final class ReportTests: XCTestCase {
     }
 
     func testASurvivorIsNotedOnTheLastStepOfEachScenarioThatRan() throws {
-        let result = MutantResult(mutant: mutant(2), verdict: .survived, duration: 1)
+        let result = MutantResult(mutant: Mutant.fixture(id: 2), verdict: .survived, duration: 1)
         let annotated = try XCTUnwrap(CucumberReportAnnotator.annotate(Data(cucumberReport.utf8), result: result))
         let noted = try steps(of: annotated).map { ($0["embeddings"] as? [[String: String]])?.count ?? 0 }
         XCTAssertEqual(noted, [0, 1, 0, 1])
     }
 
     func testAReportThatIsNotCucumberJSONIsLeftAlone() {
-        let result = MutantResult(mutant: mutant(1), verdict: .survived, duration: 1)
+        let result = MutantResult(mutant: Mutant.fixture(id: 1), verdict: .survived, duration: 1)
         XCTAssertNil(CucumberReportAnnotator.annotate(Data("not json".utf8), result: result))
         XCTAssertNil(CucumberReportAnnotator.annotate(Data("{}".utf8), result: result))
     }

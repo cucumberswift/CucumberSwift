@@ -17,13 +17,15 @@ public struct WorkFolder {
         public var description: String {
             switch self {
                 case .noWritableFolder(let tried):
-                    return "No folder for the temporary copy is writable. Tried: \(tried.joined(separator: ", ")). Pass --work-dir with a folder you can write to."
+                    let list = tried.joined(separator: ", ")
+                    return "No folder for the temporary copy is writable. Tried: \(list). Pass --work-dir with a folder you can write to."
                 case .anotherRunIsActive(let pid):
                     return "Another mutation run (process \(pid)) is still active for this package."
                 case .copyFailed(let message):
                     return "Couldn't copy the project: \(message)"
                 case .pathHasSpace(let path):
-                    return "The folder for the temporary copy has a space in its path (\(path)), and Swift Testing finds no tests in a package whose path has one. Pass --work-dir with a path that has no space."
+                    return "The folder for the temporary copy has a space in its path (\(path)), and Swift Testing finds no tests "
+                        + "in a package whose path has one. Pass --work-dir with a path that has no space."
             }
         }
     }
@@ -89,6 +91,26 @@ public struct WorkFolder {
         kill(pid, 0) == 0 || errno == EPERM
     }
 
+    /// Clones with copy-on-write where the file system can, and copies otherwise.
+    private static func clone(_ source: URL, to destination: URL, runner: CommandRunning) throws {
+        let result = runner.run("/bin/cp", ["-c", "-R", source.path, destination.path], in: source.deletingLastPathComponent(), environment: [:], timeout: nil)
+        if !result.succeeded {
+            do {
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.default.copyItem(at: source, to: destination)
+            } catch {
+                throw Failure.copyFailed("\(source.path): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Makes the files writable first, because some build and checkout files are read-only.
+    private static func remove(_ folder: URL) {
+        guard FileManager.default.fileExists(atPath: folder.path) else { return }
+        _ = ProcessRunner(ignoresCancellation: true).run("/bin/chmod", ["-R", "u+w", folder.path], in: folder.deletingLastPathComponent(), environment: [:], timeout: 120)
+        try? FileManager.default.removeItem(at: folder)
+    }
+
     /// Writes the lock file, then copies the project into a new folder inside `location`.
     public init(copying root: URL, into location: URL, lockFolder: URL, runner: CommandRunning = ProcessRunner()) throws {
         let fileManager = FileManager.default
@@ -112,29 +134,9 @@ public struct WorkFolder {
         }
     }
 
-    /// Clones with copy-on-write where the file system can, and copies otherwise.
-    private static func clone(_ source: URL, to destination: URL, runner: CommandRunning) throws {
-        let result = runner.run("/bin/cp", ["-c", "-R", source.path, destination.path], in: source.deletingLastPathComponent(), environment: [:], timeout: nil)
-        if !result.succeeded {
-            do {
-                try? FileManager.default.removeItem(at: destination)
-                try FileManager.default.copyItem(at: source, to: destination)
-            } catch {
-                throw Failure.copyFailed("\(source.path): \(error.localizedDescription)")
-            }
-        }
-    }
-
     /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue.
     public func remove() {
         Self.remove(folder)
         try? FileManager.default.removeItem(at: lockFile)
-    }
-
-    /// Makes the files writable first, because some build and checkout files are read-only.
-    private static func remove(_ folder: URL) {
-        guard FileManager.default.fileExists(atPath: folder.path) else { return }
-        _ = ProcessRunner(ignoresCancellation: true).run("/bin/chmod", ["-R", "u+w", folder.path], in: folder.deletingLastPathComponent(), environment: [:], timeout: 120)
-        try? FileManager.default.removeItem(at: folder)
     }
 }

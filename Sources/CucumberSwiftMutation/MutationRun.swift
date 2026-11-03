@@ -47,8 +47,18 @@ public final class MutationRun {
     private var before: ProjectFingerprint?
     private var cancelled = false
 
-    public init(options: MutationOptions, discoverer: MutantDiscovering,
-                runner: CommandRunning = ProcessRunner(), log: @escaping (String) -> Void = { print($0) }) {
+    private var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
+
+    public init(
+        options: MutationOptions,
+        discoverer: MutantDiscovering,
+        runner: CommandRunning = ProcessRunner(),
+        log: @escaping (String) -> Void = { print($0) }
+    ) {
         self.options = options
         self.discoverer = discoverer
         self.runner = runner
@@ -76,12 +86,6 @@ public final class MutationRun {
     /// Prints, unless the run was cancelled: the commands that the cancel stopped fail, and their errors would mislead.
     private func log(_ text: String) {
         if !isCancelled { output(text) }
-    }
-
-    private var isCancelled: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return cancelled
     }
 
     /// Deletes the copy. It takes a lock and may be called more than once.
@@ -136,41 +140,13 @@ public final class MutationRun {
     private func mutate(in copy: URL, started: Date) throws -> Int32 {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: options.output, withIntermediateDirectories: true)
-        let files = swiftFiles(in: copy)
-        var mutants = try discoverer.mutants(inFiles: files, relativeTo: copy)
-        mutants.sort { ($0.file, $0.offset, $0.replacement) < ($1.file, $1.offset, $1.replacement) }
-        if let limit = options.maxMutants { mutants = Array(mutants.prefix(limit)) }
-        mutants = mutants.enumerated().map { $1.numbered($0 + 1) }
-        log("Found \(mutants.count) mutants in \(files.count) files.")
+        let mutants = try findMutants(in: copy)
         if options.dryRun {
             mutants.forEach { log("  \($0.id). \($0.summary)") }
             return Status.completed
         }
         guard !mutants.isEmpty else { return Status.completed }
-
-        log("Building the copy and running the tests \(options.baselineRuns) times without a change.")
-        let build = runner.run(options.swift, ["build", "--build-tests"] + options.swiftArguments, in: copy, environment: [:], timeout: nil)
-        try? build.output.write(to: options.output.appendingPathComponent("build.log"), atomically: true, encoding: .utf8)
-        guard build.succeeded else {
-            log("error: the package doesn't build, so no mutant can be tested.\n\(tail(build.output))")
-            return Status.baselineFailed
-        }
-        var baseline = 0.0
-        for number in 1...options.baselineRuns {
-            let result = runTests(in: copy, environment: [:], timeout: nil)
-            guard result.succeeded else {
-                log("error: the tests fail without any change (run \(number)), so a failing mutant would prove nothing. Fix them first.\n\(tail(result.output))")
-                return Status.baselineFailed
-            }
-            guard result.testsRun > 0 else {
-                log("error: the tests ran no test (run \(number)), so no mutant could fail one. The output is in \(options.output.path)/baseline.log\n\(tail(result.output))")
-                try? result.output.write(to: options.output.appendingPathComponent("baseline.log"), atomically: true, encoding: .utf8)
-                return Status.baselineFailed
-            }
-            baseline = max(baseline, result.duration)
-        }
-        let timeout = max(options.minimumTimeout, baseline * options.timeoutMultiplier)
-        log("The tests take \(String(format: "%.1f", baseline)) s. A mutant times out after \(String(format: "%.0f", timeout)) s.")
+        guard let timeout = runBaseline(in: copy) else { return Status.baselineFailed }
 
         let runs = options.output.appendingPathComponent("runs")
         try? fileManager.removeItem(at: runs)
@@ -189,6 +165,45 @@ public final class MutationRun {
         try summary.write(to: options.output.appendingPathComponent("summary.txt"), atomically: true, encoding: .utf8)
         log("\n" + summary + "Reports are in \(options.output.path)")
         return Status.completed
+    }
+
+    /// The mutants in the copy's source files, in file and line order and numbered from 1.
+    private func findMutants(in copy: URL) throws -> [Mutant] {
+        let files = swiftFiles(in: copy)
+        var mutants = try discoverer.mutants(inFiles: files, relativeTo: copy)
+        mutants.sort { ($0.file, $0.offset, $0.replacement) < ($1.file, $1.offset, $1.replacement) }
+        if let limit = options.maxMutants { mutants = Array(mutants.prefix(limit)) }
+        log("Found \(mutants.count) mutants in \(files.count) files.")
+        return mutants.enumerated().map { $1.numbered($0 + 1) }
+    }
+
+    /// Builds the copy and runs the tests without a change. Returns how long a mutant's tests may run, or `nil`
+    /// after logging why the baseline can't prove anything: the package doesn't build, its tests fail, or they run no test.
+    private func runBaseline(in copy: URL) -> TimeInterval? {
+        log("Building the copy and running the tests \(options.baselineRuns) times without a change.")
+        let build = runner.run(options.swift, ["build", "--build-tests"] + options.swiftArguments, in: copy, environment: [:], timeout: nil)
+        try? build.output.write(to: options.output.appendingPathComponent("build.log"), atomically: true, encoding: .utf8)
+        guard build.succeeded else {
+            log("error: the package doesn't build, so no mutant can be tested.\n\(tail(build.output))")
+            return nil
+        }
+        var baseline = 0.0
+        for number in 1...options.baselineRuns {
+            let result = runTests(in: copy, environment: [:], timeout: nil)
+            guard result.succeeded else {
+                log("error: the tests fail without any change (run \(number)), so a failing mutant would prove nothing. Fix them first.\n\(tail(result.output))")
+                return nil
+            }
+            guard result.testsRun > 0 else {
+                log("error: the tests ran no test (run \(number)), so no mutant could fail one. The output is in \(options.output.path)/baseline.log\n\(tail(result.output))")
+                try? result.output.write(to: options.output.appendingPathComponent("baseline.log"), atomically: true, encoding: .utf8)
+                return nil
+            }
+            baseline = max(baseline, result.duration)
+        }
+        let timeout = max(options.minimumTimeout, baseline * options.timeoutMultiplier)
+        log("The tests take \(String(format: "%.1f", baseline)) s. A mutant times out after \(String(format: "%.0f", timeout)) s.")
+        return timeout
     }
 
     private func test(_ mutant: Mutant, in copy: URL, runs: URL, timeout: TimeInterval, sources: inout [String: String]) throws -> MutantResult {

@@ -52,7 +52,7 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         let root = try makePackage()
         let work = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
         // A kill -9 leaves the copy and the lock file behind. The next run sees that the process is gone.
-        let removed = try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder(), isAlive: { _ in false })
+        let removed = try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }
         XCTAssertEqual(removed?.lastPathComponent, work.folder.lastPathComponent)
         XCTAssertFalse(FileManager.default.fileExists(atPath: work.folder.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: lockFolder().appendingPathComponent("mutation.lock").path))
@@ -64,7 +64,7 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         // Rewrite the lock as another process's.
         let lock = lockFolder().appendingPathComponent("mutation.lock")
         try JSONEncoder().encode(WorkFolder.Lock(pid: getpid() + 1, folder: work.folder.path)).write(to: lock)
-        XCTAssertThrowsError(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder(), isAlive: { _ in true })) {
+        XCTAssertThrowsError(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in true }) {
             XCTAssertEqual($0 as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid() + 1))
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: work.folder.path))
@@ -77,12 +77,12 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         try FileManager.default.createDirectory(at: lockFolder(), withIntermediateDirectories: true)
         let lock = lockFolder().appendingPathComponent("mutation.lock")
         try JSONEncoder().encode(WorkFolder.Lock(pid: 1, folder: precious.path)).write(to: lock)
-        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder(), isAlive: { _ in false }))
+        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false })
         XCTAssertTrue(FileManager.default.fileExists(atPath: precious.path), "A lock file is data, and must not choose what gets deleted")
     }
 
     func testNoLockFileMeansNothingToCleanUp() throws {
-        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder(), isAlive: { _ in false }))
+        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false })
     }
 
     func testChoosesTheExplicitFolderFirst() throws {

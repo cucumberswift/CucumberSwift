@@ -20,17 +20,23 @@ final class FakeRunner: CommandRunning, @unchecked Sendable {
     private var recorded = [Call]()
     private let handler: (Call) -> CommandResult
 
-    init(handler: @escaping (Call) -> CommandResult) {
-        self.handler = handler
-    }
-
     var calls: [Call] {
         lock.lock()
         defer { lock.unlock() }
         return recorded
     }
 
-    func run(_ executable: String, _ arguments: [String], in directory: URL, environment: [String: String], timeout: TimeInterval?) -> CommandResult {
+    init(handler: @escaping (Call) -> CommandResult) {
+        self.handler = handler
+    }
+
+    func run(
+        _ executable: String,
+        _ arguments: [String],
+        in directory: URL,
+        environment: [String: String],
+        timeout: TimeInterval?
+    ) -> CommandResult {
         let call = Call(arguments: arguments, directory: directory, environment: environment, timeout: timeout)
         lock.lock()
         recorded.append(call)
@@ -38,12 +44,6 @@ final class FakeRunner: CommandRunning, @unchecked Sendable {
         // The commands that copy and delete are real; only `swift` is replaced.
         if executable.hasSuffix("/swift") || executable == "swift" { return handler(call) }
         return ProcessRunner().run(executable, arguments, in: directory, environment: environment, timeout: timeout)
-    }
-}
-
-extension CommandResult {
-    static func finished(_ status: Int32, output: String = "", timedOut: Bool = false, duration: TimeInterval = 1) -> CommandResult {
-        CommandResult(status: status, output: output, timedOut: timedOut, duration: duration)
     }
 }
 
@@ -57,8 +57,7 @@ struct FakeDiscoverer: MutantDiscovering {
             guard let range = source.range(of: ">=") else { continue }
             let offset = source.utf8.distance(from: source.utf8.startIndex, to: range.lowerBound)
             for replacement in [">", "<"] {
-                found.append(Mutant(id: 0, file: relative, line: 1, column: offset + 1, endLine: 1, endColumn: offset + 3,
-                                    offset: offset, length: 2, original: ">=", replacement: replacement, mutator: "RelationalOperator"))
+                found.append(Mutant.fixture(file: relative, original: ">=", replacement: replacement, offset: offset))
             }
         }
         return found
@@ -92,5 +91,37 @@ class TemporaryFolderTestCase: XCTestCase {
         try "artifact".write(to: root.appendingPathComponent(".build/debug/artifact"), atomically: true, encoding: .utf8)
         try "ref".write(to: root.appendingPathComponent(".git/HEAD"), atomically: true, encoding: .utf8)
         return root
+    }
+}
+
+extension CommandResult {
+    static func finished(_ status: Int32, output: String = "", timedOut: Bool = false, duration: TimeInterval = 1) -> CommandResult {
+        CommandResult(status: status, output: output, timedOut: timedOut, duration: duration)
+    }
+}
+
+extension Mutant {
+    /// A mutant on line 1 of `file`, with its place worked out from `offset`.
+    static func fixture(
+        id: Int = 0,
+        file: String = "Sources/Voting/Voting.swift",
+        original: String = ">=",
+        replacement: String = ">",
+        offset: Int = 44,
+        mutator: String = "RelationalOperator"
+    ) -> Mutant {
+        Mutant(
+            id: id,
+            file: file,
+            line: 1,
+            column: offset + 1,
+            endLine: 1,
+            endColumn: offset + 1 + original.utf8.count,
+            offset: offset,
+            length: original.utf8.count,
+            original: original,
+            replacement: replacement,
+            mutator: mutator
+        )
     }
 }

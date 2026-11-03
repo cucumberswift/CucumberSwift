@@ -38,11 +38,6 @@ public struct MutationOptions: Equatable, Sendable {
         ["--disable-sandbox"] + (disablePrebuilts ? ["--disable-experimental-prebuilts"] : [])
     }
 
-    public init(root: URL) {
-        self.root = root
-        output = root.appendingPathComponent(".build/mutation-testing")
-    }
-
     public static func parse(_ arguments: [String]) throws -> MutationOptions {
         var root: URL?
         var output: URL?
@@ -84,5 +79,10 @@ public struct MutationOptions: Equatable, Sendable {
         options.output = output ?? root.appendingPathComponent(".build/mutation-testing")
         if !sources.isEmpty { options.sources = sources }
         return options
+    }
+
+    public init(root: URL) {
+        self.root = root
+        output = root.appendingPathComponent(".build/mutation-testing")
     }
 }

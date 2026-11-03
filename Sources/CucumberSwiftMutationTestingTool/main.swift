@@ -14,7 +14,7 @@ let arguments = Array(CommandLine.arguments.dropFirst())
 
 #if Macros
 if arguments == ["--discover"] {
-    let source = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+    let source = String(bytes: FileHandle.standardInput.readDataToEndOfFile(), encoding: .utf8) ?? ""
     let mutants = MutantFinder.mutants(in: source, file: "Sources/Example.swift")
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]

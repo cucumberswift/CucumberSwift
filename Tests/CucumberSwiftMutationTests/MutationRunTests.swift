@@ -26,7 +26,7 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     private func run(_ runner: FakeRunner, options: MutationOptions? = nil) -> Int32 {
-        MutationRun(options: options ?? self.options(), discoverer: FakeDiscoverer(), runner: runner) { [unowned self] in log.append($0) }.run()
+        MutationRun(options: options ?? self.options(), discoverer: FakeDiscoverer(), runner: runner) { [weak self] in self?.log.append($0) }.run()
     }
 
     /// `swift build` always works. `swift test` runs `tests`, which sees the source the copy has at that moment.
@@ -36,7 +36,9 @@ final class MutationRunTests: TemporaryFolderTestCase {
             let source = (try? String(contentsOf: call.directory.appendingPathComponent("Sources/Voting/Voting.swift"), encoding: .utf8)) ?? ""
             let result = tests(source)
             // A run that prints no test count is one that ran no test: give each result the count a real run prints.
-            return result.output.contains("Executed") ? result : CommandResult(status: result.status, output: result.output + "\nExecuted 3 tests, with 0 failures", timedOut: result.timedOut, duration: result.duration)
+            guard !result.output.contains("Executed") else { return result }
+            let output = result.output + "\nExecuted 3 tests, with 0 failures"
+            return CommandResult(status: result.status, output: output, timedOut: result.timedOut, duration: result.duration)
         }
     }
 

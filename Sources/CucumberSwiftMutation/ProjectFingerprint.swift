@@ -9,14 +9,14 @@ import Foundation
 /// What identifies the user's project before a run and after it. A run changes nothing in it, so the two
 /// fingerprints must be equal; if they aren't, the tool has a bug, and the run fails and names the file.
 public struct ProjectFingerprint: Equatable, Sendable {
+    /// The folders a run neither copies nor compares: version control, build output and editor state.
+    public static let ignoredFolders: Set<String> = [".git", ".build", ".swiftpm", "DerivedData"]
+
     /// The SHA-256 of each file's relative path and contents, by path. Not the build folders.
     public let files: [String: String]
     /// `git status --porcelain`, `git ls-files -s` and `git rev-parse HEAD`, when the project is in a git
     /// work tree. A mutation run never stages, commits or checks out anything.
     public let git: [String]
-
-    /// The folders a run neither copies nor compares: version control, build output and editor state.
-    public static let ignoredFolders: Set<String> = [".git", ".build", ".swiftpm", "DerivedData"]
 
     public static func take(of root: URL, runner: CommandRunning = ProcessRunner(ignoresCancellation: true)) -> ProjectFingerprint {
         var files = [String: String]()
