@@ -15,9 +15,19 @@ extension Feature {
 }
 
 extension CoverageIssue {
-    /// Records the issue in the running test, at its line of the feature file. A warning doesn't fail the
-    /// test. Swift Testing before Swift 6.3 can't record a warning, so it prints it instead.
-    func record() {
+    /// Prints the issue with its feature file and line, as a compiler prints a warning, and records
+    /// nothing: the runner reports a feature's scores after the feature's last scenario, where no test is
+    /// running, and Xcode stops the test process when a suite records an issue (#509). An error doesn't
+    /// fail a test then.
+    ///
+    /// With `inSuite`, which ``Cucumber/coverageRecordsIssuesInSuites`` turns on, it records the issue in
+    /// the suite instead, and an error fails the suite. A warning doesn't fail it. Swift Testing before
+    /// Swift 6.3 can't record a warning, so it prints it.
+    func record(inSuite: Bool = false, output: (String) -> Void = { print($0) }) {
+        guard inSuite else {
+            output("\(file?.path ?? ""):\(max(line, 1)): \(severity == .warning ? "warning" : "error"): \(message)")
+            return
+        }
         let location = SourceLocation(fileID: "Features/\(file?.lastPathComponent ?? "")",
                                       filePath: file?.path ?? "",
                                       line: max(line, 1),
@@ -28,7 +38,7 @@ extension CoverageIssue {
         if severity == .error {
             Issue.record(Comment(rawValue: message), sourceLocation: location)
         } else {
-            print("\(file?.path ?? ""):\(line): warning: \(message)")
+            output("\(file?.path ?? ""):\(max(line, 1)): warning: \(message)")
         }
         #endif
     }
