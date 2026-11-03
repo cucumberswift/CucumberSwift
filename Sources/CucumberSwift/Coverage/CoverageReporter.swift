@@ -106,25 +106,46 @@ final class CoverageReporter: CucumberTestObserver {
         }
     }
 
-    /// Prints the feature's Mutation score and records its issues, with a mutation report set. It reads the
-    /// feature's scenarios from the recorder, so it runs before the recorder finishes the feature.
+    /// Prints what the feature's Mutation test finds and records its issues, with mutation testing on. It reads the
+    /// feature's scenarios from the recorder, so it runs before the recorder finishes the feature. Without a report,
+    /// or with one it can't read, the feature gets an error, so that turning mutation testing on never passes silently.
     private func reportMutation(of feature: Feature) {
-        guard let path = readSettings.mutationReport, let recorder, recorder.code != nil else { return }
-        if mutationReport == nil {
-            mutationReport = MutationReport.read(path: path)
-            if case .failure(let error) = mutationReport { output("CucumberSwift mutation: no Mutation score: \(error.message).") }
+        guard readSettings.isMutationTesting, let recorder else { return }
+        guard recorder.code != nil else {
+            output("CucumberSwift mutation: \(feature.title): no Mutation test, because coverage has no scores.")
+            return
         }
-        guard case .success(let report) = mutationReport else { return }
-        guard let findings = MutationFindings.make(report: report,
-                                                   scenarios: recorder.scenarios(of: feature.uri),
-                                                   regions: recorder.regions(file:line:column:),
-                                                   file: feature.coverageIssueFile,
-                                                   featureLine: Int(feature.location.line)) else {
+        let line = Int(feature.location.line)
+        guard let path = readSettings.mutationReport else {
+            let message = "Mutation testing is on, but no mutation report is set. Run `swift package mutation-test`, then set "
+                + "Cucumber.mutationReport or CUCUMBER_MUTATION_REPORT to the mutation-report.json it writes."
+            record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
+            return
+        }
+        if mutationReport == nil { mutationReport = MutationReport.read(path: path) }
+        switch mutationReport {
+            case .failure(let error)?:
+                let message = "Mutation testing is on, but \(error.message). Run `swift package mutation-test` to write it."
+                record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
+            case .success(let report)?:
+                record(findings: MutationFindings.make(report: report,
+                                                       scenarios: recorder.scenarios(of: feature.uri),
+                                                       regions: recorder.regions(file:line:column:),
+                                                       file: feature.coverageIssueFile,
+                                                       featureLine: line),
+                       for: feature)
+            case nil:
+                break
+        }
+    }
+
+    private func record(findings: MutationFindings?, for feature: Feature) {
+        guard let findings else {
             output("CucumberSwift mutation: \(feature.title): no mutant in the code its scenarios run")
             return
         }
-        output("CucumberSwift mutation: \(feature.title): \(CoverageReport.percent(findings.percent)) "
-            + "(\(findings.detected) of \(findings.counted) mutants in the code its scenarios run detected)")
+        let result = findings.survived == 0 ? "detected all" : "missed \(findings.survived) of"
+        output("CucumberSwift mutation: \(feature.title): its scenarios \(result) \(findings.counted) mutants in the code they run")
         findings.issues.forEach(record)
     }
 

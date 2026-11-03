@@ -59,7 +59,8 @@ final class MutationFindingsTests: XCTestCase {
     func testReadsEachMutantsFileLineChangeAndStatus() throws {
         let read = try report()
         let voting = read.mutants.filter { $0.file == "Sources/Voting/Voting.swift" }
-        XCTAssertEqual(voting.map(\.change), [">= to <", ">= to >", "&& to ||"])
+        XCTAssertEqual(voting.map(\.original), [">=", ">=", "&&"])
+        XCTAssertEqual(voting.map(\.replacement), ["<", ">", "||"])
         XCTAssertEqual(voting.map(\.status), ["Killed", "Survived", "Killed"])
         XCTAssertEqual(voting.map(\.line), [2, 2, 2])
         XCTAssertNotNil(read.date)
@@ -80,10 +81,10 @@ final class MutationFindingsTests: XCTestCase {
         // The survivor in Other.swift is in code that no scenario runs, so it doesn't count.
         XCTAssertEqual(findings.counted, 3)
         XCTAssertEqual(findings.detected, 2)
-        XCTAssertEqual(findings.percent, 200.0 / 3, accuracy: 0.01)
+        XCTAssertEqual(findings.survived, 1)
     }
 
-    func testASurvivorGetsAWarningOnEachScenarioThatRunsItsCode() throws {
+    func testASurvivorIsAnErrorOnTheFeatureAndOnEachScenarioThatRunsItsCode() throws {
         let scenarios = [
             scenario("A registered adult can vote", line: 4, regions: [7]),
             scenario("A child cannot vote", line: 8, regions: [7]),
@@ -91,16 +92,17 @@ final class MutationFindingsTests: XCTestCase {
         ]
         let findings = try XCTUnwrap(try findings(scenarios: scenarios))
         XCTAssertEqual(findings.issues.map(\.line), [1, 4, 8], "The feature line, then the 2 scenarios that run line 2")
-        XCTAssertTrue(findings.issues.allSatisfy { $0.kind == .mutation && $0.severity == .warning && $0.file == featureFile })
-        XCTAssertTrue(findings.issues[0].message.hasPrefix("Mutation score 67%: its scenarios detected 2 of the 3 mutants"), findings.issues[0].message)
-        XCTAssertTrue(findings.issues[1].message.contains("changing >= to > at Voting.swift:2"), findings.issues[1].message)
+        // Errors, so that the feature's Mutation test fails.
+        XCTAssertTrue(findings.issues.allSatisfy { $0.kind == .mutation && $0.severity == .error && $0.file == featureFile })
+        XCTAssertTrue(findings.issues[0].message.hasPrefix("Mutation testing: the scenarios still pass after 1 of the 3 changes"), findings.issues[0].message)
+        XCTAssertEqual(findings.issues[1].message, "This scenario still passes when >= at Voting.swift:2 is changed to >. Add a step that checks this code.")
     }
 
     func testNoIssuesWhenEveryMutantInTheFeaturesCodeWasDetected() throws {
         let scenarios = [scenario("A registered adult can vote", line: 4, regions: [7])]
         let findings = try XCTUnwrap(try findings(["Killed", "Timeout", "Killed"], scenarios: scenarios))
-        XCTAssertEqual(findings.percent, 100)
-        XCTAssertEqual(findings.issues, [])
+        XCTAssertEqual(findings.survived, 0)
+        XCTAssertEqual(findings.issues, [], "Nothing to fail: the Mutation test passes")
     }
 
     func testAMutantThatDidNotBuildIsLeftOut() throws {
@@ -113,6 +115,14 @@ final class MutationFindingsTests: XCTestCase {
     func testAFeatureWhoseScenariosRunNoMutantsCodeHasNoScore() throws {
         let scenarios = [scenario("Elsewhere", line: 4, regions: [3])]
         XCTAssertNil(try findings(scenarios: scenarios))
+    }
+
+    func testMutationTestingIsAnOptInOfItsOwn() {
+        XCTAssertFalse(CoverageSettings.read(environment: [:]).isMutationTesting)
+        XCTAssertTrue(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
+        Cucumber.mutationTesting = false
+        defer { Cucumber.mutationTesting = nil }
+        XCTAssertFalse(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
     }
 
     func testTheSettingReadsTheStaticVariableThenTheEnvironmentVariable() {

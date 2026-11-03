@@ -24,7 +24,14 @@ import Testing
 
     // The same setting, and the same order, as the XCTest runner's (CucumberSwiftTests' MutationFindingsTests).
     @Test func theMutationReportIsReadFromTheStaticVariableThenTheEnvironmentVariable() {
-        defer { Cucumber.mutationReport = nil }
+        defer {
+            Cucumber.mutationReport = nil
+            Cucumber.mutationTesting = nil
+        }
+        #expect(!CoverageSettings.read(environment: [:]).isMutationTesting)
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
+        Cucumber.mutationTesting = false
+        #expect(!CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
         #expect(CoverageSettings.read(environment: [:]).mutationReport == nil)
         #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == "/a.json")
         Cucumber.mutationReport = "/b.json"

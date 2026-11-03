@@ -42,6 +42,20 @@ struct CoverageSettings: Equatable {
         private var storedSources: [String]?
         private var storedRecordsIssuesInSuites: Bool?
         private var storedMutationReport: String?
+        private var storedMutationTesting: Bool?
+
+        var mutationTesting: Bool? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedMutationTesting
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedMutationTesting = newValue
+            }
+        }
 
         var mutationReport: String? {
             get {
@@ -117,6 +131,7 @@ struct CoverageSettings: Equatable {
     static let sourcesVariable = "CUCUMBER_COVERAGE_SOURCES"
     static let recordsIssuesInSuitesVariable = "CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES"
     static let mutationReportVariable = "CUCUMBER_MUTATION_REPORT"
+    static let mutationTestingVariable = "CUCUMBER_MUTATION_TESTING"
 
     static let storage = Storage()
 
@@ -143,8 +158,9 @@ struct CoverageSettings: Equatable {
     /// suite, instead of printing them. Off by default, because Xcode stops the test process when a suite
     /// records an issue (#509). The XCTest runner doesn't read it.
     var recordsIssuesInSuites = false
-    /// The Stryker report of a `mutation-test` run, whose mutants each feature's Mutation score is about, or
-    /// nil for no Mutation score.
+    /// Whether each feature gets a Mutation test, with coverage on: off by default.
+    var isMutationTesting = false
+    /// The Stryker report of a `mutation-test` run, whose mutants the Mutation test checks.
     var mutationReport: String?
 
     /// The settings: each static variable, then its environment variable, then its default.
@@ -161,6 +177,7 @@ struct CoverageSettings: Equatable {
         settings.redundantStepWarningLevel = level("redundantStepWarning", redundantStepWarningLevelVariable, settings.redundantStepWarningLevel)
         settings.recordsIssuesInSuites = storage.recordsIssuesInSuites
             ?? FeatureFlagValue.bool(environment[recordsIssuesInSuitesVariable]) ?? false
+        settings.isMutationTesting = storage.mutationTesting ?? FeatureFlagValue.bool(environment[mutationTestingVariable]) ?? false
         settings.mutationReport = [storage.mutationReport, environment[mutationReportVariable]]
             .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty }
