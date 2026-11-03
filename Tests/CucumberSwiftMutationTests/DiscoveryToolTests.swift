@@ -27,7 +27,9 @@ final class DiscoveryToolTests: XCTestCase {
         let process = Process()
         process.executableURL = tool
         process.arguments = arguments
-        let stdin = Pipe(), stdout = Pipe(), stderr = Pipe()
+        let stdin = Pipe()
+        let stdout = Pipe()
+        let stderr = Pipe()
         process.standardInput = stdin
         process.standardOutput = stdout
         process.standardError = stderr

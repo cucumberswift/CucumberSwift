@@ -48,7 +48,13 @@ final class FingerprintTests: TemporaryFolderTestCase {
 private final class FakeGit: CommandRunning, @unchecked Sendable {
     var porcelain = ""
 
-    func run(_ executable: String, _ arguments: [String], in directory: URL, environment: [String: String], timeout: TimeInterval?) -> CommandResult {
+    func run(
+        _: String,
+        _ arguments: [String],
+        in _: URL,
+        environment _: [String: String],
+        timeout _: TimeInterval?
+    ) -> CommandResult {
         .finished(0, output: arguments.first == "status" ? porcelain : "same")
     }
 }
