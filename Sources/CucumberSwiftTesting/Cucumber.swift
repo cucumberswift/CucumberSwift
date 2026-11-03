@@ -142,7 +142,7 @@ public final class Cucumber {
             CoverageReporter(isEnabled: { CucumberSettings.isCoverage() },
                              coveragePath: { CucumberSettings.coveragePath() },
                              settings: { CoverageSettings.read(environment: ProcessInfo.processInfo.environment) },
-                             record: { $0.record() })
+                             record: { $0.record(inSuite: CoverageSettings.read(environment: ProcessInfo.processInfo.environment).recordsIssuesInSuites) })
         ]
         // swiftlint:enable trailing_closure
         observers += (self as Any as? CucumberTestObservable)?.observers ?? []

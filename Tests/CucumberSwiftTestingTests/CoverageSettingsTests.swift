@@ -142,4 +142,24 @@ import Testing
         issue.record { lines.append($0) }
         #expect(lines == ["\(file.path):1: \(label): Feature coverage 38%"])
     }
+
+    // Recording in the suite is opt-in, because Xcode stops the test process when a suite records an issue (#509).
+    @Test func coverageIssuesAreRecordedInSuitesOnlyWhenSettingsSayIt() {
+        defer { Cucumber.coverageRecordsIssuesInSuites = nil }
+        #expect(!CoverageSettings.read(environment: [:]).recordsIssuesInSuites)
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES": "YES"]).recordsIssuesInSuites)
+        Cucumber.coverageRecordsIssuesInSuites = false
+        #expect(!CoverageSettings.read(environment: ["CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES": "YES"]).recordsIssuesInSuites)
+        Cucumber.coverageRecordsIssuesInSuites = true
+        #expect(CoverageSettings.read(environment: [:]).recordsIssuesInSuites)
+    }
+
+    @Test func anErrorRecordedInASuiteFailsIt() {
+        var lines = [String]()
+        let issue = CoverageIssue(severity: .error, message: "Feature coverage 38%", file: Self.folder.appendingPathComponent("Basket.feature"), line: 1, kind: .coverage)
+        withKnownIssue {
+            issue.record(inSuite: true) { lines.append($0) }
+        }
+        #expect(lines.isEmpty)
+    }
 }

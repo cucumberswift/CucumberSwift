@@ -18,7 +18,7 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("warning", newValue) }
     }
 
-    /// The coverage at or below which a feature gets an error, which is printed as an error and fails no test, in percent: off
+    /// The coverage at or below which a feature gets an error, which is printed as an error and fails no test unless ``coverageRecordsIssuesInSuites`` is on, in percent: off
     /// by default, so that coverage only warns. Set this to a number, such as 50, or the environment
     /// variable `CUCUMBER_COVERAGE_ERROR_LEVEL` to a number or `NO`. This variable, when set, wins over the
     /// environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
@@ -48,7 +48,7 @@ extension Cucumber {
         set { CoverageSettings.storage.setLevel("redundancyWarning", newValue) }
     }
 
-    /// The redundancy at or above which a feature gets an error, which is printed as an error and fails no test, in percent:
+    /// The redundancy at or above which a feature gets an error, which is printed as an error and fails no test unless ``coverageRecordsIssuesInSuites`` is on, in percent:
     /// off by default. Set this to a number, or the environment variable `CUCUMBER_REDUNDANCY_ERROR_LEVEL`
     /// to a number or `NO`. This variable, when set, wins over the environment variable. Set it in your
     /// `StepImplementation`'s `setupSteps()`.
@@ -76,5 +76,16 @@ extension Cucumber {
     nonisolated public static var coverageSources: [String]? {
         get { CoverageSettings.storage.sources }
         set { CoverageSettings.storage.sources = newValue }
+    }
+
+    /// Whether the Swift Testing runner records each feature's coverage and redundancy issues on the
+    /// feature's suite, where an error fails the suite, instead of printing them: off by default. Set this
+    /// to `true`, or the environment variable `CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES` to `YES`. This
+    /// variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
+    /// `setupSteps()`. Xcode stops the test process when a suite records an issue, so use it with
+    /// `swift test`, not in an Xcode project with Code Coverage on.
+    nonisolated public static var coverageRecordsIssuesInSuites: Bool? {
+        get { CoverageSettings.storage.recordsIssuesInSuites }
+        set { CoverageSettings.storage.recordsIssuesInSuites = newValue }
     }
 }
