@@ -29,38 +29,58 @@ private enum MutationError: Error, CustomStringConvertible {
 struct MutationTestingPlugin: CommandPlugin {
     private static let valueOptions = ["max-mutants", "timeout-multiplier", "minimum-timeout", "baseline-runs", "work-dir", "output"]
 
-    func performCommand(context: PluginContext, arguments: [String]) async throws {
-        var extractor = ArgumentExtractor(arguments)
-        for option in Self.valueOptions + ["target"] {
+    /// Throws when an option that takes a value has none, as at the end of the arguments or before another option:
+    /// the argument extractor drops it without a word.
+    private static func requireValues(in arguments: [String]) throws {
+        for option in valueOptions + ["target"] {
             for (index, argument) in arguments.enumerated() where argument == "--\(option)" {
                 let value = arguments.indices.contains(index + 1) ? arguments[index + 1] : nil
                 if value == nil || value?.hasPrefix("--") == true { throw MutationError.missingValue("--\(option)") }
             }
         }
-        let names = extractor.extractOption(named: "target")
-        let dryRun = extractor.extractFlag(named: "dry-run") > 0
-        let passed = Self.valueOptions.flatMap { option in
-            extractor.extractOption(named: option).flatMap { ["--\(option)", $0] }
-        }
-        let modules = context.package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
+    }
+
+    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`.
+    private static func sourceFolders(of package: Package, named names: [String], root: URL) throws -> [String] {
+        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
         let unknown = names.filter { name in !modules.contains { $0.name == name } }
         guard unknown.isEmpty else { throw MutationError.unknownTargets(unknown) }
         let chosen = modules.filter { names.isEmpty || names.contains($0.name) }
         guard !chosen.isEmpty else { throw MutationError.noTargets }
-        let root = context.package.directoryURL.resolvingSymlinksInPath()
-        let sources = chosen.map { target -> String in
+        let prefix = root.path + "/"
+        return chosen.map { target in
             let path = target.directoryURL.resolvingSymlinksInPath().path
-            return path.hasPrefix(root.path + "/") ? String(path.dropFirst(root.path.count + 1)) : path
+            return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
         }
-        // The plugin's own folder is writable without asking, and it is in the package's .build folder, which git ignores.
-        // The reports go there unless the user chose a place. The copy does not: that folder's path has a space in it
-        // ("Mutation Testing"), and Swift Testing finds no tests in a package whose path has one. The tool picks a
-        // folder for the copy itself.
-        var defaults = [String]()
-        if !passed.contains("--output") { defaults += ["--output", context.pluginWorkDirectoryURL.appending(path: "reports").path] }
+    }
+
+    func performCommand(context: PluginContext, arguments: [String]) async throws {
+        try Self.requireValues(in: arguments)
+        var extractor = ArgumentExtractor(arguments)
+        let names = extractor.extractOption(named: "target")
+        let dryRun = extractor.extractFlag(named: "dry-run") > 0
+        var passed = [String]()
+        for option in Self.valueOptions {
+            for value in extractor.extractOption(named: option) { passed += ["--\(option)", value] }
+        }
+        let root = context.package.directoryURL.resolvingSymlinksInPath()
+        let sources = try Self.sourceFolders(of: context.package, named: names, root: root)
+        // Built step by step: one long concatenation is too slow for some compilers to type-check.
+        var toolArguments: [String] = ["--root", root.path]
+        for source in sources { toolArguments += ["--sources", source] }
+        // The plugin's own folder is writable without asking, and it is in the package's .build folder, which git
+        // ignores. The reports go there unless the user chose a place. The copy does not: that folder's path has a
+        // space in it ("Mutation Testing"), and Swift Testing finds no tests in a package whose path has one. The tool
+        // picks a folder for the copy itself.
+        if !passed.contains("--output") {
+            toolArguments += ["--output", context.pluginWorkDirectoryURL.appending(path: "reports").path]
+        }
+        toolArguments += passed
+        if dryRun { toolArguments.append("--dry-run") }
+        toolArguments.append("--disable-prebuilts")
         let process = Process()
         process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
-        process.arguments = ["--root", root.path] + sources.flatMap { ["--sources", $0] } + defaults + passed + (dryRun ? ["--dry-run"] : []) + ["--disable-prebuilts"]
+        process.arguments = toolArguments
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()
         process.waitUntilExit()
