@@ -117,7 +117,7 @@ final class CoverageReporter: CucumberTestObserver {
         guard case .success(let report) = mutationReport else { return }
         guard let findings = MutationFindings.make(report: report,
                                                    scenarios: recorder.scenarios(of: feature.uri),
-                                                   regions: recorder.regions(file:line:),
+                                                   regions: recorder.regions(file:line:column:),
                                                    file: feature.coverageIssueFile,
                                                    featureLine: Int(feature.location.line)) else {
             output("CucumberSwift mutation: \(feature.title): no mutant in the code its scenarios run")

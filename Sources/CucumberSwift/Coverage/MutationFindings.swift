@@ -19,17 +19,17 @@ struct MutationFindings: Equatable {
     var percent: Double { counted == 0 ? 100 : Double(detected) * 100 / Double(counted) }
 
     /// The findings for a feature's `scenarios`, or nil when none of them runs the code of any mutant.
-    /// `regions` returns the numbers of the measured regions that hold a file's line.
+    /// `regions` returns the numbers of the measured regions that hold a file's line and column.
     static func make(report: MutationReport,
                      scenarios: [CoverageScores.Scenario],
-                     regions: (String, Int) -> Set<Int>,
+                     regions: (String, Int, Int?) -> Set<Int>,
                      file: URL?,
                      featureLine: Int) -> MutationFindings? {
         var detected = 0
         var counted = 0
         var issues = [CoverageIssue]()
         for mutant in report.mutants where mutant.isCounted {
-            let held = regions(mutant.file, mutant.line)
+            let held = regions(mutant.file, mutant.line, mutant.column)
             let running = scenarios.filter { !$0.regions.isDisjoint(with: held) }
             guard !held.isEmpty, !running.isEmpty else { continue }
             counted += 1

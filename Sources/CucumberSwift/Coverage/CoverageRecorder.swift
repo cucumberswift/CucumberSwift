@@ -229,14 +229,16 @@ final class CoverageRecorder {
         return ran
     }
 
-    /// The numbers of the measured regions that hold `line` of the file whose path ends with `file`: the
-    /// innermost ones, the regions with the fewest lines, so that a line inside an `if` belongs to the `if`'s
-    /// region and not to the whole function's. Empty when no measured code is at that line.
-    func regions(file: String, line: Int) -> Set<Int> {
+    /// The numbers of the measured regions that hold `line` of the file whose path ends with `file`, at `column`
+    /// when it is given: the innermost ones, so that code inside an `if`, or after `&&`, belongs to its own region
+    /// and not to the whole function's. Empty when no measured code is there.
+    func regions(file: String, line: Int, column: Int? = nil) -> Set<Int> {
         var found = [(span: Int, region: Int)]()
         for (_, function, firstRegion) in functions where function.file == file || function.file.hasSuffix("/" + file) {
-            for (index, region) in function.regions.enumerated() where region.lineStart <= line && line <= region.lineEnd {
-                found.append((region.lineEnd - region.lineStart, firstRegion + index))
+            for (index, region) in function.regions.enumerated() where region.contains(line: line, column: column) {
+                // Lines first, then columns: the innermost region is the one with the fewest of both.
+                let span = (region.lineEnd - region.lineStart) * 10_000 + max(0, region.columnEnd - region.columnStart)
+                found.append((span, firstRegion + index))
             }
         }
         guard let smallest = found.map(\.span).min() else { return [] }

@@ -48,7 +48,7 @@ final class MutationFindingsTests: XCTestCase {
     }
 
     /// Region 7 is line 2 of Voting.swift; Other.swift is code that no scenario runs.
-    private func regions(file: String, line: Int) -> Set<Int> {
+    private func regions(file: String, line: Int, column _: Int?) -> Set<Int> {
         file.hasSuffix("Voting.swift") && line == 2 ? [7] : []
     }
 

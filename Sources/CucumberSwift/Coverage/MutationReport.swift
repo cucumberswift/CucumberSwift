@@ -16,6 +16,8 @@ struct MutationReport: Equatable {
         /// The file, relative to the package, as the report gives it.
         let file: String
         let line: Int
+        /// The first column of the changed text, 1-based and counted in UTF-8 bytes.
+        let column: Int
         /// The change, such as `>= to >`.
         let change: String
         /// `Killed`, `Survived`, `Timeout` or `CompileError`, as the report gives it.
@@ -60,7 +62,7 @@ struct MutationReport: Equatable {
               let status = entry["status"] as? String else { return nil }
         let replacement = entry["replacement"] as? String ?? ""
         let original = text(in: source, line: line, from: column, to: location["end"]?["column"] ?? column)
-        return Mutant(file: file, line: line, change: original.isEmpty ? "to \(replacement)" : "\(original) to \(replacement)", status: status)
+        return Mutant(file: file, line: line, column: column, change: original.isEmpty ? "to \(replacement)" : "\(original) to \(replacement)", status: status)
     }
 
     /// The text of `line` from `column` up to `endColumn`, 1-based and counted in UTF-8 bytes, as swift-syntax
