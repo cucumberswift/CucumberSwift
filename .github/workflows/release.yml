@@ -175,7 +175,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           failed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --paginate \
-            --jq '.jobs[] | select(.name | startswith("Samples /")) | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .name')
+            --jq '.jobs[] | select(.name | startswith("Samples /") and (. != "Samples / All samples pass")) | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .name')
           {
             echo "### The samples failed against ${RELEASE_SHA}"
             echo
