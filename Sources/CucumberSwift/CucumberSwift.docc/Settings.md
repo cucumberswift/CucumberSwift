@@ -69,6 +69,8 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_COVERAGE_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageSources` | Your code, without your dependencies and tests | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-the-code-to-measure> |
 | `CUCUMBER_COVERAGE_SOURCES` | ^ | ^ | ^ | ^ |
+| `Cucumber.coverageRecordsIssuesInSuites` | Off | Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> |
+| `CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES` | ^ | ^ | ^ | ^ |
 | `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
 | `CUCUMBER_REDUNDANCY` | ^ | ^ | ^ | ^ |
 | `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |

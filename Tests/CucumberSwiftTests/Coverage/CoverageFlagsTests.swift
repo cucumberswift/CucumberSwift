@@ -86,4 +86,16 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertEqual(settings.redundantStepWarningLevel, .off)
         XCTAssertEqual(settings.sources, ["Sources/Core"])
     }
+
+    // The Swift Testing runner reads this setting; the shared settings read it in both modules (#509).
+    func testRecordingIssuesInSuitesIsOffUnlessAVariableTurnsItOn() {
+        let variable = "CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES"
+        defer { CoverageSettings.storage.recordsIssuesInSuites = nil }
+        XCTAssertFalse(CoverageSettings.read(environment: [:]).recordsIssuesInSuites)
+        XCTAssertTrue(CoverageSettings.read(environment: [variable: "YES"]).recordsIssuesInSuites)
+        CoverageSettings.storage.recordsIssuesInSuites = false
+        XCTAssertFalse(CoverageSettings.read(environment: [variable: "YES"]).recordsIssuesInSuites)
+        CoverageSettings.storage.recordsIssuesInSuites = true
+        XCTAssertTrue(CoverageSettings.read(environment: [:]).recordsIssuesInSuites)
+    }
 }

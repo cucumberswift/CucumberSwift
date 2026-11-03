@@ -3,3 +3,8 @@
 # feature is below 50%: with the default settings, coverage only warns (#507).
 CucumberSwift coverage: Grading: 
 Test Case '-[Grading › Coverage scores Coverage]' passed
+✔ Test "A high score" with 2 test cases passed
+Grading.feature:1: warning: Feature coverage
+# The Swift Testing run's total. When Xcode stops the process at a coverage issue, it runs the bundle
+# again with 0 tests and reports success (#509), and the lines above still appear from the first run.
+✔ Test run with 2 tests in 2 suites passed

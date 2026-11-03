@@ -40,6 +40,20 @@ struct CoverageSettings: Equatable {
         private var levels = [String: CoverageLevel]()
         private var storedRedundancy: Bool?
         private var storedSources: [String]?
+        private var storedRecordsIssuesInSuites: Bool?
+
+        var recordsIssuesInSuites: Bool? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedRecordsIssuesInSuites
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedRecordsIssuesInSuites = newValue
+            }
+        }
 
         var redundancy: Bool? {
             get {
@@ -87,6 +101,7 @@ struct CoverageSettings: Equatable {
     static let redundancyErrorLevelVariable = "CUCUMBER_REDUNDANCY_ERROR_LEVEL"
     static let redundantStepWarningLevelVariable = "CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL"
     static let sourcesVariable = "CUCUMBER_COVERAGE_SOURCES"
+    static let recordsIssuesInSuitesVariable = "CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES"
 
     static let storage = Storage()
 
@@ -109,6 +124,10 @@ struct CoverageSettings: Equatable {
     var scoresOffReason: String?
     /// Parts of the paths of the files to measure. Empty to measure the default files.
     var sources = [String]()
+    /// Whether the Swift Testing runner records a feature's issues on its suite, where an error fails the
+    /// suite, instead of printing them. Off by default, because Xcode stops the test process when a suite
+    /// records an issue (#509). The XCTest runner doesn't read it.
+    var recordsIssuesInSuites = false
 
     /// The settings: each static variable, then its environment variable, then its default.
     static func read(environment: [String: String]) -> CoverageSettings {
@@ -122,6 +141,8 @@ struct CoverageSettings: Equatable {
         settings.redundancyWarningLevel = level("redundancyWarning", redundancyWarningLevelVariable, settings.redundancyWarningLevel)
         settings.redundancyErrorLevel = level("redundancyError", redundancyErrorLevelVariable, settings.redundancyErrorLevel)
         settings.redundantStepWarningLevel = level("redundantStepWarning", redundantStepWarningLevelVariable, settings.redundantStepWarningLevel)
+        settings.recordsIssuesInSuites = storage.recordsIssuesInSuites
+            ?? FeatureFlagValue.bool(environment[recordsIssuesInSuitesVariable]) ?? false
         settings.sources = (storage.sources ?? environment[sourcesVariable].map { $0.components(separatedBy: ",") } ?? [])
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
