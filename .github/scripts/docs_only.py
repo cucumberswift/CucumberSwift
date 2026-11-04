@@ -75,6 +75,7 @@ LINUX_SCRIPTS = {
     ".github/scripts/release.py",
     ".github/scripts/test_release.py",
     ".github/scripts/test_check_lockfiles.py",
+    ".github/scripts/test_fixture_tests.py",
     ".github/scripts/test_gherkin_highlighting.py",
     ".github/scripts/publish-docs.sh",
 }
