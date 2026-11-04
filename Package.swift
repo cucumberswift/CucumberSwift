@@ -154,7 +154,8 @@ let package = Package(
             dependencies: [
                 "CucumberSwiftMutation",
                 .product(name: "SwiftSyntax", package: "swift-syntax", condition: .when(traits: ["Macros"])),
-                .product(name: "SwiftParser", package: "swift-syntax", condition: .when(traits: ["Macros"]))
+                .product(name: "SwiftParser", package: "swift-syntax", condition: .when(traits: ["Macros"])),
+                .product(name: "SwiftOperators", package: "swift-syntax", condition: .when(traits: ["Macros"]))
             ],
             path: "Sources/CucumberSwiftMutationTestingTool"),
         // Named as Xcode shows it on the package's menu.

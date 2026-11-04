@@ -35,10 +35,12 @@ public struct Mutant: Codable, Equatable, Sendable {
     public let replacement: String
     /// The rule that made it, such as `RelationalOperator`.
     public let mutator: String
+    /// The text after the ignore marker when a comment marks this line, `""` for a marker with no text, or nil.
+    public var ignoredReason: String?
 
     /// `Sources/Voting.swift:1:41 RelationalBoundary >= → >`
     public var summary: String {
-        "\(file):\(line):\(column) \(mutator) \(original) → \(replacement)"
+        "\(file):\(line):\(column) \(mutator) \(original) → \(replacement.isEmpty ? "(removed)" : replacement)"
     }
 
     public init(

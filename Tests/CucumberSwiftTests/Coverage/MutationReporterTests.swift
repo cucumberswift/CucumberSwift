@@ -40,21 +40,25 @@ final class MutationReporterTests: XCTestCase {
         return settings
     }
 
-    /// A report with one mutant at the `>=` of `isAdult(_:)`, with `status`.
-    private func writeReport(status: String) throws -> String {
+    /// A report with one mutant at the `>=` of `isAdult(_:)`, with `status`, about this file as it is now, or about
+    /// `source` when given. With `file`, the report puts the mutant in that file instead.
+    private func writeReport(status: String,
+                             source given: String? = nil,
+                             file path: String = "Tests/CucumberSwiftTests/Coverage/MutationReporterTests.swift") throws -> String {
         let line = adultLine + 1
-        let text = "    private func isAdult(_ age: Int) -> Bool { age >= 18 }"
-        let source = String(repeating: "\n", count: line - 1) + text + "\n"
+        let current = try String(contentsOfFile: #filePath, encoding: .utf8)
+        let source = given ?? current
+        let text = current.components(separatedBy: "\n")[line - 1]
         // The `>=`, not the `>` of the `->` before it.
         let column = text.range(of: ">=").map { text.utf8.distance(from: text.startIndex, to: $0.lowerBound) + 1 } ?? 0
-        let json = """
-        {"schemaVersion": "2", "files": {"Tests/CucumberSwiftTests/Coverage/MutationReporterTests.swift": {"language": "swift",
-         "source": \(String(reflecting: source)), "mutants": [{"id": "1", "mutatorName": "RelationalOperator", "replacement": ">",
-         "status": "\(status)", "location": {"start": {"line": \(line), "column": \(column)}, "end": {"line": \(line), "column": \(column + 2)}}}]}}}
-        """
-        let path = folder.appendingPathComponent("mutation-report.json").path
-        try json.write(toFile: path, atomically: true, encoding: .utf8)
-        return path
+        let location = ["start": ["line": line, "column": column], "end": ["line": line, "column": column + 2]]
+        let mutant: [String: Any] = ["id": "1", "mutatorName": "RelationalOperator", "replacement": ">", "status": status, "location": location]
+        let file: [String: Any] = ["language": "swift", "source": source, "mutants": [mutant]]
+        let report: [String: Any] = ["schemaVersion": "2", "files": [path: file]]
+        let json = try JSONSerialization.data(withJSONObject: report)
+        let written = folder.appendingPathComponent("mutation-report.json").path
+        try json.write(to: URL(fileURLWithPath: written))
+        return written
     }
 
     /// Runs one scenario that calls `isAdult(_:)` through a reporter, and returns what it recorded and printed.
@@ -103,6 +107,62 @@ final class MutationReporterTests: XCTestCase {
         XCTAssertTrue(run.output.contains("CucumberSwift mutation: Voting: its scenarios detected all 1 mutants in the code they run"), "\(run.output)")
     }
 
+    func testAMutantInCodeNoScenarioRanRecordsNothing() throws {
+        try skipWithoutCoverage()
+        let run = try run(settings: settings(report: try writeReport(status: "Survived", file: "Sources/Other/Other.swift")))
+        XCTAssertEqual(run.issues, [])
+        XCTAssertTrue(run.output.contains("CucumberSwift mutation: Voting: no mutant in the code its scenarios run"), "\(run.output)")
+    }
+
+    /// Runs two scenarios that both call `isAdult(_:)` through a reporter, and returns what it printed.
+    private func runTwoScenarios(settings: CoverageSettings) throws -> [String] {
+        var output = [String]()
+        let path = folder.appendingPathComponent("coverage").path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: { settings }, record: { _ in }, output: { output.append($0) })
+        let cucumber = Cucumber(withString: """
+        Feature: Voting
+            Scenario: An adult can vote
+                Given a person aged 30
+            Scenario: Another adult can vote
+                Given a person aged 40
+        """)
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let duration = Measurement(value: 1, unit: UnitDuration.seconds)
+        for (scenario, age) in zip(feature.scenarios, [30, 40]) {
+            reporter.didStart(scenario: scenario, at: Date())
+            XCTAssertTrue(isAdult(age))
+            reporter.didFinish(scenario: scenario, result: .passed, duration: duration)
+        }
+        reporter.didFinish(feature: feature, result: .passed, duration: duration)
+        return output
+    }
+
+    func testWithACurrentReportTheRedundancyJudgesTheMutantsTheScenariosDetect() throws {
+        try skipWithoutCoverage()
+        var settings = settings(report: try writeReport(status: "Killed"))
+        settings.isRedundancy = true
+        let summary = try runTwoScenarios(settings: settings).first { $0.hasPrefix("CucumberSwift coverage") } ?? ""
+        XCTAssertTrue(summary.contains("Another adult can vote (line 4, adds nothing of its own)"), summary)
+    }
+
+    func testWithAnOutOfDateReportTheRedundancyJudgesTheCodeAlone() throws {
+        try skipWithoutCoverage()
+        let edited = try String(contentsOfFile: #filePath, encoding: .utf8) + "// edited after the report\n"
+        var settings = settings(report: try writeReport(status: "Killed", source: edited))
+        settings.isRedundancy = true
+        let summary = try runTwoScenarios(settings: settings).first { $0.hasPrefix("CucumberSwift coverage") } ?? ""
+        XCTAssertTrue(summary.contains("Another adult can vote (line 4, adds no coverage of its own)"), summary)
+    }
+
+    func testAReportAboutAnEarlierVersionOfTheCodeIsOutOfDate() throws {
+        try skipWithoutCoverage()
+        let edited = try String(contentsOfFile: #filePath, encoding: .utf8) + "// edited after the report\n"
+        let run = try run(settings: settings(report: try writeReport(status: "Survived", source: edited)))
+        XCTAssertEqual(run.issues.map(\.severity), [.error])
+        XCTAssertTrue(run.issues.first?.message.hasPrefix("The mutation report is out of date: MutationReporterTests.swift changed") ?? false,
+                      "\(run.issues)")
+    }
+
     func testWithoutAReportTheMutationTestFails() throws {
         try skipWithoutCoverage()
         let run = try run(settings: settings(report: nil))
@@ -124,6 +184,55 @@ final class MutationReporterTests: XCTestCase {
         let run = try run(settings: settings)
         XCTAssertFalse(run.issues.contains { $0.kind == .mutation })
         XCTAssertFalse(run.output.contains { $0.hasPrefix("CucumberSwift mutation") })
+    }
+
+    func testTheRunWritesTheRegionsEachScenarioRanWhenAsked() throws {
+        try skipWithoutCoverage()
+        var settings = settings(report: nil)
+        settings.writesRegions = true
+        let recorder = CoverageRecorder(coverageFolder: folder, settings: settings, runID: "regions")
+        recorder.scenarioStarted()
+        XCTAssertTrue(isAdult(30))
+        recorder.scenarioFinished(.init(feature: "Voting.feature", featureName: "Voting", line: 4, name: "An adult can vote", tags: []))
+        recorder.writeManifest()
+        let data = try Data(contentsOf: recorder.folder.appendingPathComponent("regions.json"))
+        let file = try JSONDecoder().decode(CoverageRecorder.RegionsFile.self, from: data)
+        XCTAssertEqual(file.version, 1)
+        XCTAssertEqual(file.scenarios.map(\.line), [4])
+        let ran = file.scenarios[0].ran.map { file.regions[$0] }
+        XCTAssertTrue(ran.contains { $0.file.hasSuffix("MutationReporterTests.swift") && $0.lineStart == adultLine + 1 }, "\(ran)")
+    }
+
+    func testTheRunWritesNoRegionsFileUnlessAsked() throws {
+        try skipWithoutCoverage()
+        let recorder = CoverageRecorder(coverageFolder: folder, settings: settings(report: nil), runID: "noRegions")
+        recorder.scenarioStarted()
+        recorder.scenarioFinished(.init(feature: "Voting.feature", featureName: "Voting", line: 4, name: "An adult can vote", tags: []))
+        recorder.writeManifest()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("regions.json").path))
+    }
+
+    func testAScenariosCoverageIncludesItsBeforeScenarioHooks() throws {
+        try skipWithoutCoverage()
+        let path = folder.appendingPathComponent("hooks").path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: { self.settings(report: nil) })
+        let cucumber = Cucumber(withString: """
+        Feature: Voting
+            Scenario: An adult can vote
+                Given a person aged 30
+        """)
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let scenario = try XCTUnwrap(feature.scenarios.first)
+        // The XCTest runner announces the hooks first, runs them, then says the scenario started.
+        reporter.willRunBeforeScenarioHooks(for: scenario)
+        XCTAssertTrue(isAdult(30))
+        reporter.didStart(scenario: scenario, at: Date())
+        reporter.didFinish(scenario: scenario, result: .passed, duration: Measurement(value: 1, unit: UnitDuration.seconds))
+        let recorder = try XCTUnwrap(reporter.recorder)
+        let ran = recorder.scenarios(of: feature.uri).first?.regions ?? []
+        let hookCode = recorder.regions(file: "MutationReporterTests.swift", line: adultLine + 1)
+        XCTAssertFalse(hookCode.isEmpty)
+        XCTAssertTrue(hookCode.isSubset(of: ran), "The code a BeforeScenario hook ran belongs to the scenario")
     }
 
     func testARegionHoldsAPositionByLineAndColumn() {

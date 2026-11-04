@@ -103,13 +103,16 @@ final class CoverageRecorder {
     /// The regions each of the running scenario's steps after its Background ran.
     private var stepRuns = [CoverageScores.StepRun]()
     private var scenarios = [ScenarioRecord]()
+    /// The code each scenario ran, when the settings ask for `regions.json`.
+    private var scenarioRegions = [ScenarioRegions]()
     private var features = [FeatureRecord]()
     private var problem: String?
     private let settings: CoverageSettings
     /// The code the scores measure, and how to work out which of it a scenario ran. Nil when no binary
     /// has a coverage map, as ``scoresProblem`` says.
     private(set) var code: MeasuredCode?
-    private var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
+    /// The measured functions: the binary each is in, its coverage map entry, and the number of its first region.
+    private(set) var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
     private(set) var scoresProblem: String?
     /// The scenarios of each feature that hasn't finished, by its URI, for its scores.
     private var featureScenarios = [String: [(rule: ScenarioRule?, scenario: CoverageScores.Scenario)]]()
@@ -229,22 +232,6 @@ final class CoverageRecorder {
         return ran
     }
 
-    /// The numbers of the measured regions that hold `line` of the file whose path ends with `file`, at `column`
-    /// when it is given: the innermost ones, so that code inside an `if`, or after `&&`, belongs to its own region
-    /// and not to the whole function's. Empty when no measured code is there.
-    func regions(file: String, line: Int, column: Int? = nil) -> Set<Int> {
-        var found = [(span: Int, region: Int)]()
-        for (_, function, firstRegion) in functions where function.file == file || function.file.hasSuffix("/" + file) {
-            for (index, region) in function.regions.enumerated() where region.contains(line: line, column: column) {
-                // Lines first, then columns: the innermost region is the one with the fewest of both.
-                let span = (region.lineEnd - region.lineStart) * 10_000 + max(0, region.columnEnd - region.columnStart)
-                found.append((span, firstRegion + index))
-            }
-        }
-        guard let smallest = found.map(\.span).min() else { return [] }
-        return Set(found.filter { $0.span == smallest }.map(\.region))
-    }
-
     /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
     func scenarios(of feature: String) -> [CoverageScores.Scenario] {
         featureScenarios[feature]?.map(\.scenario) ?? []
@@ -309,18 +296,28 @@ final class CoverageRecorder {
                 .with(backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [])
                 .with(steps: stepRuns)
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
+            if settings.writesRegions {
+                scenarioRegions.append(ScenarioRegions(feature: finished.feature,
+                                                       line: finished.line,
+                                                       name: finished.name,
+                                                       ran: scenario.regions.sorted()))
+            }
         }
     }
 
     /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran: one for its
     /// scenarios outside a Rule, first, then one for each Rule, in the order of their lines. Empty when the
     /// run has no scores, or none of the feature's scenarios ran.
-    func featureFinished(feature: String, featureName: String, line: Int) -> [PartScores] {
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    func featureFinished(feature: String, featureName: String, line: Int, detections: CoverageScores.Detections? = nil) -> [PartScores] {
         guard problem == nil, let code, let ran = featureScenarios.removeValue(forKey: feature) else { return [] }
         let rules = Set(ran.compactMap(\.rule)).sorted { $0.line < $1.line }
         let parts: [ScenarioRule?] = (ran.contains { $0.rule == nil } ? [nil] : []) + rules
         return parts.map { rule in
-            let scores = CoverageScores(scenarios: ran.filter { $0.rule == rule }.map(\.scenario), code: code, isRedundancy: settings.isRedundancy)
+            let scores = CoverageScores(scenarios: ran.filter { $0.rule == rule }.map(\.scenario),
+                                        code: code,
+                                        isRedundancy: settings.isRedundancy,
+                                        detections: detections)
             features.append(FeatureRecord(feature: feature, featureName: featureName, line: line, rule: rule?.title, ruleLine: rule?.line, scores: scores))
             return PartScores(rule: rule, scores: scores)
         }
@@ -334,6 +331,9 @@ final class CoverageRecorder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
+        if settings.writesRegions, let regions = try? encoder.encode(RegionsFile(regions: codeRegions(), scenarios: scenarioRegions)) {
+            try? regions.write(to: folder.appendingPathComponent("regions.json"))
+        }
         return url
     }
 }

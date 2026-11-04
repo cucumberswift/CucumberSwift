@@ -49,6 +49,9 @@ final class FakeRunner: CommandRunning, @unchecked Sendable {
 
 /// Finds mutants without swift-syntax: the text `>=` becomes `>` and `<`, at each place it appears.
 struct FakeDiscoverer: MutantDiscovering {
+    /// The replacements whose mutants a comment marks as ignored, with the comment's text.
+    var ignoring = [String: String]()
+
     func mutants(inFiles files: [URL], relativeTo root: URL) throws -> [Mutant] {
         var found = [Mutant]()
         for file in files {
@@ -57,7 +60,9 @@ struct FakeDiscoverer: MutantDiscovering {
             guard let range = source.range(of: ">=") else { continue }
             let offset = source.utf8.distance(from: source.utf8.startIndex, to: range.lowerBound)
             for replacement in [">", "<"] {
-                found.append(Mutant.fixture(file: relative, original: ">=", replacement: replacement, offset: offset))
+                var mutant = Mutant.fixture(file: relative, original: ">=", replacement: replacement, offset: offset)
+                mutant.ignoredReason = ignoring[replacement]
+                found.append(mutant)
             }
         }
         return found
@@ -108,15 +113,17 @@ extension Mutant {
         original: String = ">=",
         replacement: String = ">",
         offset: Int = 44,
-        mutator: String = "RelationalOperator"
+        mutator: String = "RelationalOperator",
+        line: Int = 1,
+        column: Int? = nil
     ) -> Mutant {
         Mutant(
             id: id,
             file: file,
-            line: 1,
-            column: offset + 1,
-            endLine: 1,
-            endColumn: offset + 1 + original.utf8.count,
+            line: line,
+            column: column ?? offset + 1,
+            endLine: line,
+            endColumn: (column ?? offset + 1) + original.utf8.count,
             offset: offset,
             length: original.utf8.count,
             original: original,

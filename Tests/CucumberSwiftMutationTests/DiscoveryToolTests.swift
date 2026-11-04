@@ -78,6 +78,49 @@ final class DiscoveryToolTests: XCTestCase {
         XCTAssertEqual(changes(try mutants(in: "let a = true\nlet b = false")), ["true→false", "false→true"])
     }
 
+    func testArithmeticOperatorsSwapExceptOnText() throws {
+        XCTAssertEqual(changes(try mutants(in: "let a = x * 10 + 5 - y / 2")), ["*→/", "+→-", "-→+", "/→*"])
+        XCTAssertEqual(try mutants(in: "let label = \"a\" + name"), [], "`-` doesn't apply to text")
+    }
+
+    func testANegationLosesItsNot() throws {
+        let found = try mutants(in: "let open = !isClosed")
+        XCTAssertEqual(changes(found), ["!→"])
+        XCTAssertEqual(found.map(\.mutator), ["LogicalNot"])
+        XCTAssertEqual(try found.first?.applied(to: "let open = !isClosed"), "let open = isClosed")
+    }
+
+    func testATernarySwapsItsBranches() throws {
+        let source = "let label = isOn ? \"On\" : \"Off\""
+        let found = try mutants(in: source)
+        XCTAssertEqual(found.map(\.mutator), ["SwapTernary"])
+        XCTAssertEqual(try found.first?.applied(to: source), "let label = isOn ? \"Off\" : \"On\"")
+        // Its place is the condition's, which runs whenever the expression does, not the `then` branch's.
+        XCTAssertEqual(found.first?.column, 13)
+        XCTAssertEqual(found.first?.original, "isOn ? \"On\" : \"Off\"")
+    }
+
+    func testACallWhoseResultIsntUsedIsRemoved() throws {
+        let source = """
+        func checkout(order: Order) {
+            save(order)
+            try store.write(order)
+            print("saved")
+            logger.info("saved")
+            let total = compute(order)
+        }
+        """
+        let found = try mutants(in: source).filter { $0.mutator == "RemoveCall" }
+        XCTAssertEqual(found.map(\.original), ["save(order)", "try store.write(order)"], "Not logging, not a call whose result is kept")
+        XCTAssertEqual(try found.first?.applied(to: source).contains("    \n    try store"), true)
+    }
+
+    func testTheValueOfAClosureOrFunctionIsNotRemoved() throws {
+        XCTAssertEqual(try mutants(in: "let f: () -> Int = { compute() }"), [])
+        XCTAssertEqual(try mutants(in: "func f() -> Int { compute() }"), [])
+        XCTAssertEqual(changes(try mutants(in: "func f() { notify() }")), ["notify()→"])
+    }
+
     func testOperatorsInStringsAndCommentsAreNotMutated() throws {
         let source = """
         // a >= b && true
@@ -100,6 +143,21 @@ final class DiscoveryToolTests: XCTestCase {
         }
         let found = try mutants(in: source)
         XCTAssertEqual(try found.first?.applied(to: source), "let name = \"é\"; let ok = a > b\n")
+    }
+
+    func testAnIgnoreCommentMarksItsOwnLineOrTheNextLineOfCode() throws {
+        let source = """
+        func check(x: Int) -> Bool {
+            // cucumberswift:mutation-ignore - both sides give the same result
+            x >= 0
+        }
+        let b = x > 1 // cucumberswift:mutation-ignore
+        let c = x < 1
+        """
+        let found = try mutants(in: source)
+        XCTAssertEqual(found.filter { $0.line == 3 }.map(\.ignoredReason), ["both sides give the same result", "both sides give the same result"])
+        XCTAssertEqual(found.filter { $0.line == 5 }.map(\.ignoredReason), ["", ""])
+        XCTAssertEqual(found.filter { $0.line == 6 }.map(\.ignoredReason), [nil, nil])
     }
 
     func testMutantsAreInSourceOrderWithTheirLines() throws {

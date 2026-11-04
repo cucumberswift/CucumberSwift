@@ -38,6 +38,8 @@ struct CoverageIssue: Equatable {
 struct CoverageReport {
     /// The gaps a message names, at most.
     static let gapsShown = 3
+    /// The most changes a message lists before it counts the rest.
+    static let changesShown = 3
 
     let scores: CoverageScores
     let settings: CoverageSettings
@@ -90,6 +92,27 @@ struct CoverageReport {
         text.count >= width ? text : String(repeating: " ", count: width - text.count) + text
     }
 
+    /// "Scenario overlaps the scenario at line 5. That scenario runs 4 regions this one doesn't. Only this one fails
+    /// when >= at Basket.swift:21 is changed to >. Combine the best of both into one scenario, or into a Scenario
+    /// Outline for different values."
+    static func message(for overlap: CoverageScores.Overlap) -> String {
+        var sentences = ["Scenario overlaps the scenario at line \(overlap.line)."]
+        if overlap.regionsHere > 0 { sentences.append("This scenario runs \(count(overlap.regionsHere, "region")) that one doesn't.") }
+        if overlap.regionsThere > 0 { sentences.append("That scenario runs \(count(overlap.regionsThere, "region")) this one doesn't.") }
+        if !overlap.detectsHere.isEmpty { sentences.append("Only this one fails when \(listed(overlap.detectsHere)).") }
+        if !overlap.detectsThere.isEmpty { sentences.append("Only that one fails when \(listed(overlap.detectsThere)).") }
+        sentences.append("Combine the best of both into one scenario, or into a Scenario Outline for different values.")
+        return sentences.joined(separator: " ")
+    }
+
+    /// "a, b or c", or "a, b, c or 2 other changes" past ``changesShown``.
+    private static func listed(_ changes: [String]) -> String {
+        var shown = Array(changes.prefix(changesShown))
+        if changes.count > changesShown { shown.append("\(changes.count - changesShown) other \(changes.count - changesShown == 1 ? "change" : "changes")") }
+        guard shown.count > 1, let last = shown.last else { return shown.first ?? "" }
+        return shown.dropLast().joined(separator: ", ") + " or " + last
+    }
+
     func summary(name: String) -> String {
         var header = "CucumberSwift coverage: \(name): \(Self.percent(scores.coverage)) of the code its scenarios ran"
             + " (\(scores.coveredRegions) of \(scores.regionsInFunctionsRun) regions in \(Self.count(scores.functionsRun, "function"))),"
@@ -102,7 +125,8 @@ struct CoverageReport {
             let share = Self.padded(Self.percent(scenario.share), 9)
             let own = Self.padded("\(scenario.ownRegions)", 13)
             let time = Self.padded(String(format: "%.2fs", scenario.duration), 10)
-            let note = scenario.addsNothing ? ", adds no coverage of its own" : ""
+            var note = scenario.addsNothing ? (scores.isMutationAware ? ", adds nothing of its own" : ", adds no coverage of its own") : ""
+            if let overlap = scenario.overlap { note = ", overlaps line \(overlap.line)" }
             lines.append("\(share)\(own)\(time)  \(scenario.name) (line \(scenario.line)\(note))")
         }
         return lines.joined(separator: "\n")
@@ -131,8 +155,10 @@ struct CoverageReport {
         }
         if let redundancy = scores.redundancy,
            let severity = Self.severity(of: redundancy, warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, isLowerWorse: false) {
-            let message = "\(subject) redundancy: \(Self.percent(redundancy)) of its scenarios are redundant,"
-                + " because other scenarios run all the code they run after the Background\(Self.wasted(scores))"
+            let reason = scores.isMutationAware
+                ? " are redundant or overlap another, by the code they run after the Background and the mutants they detect"
+                : " are redundant, because other scenarios run all the code they run after the Background"
+            let message = "\(subject) redundancy: \(Self.percent(redundancy)) of its scenarios\(reason)\(Self.wasted(scores))"
                 + " (\(Self.levels(warning: settings.redundancyWarningLevel, error: settings.redundancyErrorLevel, comparison: "at or above")))."
             issues.append(CoverageIssue(severity: severity, message: message, file: file, line: line, kind: .redundancy))
         }
@@ -143,14 +169,31 @@ struct CoverageReport {
             issues.append(CoverageIssue(severity: severity, message: message, file: file, line: step.line, kind: .redundancy))
         }
         if settings.redundancyWarningLevel != .off {
-            // A Scenario Outline's examples get one warning between them, at the first, with their time.
-            var warned = Set<String>()
-            for scenario in scores.scenarios where scenario.addsNothing && warned.insert(scenario.group).inserted {
-                let time = scores.scenarios.filter { $0.group == scenario.group }.reduce(0) { $0 + $1.duration }
-                let message = "Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background."
-                    + " It took \(Self.seconds(time)). Consider a Scenario Outline for other values, or remove it."
-                issues.append(CoverageIssue(severity: .warning, message: message, file: file, line: scenario.line, kind: .redundancy))
-            }
+            issues += scenarioWarnings(file: file)
+        }
+        return issues
+    }
+
+    /// A warning at each scenario that adds nothing of its own, and at each that overlaps another.
+    private func scenarioWarnings(file: URL?) -> [CoverageIssue] {
+        var issues = [CoverageIssue]()
+        // A Scenario Outline's examples get one warning between them, at the first, with their time.
+        var warned = Set<String>()
+        for scenario in scores.scenarios where scenario.addsNothing && warned.insert(scenario.group).inserted {
+            let time = scores.scenarios.filter { $0.group == scenario.group }.reduce(0) { $0 + $1.duration }
+            let message = scores.isMutationAware
+                ? "Scenario adds nothing of its own: other scenarios run all the code it runs after the Background, and"
+                    + " fail on every mutant it fails on."
+                : "Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background."
+            issues.append(CoverageIssue(severity: .warning,
+                                        message: message + " It took \(Self.seconds(time)). Consider a Scenario Outline for other values, or remove it.",
+                                        file: file,
+                                        line: scenario.line,
+                                        kind: .redundancy))
+        }
+        for scenario in scores.scenarios {
+            guard let overlap = scenario.overlap, warned.insert(scenario.group).inserted else { continue }
+            issues.append(CoverageIssue(severity: .warning, message: Self.message(for: overlap), file: file, line: scenario.line, kind: .redundancy))
         }
         return issues
     }

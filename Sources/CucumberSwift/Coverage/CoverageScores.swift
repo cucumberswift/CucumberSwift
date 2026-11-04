@@ -168,12 +168,29 @@ struct CoverageScores: Codable, Equatable {
         let wastedTime: TimeInterval?
         /// The scenario's ``Scenario/group``.
         let group: String
+        /// How the scenario differs from the one it overlaps, when the two run much the same code but each checks
+        /// something the other doesn't. Only set with mutation testing on.
+        var overlap: Overlap?
     }
 
-    /// What the redundancy score measured: the score, and the redundant groups.
-    private struct Redundancy {
-        let score: Double
-        let redundantGroups: Set<String>
+    /// The mutants each scenario detected, by the scenario's line, with what each mutant changes, by its ID. With
+    /// these, the redundancy judges the scenarios by the mutants they detect as well as by their code.
+    struct Detections: Equatable {
+        var kills: [Int: Set<String>]
+        var changes: [String: String]
+    }
+
+    /// A scenario that runs only code other scenarios run, but detects a mutant they miss, and the scenario it
+    /// overlaps most: one of the two should take the best of both.
+    struct Overlap: Codable, Equatable {
+        /// The line of the scenario this one overlaps.
+        let line: Int
+        /// The regions this scenario runs that the other doesn't, and the other way around.
+        let regionsHere: Int
+        let regionsThere: Int
+        /// What the mutants change that only this scenario detects, and the other way around.
+        let detectsHere: [String]
+        let detectsThere: [String]
     }
 
     /// A function the feature entered, with regions none of its scenarios ran.
@@ -205,6 +222,8 @@ struct CoverageScores: Codable, Equatable {
     let gaps: [Gap]
     /// The redundant steps, by line. Empty with the redundancy score off.
     let redundantSteps: [RedundantStep]
+    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
+    let isMutationAware: Bool
 
     /// The feature's coverage, from 0 to 100: the regions its scenarios ran, of the regions in the
     /// functions they entered.
@@ -215,41 +234,6 @@ struct CoverageScores: Codable, Equatable {
 
     /// The seconds all the scenarios took.
     var duration: TimeInterval { scenarios.reduce(0) { $0 + $1.duration } }
-
-    /// The redundant groups of `scenarios`, and their share of the groups, from 0 to 100. A group is a
-    /// scenario, or a Scenario Outline's examples together, and its code is what its scenarios ran after their
-    /// Background steps.
-    ///
-    /// A group is redundant when the groups kept run all of its code. Every group whose code the other
-    /// groups don't all run is kept. Of the rest, which the other groups cover, each is kept in the order of
-    /// the feature file unless the groups kept so far run its code: so order only decides between groups that
-    /// cover each other, such as two that run the same code, and the later one is redundant.
-    private static func redundancy(of scenarios: [Scenario]) -> Redundancy {
-        var order = [String]()
-        var groups = [String: Set<Int>]()
-        for scenario in scenarios where !scenario.isTaggedRedundant {
-            if groups[scenario.group] == nil { order.append(scenario.group) }
-            groups[scenario.group, default: []].formUnion(scenario.countedRegions)
-        }
-        // A group with no code of its own beyond its Background has nothing to judge.
-        let judged = order.filter { groups[$0]?.isEmpty == false }
-        func others(than group: String) -> Set<Int> {
-            judged.filter { $0 != group }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
-        }
-        let covered = Set(judged.filter { (groups[$0] ?? []).isSubset(of: others(than: $0)) })
-        var kept = judged.filter { !covered.contains($0) }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
-        var redundant = Set<String>()
-        for group in judged where covered.contains(group) {
-            let regions = groups[group] ?? []
-            if regions.isSubset(of: kept) {
-                redundant.insert(group)
-            } else {
-                kept.formUnion(regions)
-            }
-        }
-        let score = judged.isEmpty ? 0 : 100 * Double(redundant.count) / Double(judged.count)
-        return Redundancy(score: score, redundantGroups: redundant)
-    }
 
     /// The steps outside the Background that run, in the same way as other scenarios do, functions that
     /// belong in the Background: the redundant steps.
@@ -300,7 +284,8 @@ struct CoverageScores: Codable, Equatable {
         return found.values.sorted { $0.line < $1.line }
     }
 
-    init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool) {
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool, detections: Detections? = nil) {
         var runs = [Int: Int]()
         for scenario in scenarios {
             for region in scenario.regions { runs[region, default: 0] += 1 }
@@ -313,8 +298,9 @@ struct CoverageScores: Codable, Equatable {
         self.functionsRun = functionsRun.count
 
         // Redundancy is measured only with its score on.
-        let measured = isRedundancy ? Self.redundancy(of: scenarios) : nil
+        let measured = isRedundancy ? Self.redundancy(of: scenarios, detections: detections) : nil
         redundancy = measured?.score
+        isMutationAware = isRedundancy && detections != nil
         // A redundant scenario's whole time is wasted: removing it would test no less code.
         let wasted = scenarios.map { scenario in
             measured.map { $0.redundantGroups.contains(scenario.group) && !scenario.isTaggedRedundant ? scenario.duration : 0 }
@@ -328,15 +314,19 @@ struct CoverageScores: Codable, Equatable {
             let own = scenario.regions.filter { runs[$0] == 1 }.count
             let share = scenario.regions.reduce(0.0) { $0 + 1 / Double(runs[$1] ?? 1) }
             let addsNothing = !scenario.isTaggedRedundant && measured?.redundantGroups.contains(scenario.group) == true
-            return ScenarioScore(name: scenario.name,
-                                 line: scenario.line,
-                                 duration: scenario.duration,
-                                 regions: scenario.regions.count,
-                                 ownRegions: own,
-                                 share: total == 0 ? 0 : 100 * share / Double(total),
-                                 addsNothing: addsNothing,
-                                 wastedTime: wastedTime,
-                                 group: scenario.group)
+            var score = ScenarioScore(name: scenario.name,
+                                      line: scenario.line,
+                                      duration: scenario.duration,
+                                      regions: scenario.regions.count,
+                                      ownRegions: own,
+                                      share: total == 0 ? 0 : 100 * share / Double(total),
+                                      addsNothing: addsNothing,
+                                      wastedTime: wastedTime,
+                                      group: scenario.group)
+            if !scenario.isTaggedRedundant, let partner = measured?.overlaps[scenario.group] {
+                score.overlap = Self.overlap(of: scenario.group, with: partner, in: scenarios, detections: detections)
+            }
+            return score
         }
 
         let entered = code.functions.filter { functionsRun.contains($0.regions) }

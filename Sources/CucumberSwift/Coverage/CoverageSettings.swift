@@ -132,6 +132,7 @@ struct CoverageSettings: Equatable {
     static let recordsIssuesInSuitesVariable = "CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES"
     static let mutationReportVariable = "CUCUMBER_MUTATION_REPORT"
     static let mutationTestingVariable = "CUCUMBER_MUTATION_TESTING"
+    static let regionsVariable = "CUCUMBER_COVERAGE_REGIONS"
 
     static let storage = Storage()
 
@@ -158,6 +159,9 @@ struct CoverageSettings: Equatable {
     /// suite, instead of printing them. Off by default, because Xcode stops the test process when a suite
     /// records an issue (#509). The XCTest runner doesn't read it.
     var recordsIssuesInSuites = false
+    /// Whether the run writes `regions.json`, the code each scenario ran, next to the manifest: off by default.
+    /// `swift package mutation-test` turns it on, to test each mutant only when a scenario runs its code.
+    var writesRegions = false
     /// Whether each feature gets a Mutation test, with coverage on: off by default.
     var isMutationTesting = false
     /// The Stryker report of a `mutation-test` run, whose mutants the Mutation test checks.
@@ -177,6 +181,7 @@ struct CoverageSettings: Equatable {
         settings.redundantStepWarningLevel = level("redundantStepWarning", redundantStepWarningLevelVariable, settings.redundantStepWarningLevel)
         settings.recordsIssuesInSuites = storage.recordsIssuesInSuites
             ?? FeatureFlagValue.bool(environment[recordsIssuesInSuitesVariable]) ?? false
+        settings.writesRegions = FeatureFlagValue.bool(environment[regionsVariable]) ?? false
         settings.isMutationTesting = storage.mutationTesting ?? FeatureFlagValue.bool(environment[mutationTestingVariable]) ?? false
         settings.mutationReport = [storage.mutationReport, environment[mutationReportVariable]]
             .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
