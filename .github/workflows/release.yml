@@ -150,10 +150,11 @@ jobs:
           name: release-notes
           path: notes.md
 
-  # Runs the samples' main jobs on the commit being released, in a release and in a dry run. It does
-  # not wait for plan, which checks the branch and who started the run: it only reads public code.
+  # Runs the samples' main jobs on the commit being released, in a release and in a dry run. It waits
+  # for plan, which checks the branch and who started the run, so a rejected run starts no macOS job.
   samples:
     name: Samples
+    needs: plan
     if: ${{ github.repository_owner == 'cucumberswift' || vars.RELEASE_IN_FORK == 'true' }}
     uses: cucumberswift/CucumberSwiftSample/.github/workflows/CI.yml@main
     with:
