@@ -40,7 +40,8 @@ status=0
   --scheme "$name" \
   --destination "platform=macOS" \
   --output "$reports" \
-  --baseline-runs 1 || status=$?
+  --baseline-runs 1 \
+  --minimum-timeout 120 || status=$?
 if [ "$status" -ne 0 ]; then
   echo "error: $name: mutation testing exited with status $status"
   exit "$status"
