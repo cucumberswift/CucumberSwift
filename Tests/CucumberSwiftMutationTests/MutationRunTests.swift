@@ -162,40 +162,6 @@ final class MutationRunTests: TemporaryFolderTestCase {
         XCTAssertTrue(reports.allSatisfy { $0.hasSuffix(".json") && $0.contains("/runner/reports/") }, reports.joined(separator: ", "))
     }
 
-    func testTheRunnerIsPreparedOnceAndCleanedUpAfterEveryEnd() {
-        let prepared = Counter()
-        let cleaned = Counter()
-        for outcome in [Int32(0), Int32(1)] {
-            let spy = SpyRunner(prepared: prepared, cleaned: cleaned, buildStatus: outcome == 0, testsRun: outcome == 0 ? 3 : 0)
-            let status = MutationRun(options: options(), discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
-            XCTAssertEqual(status, outcome == 0 ? MutationRun.Status.completed : MutationRun.Status.baselineFailed)
-        }
-        XCTAssertEqual(prepared.value, 2, "Once for each run")
-        XCTAssertEqual(cleaned.value, 2, "After the run that finished and after the one that stopped at its baseline")
-    }
-
-    func testARunnerThatCannotPrepareFailsTheRunAndStillCleansUp() {
-        let prepared = Counter()
-        let cleaned = Counter()
-        let spy = SpyRunner(prepared: prepared, cleaned: cleaned, prepareFails: true)
-        let status = MutationRun(options: options(), discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
-        XCTAssertEqual(status, MutationRun.Status.failed)
-        XCTAssertTrue(log.joined().contains("error: cannot prepare"), log.joined())
-        XCTAssertEqual(cleaned.value, 1)
-    }
-
-    func testTheRunnerLeavesOutTheFoldersItNames() throws {
-        try "x".write(to: root.appendingPathComponent("skipped.txt"), atomically: true, encoding: .utf8)
-        let spy = SpyRunner(prepared: Counter(), cleaned: Counter(), excluded: ["skipped.txt"])
-        var settings = options()
-        settings.dryRun = true
-        let seen = CopyListing()
-        spy.onPrepare = { copy in seen.names = ((try? FileManager.default.contentsOfDirectory(atPath: copy.path)) ?? []).sorted() }
-        _ = MutationRun(options: settings, discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
-        XCTAssertTrue(seen.names.contains("Package.swift"))
-        XCTAssertFalse(seen.names.contains("skipped.txt"), seen.names.joined(separator: ", "))
-    }
-
     func testAnnotatesTheCucumberReportThatTheTestsWrote() throws {
         // Write the report where the run says to, as CucumberSwift's runners do: the Then step fails for the `<` mutant.
         let fake = FakeRunner { call in

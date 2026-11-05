@@ -42,14 +42,6 @@ public struct MutationOptions: Equatable, Sendable {
         ["--disable-sandbox"] + (disablePrebuilts ? ["--disable-experimental-prebuilts"] : [])
     }
 
-    /// The runner for these options: `xcodebuild` when they name a scheme, and SwiftPM otherwise.
-    public func makeRunner(commands: CommandRunning = ProcessRunner()) -> TestRunner {
-        if let xcode {
-            return XcodebuildRunner(target: xcode, xcodebuild: xcodebuild, commands: commands)
-        }
-        return SwiftPMRunner(options: self, commands: commands)
-    }
-
     /// What is wrong with `root` for the runner, or `nil`: the file that says it is the kind of project the run
     /// builds. Checked before the copy, so that a run in the wrong folder copies nothing.
     public var rootProblem: String? {
@@ -64,11 +56,7 @@ public struct MutationOptions: Equatable, Sendable {
         var output: URL?
         var options = MutationOptions(root: URL(fileURLWithPath: "."))
         var sources = [String]()
-        var project: String?
-        var workspace: String?
-        var scheme: String?
-        var destination: String?
-        var testTarget: String?
+        var xcodeValues = [String: String]()
         var xcodeArguments = [String]()
         var index = 0
         func value(for option: String) throws -> String {
@@ -97,11 +85,7 @@ public struct MutationOptions: Equatable, Sendable {
                 case "--swift": options.swift = try value(for: argument)
                 case "--dry-run": options.dryRun = true
                 case "--disable-prebuilts": options.disablePrebuilts = true
-                case "--project": project = try value(for: argument)
-                case "--workspace": workspace = try value(for: argument)
-                case "--scheme": scheme = try value(for: argument)
-                case "--destination": destination = try value(for: argument)
-                case "--test-target": testTarget = try value(for: argument)
+                case "--project", "--workspace", "--scheme", "--destination", "--test-target": xcodeValues[argument] = try value(for: argument)
                 case "--xcodebuild": options.xcodebuild = try value(for: argument)
                 case "--xcodebuild-arg": xcodeArguments.append(try value(for: argument))
                 default: throw UsageError(description: "Unknown option \(argument)")
@@ -110,32 +94,38 @@ public struct MutationOptions: Equatable, Sendable {
         }
         guard let root else { throw UsageError(description: "--root needs the package folder") }
         options.root = root
-        options.xcode = try xcodeTarget(project: project, workspace: workspace, scheme: scheme, destination: destination,
-                                        testTarget: testTarget, arguments: xcodeArguments)
+        options.xcode = try xcodeTarget(values: xcodeValues, arguments: xcodeArguments)
         options.output = output ?? root.appendingPathComponent(".build/mutation-testing")
         if !sources.isEmpty { options.sources = sources }
         return options
     }
 
-    /// The Xcode target the options name, `nil` when none of them does.
-    private static func xcodeTarget(
-        project: String?, workspace: String?, scheme: String?, destination: String?, testTarget: String?, arguments: [String]
-    ) throws -> XcodebuildRunner.Target? {
-        let named = project != nil || workspace != nil || scheme != nil || destination != nil || testTarget != nil || !arguments.isEmpty
-        guard named else { return nil }
-        guard project == nil || workspace == nil else {
+    /// The Xcode target the options name, `nil` when none of them does. `values` has the options with a value, by name.
+    private static func xcodeTarget(values: [String: String], arguments: [String]) throws -> XcodebuildRunner.Target? {
+        guard !values.isEmpty || !arguments.isEmpty else { return nil }
+        guard values["--project"] == nil || values["--workspace"] == nil else {
             throw UsageError(description: "Pass --project or --workspace, not both")
         }
-        guard let container = project ?? workspace else {
+        guard let container = values["--project"] ?? values["--workspace"] else {
             throw UsageError(description: "--scheme, --destination, --test-target and --xcodebuild-arg need --project or --workspace")
         }
-        guard let scheme else { throw UsageError(description: "--project and --workspace need --scheme") }
-        guard let destination else { throw UsageError(description: "--project and --workspace need --destination, such as \"platform=macOS\"") }
-        return XcodebuildRunner.Target(container: container, scheme: scheme, destination: destination, testTarget: testTarget, arguments: arguments)
+        guard let scheme = values["--scheme"] else { throw UsageError(description: "--project and --workspace need --scheme") }
+        guard let destination = values["--destination"] else {
+            throw UsageError(description: "--project and --workspace need --destination, such as \"platform=macOS\"")
+        }
+        return XcodebuildRunner.Target(container: container, scheme: scheme, destination: destination, testTarget: values["--test-target"], arguments: arguments)
     }
 
     public init(root: URL) {
         self.root = root
         output = root.appendingPathComponent(".build/mutation-testing")
+    }
+
+    /// The runner for these options: `xcodebuild` when they name a scheme, and SwiftPM otherwise.
+    public func makeRunner(commands: CommandRunning = ProcessRunner()) -> TestRunner {
+        if let xcode {
+            return XcodebuildRunner(target: xcode, xcodebuild: xcodebuild, commands: commands)
+        }
+        return SwiftPMRunner(options: self, commands: commands)
     }
 }

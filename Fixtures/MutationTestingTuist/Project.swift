@@ -39,7 +39,9 @@ let project = Project(
             resources: [.folderReference(path: "Tests/Features")],
             dependencies: [
                 .target(name: "Voting"),
-                .package(product: "CucumberSwift")
+                .package(product: "CucumberSwift"),
+                // Checks the feature files and step definitions on every build.
+                .package(product: "CucumberSwiftLint", type: .plugin)
             ],
             settings: settings
         )

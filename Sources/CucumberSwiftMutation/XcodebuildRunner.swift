@@ -8,9 +8,14 @@ import Foundation
 /// Builds an Xcode project or workspace with `xcodebuild build-for-testing`, with code coverage on, and tests it
 /// with `xcodebuild test-without-building`. A scheme and a destination say what to build and where to run it.
 ///
-/// CucumberSwift's settings reach the tests as `TEST_RUNNER_`-prefixed build settings, which `xcodebuild` passes to the
-/// test process without the prefix. The test count comes from each run's result bundle, so a run in which Xcode ran
-/// no test is a run of 0 tests, whatever Xcode printed.
+/// CucumberSwift's settings reach the tests as `TEST_RUNNER_`-prefixed variables in `xcodebuild`'s environment, which it
+/// passes to the test process without the prefix. A `TEST_RUNNER_` build setting on the command line (`TEST_RUNNER_X=y`)
+/// doesn't reach the tests: Xcode 26.4 ran them without it. The test count comes from each run's result bundle, so a
+/// run in which Xcode ran no test is a run of 0 tests, whatever Xcode printed.
+///
+/// A run of some scenarios turns on a test per scenario (`CUCUMBER_ONE_TEST_PER_SCENARIO`) and selects the tests with
+/// `-only-testing`: with a test per step, the default, the test classes exist only while the bundle runs, and
+/// `-only-testing` selects none of them.
 public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -28,6 +33,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         /// More arguments for every `xcodebuild`, such as `-skipPackagePluginValidation`.
         public var arguments: [String]
 
+        var isWorkspace: Bool { container.hasSuffix(".xcworkspace") }
+
         public init(container: String, scheme: String, destination: String, testTarget: String? = nil, arguments: [String] = []) {
             self.container = container
             self.scheme = scheme
@@ -35,8 +42,6 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             self.testTarget = testTarget
             self.arguments = arguments
         }
-
-        var isWorkspace: Bool { container.hasSuffix(".xcworkspace") }
     }
 
     private let target: Target
@@ -45,6 +50,14 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let commands: CommandRunning
     private let lock = NSLock()
     private var runs = 0
+
+    /// `totalTestCount` of the summary that `xcresulttool get test-results summary` prints.
+    static func testCount(inSummary json: String) -> Int {
+        guard let data = json.data(using: .utf8),
+              let summary = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let total = summary["totalTestCount"] as? Int else { return 0 }
+        return total
+    }
 
     public init(
         target: Target,
@@ -102,16 +115,19 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             coverage = folder
         }
         let bundle = folder.appendingPathComponent("results/test-\(number).xcresult")
-        var arguments = ["test-without-building"] + common(in: copy) + ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES"]
-        do {
-            arguments += try onlyTesting(request.scenarios, in: copy)
-        } catch {
-            return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
+        var arguments = ["test-without-building"] + common(in: copy) + ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
+        if let scenarios = request.scenarios {
+            do {
+                arguments += try onlyTesting(scenarios, in: copy)
+            } catch {
+                return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
+            }
+            settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
         }
-        arguments += ["CODE_SIGNING_ALLOWED=NO"]
-        // Build settings, in a fixed order so that a run is the same command every time.
-        for key in settings.keys.sorted() { arguments.append("TEST_RUNNER_\(key)=\(settings[key] ?? "")") }
-        let result = commands.run(xcodebuild, arguments, in: copy, environment: [:], timeout: request.timeout)
+        // The prefixed variables are how xcodebuild gives the tests a setting.
+        var environment = [String: String]()
+        for (key, value) in settings { environment["TEST_RUNNER_\(key)"] = value }
+        let result = commands.run(xcodebuild, arguments, in: copy, environment: environment, timeout: request.timeout)
         let log = write(result.output, named: "test-\(number)", in: copy)
         return TestRun(
             status: result.status,
@@ -124,15 +140,14 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         )
     }
 
-    /// `-only-testing:<target>/<class>` for each class that runs one of `scenarios`. Without a test target the
-    /// class alone isn't a valid identifier, so scenarios need `Target.testTarget`.
-    private func onlyTesting(_ scenarios: [ScenarioID]?, in copy: URL) throws -> [String] {
-        guard let scenarios else { return [] }
+    /// `-only-testing <target>/CucumberScenarioTest/<test>` for the test of each of `scenarios`. A test needs its test
+    /// target, so scenarios need `Target.testTarget`.
+    private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> [String] {
         guard let testTarget = target.testTarget else {
             throw Failure(description: "Running only some scenarios needs the test target's name: pass --test-target")
         }
-        var names = ScenarioTestNames(root: copy)
-        return try names.classNames(for: scenarios).flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
+        var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: ProcessInfo.processInfo.environment))
+        return try names.testNames(for: scenarios).flatMap { ["-only-testing", "\(testTarget)/\(ScenarioTestNames.testClass)/\($0)"] }
     }
 
     /// How many tests the result bundle says ran, or 0 when there is no bundle or it can't be read.
@@ -146,14 +161,6 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             timeout: 120
         )
         return Self.testCount(inSummary: result.output)
-    }
-
-    /// `totalTestCount` of the summary that `xcresulttool get test-results summary` prints.
-    static func testCount(inSummary json: String) -> Int {
-        guard let data = json.data(using: .utf8),
-              let summary = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let total = summary["totalTestCount"] as? Int else { return 0 }
-        return total
     }
 
     private func nextRun() -> Int {

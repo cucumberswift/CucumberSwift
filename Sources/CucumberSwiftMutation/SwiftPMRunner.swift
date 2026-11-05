@@ -6,6 +6,10 @@
 import Foundation
 
 /// Builds a Swift package with `swift build --build-tests` and tests it with `swift test --skip-build`.
+///
+/// It runs every scenario whatever `TestRequest.scenarios` says. `swift test --filter` knows only the tests that the
+/// bundle declares, and CucumberSwift generates one for each scenario while the bundle runs, so no filter can select
+/// one: it runs no test, and succeeds. A mutant still gets the verdict of the whole suite, only slower.
 public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -61,16 +65,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             environment["CUCUMBER_COVERAGE_PATH"] = folder.path
             coverage = folder
         }
-        var filters = [String]()
-        if let scenarios = request.scenarios {
-            var names = ScenarioTestNames(root: copy)
-            do {
-                for name in try names.classNames(for: scenarios) { filters += ["--filter", "(^|\\.)" + NSRegularExpression.escapedPattern(for: name) + "/"] }
-            } catch {
-                return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
-            }
-        }
-        let result = commands.run(swift, ["test", "--skip-build"] + filters + arguments, in: copy, environment: environment, timeout: request.timeout)
+        let result = commands.run(swift, ["test", "--skip-build"] + arguments, in: copy, environment: environment, timeout: request.timeout)
         return TestRun(
             status: result.status,
             timedOut: result.timedOut,

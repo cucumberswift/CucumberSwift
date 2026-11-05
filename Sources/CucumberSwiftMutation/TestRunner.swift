@@ -47,6 +47,8 @@ public struct TestRun: Sendable {
     public var cucumberReport: URL?
     public var coverageFolder: URL?
 
+    public var succeeded: Bool { status == 0 && !timedOut }
+
     public init(
         status: Int32,
         timedOut: Bool = false,
@@ -64,8 +66,6 @@ public struct TestRun: Sendable {
         self.cucumberReport = cucumberReport
         self.coverageFolder = coverageFolder
     }
-
-    public var succeeded: Bool { status == 0 && !timedOut }
 }
 
 /// How a build ended.

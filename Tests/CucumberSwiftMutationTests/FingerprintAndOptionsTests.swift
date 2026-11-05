@@ -107,9 +107,14 @@ final class MutationOptionsTests: XCTestCase {
             "--root", "/p", "--workspace", "App.xcworkspace", "--scheme", "App", "--destination", "platform=macOS",
             "--test-target", "AppTests", "--xcodebuild-arg", "-quiet", "--xcodebuild-arg", "-skipMacroValidation"
         ])
-        XCTAssertEqual(options.xcode, XcodebuildRunner.Target(
-            container: "App.xcworkspace", scheme: "App", destination: "platform=macOS", testTarget: "AppTests",
-            arguments: ["-quiet", "-skipMacroValidation"]))
+        let expected = XcodebuildRunner.Target(
+            container: "App.xcworkspace",
+            scheme: "App",
+            destination: "platform=macOS",
+            testTarget: "AppTests",
+            arguments: ["-quiet", "-skipMacroValidation"]
+        )
+        XCTAssertEqual(options.xcode, expected)
         XCTAssertTrue(options.makeRunner() is XcodebuildRunner)
         XCTAssertNil(try MutationOptions.parse(["--root", "/p"]).xcode)
         XCTAssertTrue(try MutationOptions.parse(["--root", "/p"]).makeRunner() is SwiftPMRunner)
