@@ -111,8 +111,9 @@ public struct WorkFolder {
         try? FileManager.default.removeItem(at: folder)
     }
 
-    /// Writes the lock file, then copies the project into a new folder inside `location`.
-    public init(copying root: URL, into location: URL, lockFolder: URL, runner: CommandRunning = ProcessRunner()) throws {
+    /// Writes the lock file, then copies the project into a new folder inside `location`. `excluding` names the
+    /// top-level files and folders the copy leaves out, besides the ones every run leaves out.
+    public init(copying root: URL, into location: URL, lockFolder: URL, excluding: [String] = [], runner: CommandRunning = ProcessRunner()) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: lockFolder, withIntermediateDirectories: true)
         folder = location.appendingPathComponent("\(Self.folderPrefix)\(getpid())-\(UUID().uuidString.prefix(8))")
@@ -123,7 +124,7 @@ public struct WorkFolder {
         try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile)
         try fileManager.createDirectory(at: copy, withIntermediateDirectories: true)
         let top = try fileManager.contentsOfDirectory(atPath: root.path)
-        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") {
+        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") && !excluding.contains(name) {
             try Self.clone(root.appendingPathComponent(name), to: copy.appendingPathComponent(name), runner: runner)
         }
         // The dependencies SwiftPM already checked out, so that the copy builds without the network.

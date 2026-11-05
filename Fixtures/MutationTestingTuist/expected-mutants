@@ -1,0 +1,8 @@
+# The mutants a mutation testing run must find in this fixture, and what happens to each, one per line:
+#   <file>:<line> <mutator> <replacement> <Killed|Survived|Timeout|CompileError>
+# `>` survives in both functions because no scenario checks a person of exactly 18 or 16.
+Sources/Voting.swift:11 RelationalOperator < Killed
+Sources/Voting.swift:11 RelationalOperator > Survived
+Sources/Voting.swift:15 RelationalOperator < Killed
+Sources/Voting.swift:15 RelationalOperator > Survived
+Sources/Voting.swift:15 LogicalOperator || Killed

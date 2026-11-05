@@ -1,0 +1,3 @@
+# The fewest tests each framework must run. See "Fixtures" in CONTRIBUTING.md.
+# 5 scenarios of 2 steps each, as the XCTest runner runs a test for each step.
+XCTest: 10

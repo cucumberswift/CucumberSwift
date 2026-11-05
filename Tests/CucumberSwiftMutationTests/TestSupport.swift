@@ -125,3 +125,66 @@ extension Mutant {
         )
     }
 }
+
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return count
+    }
+
+    func increment() {
+        lock.lock()
+        count += 1
+        lock.unlock()
+    }
+}
+
+final class CopyListing: @unchecked Sendable {
+    var names = [String]()
+}
+
+/// A runner that runs nothing and counts what the run asks of it.
+final class SpyRunner: TestRunner, @unchecked Sendable {
+    private let prepared: Counter
+    private let cleaned: Counter
+    private let buildStatus: Bool
+    private let testsRun: Int
+    private let prepareFails: Bool
+    let excludedFromCopy: [String]
+    var onPrepare: (URL) -> Void = { _ in }
+
+    init(prepared: Counter, cleaned: Counter, buildStatus: Bool = true, testsRun: Int = 3, prepareFails: Bool = false, excluded: [String] = []) {
+        self.prepared = prepared
+        self.cleaned = cleaned
+        self.buildStatus = buildStatus
+        self.testsRun = testsRun
+        self.prepareFails = prepareFails
+        excludedFromCopy = excluded
+    }
+
+    struct PrepareFailure: Error, CustomStringConvertible {
+        let description = "cannot prepare"
+    }
+
+    func prepare(copy: URL) throws {
+        prepared.increment()
+        onPrepare(copy)
+        if prepareFails { throw PrepareFailure() }
+    }
+
+    func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
+        BuildResult(succeeded: buildStatus, duration: 1)
+    }
+
+    func test(in copy: URL, request: TestRequest) -> TestRun {
+        TestRun(status: 0, duration: 1, testsRun: testsRun)
+    }
+
+    func cleanUp(copy: URL) {
+        cleaned.increment()
+    }
+}

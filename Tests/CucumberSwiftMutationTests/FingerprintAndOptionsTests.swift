@@ -101,4 +101,45 @@ final class MutationOptionsTests: XCTestCase {
         XCTAssertThrowsError(try MutationOptions.parse(["--root", "/p", "--baseline-runs", "--dry-run"]))
         XCTAssertThrowsError(try MutationOptions.parse([]))
     }
+
+    func testReadsTheXcodeOptions() throws {
+        let options = try MutationOptions.parse([
+            "--root", "/p", "--workspace", "App.xcworkspace", "--scheme", "App", "--destination", "platform=macOS",
+            "--test-target", "AppTests", "--xcodebuild-arg", "-quiet", "--xcodebuild-arg", "-skipMacroValidation"
+        ])
+        XCTAssertEqual(options.xcode, XcodebuildRunner.Target(
+            container: "App.xcworkspace", scheme: "App", destination: "platform=macOS", testTarget: "AppTests",
+            arguments: ["-quiet", "-skipMacroValidation"]))
+        XCTAssertTrue(options.makeRunner() is XcodebuildRunner)
+        XCTAssertNil(try MutationOptions.parse(["--root", "/p"]).xcode)
+        XCTAssertTrue(try MutationOptions.parse(["--root", "/p"]).makeRunner() is SwiftPMRunner)
+    }
+
+    func testRefusesXcodeOptionsThatDoNotFitTogether() {
+        let root = ["--root", "/p"]
+        XCTAssertThrowsError(try MutationOptions.parse(root + ["--scheme", "A", "--destination", "platform=macOS"])) {
+            XCTAssertTrue("\($0)".contains("need --project or --workspace"), "\($0)")
+        }
+        XCTAssertThrowsError(try MutationOptions.parse(root + ["--project", "A.xcodeproj", "--destination", "platform=macOS"])) {
+            XCTAssertEqual("\($0)", "--project and --workspace need --scheme")
+        }
+        XCTAssertThrowsError(try MutationOptions.parse(root + ["--project", "A.xcodeproj", "--scheme", "A"])) {
+            XCTAssertTrue("\($0)".contains("need --destination"), "\($0)")
+        }
+        XCTAssertThrowsError(try MutationOptions.parse(root + ["--project", "A.xcodeproj", "--workspace", "A.xcworkspace", "--scheme", "A", "--destination", "d"])) {
+            XCTAssertEqual("\($0)", "Pass --project or --workspace, not both")
+        }
+    }
+
+    func testTheRootProblemNamesTheFileTheRunnerNeeds() throws {
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("options-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        var options = MutationOptions(root: folder)
+        XCTAssertTrue(options.rootProblem?.contains("no Package.swift") == true)
+        options.xcode = XcodebuildRunner.Target(container: "A.xcodeproj", scheme: "A", destination: "platform=macOS")
+        XCTAssertTrue(options.rootProblem?.contains("no A.xcodeproj") == true)
+        try FileManager.default.createDirectory(at: folder.appendingPathComponent("A.xcodeproj"), withIntermediateDirectories: true)
+        XCTAssertNil(options.rootProblem)
+    }
 }

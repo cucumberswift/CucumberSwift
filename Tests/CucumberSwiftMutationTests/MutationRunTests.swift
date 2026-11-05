@@ -156,7 +156,55 @@ final class MutationRunTests: TemporaryFolderTestCase {
         _ = run(fake)
         let mutantCalls = fake.calls.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }
         XCTAssertEqual(mutantCalls.map { $0.environment["CUCUMBERSWIFT_MUTANT"] }, ["1", "2"])
-        XCTAssertEqual(mutantCalls.map { URL(fileURLWithPath: $0.environment["CUCUMBER_REPORT_PATH"] ?? "").lastPathComponent }, ["mutant-1.json", "mutant-2.json"])
+        // The runner picks each run's report path: one for each run, in a folder the copy's folder holds.
+        let reports = mutantCalls.map { $0.environment["CUCUMBER_REPORT_PATH"] ?? "" }
+        XCTAssertEqual(Set(reports).count, 2)
+        XCTAssertTrue(reports.allSatisfy { $0.hasSuffix(".json") && $0.contains("/runner/reports/") }, reports.joined(separator: ", "))
+    }
+
+    func testNoRunMeasuresCoverageBecauseTheBuildHasItOn() {
+        // A build with code coverage on makes CucumberSwift measure it by default, and nothing here uses the numbers yet.
+        let fake = runner { _ in .finished(0) }
+        _ = run(fake)
+        let tests = fake.calls.filter { $0.arguments.first == "test" }
+        XCTAssertEqual(tests.count, 4, "Two baseline runs and two mutants")
+        XCTAssertTrue(tests.allSatisfy { $0.environment["CUCUMBER_COVERAGE"] == "NO" })
+        XCTAssertNil(tests.first?.environment["CUCUMBER_REPORT_PATH"], "Only a mutant's run writes a report")
+        XCTAssertTrue(fake.calls.filter { $0.arguments.first == "build" }.allSatisfy { $0.arguments.contains("--enable-code-coverage") })
+    }
+
+    func testTheRunnerIsPreparedOnceAndCleanedUpAfterEveryEnd() {
+        let prepared = Counter()
+        let cleaned = Counter()
+        for outcome in [Int32(0), Int32(1)] {
+            let spy = SpyRunner(prepared: prepared, cleaned: cleaned, buildStatus: outcome == 0, testsRun: outcome == 0 ? 3 : 0)
+            let status = MutationRun(options: options(), discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
+            XCTAssertEqual(status, outcome == 0 ? MutationRun.Status.completed : MutationRun.Status.baselineFailed)
+        }
+        XCTAssertEqual(prepared.value, 2, "Once for each run")
+        XCTAssertEqual(cleaned.value, 2, "After the run that finished and after the one that stopped at its baseline")
+    }
+
+    func testARunnerThatCannotPrepareFailsTheRunAndStillCleansUp() {
+        let prepared = Counter()
+        let cleaned = Counter()
+        let spy = SpyRunner(prepared: prepared, cleaned: cleaned, prepareFails: true)
+        let status = MutationRun(options: options(), discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
+        XCTAssertEqual(status, MutationRun.Status.failed)
+        XCTAssertTrue(log.joined().contains("error: cannot prepare"), log.joined())
+        XCTAssertEqual(cleaned.value, 1)
+    }
+
+    func testTheRunnerLeavesOutTheFoldersItNames() throws {
+        try "x".write(to: root.appendingPathComponent("skipped.txt"), atomically: true, encoding: .utf8)
+        let spy = SpyRunner(prepared: Counter(), cleaned: Counter(), excluded: ["skipped.txt"])
+        var settings = options()
+        settings.dryRun = true
+        let seen = CopyListing()
+        spy.onPrepare = { copy in seen.names = ((try? FileManager.default.contentsOfDirectory(atPath: copy.path)) ?? []).sorted() }
+        _ = MutationRun(options: settings, discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
+        XCTAssertTrue(seen.names.contains("Package.swift"))
+        XCTAssertFalse(seen.names.contains("skipped.txt"), seen.names.joined(separator: ", "))
     }
 
     func testAnnotatesTheCucumberReportThatTheTestsWrote() throws {

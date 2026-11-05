@@ -1052,6 +1052,22 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+      # Mutation testing on an Xcode project, with xcodebuild, a scheme and a destination. The run must kill and
+      # keep the mutants that the fixture's expected-mutants file lists (#521). It runs on a copy of the fixture
+      # that depends on CucumberSwift by URL, as a project does.
+      - name: Run mutation testing on the Xcode project fixture
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the mutation testing reports and logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-xcode-fixture
+          path: ${{ runner.temp }}/mutation-MutationTestingTuist
+          if-no-files-found: ignore
+          retention-days: 3
       # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
       # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
       # cancelled, which hides whether it passed (#480).
