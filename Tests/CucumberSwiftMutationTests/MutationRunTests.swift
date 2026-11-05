@@ -278,6 +278,11 @@ final class MutationRunTests: TemporaryFolderTestCase {
 
 // The report's list of scenarios, which a test run checks its feature's scenarios against.
 extension MutationRunTests {
+    func testTheRunCountsTheMutantsAndFilesItFound() {
+        _ = run(runner { _ in .finished(0, output: "Executed 4 tests") })
+        XCTAssertTrue(log.contains("Found 2 mutants in 1 file."), "\(log)")
+    }
+
     func testTheReportListsTheScenariosThatTheFirstBaselineRunTested() throws {
         // The first baseline run writes its Cucumber report where the run says, as CucumberSwift's runners do.
         let fake = FakeRunner { call in

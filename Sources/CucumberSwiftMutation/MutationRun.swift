@@ -184,7 +184,7 @@ public final class MutationRun {
         var mutants = try discoverer.mutants(inFiles: files, relativeTo: copy)
         mutants.sort { ($0.file, $0.offset, $0.replacement) < ($1.file, $1.offset, $1.replacement) }
         if let limit = options.maxMutants { mutants = Array(mutants.prefix(limit)) }
-        log("Found \(mutants.count) mutants in \(files.count) files.")
+        log("Found \(mutants.count) \(mutants.count == 1 ? "mutant" : "mutants") in \(files.count) \(files.count == 1 ? "file" : "files").")
         return mutants.enumerated().map { $1.numbered($0 + 1) }
     }
 
