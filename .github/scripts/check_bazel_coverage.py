@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Checks the per-scenario coverage that `bazel coverage` leaves in a test's outputs.
 
-Usage: check_bazel_coverage.py <test.outputs folder or outputs.zip> <scenario count>
+Usage: check_bazel_coverage.py <test.outputs folder or outputs.zip> <scenario count> <redundant scenario count>
 
 Bazel leaves a test's undeclared outputs in bazel-testlogs/<target>/test.outputs/, zipped as outputs.zip
 or, as on macOS, as plain files. CucumberSwift writes its coverage into them under Bazel: a run folder with manifest.json, and one raw profile for each
-scenario and binary. The check fails unless every scenario has a non-empty profile, and the run has
-scores and no problem.
+scenario and binary. The check fails unless every scenario has a non-empty profile, the run has
+scores and no problem, and the feature's redundancy score is above 0 with exactly the expected number of
+scenarios that add no coverage of their own.
 """
 
 import json
@@ -40,7 +41,7 @@ class Outputs:
         return os.path.getsize(os.path.join(self.path, name))
 
 
-def check(path, scenario_count):
+def check(path, scenario_count, redundant_count):
     """Returns the problems with the coverage in the outputs at `path`, none when it is right."""
     outputs = Outputs(path)
     names = outputs.names()
@@ -60,6 +61,13 @@ def check(path, scenario_count):
         problems.append("the manifest lists no binary built with coverage")
     if not manifest.get("features"):
         problems.append("the manifest has no feature scores")
+    for feature in manifest.get("features", []):
+        scores = feature.get("scores", {})
+        if not (scores.get("redundancy") or 0) > 0:
+            problems.append(f"{feature.get('featureName')} has redundancy {scores.get('redundancy')}, expected above 0")
+        adding_nothing = [one["name"] for one in scores.get("scenarios", []) if one.get("addsNothing")]
+        if len(adding_nothing) != redundant_count:
+            problems.append(f"expected {redundant_count} scenarios that add nothing, found {adding_nothing}")
     for scenario in scenarios:
         profiles = scenario.get("profiles", [])
         if not profiles:
@@ -72,14 +80,14 @@ def check(path, scenario_count):
 
 
 def main(arguments):
-    if len(arguments) != 2:
+    if len(arguments) != 3:
         print(__doc__, file=sys.stderr)
         return 2
-    problems = check(arguments[0], int(arguments[1]))
+    problems = check(arguments[0], int(arguments[1]), int(arguments[2]))
     for problem in problems:
         print(f"::error::{problem}")
     if not problems:
-        print(f"Every one of {arguments[1]} scenarios has a coverage profile, and the run has scores.")
+        print(f"Every one of {arguments[1]} scenarios has a coverage profile, and the run has coverage and redundancy scores.")
     return 1 if problems else 0
 
 
