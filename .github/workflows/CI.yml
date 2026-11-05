@@ -720,14 +720,14 @@ jobs:
             status=1
           fi
           exit $status
-      # Coverage and redundancy scores on tvOS and watchOS (#526): the tests above run without code
+      # Coverage and redundancy scores on iOS, tvOS and watchOS (#526): the tests above run without code
       # coverage, so the coverage tests skip there. This runs the CoverageDefaultsPackage fixture, which
       # turns it on, and each runner must print the Grading feature's scores.
-      - name: Measure coverage on tvOS and watchOS Simulators
+      - name: Measure coverage on iOS, tvOS and watchOS Simulators
         if: ${{ !cancelled() }}
         run: |
           status=0
-          for platform in tvOS watchOS; do
+          for platform in iOS tvOS watchOS; do
             destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
             log="$RUNNER_TEMP/coverage-$platform.log"
             (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
