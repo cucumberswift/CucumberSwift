@@ -96,7 +96,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             report = file
         }
         if request.measuresCoverage {
-            let folder = folder.appendingPathComponent("coverage/run-\(number)")
+            let folder = folder.appendingPathComponent("coverage-\(number)")
             settings["CUCUMBER_COVERAGE"] = "YES"
             settings["CUCUMBER_COVERAGE_PATH"] = folder.path
             coverage = folder

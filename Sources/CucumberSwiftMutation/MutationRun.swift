@@ -49,6 +49,9 @@ public final class MutationRun {
     private var before: ProjectFingerprint?
     private var cancelled = false
 
+    /// The Cucumber report of the first run without a change.
+    private var baselineReport: URL { options.output.appendingPathComponent("cucumber-baseline.json") }
+
     private var isCancelled: Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -152,6 +155,12 @@ public final class MutationRun {
         }
         guard !mutants.isEmpty else { return Status.completed }
         guard let timeout = runBaseline(in: copy) else { return Status.baselineFailed }
+        let coverage = ScenarioCoverage.read(inRunsUnder: options.output.appendingPathComponent("coverage"))
+        if let coverage {
+            log("Coverage: \(coverage.scenarios.count) scenarios ran. A mutant in code that no scenario runs isn't tested.")
+        } else {
+            log("No coverage of the scenarios: the package doesn't measure it with CucumberSwift, so every mutant is tested.")
+        }
 
         let runs = options.output.appendingPathComponent("runs")
         try? fileManager.removeItem(at: runs)
@@ -159,12 +168,14 @@ public final class MutationRun {
         var sources = [String: String]()
         var results = [MutantResult]()
         for mutant in mutants {
-            let result = try test(mutant, in: copy, runs: runs, timeout: timeout, sources: &sources)
+            var result = try test(mutant, in: copy, runs: runs, timeout: timeout, coverage: coverage, sources: &sources)
+            if let coverage { result.coveredBy = coverage.scenarios(running: mutant) }
             results.append(result)
             log("\(mutant.id)/\(mutants.count) \(mutant.summary): \(result.verdict.name) (\(String(format: "%.1f", result.duration)) s)")
         }
 
-        let report = try StrykerReport(results: results, sources: sources).encoded()
+        let ran = (try? Data(contentsOf: baselineReport)).flatMap(CucumberReportAnnotator.scenarios(in:)) ?? []
+        let report = try StrykerReport(results: results, sources: sources, ran: ran).encoded()
         try report.write(to: options.output.appendingPathComponent("mutation-report.json"))
         let summary = MutationSummary.text(results: results, duration: Date().timeIntervalSince(started))
         try summary.write(to: options.output.appendingPathComponent("summary.txt"), atomically: true, encoding: .utf8)
@@ -182,9 +193,6 @@ public final class MutationRun {
         return mutants.enumerated().map { $1.numbered($0 + 1) }
     }
 
-    /// The settings that keep a run from measuring coverage, which a build with coverage turns on by default.
-    private static let noCoverage = ["CUCUMBER_COVERAGE": "NO"]
-
     /// Builds the copy and runs the tests without a change. Returns how long a mutant's tests may run, or `nil`
     /// after logging why the baseline can't prove anything: the project doesn't build, its tests fail, or they run no test.
     private func runBaseline(in copy: URL) -> TimeInterval? {
@@ -197,8 +205,17 @@ public final class MutationRun {
             return nil
         }
         var baseline = 0.0
+        // Start from nothing, so a stale folder from an earlier run can't pass for this run's coverage.
+        let coverageFolder = options.output.appendingPathComponent("coverage")
+        try? FileManager.default.removeItem(at: coverageFolder)
+        try? FileManager.default.removeItem(at: baselineReport)
         for number in 1...options.baselineRuns {
-            let result = testRunner.test(in: copy, request: TestRequest(settings: Self.noCoverage))
+            // The first run measures the code each scenario runs, into regions.json, and writes the Cucumber report that
+            // lists every scenario the run tests, for the report's `testFiles`; the mutants' runs measure nothing.
+            let request = number == 1
+                ? TestRequest(settings: ["CUCUMBER_COVERAGE_REGIONS": "YES"], measuresCoverage: true, writesReport: true)
+                : TestRequest()
+            let result = testRunner.test(in: copy, request: request)
             let output = contents(of: result.log)
             guard result.succeeded else {
                 log("error: the tests fail without any change (run \(number)), so a failing mutant would prove nothing. Fix them first.\n\(tail(output))")
@@ -209,6 +226,7 @@ public final class MutationRun {
                 try? output.write(to: options.output.appendingPathComponent("baseline.log"), atomically: true, encoding: .utf8)
                 return nil
             }
+            if number == 1 { keep(result, as: baselineReport, coverage: coverageFolder) }
             baseline = max(baseline, result.duration)
         }
         let timeout = max(options.minimumTimeout, baseline * options.timeoutMultiplier)
@@ -216,10 +234,27 @@ public final class MutationRun {
         return timeout
     }
 
-    private func test(_ mutant: Mutant, in copy: URL, runs: URL, timeout: TimeInterval, sources: inout [String: String]) throws -> MutantResult {
+    /// Copies the baseline's Cucumber report and coverage out of the runner's folders, which are deleted with the copy.
+    private func keep(_ baseline: TestRun, as report: URL, coverage: URL) {
+        if let source = baseline.cucumberReport { try? FileManager.default.copyItem(at: source, to: report) }
+        if let source = baseline.coverageFolder { try? FileManager.default.copyItem(at: source, to: coverage) }
+    }
+
+    private func test(
+        _ mutant: Mutant,
+        in copy: URL,
+        runs: URL,
+        timeout: TimeInterval,
+        coverage: ScenarioCoverage?,
+        sources: inout [String: String]
+    ) throws -> MutantResult {
         let path = copy.appendingPathComponent(mutant.file)
         let original = try String(contentsOf: path, encoding: .utf8)
         sources[mutant.file] = original
+        // A comment in the code marks it as one no test can notice: neither tested nor counted.
+        if let reason = mutant.ignoredReason { return MutantResult(mutant: mutant, verdict: .ignored(reason: reason), duration: 0) }
+        // No scenario ran this code without the change, so none can notice the change: don't spend a build on it.
+        if let coverage, coverage.scenarios(running: mutant).isEmpty { return MutantResult(mutant: mutant, verdict: .noCoverage, duration: 0) }
         let mutated = try mutant.applied(to: original)
         try mutated.write(to: path, atomically: true, encoding: .utf8)
         // Put the file back whatever happens next. The copy is deleted anyway; this keeps the next mutant clean.
@@ -228,7 +263,7 @@ public final class MutationRun {
         guard testRunner.build(in: copy, timeout: nil).succeeded else {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
-        let settings = Self.noCoverage.merging(["CUCUMBERSWIFT_MUTANT": String(mutant.id)]) { _, new in new }
+        let settings = ["CUCUMBERSWIFT_MUTANT": String(mutant.id), "CUCUMBER_COVERAGE": "NO"]
         let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? contents(of: result.log).write(to: logFile, atomically: true, encoding: .utf8)
@@ -244,23 +279,28 @@ public final class MutationRun {
             verdict = .killed(by: [])
         }
         let outcome = MutantResult(mutant: mutant, verdict: verdict, duration: Date().timeIntervalSince(started))
-        if let report = result.cucumberReport, let data = try? Data(contentsOf: report) {
-            // The report as the run wrote it, next to its log.
-            try? data.write(to: runs.appendingPathComponent("mutant-\(mutant.id).json"))
-        }
-        if let report = result.cucumberReport, let data = try? Data(contentsOf: report),
-           let annotated = CucumberReportAnnotator.annotate(data, result: outcome) {
+        var killedBy = [ScenarioID]()
+        let report = result.cucumberReport.flatMap { try? Data(contentsOf: $0) }
+        // The report as the run wrote it, next to its log.
+        if let report { try? report.write(to: runs.appendingPathComponent("mutant-\(mutant.id).json")) }
+        if let report, let annotated = CucumberReportAnnotator.annotate(report, result: outcome) {
             try annotated.data.write(to: options.output.appendingPathComponent("cucumber-mutant-\(mutant.id).json"))
-            if case .killed = verdict { verdict = .killed(by: annotated.failedSteps) }
+            if case .killed = verdict {
+                verdict = .killed(by: annotated.failedSteps)
+                killedBy = annotated.failedScenarios
+            }
         }
-        return MutantResult(mutant: mutant, verdict: verdict, duration: outcome.duration)
+        return MutantResult(mutant: mutant, verdict: verdict, duration: outcome.duration, killedBy: killedBy)
     }
 
     /// What the runner wrote to `log`, or nothing when it wrote no log.
     private func contents(of log: URL?) -> String {
         log.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
     }
+}
 
+// Reading the copy's files and the tools' output.
+extension MutationRun {
     /// The Swift files under the source folders, in the copy, not in build folders.
     private func swiftFiles(in copy: URL) -> [URL] {
         var files = [URL]()

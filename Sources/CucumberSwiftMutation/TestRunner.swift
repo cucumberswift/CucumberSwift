@@ -5,24 +5,13 @@
 
 import Foundation
 
-/// A scenario: the path of its feature file in the test bundle, and the line the scenario starts on.
-public struct ScenarioID: Hashable, Codable, Sendable {
-    /// The feature file's path relative to the test target's feature folder, such as `Features/Voting.feature`.
-    public var feature: String
-    public var line: Int
-
-    public init(feature: String, line: Int) {
-        self.feature = feature
-        self.line = line
-    }
-}
-
 /// What one test run is asked to do.
 public struct TestRequest: Sendable {
     /// CucumberSwift's settings for the run, such as `CUCUMBERSWIFT_MUTANT`. Never the tool's own environment:
     /// each runner passes them its own way.
     public var settings: [String: String]
-    /// Measure which scenario runs which code. The runner picks the folder, and returns it in `TestRun.coverageFolder`.
+    /// Measure which scenario runs which code. The runner picks the folder that CucumberSwift writes its `run-*` folders
+    /// to, and returns it in `TestRun.coverageFolder`.
     public var measuresCoverage: Bool
     /// Write the Cucumber JSON report. The runner picks the file, and returns it in `TestRun.cucumberReport`.
     public var writesReport: Bool

@@ -37,7 +37,10 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
     }
 
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
-        let result = commands.run(swift, ["build", "--build-tests", "--enable-code-coverage"] + arguments, in: copy, environment: [:], timeout: timeout)
+        // As `swift test --enable-code-coverage` builds, so that a run can measure the code each scenario runs. Every
+        // build uses the same flags, so a mutant's rebuilds only what it changed.
+        let coverage = ["-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"]
+        let result = commands.run(swift, ["build", "--build-tests"] + arguments + coverage, in: copy, environment: [:], timeout: timeout)
         return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
     }
 
@@ -53,7 +56,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             report = file
         }
         if request.measuresCoverage {
-            let folder = folder.appendingPathComponent("coverage/run-\(number)")
+            let folder = folder.appendingPathComponent("coverage-\(number)")
             environment["CUCUMBER_COVERAGE"] = "YES"
             environment["CUCUMBER_COVERAGE_PATH"] = folder.path
             coverage = folder

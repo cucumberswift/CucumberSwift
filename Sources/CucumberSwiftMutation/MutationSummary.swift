@@ -15,13 +15,17 @@ public enum MutationSummary {
         } else {
             lines.append("Mutation score: none, because no mutant was tested")
         }
-        lines.append("Killed \(score.killed), timed out \(score.timedOut), survived \(score.survived), did not build \(score.unviable)")
+        lines.append("Killed \(score.killed), timed out \(score.timedOut), survived \(score.survived), did not build \(score.unviable), "
+            + "ignored \(score.ignored), in code no scenario runs \(score.noCoverage)")
         lines.append("Run time: \(String(format: "%.0f", duration)) s")
         let survivors = results.filter { $0.verdict == .survived }
         if !survivors.isEmpty {
             lines.append("")
             lines.append("Mutants that no test noticed:")
-            for result in survivors { lines.append("  \(result.mutant.summary)") }
+            for result in survivors {
+                lines.append("  \(result.mutant.summary)")
+                if !result.coveredBy.isEmpty { lines.append("    Scenarios that run this code: " + result.coveredBy.map(\.description).joined(separator: ", ")) }
+            }
         }
         return lines.joined(separator: "\n") + "\n"
     }

@@ -59,7 +59,7 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         try runner.prepare(copy: copy)
         let build = runner.build(in: copy, timeout: nil)
         XCTAssertTrue(build.succeeded)
-        XCTAssertEqual(commands.calls.first?.arguments, ["build", "--build-tests", "--enable-code-coverage", "--disable-sandbox"])
+        XCTAssertEqual(commands.calls.first?.arguments, ["build", "--build-tests", "--disable-sandbox", "-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"])
         XCTAssertEqual(try String(contentsOf: XCTUnwrap(build.log), encoding: .utf8), "Build complete!")
     }
 
@@ -238,7 +238,7 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         var scoped = target
         scoped.testTarget = "VotingTests"
         let runner = XcodebuildRunner(target: scoped, commands: commands)
-        _ = runner.test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3)]))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")]))
         let arguments = try XCTUnwrap(commands.calls.first?.arguments)
         let index = try XCTUnwrap(arguments.firstIndex(of: "-only-testing"))
         XCTAssertEqual(arguments[index + 1], "VotingTests/Voting|AnAdultCanVote")
@@ -247,7 +247,7 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
     func testScenariosNeedTheTestTarget() throws {
         let commands = commands(total: 1)
         let run = XcodebuildRunner(target: target, commands: commands).test(
-            in: try makeCopy(), request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3)]))
+            in: try makeCopy(), request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")]))
         XCTAssertNotEqual(run.status, 0)
         XCTAssertTrue(commands.calls.isEmpty, "Nothing runs when the scenarios can't be named")
         XCTAssertTrue(try String(contentsOf: XCTUnwrap(run.log), encoding: .utf8).contains("--test-target"))
@@ -287,31 +287,31 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
     func testNamesTheClassOfAScenarioByItsLine() throws {
         try write(voting, to: "Tests/Features/Voting.feature")
         var names = ScenarioTestNames(root: folder)
-        XCTAssertEqual(try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3)), ["Voting|AnAdultCanVote"])
+        XCTAssertEqual(try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")), ["Voting|AnAdultCanVote"])
     }
 
     func testAnOutlinesLineNamesEveryRowAndARowsLineNamesThatRow() throws {
         try write(voting, to: "Features/Voting.feature")
         var names = ScenarioTestNames(root: folder)
-        let all = try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 7))
+        let all = try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 7, name: ""))
         XCTAssertEqual(all.count, 2)
         XCTAssertTrue(all.allSatisfy { $0.hasPrefix("Voting|Ages") })
-        let row = try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 14))
+        let row = try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 14, name: ""))
         XCTAssertEqual(row, [all[1]])
     }
 
     func testReadableNamesAndTheConfiguredDelimiter() throws {
         try write(voting, to: "Features/Voting.feature")
         var readable = ScenarioTestNames(root: folder, readable: true)
-        XCTAssertEqual(try readable.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3)), ["Voting \u{203A} An adult can vote"])
+        XCTAssertEqual(try readable.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")), ["Voting \u{203A} An adult can vote"])
         var custom = ScenarioTestNames(root: folder, delimiter: "_")
-        XCTAssertEqual(try custom.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3)), ["Voting_AnAdultCanVote"])
+        XCTAssertEqual(try custom.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")), ["Voting_AnAdultCanVote"])
     }
 
     func testSeveralScenariosGiveEachClassOnce() throws {
         try write(voting, to: "Features/Voting.feature")
         var names = ScenarioTestNames(root: folder)
-        let id = ScenarioID(feature: "Features/Voting.feature", line: 3)
+        let id = ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")
         XCTAssertEqual(try names.classNames(for: [id, id]), ["Voting|AnAdultCanVote"])
     }
 
@@ -320,13 +320,13 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
         try write(voting, to: "B/Features/Voting.feature")
         try write(voting, to: "B/Other/Voting.feature")
         var names = ScenarioTestNames(root: folder)
-        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Other/Voting.feature", line: 4))) {
+        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Other/Voting.feature", line: 4, name: ""))) {
             XCTAssertTrue("\($0)".contains("no scenario at line 4"), "\($0)")
         }
-        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Features/Missing.feature", line: 3))) {
+        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Features/Missing.feature", line: 3, name: ""))) {
             XCTAssertTrue("\($0)".contains("No feature file"), "\($0)")
         }
-        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3))) {
+        XCTAssertThrowsError(try names.classNames(for: ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote"))) {
             XCTAssertTrue("\($0)".contains("2 feature files"), "\($0)")
         }
     }
