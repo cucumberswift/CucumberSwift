@@ -125,11 +125,16 @@ struct CoverageReport {
             let share = Self.padded(Self.percent(scenario.share), 9)
             let own = Self.padded("\(scenario.ownRegions)", 13)
             let time = Self.padded(String(format: "%.2fs", scenario.duration), 10)
-            var note = scenario.addsNothing ? (scores.isMutationAware ? ", adds nothing of its own" : ", adds no coverage of its own") : ""
-            if let overlap = scenario.overlap { note = ", overlaps line \(overlap.line)" }
-            lines.append("\(share)\(own)\(time)  \(scenario.name) (line \(scenario.line)\(note))")
+            lines.append("\(share)\(own)\(time)  \(scenario.name) (line \(scenario.line)\(note(for: scenario)))")
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// What the summary adds after a scenario's line: that it adds nothing of its own, or the line it overlaps.
+    private func note(for scenario: CoverageScores.ScenarioScore) -> String {
+        if let overlap = scenario.overlap { return ", overlaps line \(overlap.line)" }
+        guard scenario.addsNothing else { return "" }
+        return scores.isMutationAware ? ", adds nothing of its own" : ", adds no coverage of its own"
     }
 
     /// The issues for the scores past their levels: at `line`, the line of the `subject`, "Feature" or
