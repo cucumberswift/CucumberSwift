@@ -22,7 +22,8 @@ private enum MutationError: Error, CustomStringConvertible {
 /// Changes the code under test in a temporary copy of the package, runs the package's tests against each
 /// change, and reports the changes that no test noticed. The package itself is never changed.
 ///
-/// `--target` (repeatable) limits it to the code of those targets. `--dry-run` lists the changes without
+/// `--target` (repeatable) limits it to the code of those targets. `--tags` chooses the scenarios, as `CUCUMBER_TAGS`
+/// does, for Xcode, where a plugin can't be given environment variables. `--dry-run` lists the changes without
 /// testing them. `--max-mutants`, `--timeout-multiplier`, `--baseline-runs` and `--work-dir` tune the run;
 /// the reports go to the plugin's folder in the package's `.build`, or to `--output`.
 @main
@@ -32,7 +33,7 @@ struct MutationTestingPlugin: CommandPlugin {
     /// Throws when an option that takes a value has none, as at the end of the arguments or before another option:
     /// the argument extractor drops it without a word.
     private static func requireValues(in arguments: [String]) throws {
-        for option in valueOptions + ["target"] {
+        for option in valueOptions + ["target", "tags"] {
             for (index, argument) in arguments.enumerated() where argument == "--\(option)" {
                 let value = arguments.indices.contains(index + 1) ? arguments[index + 1] : nil
                 if value == nil || value?.hasPrefix("--") == true { throw MutationError.missingValue("--\(option)") }
@@ -65,6 +66,7 @@ struct MutationTestingPlugin: CommandPlugin {
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
         let dryRun = extractor.extractFlag(named: "dry-run") > 0
+        let tags = extractor.extractOption(named: "tags").last
         var passed = [String]()
         for option in Self.valueOptions {
             for value in extractor.extractOption(named: option) { passed += ["--\(option)", value] }
@@ -86,6 +88,12 @@ struct MutationTestingPlugin: CommandPlugin {
         let process = Process()
         process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
         process.arguments = toolArguments
+        // The tool passes its environment on to the tests, so `--tags` reaches them as CUCUMBER_TAGS.
+        if let tags {
+            var environment = ProcessInfo.processInfo.environment
+            environment["CUCUMBER_TAGS"] = tags
+            process.environment = environment
+        }
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()
         process.waitUntilExit()
