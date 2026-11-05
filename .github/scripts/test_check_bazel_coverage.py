@@ -59,6 +59,19 @@ class CheckBazelCoverageTests(unittest.TestCase):
         manifest = good_manifest() | {"features": []}
         self.assertIn("no feature scores", self.check(manifest, GOOD_FILES)[0])
 
+    def test_a_folder_of_plain_files_passes_and_fails_like_a_zip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            run = os.path.join(directory, "_cucumberCoverage", "run-1")
+            os.makedirs(run)
+            with open(os.path.join(run, "manifest.json"), "w") as file:
+                json.dump(good_manifest(), file)
+            for name, content in GOOD_FILES.items():
+                with open(os.path.join(run, name), "w") as file:
+                    file.write(content)
+            self.assertEqual(check_bazel_coverage.check(directory, 2), [])
+            os.remove(os.path.join(run, "b-Tests.profraw"))
+            self.assertIn("b-Tests.profraw is missing or empty", check_bazel_coverage.check(directory, 2)[0])
+
     def test_no_manifest_fails(self):
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "outputs.zip")
