@@ -720,6 +720,27 @@ jobs:
             status=1
           fi
           exit $status
+      # Coverage and redundancy scores on tvOS and watchOS (#526): the tests above run without code
+      # coverage, so the coverage tests skip there. This runs the CoverageDefaultsPackage fixture, which
+      # turns it on, and each runner must print the Grading feature's scores.
+      - name: Measure coverage on tvOS and watchOS Simulators
+        if: ${{ !cancelled() }}
+        run: |
+          status=0
+          for platform in tvOS watchOS; do
+            destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
+            log="$RUNNER_TEMP/coverage-$platform.log"
+            (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
+              -destination "$destination" -enableCodeCoverage YES -skipPackagePluginValidation > "$log" 2>&1) || status=1
+            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+            scores=$(grep -c 'CucumberSwift coverage: Grading: ' "$log" || true)
+            echo "$platform: ${scores:-0} coverage summaries (2 expected, one for each runner)"
+            if [ "${scores:-0}" -ne 2 ]; then
+              echo "::error::CucumberSwift scored the Grading feature ${scores:-0} times on $platform, not 2."
+              status=1
+            fi
+          done
+          exit $status
 
   # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job
   # uses, so that something checks the back-deployed Swift concurrency runtime and other

@@ -48,6 +48,8 @@ description = "Build and test every project in Fixtures/"
 # A fixture with an xcode-version file, such as 26.4, runs with /Applications/Xcode_<version>.app,
 # so CI checks it with exactly the Xcode the docs give; without that Xcode it fails in CI and
 # runs with the selected Xcode elsewhere.
+# A Swift package fixture with a swift-test-arguments file runs `swift test` with the arguments it gives,
+# such as --enable-code-coverage.
 # A fixture's output must have no warnings from CucumberSwift other than those its expected-warnings
 # lists, and every one of those (.github/scripts/fixture-warnings.sh). A fixture that uses the
 # CucumberSwiftLint plugin must show that the plugin ran: its stamps are deleted first, since the
@@ -121,7 +123,11 @@ for fixture in Fixtures/*/; do
   build="$fixture/.build"
   if [ -f "$fixture/Package.swift" ]; then
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
-    with_xcode swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
+    # A swift-test-arguments file gives the fixture's extra `swift test` arguments, such as --enable-code-coverage.
+    swift_test_arguments=
+    if [ -f "$fixture/swift-test-arguments" ]; then swift_test_arguments=$(cat "$fixture/swift-test-arguments"); fi
+    # shellcheck disable=SC2086
+    with_xcode swift test --package-path "$fixture" $swift_test_arguments > "$log" 2>&1 || status=$?
   fi
   if [ -f "$fixture/Project.swift" ]; then
     destination='platform=macOS'
