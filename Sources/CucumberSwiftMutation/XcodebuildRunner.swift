@@ -48,6 +48,9 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let xcodebuild: String
     private let xcrun: String
     private let commands: CommandRunning
+    /// The tool's environment. Its `CUCUMBER_*` variables reach the tests, as they do with SwiftPM, where the tests
+    /// inherit the tool's environment.
+    private let environment: [String: String]
     private let lock = NSLock()
     private var runs = 0
 
@@ -63,8 +66,10 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         target: Target,
         xcodebuild: String = "/usr/bin/xcodebuild",
         xcrun: String = "/usr/bin/xcrun",
-        commands: CommandRunning = ProcessRunner()
+        commands: CommandRunning = ProcessRunner(),
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) {
+        self.environment = environment
         self.target = target
         self.xcodebuild = xcodebuild
         self.xcrun = xcrun
@@ -100,7 +105,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public func test(in copy: URL, request: TestRequest) -> TestRun {
         let folder = runnerFolder(for: copy)
         let number = nextRun()
-        var settings = request.settings
+        var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
+        settings.merge(request.settings) { _, new in new }
         var report: URL?
         var coverage: URL?
         if request.writesReport {
@@ -125,9 +131,9 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
         }
         // The prefixed variables are how xcodebuild gives the tests a setting.
-        var environment = [String: String]()
-        for (key, value) in settings { environment["TEST_RUNNER_\(key)"] = value }
-        let result = commands.run(xcodebuild, arguments, in: copy, environment: environment, timeout: request.timeout)
+        var prefixed = [String: String]()
+        for (key, value) in settings { prefixed["TEST_RUNNER_\(key)"] = value }
+        let result = commands.run(xcodebuild, arguments, in: copy, environment: prefixed, timeout: request.timeout)
         let log = write(result.output, named: "test-\(number)", in: copy)
         return TestRun(
             status: result.status,
@@ -146,7 +152,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         guard let testTarget = target.testTarget else {
             throw Failure(description: "Running only some scenarios needs the test target's name: pass --test-target")
         }
-        var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: ProcessInfo.processInfo.environment))
+        var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: environment))
         return try names.testNames(for: scenarios).flatMap { ["-only-testing", "\(testTarget)/\(ScenarioTestNames.testClass)/\($0)"] }
     }
 

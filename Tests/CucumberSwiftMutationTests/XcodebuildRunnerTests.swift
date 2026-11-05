@@ -89,6 +89,18 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(run.succeeded)
     }
 
+    func testTheToolsCucumberVariablesReachTheTestsAndTheRequestWins() throws {
+        let commands = commands(total: 2)
+        let environment = ["CUCUMBER_TAGS": "@smoke", "CUCUMBER_COVERAGE": "YES", "PATH": "/usr/bin", "HOME": "/h"]
+        let runner = XcodebuildRunner(target: target, commands: commands, environment: environment)
+        _ = runner.test(in: try makeCopy(), request: TestRequest(settings: ["CUCUMBER_COVERAGE": "NO"]))
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_TAGS"], "@smoke")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_COVERAGE"], "NO", "A setting of the request replaces the tool's")
+        XCTAssertNil(call.environment["TEST_RUNNER_PATH"], "Only CUCUMBER_ variables are passed on")
+        XCTAssertNil(call.environment["TEST_RUNNER_HOME"])
+    }
+
     func testCountsTheTestsFromTheResultBundleAndNotFromWhatXcodePrinted() throws {
         // Xcode printed success, and ran nothing: the bundle says so.
         let commands = commands(total: 0)
