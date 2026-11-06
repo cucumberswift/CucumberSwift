@@ -13,6 +13,7 @@ public struct WorkFolder {
         case anotherRunIsActive(pid: Int32)
         case copyFailed(String)
         case pathHasSpace(String)
+        case pathInBuildFolder(String)
 
         public var description: String {
             switch self {
@@ -23,6 +24,9 @@ public struct WorkFolder {
                     return "Another mutation run (process \(pid)) is still active for this package."
                 case .copyFailed(let message):
                     return "Couldn't copy the project: \(message)"
+                case .pathInBuildFolder(let path):
+                    return "The folder for the temporary copy is in a .build folder (\(path)), and code coverage leaves out the code "
+                        + "there, so no scenario would run a mutant. Pass --work-dir with a path outside .build."
                 case .pathHasSpace(let path):
                     return "The folder for the temporary copy has a space in its path (\(path)), and Swift Testing finds no tests "
                         + "in a package whose path has one. Pass --work-dir with a path that has no space."
@@ -49,12 +53,25 @@ public struct WorkFolder {
     /// The folder for the copy, in the order: the one the user gave, the package's `.build` folder (writable, ignored by
     /// git, on the same volume so that files can be cloned), then the system temporary folder. Throws when none is
     /// writable. It never falls back to the project itself.
-    public static func chooseLocation(explicit: URL?, root: URL, temporary: URL = URL(fileURLWithPath: NSTemporaryDirectory())) throws -> URL {
-        let candidates = [explicit, root.appendingPathComponent(".build/mutation-testing/work"), temporary.appendingPathComponent("cucumberswift-mutation")]
+    /// The folder for the temporary copy: `explicit` when given, then the temporary folder, then the user's caches. Never
+    /// a folder in the package at `root`, nor one in a `.build` folder: code coverage leaves out the code under `.build`,
+    /// where dependencies are, so no scenario would seem to run a mutant.
+    public static func chooseLocation(explicit: URL?,
+                                      root: URL,
+                                      temporary: URL = URL(fileURLWithPath: NSTemporaryDirectory()),
+                                      caches: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first) throws -> URL {
+        if let explicit {
+            if explicit.path.contains(" ") { throw Failure.pathHasSpace(explicit.path) }
+            if explicit.pathComponents.contains(".build") { throw Failure.pathInBuildFolder(explicit.path) }
+        }
+        let candidates = [explicit, temporary.appendingPathComponent("cucumberswift-mutation"), caches?.appendingPathComponent("cucumberswift-mutation")]
             .compactMap { $0 }
-        if let explicit, explicit.path.contains(" ") { throw Failure.pathHasSpace(explicit.path) }
+        let inPackage = root.standardizedFileURL.path + "/"
         // A folder with a space in its path would make Swift Testing find no tests in the copy, so it is skipped.
-        for candidate in candidates where !candidate.path.contains(" ") && isWritable(candidate) { return candidate }
+        for candidate in candidates where !candidate.path.contains(" ") && !candidate.pathComponents.contains(".build")
+            && !(candidate.standardizedFileURL.path + "/").hasPrefix(inPackage) && isWritable(candidate) {
+            return candidate
+        }
         throw Failure.noWritableFolder(tried: candidates.map(\.path))
     }
 

@@ -79,24 +79,18 @@ struct MutationTestingPlugin: CommandPlugin {
         // Built step by step: one long concatenation is too slow for some compilers to type-check.
         var toolArguments: [String] = ["--root", root.path]
         for source in sources { toolArguments += ["--sources", source] }
-        // The plugin's own folder is writable without asking, and it is in the package's .build folder, which git
-        // ignores. The reports go there unless the user chose a place. The copy does not: that folder's path has a
-        // space in it ("Mutation Testing"), and Swift Testing finds no tests in a package whose path has one. The tool
-        // picks a folder for the copy itself.
-        let output = Self.outputFolder(passed: passed, default: context.pluginWorkDirectoryURL.appending(path: "reports"))
+        // The reports go to .build/mutation-testing in the package, as from the command-line tool, so a test run reads
+        // the last report whichever way the command ran. Xcode would put the plugin's own folder in DerivedData. The
+        // package's .build folder needs the permission to write to the package, which git ignores.
+        let output = Self.outputFolder(passed: passed, default: root.appending(path: ".build/mutation-testing"))
         if !passed.contains("--output") { toolArguments += ["--output", output.path] }
         toolArguments += passed
         if dryRun { toolArguments.append("--dry-run") }
+        if let tags { toolArguments += ["--tags", tags] }
         toolArguments.append("--disable-prebuilts")
         let process = Process()
         process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
         process.arguments = toolArguments
-        // The tool passes its environment on to the tests, so `--tags` reaches them as CUCUMBER_TAGS.
-        if let tags {
-            var environment = ProcessInfo.processInfo.environment
-            environment["CUCUMBER_TAGS"] = tags
-            process.environment = environment
-        }
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()
         process.waitUntilExit()

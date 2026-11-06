@@ -91,22 +91,31 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         XCTAssertEqual(try WorkFolder.chooseLocation(explicit: explicit, root: root), explicit)
     }
 
-    func testFallsBackToTheBuildFolderThenTheTemporaryFolder() throws {
+    func testFallsBackToTheTemporaryFolderThenTheCaches() throws {
         let root = try makePackage()
         let readOnly = folder.appendingPathComponent("readonly")
         try FileManager.default.createDirectory(at: readOnly, withIntermediateDirectories: true)
         try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: readOnly.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: readOnly.path) }
-        XCTAssertEqual(try WorkFolder.chooseLocation(explicit: readOnly.appendingPathComponent("inside"), root: root).path,
-                       root.appendingPathComponent(".build/mutation-testing/work").path)
-        // With the package's own folder unwritable too, the temporary folder is next.
-        let lockedPackage = folder.appendingPathComponent("locked")
-        try FileManager.default.createDirectory(at: lockedPackage, withIntermediateDirectories: true)
-        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: lockedPackage.path)
-        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: lockedPackage.path) }
         let temporary = folder.appendingPathComponent("temporary")
-        XCTAssertEqual(try WorkFolder.chooseLocation(explicit: nil, root: lockedPackage, temporary: temporary).path,
+        let caches = folder.appendingPathComponent("caches")
+        XCTAssertEqual(try WorkFolder.chooseLocation(explicit: readOnly.appendingPathComponent("inside"), root: root, temporary: temporary, caches: caches).path,
                        temporary.appendingPathComponent("cucumberswift-mutation").path)
+        // With the temporary folder unwritable too, the user's caches are next.
+        XCTAssertEqual(try WorkFolder.chooseLocation(explicit: nil, root: root, temporary: readOnly, caches: caches).path,
+                       caches.appendingPathComponent("cucumberswift-mutation").path)
+    }
+
+    func testNeverPutsTheCopyInABuildFolderOrInThePackage() throws {
+        let root = try makePackage()
+        let inBuild = root.appendingPathComponent(".build/mutation-testing/work")
+        XCTAssertThrowsError(try WorkFolder.chooseLocation(explicit: inBuild, root: root)) {
+            XCTAssertEqual($0 as? WorkFolder.Failure, .pathInBuildFolder(inBuild.path))
+        }
+        // A temporary folder inside the package is skipped for the caches.
+        let caches = folder.appendingPathComponent("caches")
+        XCTAssertEqual(try WorkFolder.chooseLocation(explicit: nil, root: root, temporary: root.appendingPathComponent("tmp"), caches: caches).path,
+                       caches.appendingPathComponent("cucumberswift-mutation").path)
     }
 
     func testRefusesAnExplicitFolderWithASpaceAndSkipsOtherCandidatesThatHaveOne() throws {
@@ -135,7 +144,14 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
         try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: locked.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
-        XCTAssertThrowsError(try WorkFolder.chooseLocation(explicit: locked.appendingPathComponent("a"), root: locked, temporary: locked.appendingPathComponent("b"))) {
+        let elsewhere = folder.appendingPathComponent("elsewhere")
+        try FileManager.default.createDirectory(at: elsewhere, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: elsewhere.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: elsewhere.path) }
+        XCTAssertThrowsError(try WorkFolder.chooseLocation(explicit: elsewhere.appendingPathComponent("a"),
+                                                           root: locked,
+                                                           temporary: elsewhere.appendingPathComponent("b"),
+                                                           caches: elsewhere.appendingPathComponent("c"))) {
             guard case .noWritableFolder(let tried)? = $0 as? WorkFolder.Failure else { return XCTFail("Wrong error: \($0)") }
             XCTAssertEqual(tried.count, 3)
         }

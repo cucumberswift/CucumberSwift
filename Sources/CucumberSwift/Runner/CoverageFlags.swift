@@ -79,7 +79,7 @@ extension Cucumber {
     }
 
     /// Whether each feature gets a Mutation test: off by default. It needs coverage on, because it matches
-    /// each mutant of the last `swift package mutation-test` run to the scenarios that run its code. The
+    /// each mutant of the last `cucumberswift-mutation-test` run to the scenarios that run its code. The
     /// test fails when any mutant in that code survived: a scenario passes with the code changed, so it
     /// doesn't check that code. Set this to `true`, or the environment variable `CUCUMBER_MUTATION_TESTING`
     /// to `YES`, and set ``mutationReport``. This variable, when set, wins over the environment variable.
@@ -89,7 +89,7 @@ extension Cucumber {
         set { CoverageSettings.storage.mutationTesting = newValue }
     }
 
-    /// The report of the `swift package mutation-test` run that ``mutationTesting`` checks,
+    /// The report of the `cucumberswift-mutation-test` run that ``mutationTesting`` checks,
     /// `mutation-report.json`, as a full path. Set this, or the environment variable `CUCUMBER_MUTATION_REPORT`.
     /// This variable, when set, wins over the environment variable. Set it in your `StepImplementation`'s
     /// `setupSteps()`.

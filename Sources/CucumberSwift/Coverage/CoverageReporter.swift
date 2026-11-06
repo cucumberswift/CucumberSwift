@@ -139,8 +139,8 @@ final class CoverageReporter: CucumberTestObserver {
         }
         let line = Int(feature.location.line)
         guard let path = readSettings.mutationReport else {
-            let message = "Mutation testing is on, but no mutation report is set. Run `swift package mutation-test`, then set "
-                + "Cucumber.mutationReport or CUCUMBER_MUTATION_REPORT to the mutation-report.json it writes."
+            let message = "Mutation testing is on, but no mutation report is set. Run `cucumberswift-mutation-test`, then set "
+                + "Cucumber.mutationReport or CUCUMBER_MUTATION_REPORT to the mutation-report.json it writes to .build/mutation-testing."
             record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
             return nil
         }
@@ -148,7 +148,7 @@ final class CoverageReporter: CucumberTestObserver {
         mutationReport = read
         switch read {
             case .failure(let error):
-                let message = "Mutation testing is on, but \(error.message). Run `swift package mutation-test` to write it."
+                let message = "Mutation testing is on, but \(error.message). Run `cucumberswift-mutation-test` to write it."
                 record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
                 return nil
             case .success(let report):
