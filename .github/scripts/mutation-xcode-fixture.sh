@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Runs mutation testing on Fixtures/MutationTestingTuist, an Xcode project, as a project would: with `xcodebuild`,
-# a scheme and a destination. The run must find the mutants, and kill and keep the ones, that the fixture's
-# expected-mutants lists (.github/scripts/mutation_fixture.py).
+# Runs mutation testing on Fixtures/MutationTestingTuist, an Xcode project, as a project would: from the Run Script
+# build phase of the fixture's Mutation target, where the command runs `xcodebuild` with a scheme and a destination
+# and prints each surviving mutant as a warning. The run must find the mutants, and kill and keep the ones, that the
+# fixture's expected-mutants lists, and the build log must warn at each survivor (.github/scripts/mutation_fixture.py).
+# It then runs XcodebuildRunnerFixtureTests, which selects one scenario of each test runner with xcodebuild.
 # Used by CI's Fixture tests, after `mise run test-fixtures`.
 #
 #   .github/scripts/mutation-xcode-fixture.sh <directory>
@@ -10,7 +12,8 @@
 # fixture's files in <directory>, which depends on CucumberSwift by URL, as a project does: a git repository of the
 # checked-out commit, tagged 999.0.0, in <directory>, which the fixture's Project.swift reads from TUIST_CUCUMBERSWIFT.
 # The copy has no project or build products from `mise run test-fixtures`, which the run would copy and hash twice.
-# The reports go to <directory>/mutation-MutationTestingTuist. The fixture in this checkout stays as it is.
+# The reports go to <directory>/mutation-MutationTestingTuist and the build log to
+# <directory>/mutation-MutationTestingTuist-build.log. The fixture in this checkout stays as it is.
 set -euo pipefail
 
 dir=${1:?usage: mutation-xcode-fixture.sh <directory>}
@@ -31,19 +34,26 @@ mkdir -p "$project"
 rsync -a --exclude Derived --exclude .build --exclude '*.xcodeproj' --exclude '*.xcworkspace' "$fixture/" "$project/"
 mise exec -- tuist generate --no-open --path "$project"
 
-# The Macros trait, because the tool finds the mutants with swift-syntax. Resolving rewrites this checkout's
-# Package.resolved, so the step puts it back.
+# Mutation testing runs from the Run Script build phase of the fixture's Mutation target, as a project runs it to see
+# the surviving mutants as warnings in Xcode. The phase runs the command from this checkout, so it needs the Macros
+# trait, which the tool needs to read Swift code with swift-syntax. Resolving rewrites this checkout's Package.resolved,
+# so the step puts it back. The build log has the command's output, with each survivor as a warning.
+export CUCUMBERSWIFT_CHECKOUT="$PWD"
+export MUTATION_REPORTS="$reports"
+log="$(cd "$dir" && pwd -P)/mutation-$name-build.log"
 status=0
-.github/scripts/keep-package-resolved.sh swift run --traits Macros cucumberswift-mutation-test \
-  --root "$project" \
-  --project "$name.xcodeproj" \
-  --scheme "$name" \
-  --destination "platform=macOS" \
-  --output "$reports" \
-  --baseline-runs 1 \
-  --minimum-timeout 120 || status=$?
+.github/scripts/keep-package-resolved.sh xcodebuild build \
+  -project "$project/$name.xcodeproj" \
+  -scheme Mutation \
+  -destination "platform=macOS" \
+  -derivedDataPath "$(cd "$dir" && pwd -P)/mutation-$name-build" \
+  -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$log" || status=${PIPESTATUS[0]}
 if [ "$status" -ne 0 ]; then
-  echo "error: $name: mutation testing exited with status $status"
+  echo "error: $name: the build with the mutation testing phase exited with status $status"
   exit "$status"
 fi
-python3 .github/scripts/mutation_fixture.py "$fixture" "$reports"
+python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
+
+# The same project, one scenario at a time: the runner selects an XCTest scenario and a Swift Testing scenario with
+# the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the folder.
+MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests

@@ -22,8 +22,16 @@ public struct ScenarioTestNames {
         public let description: String
     }
 
+    /// Which of CucumberSwift's runners runs a scenario's feature file.
+    public enum Runner: Equatable, Sendable {
+        case xctest
+        case swiftTesting
+    }
+
     /// The class that holds the test of each scenario, with a test per scenario.
     public static let testClass = "CucumberScenarioTest"
+    /// The suite that holds a Swift Testing target's feature suites.
+    public static let swiftTestingSuite = "CucumberFeatures"
 
     private let root: URL
     private let readable: Bool
@@ -91,6 +99,46 @@ public struct ScenarioTestNames {
             throw Failure(description: "\(scenario.feature) has no scenario at line \(scenario.line)")
         }
         return names
+    }
+
+    /// The runner of the feature file of `scenario`: Swift Testing when the Swift files next to the feature file, or in the
+    /// nearest folder above it that has any, import `CucumberSwiftTesting`, and XCTest otherwise. The step definitions of a
+    /// test target sit with its feature folder, as in `Tests/Features/Voting.feature` and `Tests/StepDefinitions.swift`.
+    public mutating func runner(for scenario: ScenarioID) throws -> Runner {
+        var folder = try file(for: scenario.feature).deletingLastPathComponent()
+        let top = root.standardizedFileURL.pathComponents.count
+        while folder.standardizedFileURL.pathComponents.count >= top {
+            let swiftFiles = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+                .filter { $0.pathExtension == "swift" }
+            if !swiftFiles.isEmpty {
+                let importsIt = swiftFiles.contains { ((try? String(contentsOf: $0, encoding: .utf8)) ?? "").contains("import CucumberSwiftTesting") }
+                return importsIt ? .swiftTesting : .xctest
+            }
+            folder.deleteLastPathComponent()
+        }
+        return .xctest
+    }
+
+    /// The identifier, below its test target, of the Swift Testing test that runs `scenario`, as CucumberSwift's Swift
+    /// Testing plugin generates it: `CucumberFeatures/Voting/AnAdultCanVote(_:)`. A scenario outline is one test, so a line in
+    /// an outline names the outline. The names come from `FeatureFile`, as the plugin's do, and, as with XCTest, the helper
+    /// refuses a feature title that two feature files share, because the plugin numbers a repeated suite name by the order of
+    /// the target's files.
+    public mutating func swiftTestingIdentifier(for scenario: ScenarioID) throws -> String {
+        let url = try file(for: scenario.feature)
+        let feature = try parse(url)
+        try rejectSameFeatureTitle(as: feature, besides: url)
+        var suites = Set<String>()
+        let suite = FeatureFile.uniqueSwiftTestingName(FeatureFile.typeName(for: feature.title), fallback: "Feature", in: &suites)
+        var tests = Set<String>()
+        var found: String?
+        for candidate in feature.scenarios {
+            let name = FeatureFile.uniqueSwiftTestingName(FeatureFile.typeName(for: candidate.title), fallback: "Scenario", in: &tests)
+            let lines = [candidate.line] + (candidate.examples ?? []).map(\.line)
+            if lines.contains(scenario.line) { found = name }
+        }
+        guard let found else { throw Failure(description: "\(scenario.feature) has no scenario at line \(scenario.line)") }
+        return "\(Self.swiftTestingSuite)/\(suite)/\(found)(_:)"
     }
 
     /// The tests for every scenario in `scenarios`, without repeats, in the order given.

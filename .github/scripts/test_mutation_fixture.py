@@ -131,6 +131,23 @@ class CheckTests(Folder):
         self.assertEqual(m.main(["mutation_fixture.py"]), 2)
         self.assertEqual(self.run_main(), 1)
 
+    def log_for(self, *lines):
+        path = os.path.join(self.directory.name, "build.log")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        return path
+
+    def test_the_build_log_must_warn_at_each_survivor_and_only_there(self):
+        self.write_expected()
+        self.write_report(self.good_report())
+        warning = ("/tmp/p/Sources/Voting.swift:11:13: warning: No test failed after changing >= to > at Voting.swift:11. "
+                   "Add a scenario that checks this code.")
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise", warning)]), 0)
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise")]), 1)
+        killed = warning.replace("to >", "to <")
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for(warning, killed)]), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports, os.path.join(self.directory.name, "none.log")]), 1)
+
     def both(self):
         return (m.read_expected(os.path.join(self.fixture, "expected-mutants")),
                 m.read_report(os.path.join(self.reports, "mutation-report.json")))

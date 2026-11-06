@@ -126,13 +126,13 @@ final class MutationOptionsTests: XCTestCase {
     func testReadsTheXcodeOptions() throws {
         let options = try MutationOptions.parse([
             "--root", "/p", "--workspace", "App.xcworkspace", "--scheme", "App", "--destination", "platform=macOS",
-            "--test-target", "AppTests", "--xcodebuild-arg", "-quiet", "--xcodebuild-arg", "-skipMacroValidation"
+            "--test-target", "AppTests", "--test-target", "AppSwiftTests", "--xcodebuild-arg", "-quiet", "--xcodebuild-arg", "-skipMacroValidation"
         ])
         let expected = XcodebuildRunner.Target(
             container: "App.xcworkspace",
             scheme: "App",
             destination: "platform=macOS",
-            testTarget: "AppTests",
+            testTargets: ["AppTests", "AppSwiftTests"],
             arguments: ["-quiet", "-skipMacroValidation"]
         )
         XCTAssertEqual(options.xcode, expected)

@@ -28,18 +28,18 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         public var scheme: String
         /// The `-destination` value, such as `platform=macOS`.
         public var destination: String
-        /// The test target the scheme runs, such as `VotingTests`, for `-only-testing`. `nil` for the scheme's own.
-        public var testTarget: String?
+        /// The test targets that hold the scenarios, such as `VotingTests`, for `-only-testing`.
+        public var testTargets: [String]
         /// More arguments for every `xcodebuild`, such as `-skipPackagePluginValidation`.
         public var arguments: [String]
 
         var isWorkspace: Bool { container.hasSuffix(".xcworkspace") }
 
-        public init(container: String, scheme: String, destination: String, testTarget: String? = nil, arguments: [String] = []) {
+        public init(container: String, scheme: String, destination: String, testTargets: [String] = [], arguments: [String] = []) {
             self.container = container
             self.scheme = scheme
             self.destination = destination
-            self.testTarget = testTarget
+            self.testTargets = testTargets
             self.arguments = arguments
         }
     }
@@ -124,11 +124,12 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         var arguments = ["test-without-building"] + common(in: copy) + ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
         if let scenarios = request.scenarios {
             do {
-                arguments += try onlyTesting(scenarios, in: copy)
+                let selection = try onlyTesting(scenarios, in: copy)
+                arguments += selection.arguments
+                if selection.testPerScenario { settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES" }
             } catch {
                 return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
             }
-            settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES"
         }
         // The prefixed variables are how xcodebuild gives the tests a setting.
         var prefixed = [String: String]()
@@ -146,14 +147,32 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         )
     }
 
-    /// `-only-testing <target>/CucumberScenarioTest/<test>` for the test of each of `scenarios`. A test needs its test
-    /// target, so scenarios need `Target.testTarget`.
-    private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> [String] {
-        guard let testTarget = target.testTarget else {
-            throw Failure(description: "Running only some scenarios needs the test target's name: pass --test-target")
+    /// `-only-testing` for each of `scenarios`, in every test target that `Target.testTargets` names, because a scenario
+    /// doesn't say which target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. A scenario
+    /// of the XCTest runner is the test `CucumberScenarioTest/<feature › scenario>`, with a test per scenario on. A scenario
+    /// of the Swift Testing runner is its generated test, `CucumberFeatures/<feature>/<scenario>(_:)`. Returns the
+    /// arguments and whether a scenario needs the test per scenario.
+    private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> (arguments: [String], testPerScenario: Bool) {
+        guard !target.testTargets.isEmpty else {
+            throw Failure(description: "Running only some scenarios needs the names of the test targets: pass --test-target")
         }
         var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: environment))
-        return try names.testNames(for: scenarios).flatMap { ["-only-testing", "\(testTarget)/\(ScenarioTestNames.testClass)/\($0)"] }
+        var identifiers = [String]()
+        var testPerScenario = false
+        for scenario in scenarios {
+            switch try names.runner(for: scenario) {
+                case .xctest:
+                    testPerScenario = true
+                    identifiers += try names.testNames(for: scenario).map { "\(ScenarioTestNames.testClass)/\($0)" }
+                case .swiftTesting:
+                    identifiers.append(try names.swiftTestingIdentifier(for: scenario))
+            }
+        }
+        var seen = Set<String>()
+        let arguments = target.testTargets.flatMap { testTarget in
+            identifiers.filter { seen.insert("\(testTarget)/\($0)").inserted }.flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
+        }
+        return (arguments, testPerScenario)
     }
 
     /// How many tests the result bundle says ran, or 0 when there is no bundle or it can't be read.

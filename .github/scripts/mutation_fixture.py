@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check a mutation testing run's report against the mutants a fixture expects.
 
-  python3 .github/scripts/mutation_fixture.py <fixture folder> <report folder>
+  python3 .github/scripts/mutation_fixture.py <fixture folder> <report folder> [<build log>]
 
 The fixture's expected-mutants file lists every mutant the run must find and
 what must happen to it, one per line, other than comments and blank lines:
@@ -14,6 +14,13 @@ Killed, Survived, Timeout or CompileError. The check fails, naming the mutant,
 when a listed mutant is missing or has another status, and when the run found
 a mutant the file does not list. It also fails when the file lists nothing or
 has a line it cannot read, so a run that found no mutant can't pass.
+
+With a build log, the run is one that Xcode's Run Script build phase made with `--format xcode`. The check then also
+fails when the log has no warning at a surviving mutant's line, such as
+
+  /path/Sources/Voting.swift:11:13: warning: No test failed after changing >= to > at Voting.swift:11. Add a scenario ...
+
+and when it has one for a mutant that was killed.
 
 Only the standard library is used.
 """
@@ -90,9 +97,29 @@ def check(name, expected, found):
     return errors
 
 
+def survivor_warning(key):
+    """The pattern of the warning `--format xcode` prints for the mutant at `key`."""
+    file, line, _mutator, replacement = key
+    name = re.escape(os.path.basename(file))
+    return re.compile(
+        rf"{name}:{line}:\d+: warning: No test failed after changing \S+ to {re.escape(replacement)} at {name}:{line}\.")
+
+
+def check_log(name, expected, log):
+    """Return the errors for a build log's warnings against the mutants' statuses."""
+    errors = []
+    for key, status in expected.items():
+        warned = survivor_warning(key).search(log) is not None
+        if status == "Survived" and not warned:
+            errors.append(f"error: {name}: the build log has no warning for {describe(key)}, which survived")
+        elif status != "Survived" and warned:
+            errors.append(f"error: {name}: the build log has a warning for {describe(key)}, which expected-mutants lists as {status}")
+    return errors
+
+
 def main(argv):
-    if len(argv) != 3:
-        print("usage: mutation_fixture.py <fixture folder> <report folder>", file=sys.stderr)
+    if len(argv) not in (3, 4):
+        print("usage: mutation_fixture.py <fixture folder> <report folder> [<build log>]", file=sys.stderr)
         return 2
     fixture, reports = argv[1], argv[2]
     name = os.path.basename(os.path.normpath(fixture))
@@ -103,6 +130,12 @@ def main(argv):
         print(f"error: {name}: {error}", file=sys.stderr)
         return 1
     errors = check(name, expected, found)
+    if len(argv) == 4:
+        try:
+            with open(argv[3], encoding="utf-8", errors="replace") as f:
+                errors += check_log(name, expected, f.read())
+        except OSError as error:
+            errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:
         print(error, file=sys.stderr)
     if errors:

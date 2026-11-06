@@ -108,4 +108,31 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
             XCTAssertTrue("\($0)".contains("both the feature \"Voting\""), "\($0)")
         }
     }
+
+    func testSeesWhichRunnerRunsAFeatureFromTheSwiftFilesNextToIt() throws {
+        try write(voting, to: "XC/Features/Voting.feature")
+        try write("import CucumberSwift\n", to: "XC/Steps.swift")
+        try write(voting.replacingOccurrences(of: "Voting", with: "Retiring"), to: "ST/Features/Retiring.feature")
+        try write("import CucumberSwiftTesting\nimport Testing\n", to: "ST/Steps.swift")
+        var names = ScenarioTestNames(root: folder)
+        XCTAssertEqual(try names.runner(for: id(3, feature: "XC/Features/Voting.feature")), .xctest)
+        XCTAssertEqual(try names.runner(for: id(3, feature: "ST/Features/Retiring.feature")), .swiftTesting)
+    }
+
+    func testNamesTheSwiftTestingTestOfAScenarioAsThePluginGeneratesIt() throws {
+        try write(voting, to: "Features/Voting.feature")
+        var names = ScenarioTestNames(root: folder)
+        XCTAssertEqual(try names.swiftTestingIdentifier(for: id(3)), "CucumberFeatures/Voting/AnAdultCanVote(_:)")
+        XCTAssertEqual(try names.swiftTestingIdentifier(for: id(16)), "CucumberFeatures/Voting/AnAdultCanVote_2(_:)", "A repeated name gets a number")
+    }
+
+    func testAnOutlineIsOneSwiftTestingTestWhicheverLineOfItIsGiven() throws {
+        try write(voting, to: "Features/Voting.feature")
+        var names = ScenarioTestNames(root: folder)
+        XCTAssertEqual(try names.swiftTestingIdentifier(for: id(7)), "CucumberFeatures/Voting/Ages(_:)")
+        XCTAssertEqual(try names.swiftTestingIdentifier(for: id(14)), "CucumberFeatures/Voting/Ages(_:)")
+        XCTAssertThrowsError(try names.swiftTestingIdentifier(for: id(2))) {
+            XCTAssertTrue("\($0)".contains("no scenario at line 2"), "\($0)")
+        }
+    }
 }
