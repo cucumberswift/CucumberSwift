@@ -23,7 +23,7 @@ private enum MutationError: Error, CustomStringConvertible {
 /// change, and reports the changes that no test noticed. The package itself is never changed.
 ///
 /// `--target` (repeatable) limits it to the code of those targets. `--tags` chooses the scenarios, as `CUCUMBER_TAGS`
-/// does, for Xcode, where a plugin can't be given environment variables. `--dry-run` lists the changes without
+/// does. `--dry-run` lists the changes without
 /// testing them. `--max-mutants`, `--timeout-multiplier`, `--baseline-runs` and `--work-dir` tune the run;
 /// the reports go to the plugin's folder in the package's `.build`, or to `--output`.
 @main
@@ -41,12 +41,15 @@ struct MutationTestingPlugin: CommandPlugin {
         }
     }
 
-    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`.
+    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`. A
+    /// named test target is left out, because its code isn't mutated: Xcode names every target of the package, test
+    /// targets included, when it runs the command.
     private static func sourceFolders(of package: Package, named names: [String], root: URL) throws -> [String] {
-        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
-        let unknown = names.filter { name in !modules.contains { $0.name == name } }
+        let unknown = names.filter { name in !package.targets.contains { $0.name == name } }
         guard unknown.isEmpty else { throw MutationError.unknownTargets(unknown) }
-        let chosen = modules.filter { names.isEmpty || names.contains($0.name) }
+        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
+        let named = names.filter { name in modules.contains { $0.name == name } }
+        let chosen = modules.filter { names.isEmpty || named.contains($0.name) }
         guard !chosen.isEmpty else { throw MutationError.noTargets }
         let prefix = root.path + "/"
         return chosen.map { target in
