@@ -10,9 +10,7 @@ The `cucumberswift-mutation-test` command safely changes your code in small ways
 swift run cucumberswift-mutation-test
 ```
 
-> Note: What is mutation testing?
->
-> Mutation testing is a technique for making small changes in code to see if tests still pass. If they do, we say a "mutant" survived. The goal of mutation testing is to "kill mutants" by finding tests that pass when they should fail and improving them. Don't worry, no bugs will be introduced into your code on purpose! The command changes only a throwaway copy of your code in a temporary folder, and never touches your repository. See <doc:#Know-that-your-files-are-safe>.
+> Note: What is mutation testing? Mutation testing is a technique for making small changes in code to see if tests still pass. If they do, we say a "mutant" survived. The goal of mutation testing is to "kill mutants" by finding tests that pass when they should fail and improving them. Don't worry, no bugs will be introduced into your code on purpose! The command changes only a throwaway copy of your code in a temporary folder, and never touches your repository. See <doc:#Know-that-your-files-are-safe>.
 
 The example on this page is derived from our [MutationTesting sample project](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/MutationTesting). The sample's `Basket.swift` gives 10% off from 3 items and free shipping over 100:
 
