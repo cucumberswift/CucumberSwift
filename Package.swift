@@ -35,6 +35,11 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftMutationTesting",
             targets: ["Mutation Testing"]),
+        // The same mutation testing as a command-line tool, for scripts, build servers and Xcode build phases:
+        // `swift run cucumberswift-mutation-test`. Needs the Macros trait.
+        .executable(
+            name: "cucumberswift-mutation-test",
+            targets: ["CucumberSwiftMutationTestingTool"]),
         // Step definition macros, checked at compile time. Needs the Macros trait.
         .library(
             name: "CucumberSwiftMacros",
@@ -166,7 +171,9 @@ let package = Package(
                 intent: .custom(
                     verb: "mutation-test",
                     description: "Changes the code under test in a temporary copy and reports the changes that no scenario noticed"),
-                permissions: []),
+                permissions: [
+                    .writeToPackageDirectory(reason: "Writes the mutation report to .build/mutation-testing, where your tests read it")
+                ]),
             dependencies: ["CucumberSwiftMutationTestingTool"],
             path: "Plugins/MutationTestingPlugin"),
         // The compiler plugin that expands the step definition macros. It runs on the Mac that builds.

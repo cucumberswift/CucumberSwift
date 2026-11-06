@@ -34,7 +34,7 @@ mise exec -- tuist generate --no-open --path "$project"
 # The Macros trait, because the tool finds the mutants with swift-syntax. Resolving rewrites this checkout's
 # Package.resolved, so the step puts it back.
 status=0
-.github/scripts/keep-package-resolved.sh swift run --traits Macros CucumberSwiftMutationTestingTool \
+.github/scripts/keep-package-resolved.sh swift run --traits Macros cucumberswift-mutation-test \
   --root "$project" \
   --project "$name.xcodeproj" \
   --scheme "$name" \

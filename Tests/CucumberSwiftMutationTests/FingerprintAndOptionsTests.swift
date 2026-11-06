@@ -69,6 +69,27 @@ final class MutationOptionsTests: XCTestCase {
         XCTAssertEqual(options.timeoutMultiplier, 3)
         XCTAssertNil(options.maxMutants)
         XCTAssertFalse(options.dryRun)
+        XCTAssertTrue(options.findsSources, "Without --sources, the tool finds the package's targets")
+        XCTAssertEqual(options.targets, [])
+        XCTAssertNil(options.tags)
+        XCTAssertEqual(options.format, .text)
+    }
+
+    func testThePackageIsTheCurrentFolderWithoutRoot() throws {
+        let options = try MutationOptions.parse([])
+        let current = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).standardizedFileURL
+        XCTAssertEqual(options.root, current)
+        XCTAssertEqual(options.output, current.appendingPathComponent(".build/mutation-testing"))
+    }
+
+    func testReadsTheTargetsTagsAndFormat() throws {
+        let options = try MutationOptions.parse(["--target", "Shop", "--target", "Cart", "--tags", "before", "--format", "xcode"])
+        XCTAssertEqual(options.targets, ["Shop", "Cart"])
+        XCTAssertEqual(options.tags, "before")
+        XCTAssertEqual(options.format, .xcode)
+        XCTAssertThrowsError(try MutationOptions.parse(["--format", "html"])) {
+            XCTAssertEqual("\($0)", "--format is text or xcode, not \"html\"")
+        }
     }
 
     func testReadsEveryOption() throws {
@@ -79,6 +100,7 @@ final class MutationOptionsTests: XCTestCase {
         ]
         let options = try MutationOptions.parse(arguments)
         XCTAssertEqual(options.sources, ["Sources/A", "Sources/B"])
+        XCTAssertFalse(options.findsSources)
         XCTAssertEqual(options.maxMutants, 10)
         XCTAssertEqual(options.timeoutMultiplier, 5)
         XCTAssertEqual(options.minimumTimeout, 12)
@@ -99,7 +121,6 @@ final class MutationOptionsTests: XCTestCase {
         }
         XCTAssertThrowsError(try MutationOptions.parse(["--root", "/p", "--max-mutants", "0"]))
         XCTAssertThrowsError(try MutationOptions.parse(["--root", "/p", "--baseline-runs", "--dry-run"]))
-        XCTAssertThrowsError(try MutationOptions.parse([]))
     }
 
     func testReadsTheXcodeOptions() throws {
@@ -118,6 +139,17 @@ final class MutationOptionsTests: XCTestCase {
         XCTAssertTrue(options.makeRunner() is XcodebuildRunner)
         XCTAssertNil(try MutationOptions.parse(["--root", "/p"]).xcode)
         XCTAssertTrue(try MutationOptions.parse(["--root", "/p"]).makeRunner() is SwiftPMRunner)
+    }
+
+    func testAnXcodeProjectHasNoPackageToFindItsSourcesIn() throws {
+        let xcode = ["--root", "/p", "--project", "A.xcodeproj", "--scheme", "A", "--destination", "platform=macOS"]
+        XCTAssertFalse(try MutationOptions.parse(xcode).findsSources)
+        XCTAssertEqual(try MutationOptions.parse(xcode).sources, ["Sources"])
+        XCTAssertEqual(try MutationOptions.parse(xcode + ["--sources", "App"]).sources, ["App"])
+        XCTAssertTrue(try MutationOptions.parse(["--root", "/p"]).findsSources, "A package still asks SwiftPM")
+        XCTAssertThrowsError(try MutationOptions.parse(xcode + ["--target", "App"])) {
+            XCTAssertTrue("\($0)".contains("pass --sources"), "\($0)")
+        }
     }
 
     func testRefusesXcodeOptionsThatDoNotFitTogether() {

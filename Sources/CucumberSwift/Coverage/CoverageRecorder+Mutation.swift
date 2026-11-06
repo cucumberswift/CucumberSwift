@@ -9,7 +9,7 @@
 import Foundation
 
 /// What mutation testing reads from the coverage: the regions at a mutant's place, the source files, and
-/// `regions.json` for `swift package mutation-test`.
+/// `regions.json` for `cucumberswift-mutation-test`.
 extension CoverageRecorder {
     /// A stretch of code, by its file and its first and last line and column, as `regions.json` lists them.
     struct CodeRegion: Codable, Equatable {

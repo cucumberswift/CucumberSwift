@@ -160,7 +160,7 @@ struct CoverageSettings: Equatable {
     /// records an issue (#509). The XCTest runner doesn't read it.
     var recordsIssuesInSuites = false
     /// Whether the run writes `regions.json`, the code each scenario ran, next to the manifest: off by default.
-    /// `swift package mutation-test` turns it on, to test each mutant only when a scenario runs its code.
+    /// `cucumberswift-mutation-test` turns it on, to test each mutant only when a scenario runs its code.
     var writesRegions = false
     /// Whether each feature gets a Mutation test, with coverage on: off by default.
     var isMutationTesting = false

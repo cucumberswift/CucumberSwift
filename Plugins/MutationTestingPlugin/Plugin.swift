@@ -23,7 +23,7 @@ private enum MutationError: Error, CustomStringConvertible {
 /// change, and reports the changes that no test noticed. The package itself is never changed.
 ///
 /// `--target` (repeatable) limits it to the code of those targets. `--tags` chooses the scenarios, as `CUCUMBER_TAGS`
-/// does, for Xcode, where a plugin can't be given environment variables. `--dry-run` lists the changes without
+/// does. `--dry-run` lists the changes without
 /// testing them. `--max-mutants`, `--timeout-multiplier`, `--baseline-runs` and `--work-dir` tune the run;
 /// the reports go to the plugin's folder in the package's `.build`, or to `--output`.
 @main
@@ -41,12 +41,15 @@ struct MutationTestingPlugin: CommandPlugin {
         }
     }
 
-    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`.
+    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`. A
+    /// named test target is left out, because its code isn't mutated: Xcode names every target of the package, test
+    /// targets included, when it runs the command.
     private static func sourceFolders(of package: Package, named names: [String], root: URL) throws -> [String] {
-        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
-        let unknown = names.filter { name in !modules.contains { $0.name == name } }
+        let unknown = names.filter { name in !package.targets.contains { $0.name == name } }
         guard unknown.isEmpty else { throw MutationError.unknownTargets(unknown) }
-        let chosen = modules.filter { names.isEmpty || names.contains($0.name) }
+        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
+        let named = names.filter { name in modules.contains { $0.name == name } }
+        let chosen = modules.filter { names.isEmpty || named.contains($0.name) }
         guard !chosen.isEmpty else { throw MutationError.noTargets }
         let prefix = root.path + "/"
         return chosen.map { target in
@@ -76,30 +79,24 @@ struct MutationTestingPlugin: CommandPlugin {
         // Built step by step: one long concatenation is too slow for some compilers to type-check.
         var toolArguments: [String] = ["--root", root.path]
         for source in sources { toolArguments += ["--sources", source] }
-        // The plugin's own folder is writable without asking, and it is in the package's .build folder, which git
-        // ignores. The reports go there unless the user chose a place. The copy does not: that folder's path has a
-        // space in it ("Mutation Testing"), and Swift Testing finds no tests in a package whose path has one. The tool
-        // picks a folder for the copy itself.
-        let output = Self.outputFolder(passed: passed, default: context.pluginWorkDirectoryURL.appending(path: "reports"))
+        // The reports go to .build/mutation-testing in the package, as from the command-line tool, so a test run reads
+        // the last report whichever way the command ran. Xcode would put the plugin's own folder in DerivedData. The
+        // package's .build folder needs the permission to write to the package, which git ignores.
+        let output = Self.outputFolder(passed: passed, default: root.appending(path: ".build/mutation-testing"))
         if !passed.contains("--output") { toolArguments += ["--output", output.path] }
         toolArguments += passed
         if dryRun { toolArguments.append("--dry-run") }
+        if let tags { toolArguments += ["--tags", tags] }
         toolArguments.append("--disable-prebuilts")
         let process = Process()
         process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
         process.arguments = toolArguments
-        // The tool passes its environment on to the tests, so `--tags` reaches them as CUCUMBER_TAGS.
-        if let tags {
-            var environment = ProcessInfo.processInfo.environment
-            environment["CUCUMBER_TAGS"] = tags
-            process.environment = environment
-        }
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus != 2 else { throw MutationError.notSetUp }
         guard process.terminationStatus == 0 else { throw MutationError.failed(process.terminationStatus) }
-        // Each survivor as a warning at its line, so Xcode shows it in the source file.
+        // Each survivor as a warning, which `swift package` prints and Xcode lists at the end of the command's report.
         for warning in SurvivorWarning.read(report: output.appending(path: "mutation-report.json"), root: root) {
             Diagnostics.warning(warning.message, file: warning.file, line: warning.line)
         }

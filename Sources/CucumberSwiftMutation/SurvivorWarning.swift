@@ -1,15 +1,27 @@
+//
+//  SurvivorWarning.swift
+//  CucumberSwiftMutation
+//
+//  Shared with the Mutation Testing plugin through Plugins/MutationTestingPlugin/SurvivorWarning.swift, a symlink,
+//  because a plugin can't import a library. So it uses only Foundation.
+//
+
 import Foundation
-import PackagePlugin
 
-/// A surviving mutant, read from the tool's Stryker report, as a warning at its line: Xcode shows the warning in the
-/// source file and in the issue navigator, and `swift package` prints it.
-struct SurvivorWarning: Equatable {
-    let file: String
-    let line: Int
-    let message: String
+/// A surviving mutant, read from the tool's Stryker report, as a warning. The command-line tool prints it in the
+/// compiler's format with `--format xcode`, which Xcode shows at its line. The plugin reports it as a diagnostic, which
+/// `swift package` prints and Xcode lists at the end of the command's report.
+public struct SurvivorWarning: Equatable {
+    public let file: String
+    public let line: Int
+    public let column: Int
+    public let message: String
 
-    /// The survivors in the report at `report`, with each file's path made absolute under `root`.
-    static func read(report: URL, root: URL) -> [SurvivorWarning] {
+    /// `/path/Basket.swift:22:27: warning: No test failed after …`, the compiler's format.
+    public var xcodeLine: String { "\(file):\(line):\(column): warning: \(message)" }
+
+    /// The survivors in the report at `report`, with each file's path made absolute under `root`, in file and line order.
+    public static func read(report: URL, root: URL) -> [SurvivorWarning] {
         guard let data = try? Data(contentsOf: report),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let files = json["files"] as? [String: [String: Any]] else { return [] }
@@ -17,12 +29,12 @@ struct SurvivorWarning: Equatable {
         for (path, file) in files.sorted(by: { $0.key < $1.key }) {
             let source = file["source"] as? String ?? ""
             for mutant in file["mutants"] as? [[String: Any]] ?? [] where mutant["status"] as? String == "Survived" {
-                if let warning = warning(for: mutant, in: source, file: root.appending(path: path).path) {
+                if let warning = warning(for: mutant, in: source, file: root.appendingPathComponent(path).path) {
                     warnings.append(warning)
                 }
             }
         }
-        return warnings.sorted { ($0.file, $0.line) < ($1.file, $1.line) }
+        return warnings.sorted { ($0.file, $0.line, $0.column) < ($1.file, $1.line, $1.column) }
     }
 
     private static func warning(for mutant: [String: Any], in source: String, file: String) -> SurvivorWarning? {
@@ -39,8 +51,10 @@ struct SurvivorWarning: Equatable {
         } else {
             change = original.isEmpty ? "changing this code to \(replacement)" : "changing \(original) to \(replacement)"
         }
-        let message = "No test failed after \(change). Add a scenario that checks this code."
-        return SurvivorWarning(file: file, line: line, message: message)
+        // The place is in the text too: a plugin's warning isn't shown at its line, in Xcode or `swift package`.
+        let place = "\(URL(fileURLWithPath: file).lastPathComponent):\(line)"
+        let message = "No test failed after \(change) at \(place). Add a scenario that checks this code."
+        return SurvivorWarning(file: file, line: line, column: column, message: message)
     }
 
     /// The text from `start` up to `end`, as line and column, both 1-based and counted in UTF-8 bytes, as swift-syntax
