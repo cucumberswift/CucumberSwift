@@ -102,7 +102,7 @@ struct MutationTestingPlugin: CommandPlugin {
         process.waitUntilExit()
         guard process.terminationStatus != 2 else { throw MutationError.notSetUp }
         guard process.terminationStatus == 0 else { throw MutationError.failed(process.terminationStatus) }
-        // Each survivor as a warning at its line, so Xcode shows it in the source file.
+        // Each survivor as a warning, which `swift package` prints and Xcode lists at the end of the command's report.
         for warning in SurvivorWarning.read(report: output.appending(path: "mutation-report.json"), root: root) {
             Diagnostics.warning(warning.message, file: warning.file, line: warning.line)
         }

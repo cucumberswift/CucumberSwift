@@ -1,8 +1,8 @@
 import Foundation
 import PackagePlugin
 
-/// A surviving mutant, read from the tool's Stryker report, as a warning at its line: Xcode shows the warning in the
-/// source file and in the issue navigator, and `swift package` prints it.
+/// A surviving mutant, read from the tool's Stryker report, as a warning: `swift package` prints it, and Xcode lists
+/// it at the end of the command's report in the Report navigator.
 struct SurvivorWarning: Equatable {
     let file: String
     let line: Int
@@ -39,7 +39,9 @@ struct SurvivorWarning: Equatable {
         } else {
             change = original.isEmpty ? "changing this code to \(replacement)" : "changing \(original) to \(replacement)"
         }
-        let message = "No test failed after \(change). Add a scenario that checks this code."
+        // The place is in the text: neither `swift package` nor Xcode shows a command plugin's warning at its line.
+        let place = "\(URL(fileURLWithPath: file).lastPathComponent):\(line)"
+        let message = "No test failed after \(change) at \(place). Add a scenario that checks this code."
         return SurvivorWarning(file: file, line: line, message: message)
     }
 
