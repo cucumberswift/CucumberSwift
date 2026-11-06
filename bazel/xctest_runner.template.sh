@@ -10,6 +10,7 @@ test_type="%(test_type)s"
 test_host_path="%(test_host_path)s"
 bundle_path="%(test_bundle_path)s"
 test_filter="%(test_filter)s"
+test_coverage_manifest="%(test_coverage_manifest)s"
 platform="__PLATFORM__"
 
 if [[ -n "${TEST_PREMATURE_EXIT_FILE:-}" ]]; then
@@ -24,9 +25,13 @@ if [[ -n "$test_host_path" ]]; then
   echo "error: this runner does not support a test host." >&2
   exit 1
 fi
+coverage=false
 if [[ "${COVERAGE:-}" == 1 ]]; then
-  echo "error: this runner does not collect coverage." >&2
-  exit 1
+  coverage=true
+  if [[ "$platform" != "macos" ]]; then
+    echo "error: this runner collects coverage on macOS only." >&2
+    exit 1
+  fi
 fi
 
 # The bundle is a zip, or an .xctest folder with --define=apple.experimental.tree_artifact_outputs=1.
@@ -132,6 +137,13 @@ run_xctest() {
   fi
 }
 
+# With `bazel coverage`, the binaries built with coverage write one raw profile when the process
+# ends, here. CucumberSwift also writes each scenario's own files (see Measuring Code Coverage).
+profraw="$test_dir/coverage.profraw"
+if [[ "$coverage" == true ]]; then
+  export LLVM_PROFILE_FILE="$profraw"
+fi
+
 log="$test_dir/test.log"
 status=0
 run_xctest "${args[@]+"${args[@]}"}" "$test_dir/$bundle_name.xctest" 2>&1 | tee "$log" || status=$?
@@ -147,6 +159,32 @@ if [[ -z "$summary" || "$summary" == *"Executed 0 tests"* ]]; then
   echo "error: no tests ran. Is the test bundle empty, or does the filter match nothing?" >&2
   echo "Last xctest summary: ${summary:-none}" >&2
   exit 1
+fi
+
+# Bazel's coverage report: an lcov file of the whole run, as rules_apple's runner writes. A bundle
+# with no code built with coverage writes no profile, and then has no report.
+if [[ "$coverage" == true && -n "${COVERAGE_OUTPUT_FILE:-}" ]]; then
+  if [[ ! -s "$profraw" ]]; then
+    echo "warning: the tests wrote no coverage profile, so there is no coverage report. Is the code under test built with coverage?" >&2
+  else
+    manifest="${COVERAGE_MANIFEST:-}"
+    if [[ -s "$test_coverage_manifest" ]]; then
+      manifest="$test_coverage_manifest"
+    fi
+    profdata="$test_dir/coverage.profdata"
+    xcrun llvm-profdata merge "$profraw" --output "$profdata"
+    binary="$test_dir/$bundle_name.xctest/Contents/MacOS/$bundle_name"
+    export_error="$test_dir/llvm-cov-error.txt"
+    export_status=0
+    xcrun llvm-cov export -format lcov \
+      -instr-profile "$profdata" -ignore-filename-regex='.*external/.+' -path-equivalence=".,$PWD" \
+      "$binary" ${manifest:+@"$manifest"} > "$COVERAGE_OUTPUT_FILE" 2> "$export_error" || export_status=$?
+    if [[ -s "$export_error" || "$export_status" -ne 0 ]]; then
+      echo "error: while exporting the coverage report" >&2
+      cat "$export_error" >&2
+      exit 1
+    fi
+  fi
 fi
 
 if [[ -n "${TEST_PREMATURE_EXIT_FILE:-}" ]]; then

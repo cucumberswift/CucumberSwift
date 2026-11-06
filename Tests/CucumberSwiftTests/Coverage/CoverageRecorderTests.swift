@@ -137,8 +137,16 @@ final class CoverageRecorderTests: XCTestCase {
 
     func testTheDefaultFolderIsInTheDocumentsFolder() throws {
         let documents = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-        XCTAssertEqual(CoverageRecorder.coverageFolder(path: nil), documents.appendingPathComponent("_cucumberCoverage", isDirectory: true))
+        XCTAssertEqual(CoverageRecorder.coverageFolder(path: nil, environment: [:]), documents.appendingPathComponent("_cucumberCoverage", isDirectory: true))
         XCTAssertEqual(CoverageRecorder.coverageFolder(path: folder.path)?.path, folder.path)
+    }
+
+    func testTheDefaultFolderUnderBazelIsInTheTestsOutputs() {
+        let environment = ["TEST_UNDECLARED_OUTPUTS_DIR": folder.path]
+        XCTAssertEqual(CoverageRecorder.coverageFolder(path: nil, environment: environment)?.path, folder.appendingPathComponent("_cucumberCoverage").path)
+        XCTAssertEqual(CoverageRecorder.coverageFolder(path: "/elsewhere", environment: environment)?.path, "/elsewhere")
+        XCTAssertEqual(CoverageRecorder.coverageFolder(path: nil, environment: ["TEST_UNDECLARED_OUTPUTS_DIR": ""]),
+                       CoverageRecorder.coverageFolder(path: nil, environment: [:]))
     }
 
     func testAScenarioWritesAProfileForEachBinaryBuiltWithCoverage() throws {

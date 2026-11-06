@@ -126,10 +126,14 @@ final class CoverageRecorder {
         )
     }
 
-    /// The coverage folder: `path` when given, else `_cucumberCoverage` in the documents folder, which on
-    /// a Simulator is inside the Simulator.
-    static func coverageFolder(path: String?) -> URL? {
+    /// The coverage folder: `path` when given, else `_cucumberCoverage` in the folder that Bazel keeps a
+    /// test's outputs in (`TEST_UNDECLARED_OUTPUTS_DIR`) when the test runs under Bazel, else in the documents
+    /// folder, which on a Simulator is inside the Simulator.
+    static func coverageFolder(path: String?, environment: [String: String] = ProcessInfo.processInfo.environment) -> URL? {
         if let path { return URL(fileURLWithPath: path, isDirectory: true) }
+        if let outputs = environment["TEST_UNDECLARED_OUTPUTS_DIR"], !outputs.isEmpty {
+            return URL(fileURLWithPath: outputs, isDirectory: true).appendingPathComponent("_cucumberCoverage", isDirectory: true)
+        }
         return (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))?
             .appendingPathComponent("_cucumberCoverage", isDirectory: true)
     }
