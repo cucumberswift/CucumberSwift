@@ -647,13 +647,14 @@ jobs:
   # Then the same on a watchOS Simulator (#269), where the Xcode project doesn't build: the
   # package's own tests through its CucumberSwift-Package scheme, and the consumer test packages.
   # The newest Xcode, on macos-26, with the runtimes it comes with. Nightly and manual runs
-  # only: pull requests build for tvOS and watchOS in Catalyst tests.
+  # only: pull requests build for tvOS and watchOS in Catalyst tests. The coverage steps at the end
+  # take about 25 minutes, so the job takes about 45, and the timeout only bounds a hung job.
   tvos_watchos_tests:
     name: tvOS and watchOS tests
     needs: changes
     if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
