@@ -22,6 +22,22 @@ import Testing
         #expect(!CucumberSettings.isCoverage(environment: [key: "YES"]))
     }
 
+    // The same setting, and the same order, as the XCTest runner's (CucumberSwiftTests' MutationFindingsTests).
+    @Test func theMutationReportIsReadFromTheStaticVariableThenTheEnvironmentVariable() {
+        defer {
+            Cucumber.mutationReport = nil
+            Cucumber.mutationTesting = nil
+        }
+        #expect(!CoverageSettings.read(environment: [:]).isMutationTesting)
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
+        Cucumber.mutationTesting = false
+        #expect(!CoverageSettings.read(environment: ["CUCUMBER_MUTATION_TESTING": "YES"]).isMutationTesting)
+        #expect(CoverageSettings.read(environment: [:]).mutationReport == nil)
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == "/a.json")
+        Cucumber.mutationReport = "/b.json"
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == "/b.json")
+    }
+
     // The static variable is passed in, because other suites set `Cucumber.parallelTesting` while this one runs.
     @Test func autoCoverageMeasuresABuildWithCoverageUnlessParallelTestingIsOn() {
         #expect(CucumberSettings.coverageSetting(environment: [:]) == nil)

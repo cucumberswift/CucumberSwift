@@ -23,7 +23,12 @@ final class CoverageReporter: CucumberTestObserver {
     private let output: (String) -> Void
     private(set) var recorder: CoverageRecorder?
     private var readSettings = CoverageSettings()
+    /// The mutation report, read once, when the first feature with a Mutation score finishes.
+    private var mutationReport: Result<MutationReport, MutationReport.ReadError>?
     private var hasAsked = false
+    /// The scenario being measured, so that it starts once although the runner may announce it twice. Nil between
+    /// scenarios.
+    private var startedScenario: ObjectIdentifier?
     /// The running scenario's steps that finished, and how many of its steps are its Background's.
     private var finishedSteps = 0
     private var backgroundStepCount = 0
@@ -71,7 +76,21 @@ final class CoverageReporter: CucumberTestObserver {
         // A feature's scores come from its scenarios, which each start their own measurement.
     }
 
+    /// The runner calls this before a scenario's `BeforeScenario` hooks, when they run before the observers hear that
+    /// the scenario started, as in the XCTest runner. The scenario's coverage then includes the code its hooks run, as
+    /// it does with the Swift Testing runner, where the observers hear it first.
+    func willRunBeforeScenarioHooks(for scenario: Scenario) {
+        begin(scenario)
+    }
+
     func didStart(scenario: Scenario, at _: Date) {
+        begin(scenario)
+    }
+
+    /// Starts measuring `scenario`, once, whichever of the two calls comes first.
+    private func begin(_ scenario: Scenario) {
+        guard startedScenario != ObjectIdentifier(scenario) else { return }
+        startedScenario = ObjectIdentifier(scenario)
         if !hasAsked {
             hasAsked = true
             let path = coveragePath()
@@ -90,7 +109,11 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
-        let parts = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) ?? []
+        let detections = reportMutation(of: feature)
+        let parts = recorder?.featureFinished(feature: feature.uri,
+                                              featureName: feature.title,
+                                              line: Int(feature.location.line),
+                                              detections: detections) ?? []
         for part in parts {
             let report = CoverageReport(scores: part.scores, settings: readSettings)
             if let rule = part.rule {
@@ -103,7 +126,66 @@ final class CoverageReporter: CucumberTestObserver {
         }
     }
 
+    /// Prints what the feature's Mutation test finds and records its issues, with mutation testing on. It reads the
+    /// feature's scenarios from the recorder, so it runs before the recorder finishes the feature. Without a report,
+    /// or with one it can't read, the feature gets an error, so that turning mutation testing on never passes silently.
+    ///
+    /// Returns the mutants each scenario detected, for the redundancy to judge the scenarios by them too, or nil when
+    /// the redundancy judges by code alone: with mutation testing off, or without a report that is up to date.
+    private func reportMutation(of feature: Feature) -> CoverageScores.Detections? {
+        guard readSettings.isMutationTesting, let recorder else { return nil }
+        guard recorder.code != nil else {
+            output("CucumberSwift mutation: \(feature.title): no Mutation test, because coverage has no scores.")
+            return nil
+        }
+        let line = Int(feature.location.line)
+        guard let path = readSettings.mutationReport else {
+            let message = "Mutation testing is on, but no mutation report is set. Run `cucumberswift-mutation-test`, then set "
+                + "Cucumber.mutationReport or CUCUMBER_MUTATION_REPORT to the mutation-report.json it writes to .build/mutation-testing."
+            record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
+            return nil
+        }
+        let read = mutationReport ?? MutationReport.read(path: path)
+        mutationReport = read
+        switch read {
+            case .failure(let error):
+                let message = "Mutation testing is on, but \(error.message). Run `cucumberswift-mutation-test` to write it."
+                record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
+                return nil
+            case .success(let report):
+                let code = MutationFindings.CodeLookup(regions: recorder.regions(file:line:column:)) { file in
+                    recorder.sourcePath(endingWith: file).flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }
+                }
+                let findings = MutationFindings.make(report: report,
+                                                     scenarios: recorder.scenarios(of: feature.uri),
+                                                     code: code,
+                                                     file: feature.coverageIssueFile,
+                                                     featureLine: line,
+                                                     feature: MutationReport.feature(ofURI: feature.uri))
+                record(findings: findings, for: feature)
+                guard findings?.isOutOfDate != true else { return nil }
+                return CoverageScores.Detections(kills: findings?.kills ?? [:], changes: findings?.changes ?? [:])
+        }
+    }
+
+    private func record(findings: MutationFindings?, for feature: Feature) {
+        guard let findings else {
+            output("CucumberSwift mutation: \(feature.title): no mutant in the code its scenarios run")
+            return
+        }
+        guard findings.counted > 0 else {
+            output("CucumberSwift mutation: \(feature.title): the mutation report can't score its scenarios, see the error")
+            findings.issues.forEach(record)
+            return
+        }
+        let result = findings.survived == 0 ? "detected all" : "missed \(findings.survived) of"
+        output("CucumberSwift mutation: \(feature.title): its scenarios \(result) \(findings.counted) mutants in the code they run")
+        findings.issues.forEach(record)
+    }
+
     func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {
+        // Forget the scenario: the Swift Testing runner frees it, and the next scenario can have the same identity.
+        startedScenario = nil
         recorder?.scenarioFinished(CoverageRecorder.FinishedScenario(feature: scenario.feature?.uri ?? "",
                                                                      featureName: scenario.feature?.title ?? "",
                                                                      line: Int(scenario.location.line),

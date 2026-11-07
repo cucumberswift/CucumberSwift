@@ -98,4 +98,19 @@ final class CoverageFlagsTests: XCTestCase {
         CoverageSettings.storage.recordsIssuesInSuites = true
         XCTAssertTrue(CoverageSettings.read(environment: [:]).recordsIssuesInSuites)
     }
+
+    func testTheMutationVariablesWinOverTheEnvironmentVariables() {
+        defer {
+            Cucumber.mutationTesting = nil
+            Cucumber.mutationReport = nil
+        }
+        let environment = ["CUCUMBER_MUTATION_TESTING": "YES", "CUCUMBER_MUTATION_REPORT": "/tmp/from-environment.json"]
+        Cucumber.mutationTesting = false
+        Cucumber.mutationReport = "/tmp/from-code.json"
+        let settings = CoverageSettings.read(environment: environment)
+        XCTAssertEqual(Cucumber.mutationTesting, false)
+        XCTAssertEqual(Cucumber.mutationReport, "/tmp/from-code.json")
+        XCTAssertFalse(settings.isMutationTesting)
+        XCTAssertEqual(settings.mutationReport, "/tmp/from-code.json")
+    }
 }

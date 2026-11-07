@@ -69,15 +69,19 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_COVERAGE_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageSources` | Your code, without your dependencies and tests | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-the-code-to-measure> |
 | `CUCUMBER_COVERAGE_SOURCES` | ^ | ^ | ^ | ^ |
+| `Cucumber.mutationTesting` | Off | XCTest and Swift Testing | Coverage on, and a mutation report | <doc:Mutation-Testing#Fail-your-tests-on-a-surviving-mutant> |
+| `CUCUMBER_MUTATION_TESTING` | ^ | ^ | ^ | ^ |
+| `Cucumber.mutationReport` | None | XCTest and Swift Testing | Mutation testing on | <doc:Mutation-Testing#Fail-your-tests-on-a-surviving-mutant> |
+| `CUCUMBER_MUTATION_REPORT` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageRecordsIssuesInSuites` | Off | Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> |
 | `CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundantStepWarningLevel` | 50 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-steps> |
+| `Cucumber.redundantStepWarningLevel` | 50 | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Find-redundant-steps> |
 | `CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
 | `StepImplementation.shouldRunWith(scenario:tags:)` | All scenarios | XCTest and Swift Testing | None | <doc:Settings#Choose-scenarios-in-code> |
 | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> |
