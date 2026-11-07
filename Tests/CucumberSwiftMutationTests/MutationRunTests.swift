@@ -156,7 +156,10 @@ final class MutationRunTests: TemporaryFolderTestCase {
         _ = run(fake)
         let mutantCalls = fake.calls.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }
         XCTAssertEqual(mutantCalls.map { $0.environment["CUCUMBERSWIFT_MUTANT"] }, ["1", "2"])
-        XCTAssertEqual(mutantCalls.map { URL(fileURLWithPath: $0.environment["CUCUMBER_REPORT_PATH"] ?? "").lastPathComponent }, ["mutant-1.json", "mutant-2.json"])
+        // The runner picks each run's report path: one for each run, in a folder the copy's folder holds.
+        let reports = mutantCalls.map { $0.environment["CUCUMBER_REPORT_PATH"] ?? "" }
+        XCTAssertEqual(Set(reports).count, 2)
+        XCTAssertTrue(reports.allSatisfy { $0.hasSuffix(".json") && $0.contains("/runner/reports/") }, reports.joined(separator: ", "))
     }
 
     func testAnnotatesTheCucumberReportThatTheTestsWrote() throws {

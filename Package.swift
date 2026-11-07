@@ -150,6 +150,7 @@ let package = Package(
         // tests, the verdicts and the reports. Not a product. Its tests link it, which they can't do with the tool.
         .target(
             name: "CucumberSwiftMutation",
+            dependencies: ["CucumberSwiftGherkin"],
             path: "Sources/CucumberSwiftMutation"),
         // The tool the Mutation Testing plugin runs. It builds for the Mac that builds the tests. It finds the
         // mutants with swift-syntax, so without the Macros trait it only says what to turn on. Its tests run it
