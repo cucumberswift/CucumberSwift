@@ -19,6 +19,16 @@ extension Taggable {
 
 extension Array where Element: Taggable {
     func taggedElements(with environment: [String: String] = ProcessInfo.processInfo.environment, askImplementor: Bool) -> [Element] {
+        let tagged = tagged(with: environment, askImplementor: askImplementor)
+        // `CUCUMBER_SCENARIOS` names the scenarios to run, and applies to scenarios only, not to features.
+        guard environment[ScenarioList.variable] != nil else { return tagged }
+        return tagged.filter { element in
+            guard let scenario = element as? Scenario else { return true }
+            return ScenarioList.runs(feature: scenario.feature?.uri ?? "", line: Int(scenario.location.line), environment: environment)
+        }
+    }
+
+    private func tagged(with environment: [String: String], askImplementor: Bool) -> [Element] {
         if let tagNames = environment["CUCUMBER_TAGS"] {
             let tags = tagNames.components(separatedBy: ",")
             return filter { $0.containsTags(tags) }

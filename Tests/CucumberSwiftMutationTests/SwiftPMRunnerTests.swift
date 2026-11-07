@@ -51,6 +51,20 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(run.coverageFolder, "The tests wrote no coverage")
     }
 
+    func testRunsOnlyTheScenariosOfARequestThroughCucumberScenarios() throws {
+        let commands = RecordingCommands()
+        let runner = SwiftPMRunner(commands: commands)
+        let copy = try makeCopy()
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [
+            ScenarioID(feature: "Features/Basket.feature", line: 3, name: "One"),
+            ScenarioID(feature: "Features/Basket.feature", line: 9, name: "Two")
+        ]))
+        _ = runner.test(in: copy, request: TestRequest())
+        XCTAssertEqual(commands.calls.first?.arguments, ["test", "--skip-build"], "No --filter: it can't see the scenarios' tests")
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], "Features/Basket.feature:3,Features/Basket.feature:9")
+        XCTAssertNil(commands.calls.last?.environment["CUCUMBER_SCENARIOS"], "A request of every scenario sets nothing")
+    }
+
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {
         let commands = RecordingCommands { call in
             for key in ["CUCUMBER_REPORT_PATH", "CUCUMBER_COVERAGE_PATH"] {

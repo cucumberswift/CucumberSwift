@@ -12,6 +12,9 @@ Sources/Voting.swift:11 RelationalOperator > Survived
 """
 
 
+COUNT = "  {0}/2 Voting.swift: >= to <: {1} (0.4 s, {2} of {3} scenarios)"
+
+
 def mutant(line, mutator, replacement, status):
     return {"id": "1", "mutatorName": mutator, "replacement": replacement, "status": status,
             "location": {"start": {"line": line, "column": 1}, "end": {"line": line, "column": 3}}}
@@ -147,11 +150,44 @@ class CheckTests(Folder):
         self.write_report(self.good_report())
         warning = ("/tmp/p/Sources/Voting.swift:11:13: warning: No test failed after changing >= to > at Voting.swift:11. "
                    "Add a scenario that checks this code.")
-        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise", warning)]), 0)
-        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise")]), 1)
+        counts = (COUNT.format(1, "Killed", 1, 2), COUNT.format(2, "Survived", 2, 2))
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise", warning, *counts)]), 0)
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for("noise", *counts)]), 1)
         killed = warning.replace("to >", "to <")
-        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for(warning, killed)]), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports, self.log_for(warning, killed, *counts)]), 1)
         self.assertEqual(m.main(["m", self.fixture, self.reports, os.path.join(self.directory.name, "none.log")]), 1)
+
+    def write_cucumber_report(self, number, scenarios):
+        elements = [{"type": "scenario", "name": f"S{i}"} for i in range(scenarios)] + [{"type": "background", "name": ""}]
+        with open(os.path.join(self.reports, f"cucumber-mutant-{number}.json"), "w", encoding="utf-8") as f:
+            json.dump([{"uri": "a.feature", "elements": elements}], f)
+
+    def scenario_errors(self, *lines):
+        self.write_expected()
+        return m.check_scenarios("Fixture", m.read_expected(os.path.join(self.fixture, "expected-mutants")), "\n".join(lines), self.reports)
+
+    def test_every_tested_mutant_must_show_the_scenarios_it_ran_and_some_must_run_fewer_than_all(self):
+        self.assertEqual(self.scenario_errors(COUNT.format(1, "Killed", 1, 2), COUNT.format(2, "Survived", 2, 2)), [])
+        self.assertIn("for 1 mutants, and 2 were tested", self.scenario_errors(COUNT.format(1, "Killed", 1, 2))[0])
+        self.assertIn("for 0 mutants", self.scenario_errors("1/2 x: Killed (0.4 s)")[0])
+        errors = self.scenario_errors(COUNT.format(1, "Killed", 2, 2), COUNT.format(2, "Survived", 2, 2))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("every mutant ran every scenario", errors[0])
+
+    def test_a_mutant_must_run_at_least_one_scenario(self):
+        errors = self.scenario_errors(COUNT.format(1, "Killed", 0, 2), COUNT.format(2, "Survived", 1, 2))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("mutant 1 ran 0 of 2", errors[0])
+
+    def test_the_count_in_the_log_must_be_what_the_mutants_cucumber_report_holds(self):
+        self.write_cucumber_report(1, 1)
+        self.write_cucumber_report(2, 3)
+        errors = self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("mutant 2 ran 2 scenarios, and its Cucumber report holds 3", errors[0])
+        with open(os.path.join(self.reports, "cucumber-mutant-1.json"), "w", encoding="utf-8") as f:
+            f.write("not json")
+        self.assertIn("isn't a Cucumber JSON report", self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))[0])
 
     def both(self):
         return (m.read_expected(os.path.join(self.fixture, "expected-mutants")),
