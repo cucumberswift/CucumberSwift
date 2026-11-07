@@ -29,7 +29,8 @@ The log also shows how many scenarios each tested mutant ran, as the run prints 
 The check fails unless every mutant that was tested has such a line, and each runs at least one scenario and at most
 all of them, and at least one runs fewer than all of them, so a run that ran every scenario for every mutant can't pass.
 Where the reports folder has the Cucumber report that the mutant's run wrote (cucumber-mutant-3.json), the report must
-hold exactly that many scenarios, so the count in the log is the number of scenarios that ran.
+hold no more scenarios than that. It can hold fewer: a package with an XCTest and a Swift Testing target has both
+runners write one report, and the one that finishes last replaces the other's.
 
 Only the standard library is used.
 """
@@ -176,7 +177,7 @@ def check_scenarios(name, expected, log, reports):
         except MutantsError as error:
             errors.append(f"error: {name}: {error}")
             continue
-        if held is not None and held != ran:
+        if held is not None and held > ran:
             errors.append(f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}")
     if all(ran == every for (_status, ran, every) in counts.values()):
         errors.append(f"error: {name}: every mutant ran every scenario: the run didn't select the scenarios that cover them")
