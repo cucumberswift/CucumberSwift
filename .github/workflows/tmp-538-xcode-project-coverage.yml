@@ -1,0 +1,39 @@
+name: tmp-538-xcode-project-coverage
+
+# Temporary (#538): runs the nightly step that measures coverage with an Xcode project once. Deleted before review.
+on:
+  push:
+    branches:
+      - task/538-xcode-project-coverage-platforms
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Coverage with an Xcode project on iOS, tvOS, watchOS and Mac Catalyst
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i -E 'ios|tvos|watchos' || true
+      - name: Install the pinned Tuist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          command -v mise || brew install mise
+          mise install
+      - name: Measure coverage with an Xcode project on iOS, tvOS and watchOS Simulators and Mac Catalyst
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise exec -- .github/scripts/xcode-project-coverage.sh "$RUNNER_TEMP/xcode-project-coverage"
+      - name: Show each destination's scores
+        if: ${{ !cancelled() }}
+        run: |
+          grep -H -E 'CucumberSwift coverage: Grading|Test run with|\*\* TEST' "$RUNNER_TEMP"/xcode-project-coverage/*.log | cut -c1-300 || true
