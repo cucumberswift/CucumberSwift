@@ -258,6 +258,11 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
   echo "The fixture's scenario did not run all its steps"
   exit 1
 fi
+# Its step definition passes only when the step's failure is at the feature file in the project (#535).
+if ! grep -q "Then a failure is reported at this feature file in the project\]' passed" "$log"; then
+  echo "The fixture's step failure was not reported at the feature file in the project"
+  exit 1
+fi
 python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
 '''
 

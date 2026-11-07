@@ -7,9 +7,9 @@ import Foundation
 import XCTest
 
 extension Feature {
-    /// Where a coverage issue about the feature goes: its feature file, as the step failures do.
+    /// Where a coverage issue about the feature goes: its feature file in the project, as the step failures do.
     var coverageIssueFile: URL? {
-        URL(string: uri)
+        URL(string: uri).map(FeatureSourceFiles.issueFile)
     }
 }
 

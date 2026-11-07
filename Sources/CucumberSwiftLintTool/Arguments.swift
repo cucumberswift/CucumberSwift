@@ -1,8 +1,12 @@
-/// `--stamp <file> --features <file>… --step-definitions <file>…`, or `--fix <file or folder>…`
+/// `--stamp <file> [--target <name> --feature-paths <file>] --features <file>… --step-definitions <file>…`, or
+/// `--fix <file or folder>…`
 struct Arguments {
-    private static let options: Set = ["--stamp", "--features", "--step-definitions", "--fix"]
+    private static let options: Set = ["--stamp", "--target", "--feature-paths", "--features", "--step-definitions", "--fix"]
 
     private(set) var stamp: String?
+    /// The target's name, and where to write the Swift file with its feature files' paths (`FeatureSourcePaths`).
+    private(set) var target = ""
+    private(set) var featurePaths: String?
     private(set) var features = [String]()
     private(set) var swiftFiles = [String]()
     /// Whether to fix the feature files in `fixPaths` rather than check them.
@@ -20,6 +24,8 @@ struct Arguments {
             }
             switch option {
                 case "--stamp": stamp = argument
+                case "--target": target = argument
+                case "--feature-paths": featurePaths = argument
                 case "--features": features.append(argument)
                 case "--step-definitions": swiftFiles.append(argument)
                 case "--fix": fixPaths.append(argument)

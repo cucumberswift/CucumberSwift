@@ -55,7 +55,7 @@ enum StepTestCase {
     /// The issue at the step's line in its feature file. An issue already in that file, such as an
     /// ambiguous step's, and a step with no feature file, such as one from the DSL, stay as they are.
     static func issue(_ issue: XCTIssue, locatedAt step: Step) -> XCTIssue {
-        guard let featureFile = step.location.uri,
+        guard let featureFile = step.location.uri.map(FeatureSourceFiles.issueFile),
               issue.sourceCodeContext.location?.fileURL != featureFile else { return issue }
         var located = issue
         located.sourceCodeContext = XCTSourceCodeContext(callStack: issue.sourceCodeContext.callStack,

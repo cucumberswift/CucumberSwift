@@ -1,10 +1,11 @@
 import Foundation
 
 // Run by the CucumberSwiftLint build tool plugin:
-//   CucumberSwiftLintTool --stamp <file> --features <file>… --step-definitions <file>…
+//   CucumberSwiftLintTool --stamp <file> --target <name> --feature-paths <file> --features <file>… --step-definitions <file>…
 // Prints each problem as `file:line:column: warning: message`, which Xcode and SwiftPM show as a
 // warning on that line, and exits 0, so a warning never fails the build. A step of the Swift DSL written where a
 // step definition belongs, or the other way round, is an `error:`, and the tool then exits 1, which fails it.
+// It writes the target's feature files' paths to the Swift file `--feature-paths` names (FeatureSourcePaths.swift).
 //
 // Run by the Fix Feature Files command plugin:
 //   CucumberSwiftLintTool --fix <file or folder>…
@@ -19,6 +20,14 @@ if arguments.fix {
         errorOutput: { FileHandle.standardError.write(Data("\($0)\n".utf8)) })
     exit(status)
 } else {
+    if let featurePaths = arguments.featurePaths {
+        do {
+            try FeatureSourcePaths.write(target: arguments.target, features: arguments.features, to: featurePaths)
+        } catch {
+            print("\(featurePaths): error: CucumberSwiftLint couldn't write the feature files' paths: \(error.localizedDescription)")
+            exit(1)
+        }
+    }
     let diagnostics = Linter.check(features: arguments.features, stepDefinitionFiles: arguments.swiftFiles)
     for diagnostic in diagnostics {
         print(diagnostic)

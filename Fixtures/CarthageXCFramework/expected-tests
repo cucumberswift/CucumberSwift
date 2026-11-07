@@ -1,2 +1,2 @@
 # The fewest tests each framework must run. See "Fixtures" in CONTRIBUTING.md.
-XCTest: 6
+XCTest: 8

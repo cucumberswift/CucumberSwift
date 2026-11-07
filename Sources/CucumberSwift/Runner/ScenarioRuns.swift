@@ -65,7 +65,7 @@ enum ScenarioRuns {
     }
 
     static func repeatedScenarioIssue(for scenario: Scenario, count: Int) -> XCTIssue {
-        let location = scenario.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(scenario.location.line)) }
+        let location = scenario.location.uri.map { XCTSourceCodeLocation(fileURL: FeatureSourceFiles.issueFile(for: $0), lineNumber: Int(scenario.location.line)) }
         return XCTIssue(type: .assertionFailure,
                         compactDescription: repeatedScenarioMessage(for: scenario, count: count),
                         detailedDescription: nil,

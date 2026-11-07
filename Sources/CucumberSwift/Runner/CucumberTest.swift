@@ -301,7 +301,7 @@ open class CucumberTest: XCTestCase {
 
     /// Records an ambiguous step's failure at the step in its feature file, as for a step with no step definition.
     static func ambiguousStepIssue(for step: Step) -> XCTIssue {
-        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: FeatureSourceFiles.issueFile(for: $0), lineNumber: Int(step.location.line)) }
         return XCTIssue(type: .assertionFailure,
                         compactDescription: ambiguousStepMessage(for: step),
                         detailedDescription: nil,
@@ -327,7 +327,7 @@ open class CucumberTest: XCTestCase {
         let generatedSwift = StubGenerator.stub(for: step, in: Cucumber.shared.features)
             ?? step.scenario?.feature.flatMap { StubGenerator.stub(for: step, in: [$0]) }
             ?? ""
-        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: $0, lineNumber: Int(step.location.line)) }
+        let location = step.location.uri.map { XCTSourceCodeLocation(fileURL: FeatureSourceFiles.issueFile(for: $0), lineNumber: Int(step.location.line)) }
         let attachments = step.location.uri.map {
             [stubAttachment(named: stubAttachmentName(sourceFile: $0, line: step.location.line), generatedSwift: generatedSwift)]
         } ?? []

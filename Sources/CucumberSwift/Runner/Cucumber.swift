@@ -154,7 +154,10 @@ import XCTest
     }
 
     func readFromFeaturesFolder(in testBundle: Bundle) {
-        TestBundleFiles.featureFiles(at: TestBundleFiles.featuresFolder(in: testBundle)).forEach { url in
+        let folder = TestBundleFiles.featuresFolder(in: testBundle)
+        let files = TestBundleFiles.featureFiles(at: folder)
+        FeatureSourceFiles.read(copies: files, in: folder)
+        files.forEach { url in
             if let string = try? String(contentsOf: url, encoding: .utf8) {
                 Cucumber.shared.parseIntoFeatures(string, uri: url.absoluteString)
             }
@@ -319,6 +322,7 @@ import XCTest
                 executeAsync = nil
         }
         let definition = Step.Definition(file: file, line: line, matches: matchesExpression, execute: execute, executeAsync: executeAsync)
+        FeatureSourceFiles.addStepDefinition(file: file)
         features
             .flatMap { $0.scenarios.flatMap { $0.steps } }
             .filter { step -> Bool in
