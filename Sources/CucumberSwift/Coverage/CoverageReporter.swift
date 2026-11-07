@@ -26,7 +26,8 @@ final class CoverageReporter: CucumberTestObserver {
     /// The mutation report, read once, when the first feature with a Mutation score finishes.
     private var mutationReport: Result<MutationReport, MutationReport.ReadError>?
     private var hasAsked = false
-    /// The scenario being measured, so that it starts once although the runner may announce it twice.
+    /// The scenario being measured, so that it starts once although the runner may announce it twice. Nil between
+    /// scenarios.
     private var startedScenario: ObjectIdentifier?
     /// The running scenario's steps that finished, and how many of its steps are its Background's.
     private var finishedSteps = 0
@@ -183,6 +184,8 @@ final class CoverageReporter: CucumberTestObserver {
     }
 
     func didFinish(scenario: Scenario, result _: Reporter.Result, duration: Measurement<UnitDuration>) {
+        // Forget the scenario: the Swift Testing runner frees it, and the next scenario can have the same identity.
+        startedScenario = nil
         recorder?.scenarioFinished(CoverageRecorder.FinishedScenario(feature: scenario.feature?.uri ?? "",
                                                                      featureName: scenario.feature?.title ?? "",
                                                                      line: Int(scenario.location.line),
