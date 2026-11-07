@@ -1109,7 +1109,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 90
     permissions:
       contents: read
     strategy:
@@ -1204,7 +1204,26 @@ jobs:
       - name: Check per-scenario coverage under bazel coverage
         working-directory: Tests
         run: |
-          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
+          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --disk_cache="$HOME/Library/Caches/CucumberSwiftMutation/bazel-disk-cache" --test_output=errors
           grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+      # Mutation testing on the Bazel fixture, run by the command-line tool as a Bazel project's script would: it
+      # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
+      # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
+      # lists, and print a warning for each survivor (#522). It shares the coverage step's disk cache, and runs with
+      # the newest Bazel only: the oldest runs the other steps to check the module.
+      - name: Run mutation testing on the Bazel fixture
+        if: ${{ matrix.bazel == '' }}
+        run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the Bazel mutation testing reports and log
+        if: ${{ failure() && matrix.bazel == '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-bazel-fixture
+          path: |
+            ${{ runner.temp }}/mutation-Bazel
+            ${{ runner.temp }}/mutation-Bazel.log
+          if-no-files-found: ignore
+          retention-days: 3

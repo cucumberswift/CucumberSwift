@@ -59,6 +59,13 @@ public struct MutationOptions: Equatable, Sendable {
     public var xcode: XcodebuildRunner.Target?
     public var xcodebuild = "/usr/bin/xcodebuild"
 
+    /// The Bazel test target to build and test with `bazel`, instead of the package with SwiftPM.
+    public var bazelTarget: BazelRunner.Target?
+    /// The Bazel to run: a name that is looked for in PATH, or a full path.
+    public var bazel = "bazel"
+    /// Where Bazel keeps what it builds, for every copy and every run: its default is in the user's caches folder.
+    public var bazelDiskCache: URL?
+
     /// What every `swift build` and `swift test` in the copy gets: the sandbox is off because SwiftPM can't
     /// nest its own inside the plugin's.
     var swiftArguments: [String] {
@@ -68,6 +75,10 @@ public struct MutationOptions: Equatable, Sendable {
     /// What is wrong with `root` for the runner, or `nil`: the file that says it is the kind of project the run
     /// builds. Checked before the copy, so that a run in the wrong folder copies nothing.
     public var rootProblem: String? {
+        if bazelTarget != nil {
+            guard !BazelRunner.workspaceFiles.contains(where: { FileManager.default.fileExists(atPath: root.appendingPathComponent($0).path) }) else { return nil }
+            return "\(root.path) has no MODULE.bazel. Pass --root with the Bazel workspace."
+        }
         let file = xcode?.container ?? "Package.swift"
         guard !FileManager.default.fileExists(atPath: root.appendingPathComponent(file).path) else { return nil }
         return xcode == nil ? "\(root.path) has no Package.swift. Run the command in a Swift package."
@@ -80,10 +91,12 @@ public struct MutationOptions: Equatable, Sendable {
         var options = MutationOptions(root: URL(fileURLWithPath: "."))
         var sources = [String]()
         var xcode = XcodeInput()
+        var bazelArguments = [String]()
         var index = 0
-        func value(for option: String) throws -> String {
+        func value(for option: String, isArgument: Bool = false) throws -> String {
             index += 1
-            guard index < arguments.count, !arguments[index].hasPrefix("--") else {
+            // An argument for Bazel is a flag itself, such as `--config=ci`, so it may start with dashes.
+            guard index < arguments.count, isArgument || !arguments[index].hasPrefix("--") else {
                 throw UsageError(description: "\(option) needs a value")
             }
             return arguments[index]
@@ -110,6 +123,10 @@ public struct MutationOptions: Equatable, Sendable {
                 case "--test-target": xcode.testTargets.append(try value(for: argument))
                 case "--xcodebuild": options.xcodebuild = try value(for: argument)
                 case "--xcodebuild-arg": xcode.arguments.append(try value(for: argument))
+                case "--bazel-target": options.bazelTarget = BazelRunner.Target(label: try value(for: argument))
+                case "--bazel-arg": bazelArguments.append(try value(for: argument, isArgument: true))
+                case "--bazel": options.bazel = try value(for: argument)
+                case "--bazel-disk-cache": options.bazelDiskCache = URL(fileURLWithPath: try value(for: argument)).standardizedFileURL
                 default: throw UsageError(description: "Unknown option \(argument)")
             }
             index += 1
@@ -123,6 +140,7 @@ public struct MutationOptions: Equatable, Sendable {
             options.findsSources = false
         }
         try options.applyXcode(xcode)
+        try options.applyBazel(arguments: bazelArguments)
         return options
     }
 
@@ -158,8 +176,11 @@ public struct MutationOptions: Equatable, Sendable {
         output = root.appendingPathComponent(".build/mutation-testing")
     }
 
-    /// The runner for these options: `xcodebuild` when they name a scheme, and SwiftPM otherwise.
+    /// The runner for these options: `bazel` when they name a Bazel target, `xcodebuild` when they name a scheme, and SwiftPM otherwise.
     public func makeRunner(commands: CommandRunning = ProcessRunner()) -> TestRunner {
+        if let bazelTarget {
+            return BazelRunner(target: bazelTarget, bazel: bazel, diskCache: bazelDiskCache ?? BazelRunner.defaultDiskCache, commands: commands)
+        }
         if let xcode {
             return XcodebuildRunner(target: xcode, xcodebuild: xcodebuild, commands: commands)
         }
@@ -173,5 +194,21 @@ public struct MutationOptions: Equatable, Sendable {
         guard xcode != nil else { return }
         guard targets.isEmpty else { throw UsageError(description: "--target names a package's targets: with --project or --workspace, pass --sources") }
         findsSources = false
+    }
+
+    /// Sets the Bazel target's arguments from `--bazel-arg`. A Bazel workspace has no package to describe either, so its sources
+    /// are the folders `--sources` names, and it can't also be an Xcode project.
+    private mutating func applyBazel(arguments: [String]) throws {
+        guard var target = bazelTarget else {
+            guard arguments.isEmpty, bazel == "bazel", bazelDiskCache == nil else {
+                throw UsageError(description: "--bazel, --bazel-arg and --bazel-disk-cache need --bazel-target")
+            }
+            return
+        }
+        guard xcode == nil else { throw UsageError(description: "Pass --bazel-target or --project and --workspace, not both") }
+        guard targets.isEmpty else { throw UsageError(description: "--target names a package's targets: with --bazel-target, pass --sources") }
+        guard findsSources == false else { throw UsageError(description: "--bazel-target needs --sources, the folders of the code to mutate") }
+        target.arguments = arguments
+        bazelTarget = target
     }
 }

@@ -2,18 +2,16 @@
 //  Grades.swift
 //  Grades
 //
-//  The code under test of CucumberSwiftCoverageTests. Its feature runs only some of the branches of `grade(for:)`.
+//  The code under test of CucumberSwiftCoverageTests, which mutation testing mutates too. The feature
+//  checks scores of 95, 92 and 75, so it runs some branches of `grade(for:)` and no scenario checks a
+//  score of exactly 90, 80 or 70.
 //
 
 public enum Grades {
     public static func grade(for score: Int) -> String {
-        switch score {
-            case 90...: return "A"
-            case 80..<90: return "B"
-            case 70..<80: return "C"
-            case 60..<70: return "D"
-            case 0..<60: return "F"
-            default: return "?"
-        }
+        if score >= 90 { return "A" }
+        if score >= 80 { return "B" }
+        if score >= 70 { return "C" }
+        return "D"
     }
 }
