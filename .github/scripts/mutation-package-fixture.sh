@@ -20,7 +20,7 @@ rm -rf "$reports"
 export CUCUMBER_SWIFT_PATH="$repo"
 status=0
 (cd "$fixture" && swift run cucumberswift-mutation-test --format xcode --output "$reports") 2>&1 | tee "$log" || status=$?
-if [ "$status" -ne 0 ]; then
+if [[ "$status" -ne 0 ]]; then
   echo "::error::MutationTestingPackage: cucumberswift-mutation-test exited with $status"
   exit 1
 fi
