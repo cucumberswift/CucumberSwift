@@ -48,8 +48,8 @@ status=0
   -destination "platform=macOS" \
   -derivedDataPath "$(cd "$dir" && pwd -P)/mutation-$name-build" \
   -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$log" || status=${PIPESTATUS[0]}
-if [ "$status" -ne 0 ]; then
-  echo "error: $name: the build with the mutation testing phase exited with status $status"
+if [[ "$status" -ne 0 ]]; then
+  echo "error: $name: the build with the mutation testing phase exited with status $status" >&2
   exit "$status"
 fi
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"

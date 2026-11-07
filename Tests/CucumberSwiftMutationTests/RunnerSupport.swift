@@ -56,15 +56,15 @@ final class SpyRunner: TestRunner, @unchecked Sendable {
         if prepareFails { throw PrepareFailure() }
     }
 
-    func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
+    func build(in _: URL, timeout _: TimeInterval?) -> BuildResult {
         BuildResult(succeeded: buildStatus, duration: 1)
     }
 
-    func test(in copy: URL, request: TestRequest) -> TestRun {
+    func test(in _: URL, request _: TestRequest) -> TestRun {
         TestRun(status: 0, duration: 1, testsRun: testsRun)
     }
 
-    func cleanUp(copy: URL) {
+    func cleanUp(copy _: URL) {
         cleaned.increment()
     }
 }

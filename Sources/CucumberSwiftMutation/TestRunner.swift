@@ -101,7 +101,9 @@ public protocol TestRunner: Sendable {
 
 extension TestRunner {
     public var excludedFromCopy: [String] { [] }
-    public func cleanUp(copy: URL) {}
+    public func cleanUp(copy _: URL) {
+        // A runner that makes nothing outside the copy has nothing to clean up.
+    }
 }
 
 /// What a runner writes next to the copy: logs, reports, coverage and build products. It is in the folder that

@@ -38,9 +38,6 @@ class Folder(unittest.TestCase):
         with open(os.path.join(self.reports, "mutation-report.json"), "w", encoding="utf-8") as f:
             f.write(content if isinstance(content, str) else json.dumps(content))
 
-    def run_main(self):
-        return m.main(["mutation_fixture.py", self.fixture, self.reports])
-
 
 class ReadExpectedTests(Folder):
     def test_reads_every_line_other_than_comments_and_blanks(self):
@@ -95,7 +92,7 @@ class CheckTests(Folder):
     def test_passes_when_every_mutant_is_as_listed(self):
         self.write_expected()
         self.write_report(self.good_report())
-        self.assertEqual(self.run_main(), 0)
+        self.assertEqual(m.main(["m", self.fixture, self.reports]), 0)
 
     def test_fails_a_mutant_with_another_status(self):
         self.write_expected()
@@ -104,7 +101,7 @@ class CheckTests(Folder):
         errors = m.check("Fixture", *self.both())
         self.assertEqual(len(errors), 1)
         self.assertIn("is Killed, but expected-mutants lists it as Survived", errors[0])
-        self.assertEqual(self.run_main(), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports]), 1)
 
     def test_fails_a_listed_mutant_the_run_did_not_find(self):
         self.write_expected()
@@ -125,11 +122,19 @@ class CheckTests(Folder):
     def test_a_run_that_found_no_mutant_cannot_pass(self):
         self.write_expected()
         self.write_report(report())
-        self.assertEqual(self.run_main(), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports]), 1)
+
+    def test_a_path_outside_the_working_and_temporary_folders_is_refused(self):
+        self.write_expected()
+        self.write_report(self.good_report())
+        self.assertEqual(m.main(["m", "/etc", self.reports]), 1)
+        self.assertEqual(m.main(["m", self.fixture, "/etc"]), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports, "/etc/hosts"]), 1)
+        self.assertEqual(m.safe_path(self.fixture), os.path.realpath(self.fixture))
 
     def test_usage_and_missing_files_fail(self):
         self.assertEqual(m.main(["mutation_fixture.py"]), 2)
-        self.assertEqual(self.run_main(), 1)
+        self.assertEqual(m.main(["m", self.fixture, self.reports]), 1)
 
     def log_for(self, *lines):
         path = os.path.join(self.directory.name, "build.log")

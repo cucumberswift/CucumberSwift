@@ -28,6 +28,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 
 STATUSES = ("Killed", "Survived", "Timeout", "CompileError")
 LINE = re.compile(r"^(\S+):(\d+) (\w+) (\S+) (" + "|".join(STATUSES) + r")$")
@@ -97,6 +98,20 @@ def check(name, expected, found):
     return errors
 
 
+def safe_path(path):
+    """Return `path` with its links resolved, when it is in the working folder or a temporary folder.
+
+    The command line names the fixture, the reports and the log, and the script reads files there, so it refuses a path
+    that points anywhere else: the checkout, and the folders that CI and `mktemp` make for a run, hold all of them.
+    """
+    real = os.path.realpath(path)
+    roots = [os.getcwd(), tempfile.gettempdir(), os.environ.get("RUNNER_TEMP", "")]
+    for root in (os.path.realpath(root) for root in roots if root):
+        if real == root or real.startswith(root + os.sep):
+            return real
+    raise MutantsError(f"{path} isn't in the working folder or a temporary folder")
+
+
 def survivor_warning(key):
     """The pattern of the warning `--format xcode` prints for the mutant at `key`."""
     file, line, _mutator, replacement = key
@@ -121,9 +136,9 @@ def main(argv):
     if len(argv) not in (3, 4):
         print("usage: mutation_fixture.py <fixture folder> <report folder> [<build log>]", file=sys.stderr)
         return 2
-    fixture, reports = argv[1], argv[2]
-    name = os.path.basename(os.path.normpath(fixture))
+    name = os.path.basename(os.path.normpath(argv[1]))
     try:
+        fixture, reports = safe_path(argv[1]), safe_path(argv[2])
         expected = read_expected(os.path.join(fixture, "expected-mutants"))
         found = read_report(os.path.join(reports, "mutation-report.json"))
     except MutantsError as error:
@@ -132,9 +147,9 @@ def main(argv):
     errors = check(name, expected, found)
     if len(argv) == 4:
         try:
-            with open(argv[3], encoding="utf-8", errors="replace") as f:
+            with open(safe_path(argv[3]), encoding="utf-8", errors="replace") as f:
                 errors += check_log(name, expected, f.read())
-        except OSError as error:
+        except (OSError, MutantsError) as error:
             errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:
         print(error, file=sys.stderr)
