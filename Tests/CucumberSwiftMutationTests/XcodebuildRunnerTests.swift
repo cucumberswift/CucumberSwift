@@ -183,9 +183,51 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         scoped.testTargets = ["A", "B"]
         _ = XcodebuildRunner(target: scoped, commands: commands)
             .test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let selected = call.arguments.enumerated().filter { $0.element == "-only-testing" }.map { call.arguments[$0.offset + 1] }
-        XCTAssertEqual(selected, ["A/CucumberScenarioTest/Voting \u{203A} An adult can vote", "B/CucumberScenarioTest/Voting \u{203A} An adult can vote"])
+        let selected = commands.calls.compactMap { call in
+            call.arguments.firstIndex(of: "-only-testing").map { call.arguments[$0 + 1] }
+        }
+        let test = "CucumberScenarioTest/Voting \u{203A} An adult can vote"
+        XCTAssertEqual(selected, ["A/\(test)", "B/\(test)"], "One run for each test target")
+    }
+
+    func testSeveralTestTargetsRunOneAtATimeWithAReportEach() throws {
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(2)) }
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                try? FileManager.default.createDirectory(atPath: call.arguments[index + 1], withIntermediateDirectories: true)
+            }
+            if let path = call.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"] {
+                let name = call.arguments.contains("A") ? "Feature A" : "Feature B"
+                try? FileManager.default.createDirectory(atPath: URL(fileURLWithPath: path).deletingLastPathComponent().path, withIntermediateDirectories: true)
+                try? "[{\"name\": \"\(name)\", \"elements\": []}]".write(toFile: path, atomically: true, encoding: .utf8)
+            }
+            return .finished(0, output: "** TEST SUCCEEDED **")
+        }
+        var scoped = target
+        scoped.testTargets = ["A", "B"]
+        let run = XcodebuildRunner(target: scoped, commands: commands).test(in: try makeCopy(), request: TestRequest(writesReport: true))
+        let tests = commands.calls.filter { $0.arguments.first == "test-without-building" }
+        XCTAssertEqual(tests.count, 2)
+        XCTAssertEqual(tests.map { $0.arguments.firstIndex(of: "-only-testing").map { tests[0].arguments.indices.contains($0 + 1) } ?? false }, [true, true])
+        XCTAssertEqual(Set(tests.compactMap { $0.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"] }).count, 2, "A report of its own, so one doesn't replace the other")
+        XCTAssertEqual(run.testsRun, 4, "The tests of both result bundles")
+        let merged = try JSONSerialization.jsonObject(with: Data(contentsOf: XCTUnwrap(run.cucumberReport))) as? [[String: Any]]
+        XCTAssertEqual(merged?.compactMap { $0["name"] as? String }, ["Feature A", "Feature B"])
+    }
+
+    func testOneFailedTestTargetFailsTheRun() throws {
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(1)) }
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                try? FileManager.default.createDirectory(atPath: call.arguments[index + 1], withIntermediateDirectories: true)
+            }
+            return .finished(call.arguments.contains("B") ? 65 : 0, output: "")
+        }
+        var scoped = target
+        scoped.testTargets = ["A", "B"]
+        let run = XcodebuildRunner(target: scoped, commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertEqual(run.status, 65)
+        XCTAssertFalse(run.succeeded)
     }
 
     func testARunOfAllTheScenariosKeepsTheTestPerStep() throws {

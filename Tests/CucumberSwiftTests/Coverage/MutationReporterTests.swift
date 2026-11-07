@@ -235,6 +235,27 @@ final class MutationReporterTests: XCTestCase {
         XCTAssertTrue(hookCode.isSubset(of: ran), "The code a BeforeScenario hook ran belongs to the scenario")
     }
 
+    func testAScenarioThatTakesTheIdentityOfTheOneBeforeItIsStillMeasured() throws {
+        try skipWithoutCoverage()
+        let path = folder.appendingPathComponent("reused").path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: { self.settings(report: nil) })
+        let cucumber = Cucumber(withString: """
+        Feature: Voting
+            Scenario: An adult can vote
+                Given a person aged 30
+        """)
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let scenario = try XCTUnwrap(feature.scenarios.first)
+        let duration = Measurement(value: 1, unit: UnitDuration.seconds)
+        // The Swift Testing runner frees each scenario, so the next one can have the same object identity.
+        for _ in 1...2 {
+            reporter.didStart(scenario: scenario, at: Date())
+            XCTAssertTrue(isAdult(30))
+            reporter.didFinish(scenario: scenario, result: .passed, duration: duration)
+        }
+        XCTAssertEqual(reporter.recorder?.scenarios(of: feature.uri).count, 2)
+    }
+
     func testARegionHoldsAPositionByLineAndColumn() {
         let region = CoverageMap.Region(counter: .zero, lineStart: 3, lineEnd: 5, columnStart: 10, columnEnd: 4)
         XCTAssertTrue(region.contains(line: 4, column: 1))

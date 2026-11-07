@@ -107,52 +107,88 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         let number = nextRun()
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
-        var report: URL?
-        var coverage: URL?
-        if request.writesReport {
-            let file = folder.appendingPathComponent("reports/report-\(number).json")
-            settings["CUCUMBER_REPORT_PATH"] = file.path
-            report = file
-        }
-        if request.measuresCoverage {
-            let folder = folder.appendingPathComponent("coverage-\(number)")
+        let coverage = request.measuresCoverage ? folder.appendingPathComponent("coverage-\(number)") : nil
+        if let coverage {
             settings["CUCUMBER_COVERAGE"] = "YES"
-            settings["CUCUMBER_COVERAGE_PATH"] = folder.path
-            coverage = folder
+            settings["CUCUMBER_COVERAGE_PATH"] = coverage.path
         }
-        let bundle = folder.appendingPathComponent("results/test-\(number).xcresult")
-        var arguments = ["test-without-building"] + common(in: copy) + ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
+        var identifiers: [String]?
         if let scenarios = request.scenarios {
             do {
                 let selection = try onlyTesting(scenarios, in: copy)
-                arguments += selection.arguments
+                identifiers = selection.identifiers
                 if selection.testPerScenario { settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES" }
             } catch {
                 return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
             }
         }
-        // The prefixed variables are how xcodebuild gives the tests a setting.
-        var prefixed = [String: String]()
-        for (key, value) in settings { prefixed["TEST_RUNNER_\(key)"] = value }
-        let result = commands.run(xcodebuild, arguments, in: copy, environment: prefixed, timeout: request.timeout)
-        let log = write(result.output, named: "test-\(number)", in: copy)
+        // Each test bundle runs in a process of its own, and the processes write one report, the last replacing the
+        // others. So a project with several test targets gets an `xcodebuild` run for each, and their reports are merged.
+        let groups = target.testTargets.count > 1 ? target.testTargets.map { [$0] } : [target.testTargets]
+        var runs = [(result: CommandResult, report: URL?, tests: Int)]()
+        for (index, group) in groups.enumerated() {
+            let name = groups.count > 1 ? "\(number)-\(index + 1)" : "\(number)"
+            var runSettings = settings
+            var report: URL?
+            if request.writesReport {
+                report = folder.appendingPathComponent("reports/report-\(name).json")
+                runSettings["CUCUMBER_REPORT_PATH"] = report?.path
+            }
+            let bundle = folder.appendingPathComponent("results/test-\(name).xcresult")
+            var arguments = ["test-without-building"] + common(in: copy)
+            arguments += ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
+            arguments += onlyTestingArguments(for: group, identifiers: identifiers, selectsTargets: groups.count > 1)
+            // The prefixed variables are how xcodebuild gives the tests a setting.
+            var prefixed = [String: String]()
+            for (key, value) in runSettings { prefixed["TEST_RUNNER_\(key)"] = value }
+            let result = commands.run(xcodebuild, arguments, in: copy, environment: prefixed, timeout: request.timeout)
+            runs.append((result, report, testsRun(inBundle: bundle, in: copy)))
+        }
+        let reports = runs.compactMap(\.report).filter { FileManager.default.fileExists(atPath: $0.path) }
         return TestRun(
-            status: result.status,
-            timedOut: result.timedOut,
-            duration: result.duration,
-            testsRun: testsRun(inBundle: bundle, in: copy),
-            log: log,
-            cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
+            status: runs.map(\.result.status).first { $0 != 0 } ?? 0,
+            timedOut: runs.contains { $0.result.timedOut },
+            duration: runs.map(\.result.duration).reduce(0, +),
+            testsRun: runs.map(\.tests).reduce(0, +),
+            log: write(combinedOutput(of: runs.map(\.result)), named: "test-\(number)", in: copy),
+            cucumberReport: reports.count > 1 ? mergedReport(reports, named: "report-\(number).json", in: folder) : reports.first,
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
     }
 
-    /// `-only-testing` for each of `scenarios`, in every test target that `Target.testTargets` names, because a scenario
-    /// doesn't say which target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. A scenario
-    /// of the XCTest runner is the test `CucumberScenarioTest/<feature › scenario>`, with a test per scenario on. A scenario
-    /// of the Swift Testing runner is its generated test, `CucumberFeatures/<feature>/<scenario>(_:)`. Returns the
-    /// arguments and whether a scenario needs the test per scenario.
-    private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> (arguments: [String], testPerScenario: Bool) {
+    /// What the runs printed: one run's output as it is, and several runs' each under the name of its test target.
+    private func combinedOutput(of results: [CommandResult]) -> String {
+        guard results.count > 1 else { return results.first?.output ?? "" }
+        let sections = zip(target.testTargets, results).map { "== test target \($0) ==\n\($1.output)" }
+        return sections.joined(separator: "\n")
+    }
+
+    /// The Cucumber reports of several runs as one report: each is a JSON array of features, so the merge is one array.
+    private func mergedReport(_ reports: [URL], named name: String, in folder: URL) -> URL? {
+        var features = [Any]()
+        for report in reports {
+            if let data = try? Data(contentsOf: report), let array = try? JSONSerialization.jsonObject(with: data) as? [Any] { features += array }
+        }
+        let merged = folder.appendingPathComponent("reports/\(name)")
+        guard let data = try? JSONSerialization.data(withJSONObject: features) else { return nil }
+        return (try? data.write(to: merged)) == nil ? nil : merged
+    }
+
+    /// The `-only-testing` arguments of a run of the test targets in `group`: each of `identifiers` in each target, because a
+    /// scenario doesn't say which target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. With no
+    /// identifiers, a run of one of several targets names its target, and a run of all of them names nothing.
+    private func onlyTestingArguments(for group: [String], identifiers: [String]?, selectsTargets: Bool) -> [String] {
+        guard let identifiers else { return selectsTargets ? group.flatMap { ["-only-testing", $0] } : [] }
+        var seen = Set<String>()
+        return group.flatMap { testTarget in
+            identifiers.filter { seen.insert("\(testTarget)/\($0)").inserted }.flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
+        }
+    }
+
+    /// The identifiers, below their test target, of the tests that run `scenarios`. A scenario of the XCTest runner is the
+    /// test `CucumberScenarioTest/<feature › scenario>`, with a test per scenario on. A scenario of the Swift Testing runner is
+    /// its generated test, `CucumberFeatures/<feature>/<scenario>(_:)`. Also whether a scenario needs the test per scenario.
+    private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> (identifiers: [String], testPerScenario: Bool) {
         guard !target.testTargets.isEmpty else {
             throw Failure(description: "Running only some scenarios needs the names of the test targets: pass --test-target")
         }
@@ -168,11 +204,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
                     identifiers.append(try names.swiftTestingIdentifier(for: scenario))
             }
         }
-        var seen = Set<String>()
-        let arguments = target.testTargets.flatMap { testTarget in
-            identifiers.filter { seen.insert("\(testTarget)/\($0)").inserted }.flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
-        }
-        return (arguments, testPerScenario)
+        return (identifiers, testPerScenario)
     }
 
     /// How many tests the result bundle says ran, or 0 when there is no bundle or it can't be read.

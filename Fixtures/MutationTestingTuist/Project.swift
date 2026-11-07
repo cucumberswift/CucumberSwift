@@ -83,7 +83,8 @@ let project = Project(
                     env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
                         /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift-mutation-test \\
                         --root "$SRCROOT" --project MutationTestingTuist.xcodeproj --scheme MutationTestingTuist \\
-                        --destination 'platform=macOS' --format xcode --output "$MUTATION_REPORTS" \\
+                        --destination 'platform=macOS' --test-target VotingTests --test-target VotingSwiftTests \\
+                        --format xcode --output "$MUTATION_REPORTS" \\
                         --baseline-runs 1 --minimum-timeout 120
                     """,
                     name: "Run mutation testing",

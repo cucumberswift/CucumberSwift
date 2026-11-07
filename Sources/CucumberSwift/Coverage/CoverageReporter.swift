@@ -191,6 +191,10 @@ final class CoverageReporter: CucumberTestObserver {
                                                                      duration: duration.converted(to: .seconds).value,
                                                                      group: Self.group(of: scenario),
                                                                      rule: scenario.rule))
+        // The next scenario starts afresh even when it has this one's identity: the Swift Testing runner frees a
+        // scenario when its test ends, and the next may take the same address. It would otherwise never start, and its
+        // coverage would be lost without a message.
+        startedScenario = nil
     }
 
     func didFinish(step: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {

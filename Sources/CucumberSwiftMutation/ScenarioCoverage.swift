@@ -9,7 +9,7 @@ import Foundation
 /// `CUCUMBER_COVERAGE_REGIONS` on. A mutant whose code no scenario ran can't be detected by any scenario, so the
 /// run doesn't test it.
 public struct ScenarioCoverage: Equatable, Sendable {
-    public struct Region: Codable, Equatable, Sendable {
+    public struct Region: Codable, Hashable, Sendable {
         public let file: String
         public let lineStart: Int
         public let columnStart: Int
@@ -60,15 +60,32 @@ public struct ScenarioCoverage: Equatable, Sendable {
     public let regions: [Region]
     public let scenarios: [Scenario]
 
-    /// The coverage in `regions.json` in one of the run folders under `folder`, or nil when there is none.
+    /// The coverage in the `regions.json` of every run folder under `folder`, merged, or nil when there is none. A test
+    /// run that has several test bundles, as an Xcode scheme can, writes a run folder for each bundle's process. Each
+    /// run numbers its own regions, so the merge numbers a region again by its place, and keeps one of the regions that
+    /// two runs share, which both numbered.
     public static func read(inRunsUnder folder: URL) -> ScenarioCoverage? {
         let runs = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        var regions = [Region]()
+        var numbers = [Region: Int]()
+        var scenarios = [Scenario]()
+        var found = false
         for run in runs.sorted(by: { $0.path < $1.path }) where run.lastPathComponent.hasPrefix("run-") {
             guard let data = try? Data(contentsOf: run.appendingPathComponent("regions.json")),
                   let file = try? JSONDecoder().decode(File.self, from: data), file.version == 1 else { continue }
-            return ScenarioCoverage(regions: file.regions, scenarios: file.scenarios)
+            found = true
+            let renumbered = file.regions.map { region -> Int in
+                if let number = numbers[region] { return number }
+                regions.append(region)
+                numbers[region] = regions.count - 1
+                return regions.count - 1
+            }
+            scenarios += file.scenarios.map { scenario in
+                let ran = scenario.ran.compactMap { renumbered.indices.contains($0) ? renumbered[$0] : nil }
+                return Scenario(feature: scenario.feature, line: scenario.line, name: scenario.name, ran: ran)
+            }
         }
-        return nil
+        return found ? ScenarioCoverage(regions: regions, scenarios: scenarios) : nil
     }
 
     public init(regions: [Region], scenarios: [Scenario]) {
