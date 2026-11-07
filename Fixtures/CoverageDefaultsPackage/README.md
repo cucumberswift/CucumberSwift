@@ -6,8 +6,8 @@ redundant, and 1 that takes another path. `mise run test-fixtures` runs it with 
 (`swift-test-arguments`), and `expected-output` lists the lines that show each runner scored the feature and the
 Swift Testing runner printed its warnings.
 
-Our nightly CI run also runs this package with `xcodebuild test -enableCodeCoverage YES` on a tvOS and a
-watchOS Simulator, to show that both runners score a feature there (#526).
+Our nightly CI run also runs this package with `xcodebuild test -enableCodeCoverage YES` on an iOS, a tvOS and a
+watchOS Simulator and on Mac Catalyst, to show that both runners score a feature there (#526).
 
 The test targets set `Cucumber.coverageSources`, because CucumberSwift never measures the files in its own
 package folder, and this fixture is inside it. A project that depends on CucumberSwift doesn't need it.
