@@ -212,8 +212,10 @@ public final class MutationRun {
         for number in 1...options.baselineRuns {
             // The first run measures the code each scenario runs, into regions.json, and writes the Cucumber report that
             // lists every scenario the run tests, for the report's `testFiles`; the mutants' runs measure nothing.
+            // The XCTest and the Swift Testing runner each run in a process of their own: both merge into the report.
+            let settings = ["CUCUMBER_COVERAGE_REGIONS": "YES", "CUCUMBERSWIFT_MERGE_REPORT": "YES"]
             let request = number == 1
-                ? TestRequest(settings: ["CUCUMBER_COVERAGE_REGIONS": "YES"], measuresCoverage: true, writesReport: true)
+                ? TestRequest(settings: settings, measuresCoverage: true, writesReport: true)
                 : TestRequest()
             let result = testRunner.test(in: copy, request: request)
             let output = contents(of: result.log)
@@ -263,7 +265,11 @@ public final class MutationRun {
         guard testRunner.build(in: copy, timeout: nil).succeeded else {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
-        let settings = ["CUCUMBERSWIFT_MUTANT": String(mutant.id), "CUCUMBER_COVERAGE": "NO"]
+        let settings = [
+            "CUCUMBERSWIFT_MERGE_REPORT": "YES",
+            "CUCUMBERSWIFT_MUTANT": String(mutant.id),
+            "CUCUMBER_COVERAGE": "NO"
+        ]
         let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? contents(of: result.log).write(to: logFile, atomically: true, encoding: .utf8)
