@@ -41,33 +41,22 @@ class Outputs:
         return os.path.getsize(os.path.join(self.path, name))
 
 
-def check(path, scenario_count, redundant_count):
-    """Returns the problems with the coverage in the outputs at `path`, none when it is right."""
-    outputs = Outputs(path)
-    names = outputs.names()
-    manifests = [name for name in names if name.endswith("/manifest.json") and "_cucumberCoverage/run-" in name]
-    if len(manifests) != 1:
-        return [f"expected one coverage manifest, found {len(manifests)} in {sorted(names)}"]
-    manifest = json.loads(outputs.read(manifests[0]))
-    folder = manifests[0].rsplit("/", 1)[0]
+def feature_problems(features, redundant_count):
+    """The problems with the scores of the manifest's features."""
     problems = []
-    for key in ("problem", "scoresProblem"):
-        if manifest.get(key):
-            problems.append(f"the manifest's {key}: {manifest[key]}")
-    scenarios = manifest.get("scenarios", [])
-    if len(scenarios) != scenario_count:
-        problems.append(f"expected {scenario_count} scenarios, the manifest has {len(scenarios)}")
-    if not manifest.get("binaries"):
-        problems.append("the manifest lists no binary built with coverage")
-    if not manifest.get("features"):
-        problems.append("the manifest has no feature scores")
-    for feature in manifest.get("features", []):
+    for feature in features:
         scores = feature.get("scores", {})
-        if not (scores.get("redundancy") or 0) > 0:
+        if (scores.get("redundancy") or 0) <= 0:
             problems.append(f"{feature.get('featureName')} has redundancy {scores.get('redundancy')}, expected above 0")
         adding_nothing = [one["name"] for one in scores.get("scenarios", []) if one.get("addsNothing")]
         if len(adding_nothing) != redundant_count:
             problems.append(f"expected {redundant_count} scenarios that add nothing, found {adding_nothing}")
+    return problems
+
+
+def scenario_problems(outputs, names, folder, scenarios):
+    """The problems with the scenarios' profiles: one missing or empty."""
+    problems = []
     for scenario in scenarios:
         profiles = scenario.get("profiles", [])
         if not profiles:
@@ -77,6 +66,26 @@ def check(path, scenario_count, redundant_count):
             if name not in names or outputs.size(name) == 0:
                 problems.append(f"{scenario['name']}'s profile {profile} is missing or empty")
     return problems
+
+
+def check(path, scenario_count, redundant_count):
+    """Returns the problems with the coverage in the outputs at `path`, none when it is right."""
+    outputs = Outputs(path)
+    names = outputs.names()
+    manifests = [name for name in names if name.endswith("/manifest.json") and "_cucumberCoverage/run-" in name]
+    if len(manifests) != 1:
+        return [f"expected one coverage manifest, found {len(manifests)} in {sorted(names)}"]
+    manifest = json.loads(outputs.read(manifests[0]))
+    problems = [f"the manifest's {key}: {manifest[key]}" for key in ("problem", "scoresProblem") if manifest.get(key)]
+    scenarios = manifest.get("scenarios", [])
+    if len(scenarios) != scenario_count:
+        problems.append(f"expected {scenario_count} scenarios, the manifest has {len(scenarios)}")
+    if not manifest.get("binaries"):
+        problems.append("the manifest lists no binary built with coverage")
+    if not manifest.get("features"):
+        problems.append("the manifest has no feature scores")
+    problems += feature_problems(manifest.get("features", []), redundant_count)
+    return problems + scenario_problems(outputs, names, manifests[0].rsplit("/", 1)[0], scenarios)
 
 
 def main(arguments):

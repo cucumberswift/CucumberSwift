@@ -32,11 +32,6 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         /// More arguments for every `bazel build` and `bazel test`, such as `--config=ci`.
         public var arguments: [String]
 
-        public init(label: String, arguments: [String] = []) {
-            self.label = label
-            self.arguments = arguments
-        }
-
         /// The package folder and the target's name: `Tests` and `AppTests` for `//Tests:AppTests`. Nil for a label
         /// of another repository, whose test logs aren't in the workspace's package folders.
         var package: (folder: String, name: String)? {
@@ -46,6 +41,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             let folder = String(parts[0])
             let name = parts.count > 1 ? String(parts[1]) : String(folder.split(separator: "/").last ?? "")
             return name.isEmpty ? nil : (folder, name)
+        }
+
+        public init(label: String, arguments: [String] = []) {
+            self.label = label
+            self.arguments = arguments
         }
     }
 
@@ -68,6 +68,23 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     private let environment: [String: String]
     private let lock = NSLock()
     private var runs = 0
+
+    /// The Bazel to run: `bazel` as a full path, or found in the folders of PATH and where Homebrew and Bazelisk put it.
+    private var executable: String? {
+        if bazel.contains("/") { return FileManager.default.isExecutableFile(atPath: bazel) ? bazel : nil }
+        let folders = (environment["PATH"] ?? "").split(separator: ":").map(String.init) + ["/opt/homebrew/bin", "/usr/local/bin"]
+        return folders.map { "\($0)/\(bazel)" }.first { FileManager.default.isExecutableFile(atPath: $0) }
+    }
+
+    /// What every `bazel build` and `bazel test` gets, so that the test reuses what the build made: coverage on, in
+    /// LLVM's format, and the shared disk cache.
+    private var common: [String] {
+        var arguments = ["--collect_code_coverage", "--features=llvm_coverage_map_format", "--features=-gcc_coverage_map_format"]
+        if let diskCache, !target.arguments.contains(where: { $0.hasPrefix("--disk_cache") }) {
+            arguments.append("--disk_cache=\(diskCache.path)")
+        }
+        return arguments + target.arguments
+    }
 
     public init(
         target: Target,
@@ -97,23 +114,6 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         }
         if let diskCache { try FileManager.default.createDirectory(at: diskCache, withIntermediateDirectories: true) }
         _ = try makeFolder(runnerFolder(for: copy))
-    }
-
-    /// The Bazel to run: `bazel` as a full path, or found in the folders of PATH and where Homebrew and Bazelisk put it.
-    private var executable: String? {
-        if bazel.contains("/") { return FileManager.default.isExecutableFile(atPath: bazel) ? bazel : nil }
-        let folders = (environment["PATH"] ?? "").split(separator: ":").map(String.init) + ["/opt/homebrew/bin", "/usr/local/bin"]
-        return folders.map { "\($0)/\(bazel)" }.first { FileManager.default.isExecutableFile(atPath: $0) }
-    }
-
-    /// What every `bazel build` and `bazel test` gets, so that the test reuses what the build made: coverage on, in
-    /// LLVM's format, and the shared disk cache.
-    private var common: [String] {
-        var arguments = ["--collect_code_coverage", "--features=llvm_coverage_map_format", "--features=-gcc_coverage_map_format"]
-        if let diskCache, !target.arguments.contains(where: { $0.hasPrefix("--disk_cache") }) {
-            arguments.append("--disk_cache=\(diskCache.path)")
-        }
-        return arguments + target.arguments
     }
 
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
@@ -158,8 +158,8 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// The test's log in `bazel-testlogs`, which Bazel writes to the copy's convenience link.
     private func testLog(in copy: URL) -> URL {
         let (folder, name) = target.package ?? ("", "")
-        return copy.appendingPathComponent("bazel-testlogs").appendingPathComponent(folder).appendingPathComponent(name)
-            .appendingPathComponent("test.log")
+        let logs = copy.appendingPathComponent("bazel-testlogs").appendingPathComponent(folder)
+        return logs.appendingPathComponent(name).appendingPathComponent("test.log")
     }
 
     /// Copies the coverage the test left in its outputs to a folder of its own, because the next test run replaces the outputs.
