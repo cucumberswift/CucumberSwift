@@ -28,12 +28,23 @@ final class CoverageIssuesTests: XCTestCase {
         warning.record(in: self)
     }
 
+    // `swift test` and `xcodebuild test` don't print a warning the test records, so the runner prints it too,
+    // as the Swift Testing runner does (#531).
+    func testAWarningIsPrintedAsWellAsRecorded() {
+        var printed = [String]()
+        CoverageIssue(severity: .warning, message: "Feature coverage 71%", file: file, line: 1).record(in: self) { printed.append($0) }
+        XCTAssertEqual(printed, ["\(file.path):1: warning: Feature coverage 71%"])
+    }
+
     func testAnErrorFailsTheTest() {
         let error = CoverageIssue(severity: .error, message: "Feature coverage 44%", file: file, line: 1)
         XCTAssertEqual(error.xcTestIssue.type, .assertionFailure)
+        var printed = [String]()
         XCTExpectFailure("A coverage error fails the test.") {
-            error.record(in: self)
+            error.record(in: self) { printed.append($0) }
         }
+        // XCTest prints the failure itself.
+        XCTAssertEqual(printed, [])
     }
 
     func testWithoutATestTheIssueIsPrinted() {

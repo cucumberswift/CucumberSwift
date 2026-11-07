@@ -25,10 +25,10 @@ CucumberSwift coverage: Arithmetic: 71% of the code its scenarios ran (15 of 21 
       19%            4     0.02s  Classifying a small number (line 19)
 ```
 
-A feature whose coverage is at or below 80% gets a warning on its `Feature:` line. Xcode shows it in the feature file, with the functions whose code no scenario ran:
+A feature whose coverage is at or below 80% gets a warning on its `Feature:` line, with the functions whose code no scenario ran. Xcode shows the warning in the feature file, and `swift test` and `xcodebuild test` print it with the feature file and line:
 
 ```
-Feature coverage 71%: its scenarios ran 15 of the 21 regions in the 6 functions they entered (warning at or below 80%). Not run: Calculator.classify(Int), 5 regions, entered by the scenario at line 19; Calculator.divide(_: Int, by: Int), 1 region, entered by the scenario at line 14.
+/path/to/Features/Arithmetic.feature:1: warning: Feature coverage 71%: its scenarios ran 15 of the 21 regions in the 6 functions they entered (warning at or below 80%). Not run: Calculator.classify(Int), 5 regions, entered by the scenario at line 19; Calculator.divide(_: Int, by: Int), 1 region, entered by the scenario at line 14.
 ```
 
 A warning doesn't fail a test. To fail the features with low coverage, set an error level, as <doc:#Fail-a-test-on-low-coverage> shows. Xcode's and `swift test`'s own coverage report for the whole run is unchanged.
@@ -40,7 +40,7 @@ The XCTest runner records a feature's issues in tests of its own, which run afte
 - `Coverage`, for the coverage warning or error.
 - `Redundancy`, for the redundancy warning or error, and the warnings on the scenarios that add no coverage of their own.
 
-With the XCTest runner, an error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test, unless you set `Cucumber.coverageRecordsIssuesInSuites`, as <doc:#Fail-a-test-on-low-coverage> shows.
+With the XCTest runner, an error fails its test, and the scenarios pass or fail on their own steps. The XCTest runner also prints each warning, because `swift test` and `xcodebuild test` print the errors that a test records but not its warnings. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test, unless you set `Cucumber.coverageRecordsIssuesInSuites`, as <doc:#Fail-a-test-on-low-coverage> shows.
 
 ### Set it in code
 
@@ -334,7 +334,7 @@ The Swift Testing runner runs scenarios one at a time while coverage is on, as <
 
 A feature whose scenarios run no measured code, such as a UI test whose app runs in another process, gets no coverage or redundancy issue.
 
-The warnings need Xcode 26 with XCTest. With an earlier version, CucumberSwift prints each warning instead, and still records the errors.
+The XCTest runner records the warnings in tests only with Xcode 26. With an earlier version, it prints each warning and records only the errors.
 
 CucumberSwift reads version 7 of LLVM's coverage format, the one Xcode 26 writes, and prints the cause when a binary has another. It measures only the binaries built with code coverage, so it doesn't measure a prebuilt framework, such as a closed-source SDK.
 

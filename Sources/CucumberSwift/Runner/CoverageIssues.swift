@@ -35,19 +35,20 @@ extension CoverageIssue {
         #endif
     }
 
-    /// Records the issue in `test`, the feature's last test. Without a test, as when a parallel worker
-    /// finishes its features after its last test, or for a warning that XCTest before Xcode 26 can't record
-    /// as one, it prints it instead.
+    /// Records the issue in `test`, the feature's last test, and prints a warning too, as the Swift Testing
+    /// runner does: `swift test` and `xcodebuild test` print an error that fails a test, but not a warning.
+    /// Without a test, as when a parallel worker finishes its features after its last test, or for a warning
+    /// that XCTest before Xcode 26 can't record as one, it only prints the issue.
     func record(in test: XCTestCase?, output: (String) -> Void = { print($0) }) {
         #if compiler(>=6.2)
         let canRecord = true
         #else
         let canRecord = severity == .error
         #endif
-        guard let test, canRecord else {
-            output("\(file?.path ?? ""):\(line): \(severity == .warning ? "warning" : "error"): \(message)")
-            return
+        if severity == .warning || test == nil {
+            output(printedLine)
         }
+        guard let test, canRecord else { return }
         test.record(xcTestIssue)
     }
 }
