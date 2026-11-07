@@ -115,6 +115,18 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(run.succeeded)
     }
 
+    func testRunsOnlyTheScenariosOfARequestThroughCucumberScenarios() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        let bazel = runner(commands: commands, environment: ["CUCUMBER_SCENARIOS": "Features/Old.feature:1"])
+        _ = bazel.test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Basket.feature", line: 3, name: "One")]))
+        _ = bazel.test(in: copy, request: TestRequest())
+        let first = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertTrue(first.contains("--test_env=CUCUMBER_SCENARIOS=Features/Basket.feature:3"))
+        XCTAssertFalse(first.contains { $0.hasPrefix("--test_filter") }, "A filter can't see the scenarios' tests")
+        XCTAssertFalse(first.contains("--test_env=CUCUMBER_SCENARIOS=Features/Old.feature:1"), "The request wins over the tool's environment")
+    }
+
     func testCountsTheTestsFromTheTestsOwnLogAndANonZeroStatusFailsTheRun() throws {
         let copy = try makeCopy()
         let passed = runner(commands: commands(in: copy, output: "Executed 5 tests, with 0 failures")).test(in: copy, request: TestRequest())

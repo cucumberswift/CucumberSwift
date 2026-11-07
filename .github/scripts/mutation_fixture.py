@@ -22,6 +22,15 @@ fails when the log has no warning at a surviving mutant's line, such as
 
 and when it has one for a mutant that was killed.
 
+The log also shows how many scenarios each tested mutant ran, as the run prints them:
+
+  3/6 Voting.swift: >= to <: Killed (0.4 s, 2 of 14 scenarios)
+
+The check fails unless every mutant that was tested has such a line, and each runs at least one scenario and at most
+all of them, and at least one runs fewer than all of them, so a run that ran every scenario for every mutant can't pass.
+Where the reports folder has the Cucumber report that the mutant's run wrote (cucumber-mutant-3.json), the report must
+hold exactly that many scenarios, so the count in the log is the number of scenarios that ran.
+
 Only the standard library is used.
 """
 import json
@@ -132,6 +141,48 @@ def check_log(name, expected, log):
     return errors
 
 
+TESTED = ("Killed", "Survived", "Timeout")
+SCENARIO_COUNT = re.compile(r"^\s*(\d+)/(\d+) .*: (" + "|".join(TESTED) + r") \([\d.]+ s, (\d+) of (\d+) scenarios?\)\s*$")
+
+
+def scenarios_in_report(path):
+    """How many scenarios a Cucumber JSON report holds, or None when there is no report there."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            features = json.load(f)
+        return sum(1 for feature in features for element in feature.get("elements", []) if element.get("type") == "scenario")
+    except OSError:
+        return None
+    except (ValueError, AttributeError, TypeError):
+        raise MutantsError(f"{path} isn't a Cucumber JSON report")
+
+
+def check_scenarios(name, expected, log, reports):
+    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them."""
+    counts = {}
+    for line in log.splitlines():
+        found = SCENARIO_COUNT.match(line)
+        if found:
+            counts[int(found.group(1))] = (found.group(3), int(found.group(4)), int(found.group(5)))
+    tested = sum(1 for status in expected.values() if status in TESTED)
+    if len(counts) != tested:
+        return [f"error: {name}: the log shows the number of scenarios run for {len(counts)} mutants, and {tested} were tested"]
+    errors = []
+    for number, (_status, ran, every) in sorted(counts.items()):
+        if not 1 <= ran <= every:
+            errors.append(f"error: {name}: mutant {number} ran {ran} of {every} scenarios, which a run of covering scenarios can't")
+        try:
+            held = scenarios_in_report(os.path.join(reports, f"cucumber-mutant-{number}.json"))
+        except MutantsError as error:
+            errors.append(f"error: {name}: {error}")
+            continue
+        if held is not None and held != ran:
+            errors.append(f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}")
+    if all(ran == every for (_status, ran, every) in counts.values()):
+        errors.append(f"error: {name}: every mutant ran every scenario: the run didn't select the scenarios that cover them")
+    return errors
+
+
 def main(argv):
     if len(argv) not in (3, 4):
         print("usage: mutation_fixture.py <fixture folder> <report folder> [<build log>]", file=sys.stderr)
@@ -148,7 +199,9 @@ def main(argv):
     if len(argv) == 4:
         try:
             with open(safe_path(argv[3]), encoding="utf-8", errors="replace") as f:
-                errors += check_log(name, expected, f.read())
+                log = f.read()
+            errors += check_log(name, expected, log)
+            errors += check_scenarios(name, expected, log, reports)
         except (OSError, MutantsError) as error:
             errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:

@@ -13,9 +13,10 @@ import Foundation
 /// doesn't reach the tests: Xcode 26.4 ran them without it. The test count comes from each run's result bundle, so a
 /// run in which Xcode ran no test is a run of 0 tests, whatever Xcode printed.
 ///
-/// A run of some scenarios turns on a test per scenario (`CUCUMBER_ONE_TEST_PER_SCENARIO`) and selects the tests with
-/// `-only-testing`: with a test per step, the default, the test classes exist only while the bundle runs, and
-/// `-only-testing` selects none of them.
+/// A run of some scenarios sets `CUCUMBER_SCENARIOS`, as every runner does, so CucumberSwift runs only those. With the
+/// names of the test targets, it also turns on a test per scenario (`CUCUMBER_ONE_TEST_PER_SCENARIO`) and selects the
+/// tests with `-only-testing`, which keeps Xcode from starting a test bundle that has none of them: with a test per step,
+/// the default, the test classes exist only while the bundle runs, and `-only-testing` selects none of them.
 public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -112,8 +113,9 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             settings["CUCUMBER_COVERAGE"] = "YES"
             settings["CUCUMBER_COVERAGE_PATH"] = coverage.path
         }
+        settings.merge(request.scenarioSettings) { _, new in new }
         var identifiers: [String]?
-        if let scenarios = request.scenarios {
+        if let scenarios = request.scenarios, !target.testTargets.isEmpty {
             do {
                 let selection = try onlyTesting(scenarios, in: copy)
                 identifiers = selection.identifiers
@@ -189,9 +191,6 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// test `CucumberScenarioTest/<feature › scenario>`, with a test per scenario on. A scenario of the Swift Testing runner is
     /// its generated test, `CucumberFeatures/<feature>/<scenario>(_:)`. Also whether a scenario needs the test per scenario.
     private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> (identifiers: [String], testPerScenario: Bool) {
-        guard !target.testTargets.isEmpty else {
-            throw Failure(description: "Running only some scenarios needs the names of the test targets: pass --test-target")
-        }
         var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: environment))
         var identifiers = [String]()
         var testPerScenario = false

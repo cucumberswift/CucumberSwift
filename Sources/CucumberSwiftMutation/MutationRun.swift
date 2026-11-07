@@ -157,7 +157,7 @@ public final class MutationRun {
         guard let timeout = runBaseline(in: copy) else { return Status.baselineFailed }
         let coverage = ScenarioCoverage.read(inRunsUnder: options.output.appendingPathComponent("coverage"))
         if let coverage {
-            log("Coverage: \(coverage.scenarios.count) scenarios ran. A mutant in code that no scenario runs isn't tested.")
+            log("Coverage: \(coverage.scenarios.count) scenarios ran. A mutant in code that no scenario runs isn't tested, and a mutant is tested with only the scenarios that run its code.")
         } else {
             log("No coverage of the scenarios: the package doesn't measure it with CucumberSwift, so every mutant is tested.")
         }
@@ -171,7 +171,7 @@ public final class MutationRun {
             var result = try test(mutant, in: copy, runs: runs, timeout: timeout, coverage: coverage, sources: &sources)
             if let coverage { result.coveredBy = coverage.scenarios(running: mutant) }
             results.append(result)
-            log("\(mutant.id)/\(mutants.count) \(mutant.summary): \(result.verdict.name) (\(String(format: "%.1f", result.duration)) s)")
+            log("\(mutant.id)/\(mutants.count) \(mutant.summary): \(result.verdict.name) (\(String(format: "%.1f", result.duration)) s\(Self.scenarioCount(of: result, coverage: coverage)))")
         }
 
         let ran = (try? Data(contentsOf: baselineReport)).flatMap(CucumberReportAnnotator.scenarios(in:)) ?? []
@@ -254,7 +254,8 @@ public final class MutationRun {
         // A comment in the code marks it as one no test can notice: neither tested nor counted.
         if let reason = mutant.ignoredReason { return MutantResult(mutant: mutant, verdict: .ignored(reason: reason), duration: 0) }
         // No scenario ran this code without the change, so none can notice the change: don't spend a build on it.
-        if let coverage, coverage.scenarios(running: mutant).isEmpty { return MutantResult(mutant: mutant, verdict: .noCoverage, duration: 0) }
+        let covering = coverage?.scenarios(running: mutant)
+        if let covering, covering.isEmpty { return MutantResult(mutant: mutant, verdict: .noCoverage, duration: 0) }
         let mutated = try mutant.applied(to: original)
         try mutated.write(to: path, atomically: true, encoding: .utf8)
         // Put the file back whatever happens next. The copy is deleted anyway; this keeps the next mutant clean.
@@ -264,7 +265,7 @@ public final class MutationRun {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
         let settings = ["CUCUMBERSWIFT_MUTANT": String(mutant.id), "CUCUMBER_COVERAGE": "NO"]
-        let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
+        let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, scenarios: covering, timeout: timeout))
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? contents(of: result.log).write(to: logFile, atomically: true, encoding: .utf8)
         if !result.timedOut, result.testsRun == 0 {
@@ -301,6 +302,18 @@ public final class MutationRun {
 
 // Reading the copy's files and the tools' output.
 extension MutationRun {
+    /// What a mutant's log line says of the scenarios its run used, such as `, 2 of 14 scenarios`: the ones that run its
+    /// code, out of every scenario the baseline ran. Nothing for a mutant that wasn't tested, or without coverage, which runs every scenario.
+    static func scenarioCount(of result: MutantResult, coverage: ScenarioCoverage?) -> String {
+        guard let coverage else { return "" }
+        switch result.verdict {
+            case .killed, .survived, .timedOut: break
+            case .unviable, .ignored, .noCoverage: return ""
+        }
+        let count = result.coveredBy.count
+        return ", \(count) of \(coverage.scenarios.count) \(coverage.scenarios.count == 1 ? "scenario" : "scenarios")"
+    }
+
     /// The Swift files under the source folders, in the copy, not in build folders.
     private func swiftFiles(in copy: URL) -> [URL] {
         var files = [URL]()

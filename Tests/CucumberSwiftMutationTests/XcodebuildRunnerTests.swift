@@ -238,13 +238,14 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"])
     }
 
-    func testScenariosNeedTheTestTarget() throws {
+    func testScenariosWithoutTheTestTargetsRunThroughCucumberScenariosAlone() throws {
         let commands = commands(total: 1)
         let run = XcodebuildRunner(target: target, commands: commands).test(
             in: try makeCopy(), request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
-        XCTAssertNotEqual(run.status, 0)
-        XCTAssertTrue(commands.calls.isEmpty, "Nothing runs when the scenarios can't be named")
-        XCTAssertTrue(try String(contentsOf: XCTUnwrap(run.log), encoding: .utf8).contains("--test-target"))
+        XCTAssertEqual(run.status, 0)
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertFalse(call.arguments.contains("-only-testing"), "Without test targets there is no name to select")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_SCENARIOS"], "Features/Voting.feature:3")
     }
 
     func testReadsTheTestCountOfASummary() {
