@@ -29,6 +29,8 @@ if [[ "$1" == "simctl" ]]; then
     spawn)
       shift 3
       PROBE="${SIMCTL_CHILD_PROBE-unset}"
+      LLVM_PROFILE_FILE="${SIMCTL_CHILD_LLVM_PROFILE_FILE-}"
+      [[ -n "$LLVM_PROFILE_FILE" ]] || unset LLVM_PROFILE_FILE
       printf 'PATH=%s\nNESTED=%s\n' "${SIMCTL_CHILD_PATH-unset}" "${SIMCTL_CHILD_SIMCTL_CHILD_FAKE-unset}" \
         > "$FAKE_CHILD_EXCLUDED" ;;
     *) exit 0 ;;
@@ -160,6 +162,7 @@ manifest=""
 [[ "$(cat "$work/profile_file")" == */coverage.profraw ]] || fail "LLVM_PROFILE_FILE reached xctest as '$(cat "$work/profile_file")'"
 grep -q "^llvm-profdata merge .*coverage.profraw --output .*coverage.profdata" "$work/llvm" || fail "no profdata merge: $(cat "$work/llvm")"
 grep -q "^llvm-cov export -format lcov .* @$work/manifest.txt" "$work/llvm" || fail "the rule's coverage manifest wasn't used: $(cat "$work/llvm")"
+grep -q "^llvm-cov export -format lcov .*/Fake.xctest/Contents/MacOS/Fake " "$work/llvm" || fail "the macOS report read the wrong binary: $(cat "$work/llvm")"
 [[ "$(cat "$work/lcov.dat")" == "SF:Fake.swift" ]] || fail "no lcov report: $(cat "$work/lcov.dat" 2>&1)"
 
 # Without a manifest from the rule, Bazel's COVERAGE_MANIFEST is used.
@@ -179,10 +182,18 @@ grep -q "while exporting the coverage report" "$work/err" || fail "no export err
 
 platform="watchos"
 
-# Coverage is for macOS only.
-run "" COVERAGE=1
-[[ "$status" -ne 0 ]] || fail "a watchOS coverage run passed"
-grep -q "coverage on macOS only" "$work/err" || fail "no macOS-only error: $(cat "$work/err")"
+# With COVERAGE=1, the watchOS simulator's xctest writes its profile into the runner's folder too,
+# and the report reads the binary at the root of the bundle, where a watchOS bundle keeps it.
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1
+[[ "$status" -eq 0 ]] || fail "a watchOS coverage run exited $status: $(cat "$work/err")"
+[[ "$(cat "$work/profile_file")" == */coverage.profraw ]] || fail "LLVM_PROFILE_FILE reached the watchOS xctest as '$(cat "$work/profile_file")'"
+grep -q "^llvm-profdata merge .*coverage.profraw" "$work/llvm" || fail "no watchOS profdata merge: $(cat "$work/llvm")"
+grep -q "^llvm-cov export -format lcov .*/Fake.xctest/Fake\( \|$\)" "$work/llvm" || fail "the watchOS report read the wrong binary: $(cat "$work/llvm")"
+grep -q "^SF:Fake.swift" "$work/lcov.dat" || fail "no watchOS report: $(cat "$work/lcov.dat")"
+
+# Without COVERAGE, the watchOS xctest gets no profile file either.
+run ""
+[[ "$(cat "$work/profile_file")" == "unset" && ! -e "$work/llvm" ]] || fail "a watchOS run without coverage set up coverage: $(cat "$work/profile_file")"
 
 # A watchOS run makes a simulator of the newest available watchOS that is not newer than the
 # selected Xcode's watchOS SDK, boots it, runs the

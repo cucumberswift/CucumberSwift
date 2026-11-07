@@ -28,10 +28,6 @@ fi
 coverage=false
 if [[ "${COVERAGE:-}" == 1 ]]; then
   coverage=true
-  if [[ "$platform" != "macos" ]]; then
-    echo "error: this runner collects coverage on macOS only." >&2
-    exit 1
-  fi
 fi
 
 # The bundle is a zip, or an .xctest folder with --define=apple.experimental.tree_artifact_outputs=1.
@@ -51,6 +47,15 @@ if [[ "$bundle_path" == *.xctest ]]; then
   cp -R "$bundle_path" "$test_dir"
 else
   unzip -qq -d "$test_dir" "$bundle_path"
+fi
+
+# With `bazel coverage`, the binaries built with coverage write one raw profile when the process
+# ends, here. CucumberSwift also writes each scenario's own files (see Measuring Code Coverage).
+# It's set before the watchOS simulator's environment is built below, so it reaches the simulator too,
+# which writes to this Mac's folders.
+profraw="$test_dir/coverage.profraw"
+if [[ "$coverage" == true ]]; then
+  export LLVM_PROFILE_FILE="$profraw"
 fi
 
 # xctest inherits Bazel's test environment as it is: --test_env, the env
@@ -137,13 +142,6 @@ run_xctest() {
   fi
 }
 
-# With `bazel coverage`, the binaries built with coverage write one raw profile when the process
-# ends, here. CucumberSwift also writes each scenario's own files (see Measuring Code Coverage).
-profraw="$test_dir/coverage.profraw"
-if [[ "$coverage" == true ]]; then
-  export LLVM_PROFILE_FILE="$profraw"
-fi
-
 log="$test_dir/test.log"
 status=0
 run_xctest "${args[@]+"${args[@]}"}" "$test_dir/$bundle_name.xctest" 2>&1 | tee "$log" || status=$?
@@ -173,7 +171,11 @@ if [[ "$coverage" == true && -n "${COVERAGE_OUTPUT_FILE:-}" ]]; then
     fi
     profdata="$test_dir/coverage.profdata"
     xcrun llvm-profdata merge "$profraw" --output "$profdata"
+    # A macOS bundle keeps its binary in Contents/MacOS, and a watchOS bundle at its root.
     binary="$test_dir/$bundle_name.xctest/Contents/MacOS/$bundle_name"
+    if [[ "$platform" == "watchos" ]]; then
+      binary="$test_dir/$bundle_name.xctest/$bundle_name"
+    fi
     export_error="$test_dir/llvm-cov-error.txt"
     export_status=0
     xcrun llvm-cov export -format lcov \

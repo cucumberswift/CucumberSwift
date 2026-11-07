@@ -1160,14 +1160,18 @@ jobs:
             done
           done
           exit $status
-      # `bazel coverage` builds Grades with code coverage and runs the macOS test with COVERAGE=1: the
-      # runner must accept it, and CucumberSwift must write each scenario's coverage into the test's
-      # outputs, with scores (#522). CucumberSwift reads the coverage format of Xcode 26, so this step
+      # `bazel coverage` builds Grades with code coverage and runs the tests with COVERAGE=1 on macOS, an
+      # iOS simulator and a watchOS simulator: each runner must accept it, and CucumberSwift must write
+      # each scenario's coverage into the test's outputs, with scores (#522, #534). rules_apple can't run
+      # tvOS tests, so tvOS has no run. CucumberSwift reads the coverage format of Xcode 26, so this step
       # builds with Xcode 26.2 rather than the image's default.
       - name: Check per-scenario coverage under bazel coverage
         working-directory: Tests
         run: |
-          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
-          grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
-          grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
-          python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+          bazel coverage //:CucumberSwiftCoverageTests //:CucumberSwiftCoverageTests_iOS //:CucumberSwiftCoverageTests_watchOS --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
+          for t in CucumberSwiftCoverageTests CucumberSwiftCoverageTests_iOS CucumberSwiftCoverageTests_watchOS; do
+            echo "$t:"
+            grep -h 'CucumberSwift coverage' "bazel-testlogs/$t/test.log"
+            grep -q 'CucumberSwift coverage: Grading' "bazel-testlogs/$t/test.log"
+            python3 ../.github/scripts/check_bazel_coverage.py "bazel-testlogs/$t/test.outputs" 3 1
+          done
