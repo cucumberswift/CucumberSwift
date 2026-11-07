@@ -1161,4 +1161,9 @@ jobs:
               fi
             done
           done
+          # The Swift Testing suite (#533) counts its tests with the script that checks the fixtures: its
+          # expected-tests file gives the floor, and a run with no Swift Testing tests fails.
+          for t in CucumberSwiftTestingConsumerTests CucumberSwiftTestingConsumerTests_iOS; do
+            python3 ../.github/scripts/fixture_tests.py CucumberSwiftTestingConsumerTests "bazel-testlogs/$t/test.log" || status=1
+          done
           exit $status

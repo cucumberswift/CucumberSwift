@@ -36,6 +36,10 @@ printf '%s\n' "$@" > "$FAKE_ARGS"
 printf '%s' "${PROBE-unset}" > "$FAKE_PROBE"
 printf '%s' "${DEVELOPER_DIR-unset}" > "$FAKE_DEVELOPER_DIR"
 printf "\t Executed %s tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds\n" "$FAKE_COUNT"
+# xctest runs the Swift Testing tests of a bundle after its XCTest tests, and reports them in a summary of their own.
+if [[ -n "${FAKE_SWIFT_TESTING_COUNT:-}" ]]; then
+  printf "✔ Test run with %s tests in 1 suite passed after 0.001 seconds.\n" "$FAKE_SWIFT_TESTING_COUNT"
+fi
 exit "$FAKE_STATUS"
 EOF
 chmod +x "$work/bin/xcrun"
@@ -124,6 +128,16 @@ run "" FAKE_COUNT=0
 [[ "$status" -ne 0 ]] || fail "a run with no tests passed"
 grep -q "no tests ran" "$work/err" || fail "no 'no tests ran' error"
 grep -q "Last xctest summary:.*Executed 0 tests" "$work/err" || fail "the summary line is missing: $(cat "$work/err")"
+
+# A bundle of Swift Testing tests has no XCTest tests to count: its own summary counts, but a Swift Testing
+# run with no tests fails as well, and shows its summary line.
+run "" FAKE_COUNT=0 FAKE_SWIFT_TESTING_COUNT=5
+[[ "$status" -eq 0 ]] || fail "a run of 5 Swift Testing tests exited $status: $(cat "$work/err")"
+run "" FAKE_COUNT=0 FAKE_SWIFT_TESTING_COUNT=0
+[[ "$status" -ne 0 ]] || fail "a Swift Testing run with no tests passed"
+grep -q "Last Swift Testing summary:.*Test run with 0 tests" "$work/err" || fail "the Swift Testing summary line is missing: $(cat "$work/err")"
+run "" FAKE_COUNT=3 FAKE_SWIFT_TESTING_COUNT=0
+[[ "$status" -eq 0 ]] || fail "a run of 3 XCTest tests and no Swift Testing tests exited $status: $(cat "$work/err")"
 
 # --test_filter and the test_filter attribute go to xctest together.
 run "Mod.B" TESTBRIDGE_TEST_ONLY="Mod.A/testOne"

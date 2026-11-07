@@ -1,4 +1,5 @@
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_swift//swift:swift_binary.bzl", "swift_binary")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 
 # The Objective-C base classes of the tests CucumberSwift generates for each step and scenario.
@@ -31,4 +32,34 @@ swift_library(
         ":CucumberSwiftObjC",
         "@cucumberswift_expressions//:CucumberSwiftExpressions",
     ],
+)
+
+# The Gherkin parser that the Swift Testing runner's generator links, as Package.swift's CucumberSwiftGherkin
+# target does: CucumberSwift's own Core sources, compiled a second time without XCTest. Not testonly, so
+# the generator can build for the Mac that builds the tests.
+swift_library(
+    name = "CucumberSwiftGherkin",
+    srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
+    module_name = "CucumberSwiftGherkin",
+)
+
+# Writes the Swift Testing tests of a test target's feature files: bazel/swift_testing.bzl runs it.
+swift_binary(
+    name = "CucumberSwiftTestingGenerator",
+    srcs = glob(["Sources/CucumberSwiftTestingGenerator/*.swift"]),
+    module_name = "CucumberSwiftTestingGenerator",
+    visibility = ["//visibility:public"],
+    deps = [":CucumberSwiftGherkin"],
+)
+
+# The Swift Testing runner: the step definition API, and what the generated tests call. No CucumberSwift:
+# a test target uses one runner or the other. testonly, as CucumberSwift is, because it links Swift Testing
+# and XCTest.
+swift_library(
+    name = "CucumberSwiftTesting",
+    srcs = glob(["Sources/CucumberSwiftTesting/**/*.swift"]),
+    module_name = "CucumberSwiftTesting",
+    testonly = True,
+    visibility = ["//visibility:public"],
+    deps = ["@cucumberswift_expressions//:CucumberSwiftExpressions"],
 )

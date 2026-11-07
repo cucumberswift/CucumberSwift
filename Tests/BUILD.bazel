@@ -1,5 +1,5 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load(":consumer_tests.bzl", "consumer_tests")
+load(":consumer_tests.bzl", "consumer_tests", "swift_testing_consumer_tests")
 load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
@@ -38,5 +38,11 @@ consumer_tests(name = "CucumberSwiftDSLConsumerTests")
 
 consumer_tests(
     name = "CucumberSwiftSwift6ConsumerTests",
+    copts = ["-swift-version", "6"],
+)
+
+# The Swift Testing runner, from generated tests (#533), at the lowest OS versions CucumberSwift supports.
+swift_testing_consumer_tests(
+    name = "CucumberSwiftTestingConsumerTests",
     copts = ["-swift-version", "6"],
 )
