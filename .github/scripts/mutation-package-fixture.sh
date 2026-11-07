@@ -26,23 +26,3 @@ if [[ "$status" -ne 0 ]]; then
 fi
 cd "$repo"
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
-
-# Both runners' scenarios must be in each run's Cucumber report: the XCTest target's (Voting and Driving) and the
-# Swift Testing target's (Retiring). Each killed mutant then names the scenarios that failed on it.
-python3 -I - "$reports" <<'PYTHON'
-import json, os, sys
-
-reports = sys.argv[1]
-with open(os.path.join(reports, "cucumber-baseline.json"), encoding="utf-8") as f:
-    features = sorted(feature["name"] for feature in json.load(f))
-if features != ["Driving", "Retiring", "Voting"]:
-    sys.exit(f"::error::MutationTestingPackage: the baseline report has the features {features}, not Driving, Retiring and Voting")
-with open(os.path.join(reports, "mutation-report.json"), encoding="utf-8") as f:
-    report = json.load(f)
-for name, entry in report["files"].items():
-    for mutant in entry["mutants"]:
-        if mutant["status"] == "Killed" and not mutant.get("killedBy"):
-            line = mutant["location"]["start"]["line"]
-            sys.exit(f"::error::MutationTestingPackage: no scenario is named as killing the mutant at {name}:{line}")
-print("MutationTestingPackage: each run's report has both runners' scenarios.")
-PYTHON

@@ -208,9 +208,7 @@ public final class MutationRun {
             "CUCUMBER_COVERAGE": "YES",
             "CUCUMBER_COVERAGE_PATH": coverageFolder.path,
             "CUCUMBER_COVERAGE_REGIONS": "YES",
-            "CUCUMBER_REPORT_PATH": baselineReport.path,
-            // The XCTest and the Swift Testing runner each run in a process of their own: both merge into the report.
-            "CUCUMBERSWIFT_MERGE_REPORT": "YES"
+            "CUCUMBER_REPORT_PATH": baselineReport.path
         ]
         for number in 1...options.baselineRuns {
             let result = runTests(in: copy, environment: number == 1 ? measuring : [:], timeout: nil)
@@ -255,12 +253,7 @@ public final class MutationRun {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
         let report = runs.appendingPathComponent("mutant-\(mutant.id).json")
-        let environment = [
-            "CUCUMBER_REPORT_PATH": report.path,
-            "CUCUMBERSWIFT_MERGE_REPORT": "YES",
-            "CUCUMBERSWIFT_MUTANT": String(mutant.id),
-            "CUCUMBER_COVERAGE": "NO"
-        ]
+        let environment = ["CUCUMBER_REPORT_PATH": report.path, "CUCUMBERSWIFT_MUTANT": String(mutant.id), "CUCUMBER_COVERAGE": "NO"]
         let result = runTests(in: copy, environment: environment, timeout: timeout)
         try? result.output.write(to: runs.appendingPathComponent("mutant-\(mutant.id).log"), atomically: true, encoding: .utf8)
         if !result.timedOut, result.testsRun == 0 {

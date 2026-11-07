@@ -11,7 +11,7 @@ import XCTest
 
 class ReportFileTests: XCTestCase {
     private var folder: URL!
-    var url: URL { folder.appendingPathComponent("report.json") }
+    private var url: URL { folder.appendingPathComponent("report.json") }
 
     override func setUpWithError() throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("ReportFileTests-\(UUID().uuidString)")
@@ -183,13 +183,12 @@ class ReportFileTests: XCTestCase {
 
     /// Runs one feature through the reporter with a report at `url` that another worker already wrote to,
     /// and returns the names of the features the report holds afterwards.
-    func featureNamesAfterARunBesideAnotherWorker(beforeTheRun prepare: () throws -> Void = {}) throws -> [String] {
+    private func featureNamesAfterARunBesideAnotherWorker() throws -> [String] {
         Cucumber.shared.reset()
         Cucumber.reportPath = url.path
         addTeardownBlock { Cucumber.reportPath = nil }
         let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
         ReportFile(url: url).merge([feature([scenario("Elsewhere", line: 3)], name: "Other", uri: "Other.feature")])
-        try prepare()
         Feature("F1") {
             Scenario("S1") {
                 Given(I: print(""))

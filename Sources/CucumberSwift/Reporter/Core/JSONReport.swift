@@ -137,12 +137,6 @@ final class CucumberJSONRecorder {
     /// Identifies what an event is about, as the runner's own object does: the feature, scenario or step.
     typealias Key = ObjectIdentifier
 
-    /// Whether `CUCUMBERSWIFT_MERGE_REPORT` asks every process of the run to merge into the report. Internal: the
-    /// mutation testing tool sets it for its runs.
-    private static var mergesOnRequest: Bool {
-        ProcessInfo.processInfo.environment["CUCUMBERSWIFT_MERGE_REPORT"] == "YES"
-    }
-
     private let reportURL: () -> URL
     private let isParallel: () -> Bool
     private let ordersByFile: Bool
@@ -172,10 +166,7 @@ final class CucumberJSONRecorder {
     ///     whichever ran first. A runner that doesn't promise an order of its tests turns it on.
     init(reportURL: @escaping () -> URL, isParallel: @escaping () -> Bool = { false }, ordersByFile: Bool = false) {
         self.reportURL = reportURL
-        // A process asked to merge writes the report as a parallel worker does: it joins the report's run and
-        // merges into it, so that several runners' processes in one run, such as the XCTest and the Swift Testing
-        // targets of one `swift test`, all keep their features in it. The mutation testing tool asks for it.
-        self.isParallel = { isParallel() || Self.mergesOnRequest }
+        self.isParallel = isParallel
         self.ordersByFile = ordersByFile
     }
 
@@ -186,9 +177,7 @@ final class CucumberJSONRecorder {
             // XCTest asks for CucumberTest's suite again while a worker runs scenarios. Clearing the
             // features then would leave the scenario in progress with a feature that is no longer in the
             // report, and lose the rest of the worker's scenarios. The report is where the run starts over.
-            // The tool deletes the report before each run it asks to merge, so a report already there is this
-            // run's, from a runner that finished more than a minute ago.
-            ReportFile.at(reportURL()).joinRun(staleAfter: Self.mergesOnRequest ? .infinity : 60)
+            ReportFile.at(reportURL()).joinRun()
             save(atBoundary: true)
             return
         }
