@@ -11,6 +11,11 @@ CucumberSwift re-exports it. The build folder Carthage used is deleted first: th
 module records its search paths, so a test on the machine that built it would otherwise find the
 module there and pass.
 
+The test target's code under test is the `Cukes` framework, built from source with Code Coverage on, as a
+project's own code is. CucumberSwift scores the feature, and the task fails unless the summary is in the output.
+`CUCUMBER_COVERAGE_SOURCES` names the framework's folder, because CucumberSwift never measures the files in its
+own package folder, which holds this fixture.
+
 `mise run test-carthage` builds the framework with Carthage and runs this fixture on an iOS
 simulator. `mise run test-fixtures` skips it. Needs Carthage 0.37 or later, and the Tuist version
 pinned in `.mise.toml`.
