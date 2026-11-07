@@ -2,7 +2,9 @@ import Foundation
 import PackagePlugin
 
 /// Checks the target's `.feature` files on every build, and reports each problem as a warning on
-/// the line it was found on, in Xcode's issue navigator and in the editor.
+/// the line it was found on, in Xcode's issue navigator and in the editor. Also adds a Swift file to the target
+/// with each feature file's path, so that CucumberSwift's XCTest runner reports its issues at the feature
+/// files in the project, not at their copies in the test bundle.
 @main
 struct CucumberSwiftLintPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
@@ -45,13 +47,16 @@ private func lintCommands(tool: URL, workDirectory: URL, targetName: String, pat
     let sortedFeatures = features.sorted()
     let sortedSwiftFiles = swiftFiles.sorted()
     let stamp = workDirectory.appendingPathComponent("\(targetName).lint-stamp")
+    // A Swift output, so the target compiles it.
+    let featurePaths = workDirectory.appendingPathComponent("CucumberSwiftFeatureSourcePaths.swift")
     return [
         .buildCommand(displayName: "Checking feature files in \(targetName)",
                       executable: tool,
-                      arguments: ["--stamp", stamp.path, "--features"] + sortedFeatures
+                      arguments: ["--stamp", stamp.path, "--target", targetName, "--feature-paths", featurePaths.path, "--features"]
+                        + sortedFeatures
                         + ["--step-definitions"] + sortedSwiftFiles,
                       inputFiles: (sortedFeatures + sortedSwiftFiles).map { URL(fileURLWithPath: $0) },
-                      outputFiles: [stamp])
+                      outputFiles: [stamp, featurePaths])
     ]
 }
 

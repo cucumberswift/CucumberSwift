@@ -8,6 +8,7 @@
 //
 
 import CucumberSwift
+import Foundation
 import XCTest
 
 final class Basket {
@@ -30,6 +31,21 @@ extension Cucumber: StepImplementation {
 
         Then("the basket holds {int} cuke(s)") { (match: CucumberSwiftExpressions.Match, _) in
             XCTAssertEqual(Basket.shared.cukes, try match.first(\.int))
+        }
+
+        // Without the CucumberSwiftLint plugin, which a Carthage project can't use, CucumberSwift finds the
+        // feature file in the project from this file's path, and reports a step's failure there, not at its copy
+        // in the test bundle (#535). The failure is expected only there; anywhere else, it fails the test.
+        Then("a failure is reported at this feature file in the project") { _, _ in
+            let featureFile = URL(fileURLWithPath: "\(#filePath)")
+                .deletingLastPathComponent()
+                .appendingPathComponent("Features/Basket.feature")
+                .resolvingSymlinksInPath()
+            let options = XCTExpectedFailure.Options()
+            options.issueMatcher = { $0.sourceCodeContext.location?.fileURL.resolvingSymlinksInPath() == featureFile }
+            XCTExpectFailure("A failure on purpose, to show where CucumberSwift reports it", options: options) {
+                XCTFail("Reported at \(featureFile.path)")
+            }
         }
     }
 }
