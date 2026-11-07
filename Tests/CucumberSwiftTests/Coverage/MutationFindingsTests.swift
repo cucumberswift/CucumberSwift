@@ -135,13 +135,20 @@ final class MutationFindingsTests: XCTestCase {
                       "\(findings.issues)")
     }
 
-    func testAFileThatCantBeReadCountsAsUnchanged() throws {
+    func testAFileThatCantBeReadSaysThatTheReportCantBeChecked() throws {
         let scenarios = [scenario("A registered adult can vote", line: 4, regions: [7])]
         let findings = try XCTUnwrap(try findings(scenarios: scenarios) { _, _ in "" })
-        // An empty text is a file that reads differently. A file that can't be read at all is nil.
+        // An empty text is a file that reads differently. A file that can't be read at all is nil, as on a device.
         XCTAssertEqual(findings.counted, 0)
         let unreadable = try XCTUnwrap(try self.findings(scenarios: scenarios) { _, _ in nil })
+        // The mutants are scored as the report says, and the feature says that nothing checked the report.
         XCTAssertEqual(unreadable.counted, 3)
+        XCTAssertFalse(unreadable.isOutOfDate)
+        let warnings = unreadable.issues.filter { $0.severity == .warning }
+        XCTAssertEqual(warnings.count, 1, "\(unreadable.issues)")
+        XCTAssertEqual(warnings.first?.line, 1)
+        XCTAssertTrue(warnings.first?.message.hasPrefix("The mutation report can't be checked against the code: Voting.swift can't be read where the tests run") ?? false,
+                      "\(warnings)")
     }
 
     func testAMutantsTextCanSpanLines() {

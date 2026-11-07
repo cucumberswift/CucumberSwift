@@ -52,15 +52,22 @@ struct MutationFindings: Equatable {
         var kills = [Int: Set<String>]()
         var changes = [String: String]()
         var stale = Set<String>()
-        var checked = [String: Bool]()
+        var checked = [String: Freshness]()
+        var unchecked = Set<String>()
         for mutant in report.mutants where mutant.isCounted {
             let held = code.regions(mutant.file, mutant.line, mutant.column)
             let running = scenarios.filter { !$0.regions.isDisjoint(with: held) }
             guard !held.isEmpty, !running.isEmpty else { continue }
-            checked[mutant.file] = checked[mutant.file] ?? isUnchanged(mutant.file, report: report, code: code)
-            guard checked[mutant.file] == true else {
-                stale.insert(URL(fileURLWithPath: mutant.file).lastPathComponent)
-                continue
+            let freshness = checked[mutant.file] ?? freshness(of: mutant.file, report: report, code: code)
+            checked[mutant.file] = freshness
+            switch freshness {
+                case .changed:
+                    stale.insert(URL(fileURLWithPath: mutant.file).lastPathComponent)
+                    continue
+                case .unreadable:
+                    unchecked.insert(URL(fileURLWithPath: mutant.file).lastPathComponent)
+                case .unchanged:
+                    break
             }
             counted += 1
             if mutant.isDetected {
@@ -79,6 +86,13 @@ struct MutationFindings: Equatable {
             let message = "The mutation report is out of date: \(stale.sorted().joined(separator: ", ")) changed after it was written"
                 + "\(dated(report.date)). Run `cucumberswift-mutation-test` again."
             summary.append(CoverageIssue(severity: .error, message: message, file: file, line: featureLine, kind: .mutation))
+        }
+        // The mutants are still scored, as the report says them, but the feature says that nothing checked the report.
+        if !unchecked.isEmpty {
+            let message = "The mutation report can't be checked against the code: \(unchecked.sorted().joined(separator: ", ")) can't be read "
+                + "where the tests run, so the report is taken as it is\(dated(report.date)). Run the tests where they can read the code, "
+                + "such as on the Mac or on a Simulator, to check that the report is up to date."
+            summary.append(CoverageIssue(severity: .warning, message: message, file: file, line: featureLine, kind: .mutation))
         }
         guard counted > 0 || !stale.isEmpty else { return nil }
         let survived = counted - detected
@@ -120,11 +134,20 @@ struct MutationFindings: Equatable {
         feature == other || feature.hasSuffix("/" + other) || other.hasSuffix("/" + feature)
     }
 
-    /// Whether `file` reads now as the report recorded it. A file that can't be read, as on a device that can't see
-    /// the Mac's files, or that the report has no text for, counts as unchanged: there's nothing to compare.
-    private static func isUnchanged(_ file: String, report: MutationReport, code: CodeLookup) -> Bool {
-        guard let recorded = report.sources[file], !recorded.isEmpty, let current = code.currentSource(file) else { return true }
-        return recorded == current
+    /// Whether a file reads now as the report recorded it.
+    private enum Freshness {
+        case unchanged
+        case changed
+        /// The file can't be read where the tests run, as on a device that can't see the Mac's files, so nothing was compared.
+        case unreadable
+    }
+
+    /// Whether `file` reads now as the report recorded it. A file that the report has no text for counts as unchanged:
+    /// there's nothing to compare.
+    private static func freshness(of file: String, report: MutationReport, code: CodeLookup) -> Freshness {
+        guard let recorded = report.sources[file], !recorded.isEmpty else { return .unchanged }
+        guard let current = code.currentSource(file) else { return .unreadable }
+        return recorded == current ? .unchanged : .changed
     }
 
     /// `>= at Voting.swift:12 is changed to >`

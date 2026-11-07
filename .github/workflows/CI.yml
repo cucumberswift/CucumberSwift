@@ -1078,6 +1078,40 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
+      # The same run with an iOS Simulator as the test destination (#536): the same mutants with the same statuses.
+      # The run script's build runs on the Mac, and the tests run on the Simulator.
+      - name: Run mutation testing on the Xcode project fixture with an iOS Simulator
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-ios"
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-ios" "$destination"
+      # The same run with Mac Catalyst, a tvOS Simulator and a watchOS Simulator as the test destination (#536), in the
+      # nightly and manual runs only: pull requests run the macOS and iOS destinations.
+      - name: Run mutation testing on the Xcode project fixture with Mac Catalyst
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-catalyst"
+          .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-catalyst" "platform=macOS,variant=Mac Catalyst"
+      - name: Run mutation testing on the Xcode project fixture with a tvOS Simulator
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-tvos"
+          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
+          .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-tvos" "$destination"
+      - name: Run mutation testing on the Xcode project fixture with a watchOS Simulator
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-watchos"
+          destination=$(.github/scripts/simulator-destination.sh "watchOS Simulator")
+          .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-watchos" "$destination"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Xcode mutation testing reports and log
         if: failure()
@@ -1087,6 +1121,8 @@ jobs:
           path: |
             ${{ runner.temp }}/mutation-MutationTestingTuist
             ${{ runner.temp }}/mutation-MutationTestingTuist-build.log
+            ${{ runner.temp }}/mutation-xcode-*/mutation-MutationTestingTuist
+            ${{ runner.temp }}/mutation-xcode-*/mutation-MutationTestingTuist-build.log
           if-no-files-found: ignore
           retention-days: 3
       # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing

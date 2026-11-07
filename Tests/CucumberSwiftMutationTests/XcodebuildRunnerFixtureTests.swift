@@ -9,7 +9,8 @@ import XCTest
 /// Runs one scenario at a time through `xcodebuild`, with the test names that `ScenarioTestNames` makes, on the generated
 /// project of `Fixtures/MutationTestingTuist`. Our GitHub Actions CI workflow runs it from
 /// `.github/scripts/mutation-xcode-fixture.sh`, which generates the project and sets `MUTATION_XCODE_FIXTURE` to its
-/// folder. Without that variable the tests are skipped, because they build a project with `xcodebuild`.
+/// folder. Without that variable the tests are skipped, because they build a project with `xcodebuild`. The tests run on
+/// the destination that `MUTATION_XCODE_DESTINATION` names, `platform=macOS` when it isn't set.
 final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
     private var copy: URL!
     private var runner: XcodebuildRunner!
@@ -29,7 +30,7 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
         let target = XcodebuildRunner.Target(
             container: "MutationTestingTuist.xcodeproj",
             scheme: "MutationTestingTuist",
-            destination: "platform=macOS",
+            destination: ProcessInfo.processInfo.environment["MUTATION_XCODE_DESTINATION"].flatMap { $0.isEmpty ? nil : $0 } ?? "platform=macOS",
             testTargets: ["VotingTests", "VotingSwiftTests"]
         )
         runner = XcodebuildRunner(target: target)

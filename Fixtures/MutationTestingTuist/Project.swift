@@ -1,7 +1,10 @@
 import ProjectDescription
 
-// A macOS framework tested with CucumberSwift and XCTest, and with Swift Testing, for mutation testing on an Xcode
-// project. Its features leave 3 changes to its code that no scenario notices. See README.md.
+// A framework tested with CucumberSwift and XCTest, and with Swift Testing, for mutation testing on an Xcode project,
+// for macOS, Mac Catalyst, iOS, tvOS and watchOS: mutation testing picks the destination of the tests. Its features
+// leave 3 changes to its code that no scenario notices. See README.md.
+let destinations: Destinations = [.mac, .macCatalyst, .iPhone, .appleTv, .appleWatch]
+let deploymentTargets: DeploymentTargets = .multiplatform(iOS: "16.0", macOS: "14.0", watchOS: "9.0", tvOS: "16.0")
 let settings: Settings = .settings(base: [
     "SWIFT_VERSION": "6.0",
     // Builds and runs without a signing team.
@@ -19,20 +22,20 @@ let project = Project(
     targets: [
         .target(
             name: "Voting",
-            destinations: .macOS,
+            destinations: destinations,
             product: .framework,
             bundleId: "org.cucumberswift.fixtures.Voting",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Sources/**"],
             settings: settings
         ),
         .target(
             name: "VotingTests",
-            destinations: .macOS,
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.VotingTests",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/*.swift"],
             // CucumberSwift reads the feature files from the "Features" folder in the test bundle.
@@ -49,10 +52,10 @@ let project = Project(
         // among the target's files and generates a test for each scenario.
         .target(
             name: "VotingSwiftTests",
-            destinations: .macOS,
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.VotingSwiftTests",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["SwiftTests/*.swift"],
             resources: [.folderReference(path: "SwiftTests/Features")],
@@ -67,8 +70,10 @@ let project = Project(
         ),
         // Runs mutation testing on this project from a Run Script build phase, as a project does to see the surviving
         // mutants as warnings in Xcode. `xcodebuild build -scheme Mutation` runs the phase, and the phase runs the command
-        // from a CucumberSwift checkout: CUCUMBERSWIFT_CHECKOUT is the checkout's folder and MUTATION_REPORTS the folder
-        // for the reports. The build's variables would reach the command's own `xcodebuild`, so the phase clears them.
+        // from a CucumberSwift checkout: CUCUMBERSWIFT_CHECKOUT is the checkout's folder, MUTATION_REPORTS the folder
+        // for the reports and MUTATION_DESTINATION the destination of the tests, macOS when it isn't set. The phase itself
+        // always runs on the Mac, whatever that destination is. The build's variables would reach the command's own
+        // `xcodebuild`, so the phase clears them.
         .target(
             name: "Mutation",
             destinations: .macOS,
@@ -83,7 +88,7 @@ let project = Project(
                     env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
                         /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift-mutation-test \\
                         --root "$SRCROOT" --project MutationTestingTuist.xcodeproj --scheme MutationTestingTuist \\
-                        --destination 'platform=macOS' --test-target VotingTests --test-target VotingSwiftTests \\
+                        --destination "${MUTATION_DESTINATION:-platform=macOS}" --test-target VotingTests --test-target VotingSwiftTests \\
                         --format xcode --output "$MUTATION_REPORTS" \\
                         --baseline-runs 1 --minimum-timeout 120
                     """,

@@ -6,7 +6,12 @@
 # It then runs XcodebuildRunnerFixtureTests, which selects one scenario of each test runner with xcodebuild.
 # Used by CI's Fixture tests, after `mise run test-fixtures`.
 #
-#   .github/scripts/mutation-xcode-fixture.sh <directory>
+#   .github/scripts/mutation-xcode-fixture.sh <directory> [<destination>]
+#
+# <destination> is where the tests run, the `-destination` value of the command's `xcodebuild`: `platform=macOS`, the
+# default, `platform=macOS,variant=Mac Catalyst`, or a Simulator such as the one that
+# `.github/scripts/simulator-destination.sh "iOS Simulator"` prints. The build with the Run Script phase always runs
+# on the Mac, and the run must find the same mutants with the same statuses on every destination.
 #
 # The fixture's own path to this checkout doesn't reach it from another folder, so the run uses a copy of the
 # fixture's files in <directory>, which depends on CucumberSwift by URL, as a project does: a git repository of the
@@ -16,7 +21,8 @@
 # <directory>/mutation-MutationTestingTuist-build.log. The fixture in this checkout stays as it is.
 set -euo pipefail
 
-dir=${1:?usage: mutation-xcode-fixture.sh <directory>}
+dir=${1:?usage: mutation-xcode-fixture.sh <directory> [<destination>]}
+destination=${2:-platform=macOS}
 name=MutationTestingTuist
 fixture=Fixtures/$name
 repo="$(cd "$dir" && pwd -P)/CucumberSwift.git"
@@ -40,6 +46,7 @@ mise exec -- tuist generate --no-open --path "$project"
 # so the step puts it back. The build log has the command's output, with each survivor as a warning.
 export CUCUMBERSWIFT_CHECKOUT="$PWD"
 export MUTATION_REPORTS="$reports"
+export MUTATION_DESTINATION="$destination"
 log="$(cd "$dir" && pwd -P)/mutation-$name-build.log"
 status=0
 .github/scripts/keep-package-resolved.sh xcodebuild build \
@@ -56,4 +63,5 @@ python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
 # The same project, one scenario at a time: the runner selects an XCTest scenario and a Swift Testing scenario with
 # the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the folder.
-MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests
+MUTATION_XCODE_FIXTURE="$project" MUTATION_XCODE_DESTINATION="$destination" \
+  .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests
