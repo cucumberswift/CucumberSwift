@@ -1054,6 +1054,10 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+      # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
+      # their coverage folders, and fails unless every way gives the same scores (#515).
+      - name: Merge the coverage of parallel and sharded runs
+        run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
       # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
       # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
       # cancelled, which hides whether it passed (#480).
