@@ -165,7 +165,7 @@ final class CoverageRecorder {
         self.settings = settings
         measureCode()
         if let version = counters.unsupportedVersions.first, counters.binaries.isEmpty {
-            problem = "The profile format of this test process is version \(version), and CucumberSwift writes version \(ProfileCounters.supportedVersion), the one of Xcode 26."
+            problem = "The profile format of this test process is version \(version), and CucumberSwift writes versions 8 and 10, the ones of Xcode 16 and Xcode 26."
         } else if counters.binaries.isEmpty {
             problem = "No binary in the test process was built with code coverage. Turn on code coverage for the test target."
         }

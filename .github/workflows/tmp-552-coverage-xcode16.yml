@@ -1,0 +1,92 @@
+name: tmp-552-coverage-xcode16
+
+# Temporary (#552): proves coverage, redundancy and the coverage files with Xcode 16, once on this branch.
+# Xcode 16.0 writes version 8 of the raw profile and version 6 of the coverage map; Xcode 16.4, like 16.3,
+# writes versions 10 and 7, as Xcode 26 does. Deleted before review.
+on:
+  push:
+    branches:
+      - feature/552-coverage-xcode16
+
+permissions:
+  contents: read
+
+jobs:
+  coverage_xcode16:
+    name: Coverage (Xcode 16)
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 16.0
+        run: .github/scripts/select-xcode.sh 16.0
+      - name: Install the iOS platform for Xcode 16.0
+        run: |
+          xcrun simctl list runtimes > /dev/null
+          xcodebuild -downloadPlatform iOS
+      - name: Install Carthage
+        run: command -v carthage || brew install carthage
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      # The scoring tests and the llvm-profdata merge must pass, not skip, so the bundle really was measured.
+      - name: "Xcode 16.0: CucumberSwift's coverage tests, built with code coverage"
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          log="$RUNNER_TEMP/coverage-tests.log"
+          swift test --enable-code-coverage --filter 'CoverageMapTests|CoverageRecorderTests|CoverageReporterTests|RawProfileFormatTests' 2>&1 | tee "$log"
+          status=0
+          for test in testXcode16sVersionsAreDecodedAsXcode26s testAProfileHasTheLayoutOfItsBinarysVersion \
+            testAProfileMergesWithTheLLVMProfdataOfTheXcodeThatBuiltTheTests testAProfileIsARawProfileWhateverTheRunsProfileFile \
+            testTheCoverageMapFindsTheCodeAScenarioRanAndScoresItsFeature testTwoScenariosWhoseStepsRunTheSameCodeAreRedundantButTheBackgroundsStepsAreNot; do
+            if grep -q "$test\]' passed" "$log"; then echo "passed: $test"; else echo "::error::$test didn't pass"; status=1; fi
+          done
+          exit $status
+      - name: "Xcode 16.0: build the framework with Carthage and score the fixture's feature"
+        if: ${{ !cancelled() }}
+        env:
+          CARTHAGE_LOG: carthage-build.log
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+        run: mise run test-carthage
+      - name: Select Xcode 16.4
+        if: ${{ !cancelled() }}
+        run: .github/scripts/select-xcode.sh 16.4
+      - name: "Xcode 16.4: the coverage fixtures, with both runners"
+        if: ${{ !cancelled() }}
+        env:
+          FIXTURES: CoverageDefaultsPackage,CoverageDefaultsTuist
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise run test-fixtures
+      - name: "Xcode 16.4: measure coverage on iOS and tvOS Simulators and Mac Catalyst"
+        if: ${{ !cancelled() }}
+        run: |
+          status=0
+          for platform in iOS tvOS Catalyst; do
+            if [ "$platform" = Catalyst ]; then
+              destination='platform=macOS,variant=Mac Catalyst'
+            else
+              destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
+            fi
+            log="$RUNNER_TEMP/coverage-$platform.log"
+            (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
+              -destination "$destination" -enableCodeCoverage YES -skipPackagePluginValidation \
+              CODE_SIGNING_ALLOWED=NO > "$log" 2>&1) || status=1
+            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+            scores=$(grep -c 'CucumberSwift coverage: Grading: 50% of the code its scenarios ran (4 of 8 regions in 1 function), .*redundancy 33%' "$log" || true)
+            echo "$platform: ${scores:-0} correct coverage summaries (2 expected, one for each runner)"
+            if [ "${scores:-0}" -ne 2 ]; then
+              echo "::error::CucumberSwift gave the Grading feature the expected scores ${scores:-0} times on $platform, not 2."
+              status=1
+            fi
+          done
+          exit $status
