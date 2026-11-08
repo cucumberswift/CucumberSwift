@@ -34,12 +34,21 @@ swift_library(
     ],
 )
 
+# Merges the coverage of several runs and scores it. Its sources are symlinks to the coverage scores' files
+# in Sources/CucumberSwift/Coverage, compiled without XCTest.
+swift_library(
+    name = "CucumberSwiftCoverageMerge",
+    srcs = glob(["Sources/CucumberSwiftCoverageMerge/*.swift"]),
+    module_name = "CucumberSwiftCoverageMerge",
+    visibility = ["//visibility:public"],
+)
+
 # Scores the scenarios of several runs as one run, such as a parallel run's workers or a suite's shards:
-# `bazel run @cucumberswift//:cucumberswift-coverage-merge -- <coverage folder>`. Its sources are symlinks
-# to the coverage scores' files in Sources/CucumberSwift/Coverage, compiled without XCTest.
+# `bazel run @cucumberswift//:cucumberswift-coverage-merge -- <coverage folder>`.
 swift_binary(
     name = "cucumberswift-coverage-merge",
     srcs = glob(["Sources/CucumberSwiftCoverageMergeTool/*.swift"]),
     module_name = "CucumberSwiftCoverageMergeTool",
     visibility = ["//visibility:public"],
+    deps = [":CucumberSwiftCoverageMerge"],
 )

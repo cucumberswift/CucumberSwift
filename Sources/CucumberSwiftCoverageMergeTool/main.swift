@@ -1,3 +1,4 @@
+import CucumberSwiftCoverageMerge
 import Foundation
 
 // cucumberswift-coverage-merge <folder>…
@@ -14,8 +15,7 @@ guard !arguments.isEmpty, !arguments.contains(where: { ["-h", "--help"].contains
 }
 let folders = arguments.map { URL(fileURLWithPath: $0, isDirectory: true) }
 do {
-    let merge = try CoverageMerge(runs: CoverageMerge.read(folders))
-    exit(merge.report { print($0) } ? 1 : 0)
+    exit(try MergedCoverage(folders: folders).report { print($0) } ? 1 : 0)
 } catch {
     FileHandle.standardError.write(Data("error: \(error)\n".utf8))
     exit(2)

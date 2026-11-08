@@ -58,6 +58,10 @@ struct CoverageMerge {
     let scenarioCount: Int
     /// How many scenarios ran in more than one run, and were scored once.
     let repeatedCount: Int
+    /// The measured code of every run, numbered again as one build.
+    let code: MeasuredCode
+    /// Every scenario that was scored, once, with the regions it ran numbered as ``code`` numbers them.
+    let scenarios: [MergedScenario]
 
     /// The folders of the runs in `folders`: each folder that has a `manifest.json`, and each `run-<id>`
     /// folder with one directly inside the others.
@@ -112,7 +116,7 @@ struct CoverageMerge {
     }
 
     /// A scenario as the merge scores it.
-    private struct MergedScenario {
+    struct MergedScenario {
         let feature: String
         let featureName: String
         let featureLine: Int
@@ -163,6 +167,7 @@ struct CoverageMerge {
             renumbered.append(map)
         }
         let code = MeasuredCode(functions: functions)
+        self.code = code
 
         var seen = Set<[String]>()
         var scenarios = [MergedScenario]()
@@ -196,6 +201,7 @@ struct CoverageMerge {
         }
         scenarioCount = scenarios.count
         repeatedCount = repeated
+        self.scenarios = scenarios
 
         let byFeature = Dictionary(grouping: scenarios, by: \.feature)
         features = byFeature.keys.sorted().flatMap { key -> [FeatureScores] in

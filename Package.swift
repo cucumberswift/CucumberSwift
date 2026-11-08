@@ -93,10 +93,15 @@ let package = Package(
         .target(
             name: "CucumberSwiftGherkin",
             path: "Sources/CucumberSwiftGherkin"),
-        // The tool behind cucumberswift-coverage-merge: the coverage scores' files, through symlinks to
-        // Sources/CucumberSwift/Coverage, compiled without XCTest or Swift Testing.
+        // Merges the coverage of several runs and scores it: the coverage scores' files, through symlinks to
+        // Sources/CucumberSwift/Coverage, compiled without XCTest or Swift Testing. Not a product.
+        .target(
+            name: "CucumberSwiftCoverageMerge",
+            path: "Sources/CucumberSwiftCoverageMerge"),
+        // The tool behind cucumberswift-coverage-merge.
         .executableTarget(
             name: "CucumberSwiftCoverageMergeTool",
+            dependencies: ["CucumberSwiftCoverageMerge"],
             path: "Sources/CucumberSwiftCoverageMergeTool"),
         // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
         // CucumberSwiftGherkin for the keywords of feature files in other languages.
