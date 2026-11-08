@@ -177,6 +177,9 @@ def check_scenarios(name, expected, log, reports):
         except MutantsError as error:
             errors.append(f"error: {name}: {error}")
             continue
+        # Not `!=`, until the report overwrite is fixed in main (#546): a package with an XCTest and a Swift Testing
+        # target has both runners write one report, and the last replaces the other's, so the report can hold fewer
+        # scenarios than ran. Then it must equal the log's count.
         if held is not None and held > ran:
             errors.append(f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}")
     if all(ran == every for (_status, ran, every) in counts.values()):
