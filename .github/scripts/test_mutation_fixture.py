@@ -179,8 +179,8 @@ class CheckTests(Folder):
         self.assertEqual(len(errors), 1)
         self.assertIn("mutant 1 ran 0 of 2", errors[0])
 
-    def test_the_count_in_the_log_must_be_what_the_mutants_cucumber_report_holds(self):
-        self.write_cucumber_report(1, 1)
+    def test_the_mutants_cucumber_report_may_hold_fewer_scenarios_than_the_log_counts_but_not_more(self):
+        self.write_cucumber_report(1, 0)
         self.write_cucumber_report(2, 3)
         errors = self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))
         self.assertEqual(len(errors), 1)

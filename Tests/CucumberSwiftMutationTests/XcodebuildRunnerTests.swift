@@ -215,6 +215,18 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(merged?.compactMap { $0["name"] as? String }, ["Feature A", "Feature B"])
     }
 
+    func testOneNamedTestTargetLimitsTheRunToThatTarget() throws {
+        let named = commands(total: 3)
+        var scoped = target
+        scoped.testTargets = ["A"]
+        _ = XcodebuildRunner(target: scoped, commands: named).test(in: try makeCopy(), request: TestRequest())
+        let call = try XCTUnwrap(named.calls.first { $0.arguments.first == "test-without-building" })
+        XCTAssertEqual(call.arguments.firstIndex(of: "-only-testing").map { call.arguments[$0 + 1] }, "A")
+        let none = commands(total: 3)
+        _ = XcodebuildRunner(target: target, commands: none).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertFalse(try XCTUnwrap(none.calls.first).arguments.contains("-only-testing"), "No test target named: every test of the scheme")
+    }
+
     func testOneFailedTestTargetFailsTheRun() throws {
         let commands = RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(1)) }

@@ -40,6 +40,15 @@ final class SpyRunner: TestRunner, @unchecked Sendable {
     private let prepareFails: Bool
     let excludedFromCopy: [String]
     var onPrepare: (URL) -> Void = { _ in }
+    private let requestLock = NSLock()
+    private var recordedRequests = [TestRequest]()
+
+    /// What each test run was asked to do, in order.
+    var requests: [TestRequest] {
+        requestLock.lock()
+        defer { requestLock.unlock() }
+        return recordedRequests
+    }
 
     init(prepared: Counter, cleaned: Counter, buildStatus: Bool = true, testsRun: Int = 3, prepareFails: Bool = false, excluded: [String] = []) {
         self.prepared = prepared
@@ -60,47 +69,14 @@ final class SpyRunner: TestRunner, @unchecked Sendable {
         BuildResult(succeeded: buildStatus, duration: 1)
     }
 
-    func test(in _: URL, request _: TestRequest) -> TestRun {
-        TestRun(status: 0, duration: 1, testsRun: testsRun)
+    func test(in _: URL, request: TestRequest) -> TestRun {
+        requestLock.lock()
+        recordedRequests.append(request)
+        requestLock.unlock()
+        return TestRun(status: 0, duration: 1, testsRun: testsRun)
     }
 
     func cleanUp(copy _: URL) {
         cleaned.increment()
-    }
-}
-
-/// Runs nothing and records each command, as `FakeRunner` does for `swift`.
-final class RecordingCommands: CommandRunning, @unchecked Sendable {
-    struct Call: Equatable {
-        let executable: String
-        let arguments: [String]
-        let environment: [String: String]
-        let timeout: TimeInterval?
-    }
-
-    private let lock = NSLock()
-    private var recorded = [Call]()
-    private let handler: (Call) -> CommandResult
-
-    var calls: [Call] {
-        lock.lock()
-        defer { lock.unlock() }
-        return recorded
-    }
-
-    init(handler: @escaping (Call) -> CommandResult = { _ in .finished(0) }) {
-        self.handler = handler
-    }
-
-    func run(_ executable: String, _ arguments: [String], in directory: URL, environment: [String: String], timeout: TimeInterval?) -> CommandResult {
-        // The commands that copy and delete are real, as with `FakeRunner`; only the build tools are replaced.
-        if ["/bin/cp", "/bin/chmod", "/usr/bin/git"].contains(executable) {
-            return ProcessRunner().run(executable, arguments, in: directory, environment: environment, timeout: timeout)
-        }
-        let call = Call(executable: executable, arguments: arguments, environment: environment, timeout: timeout)
-        lock.lock()
-        recorded.append(call)
-        lock.unlock()
-        return handler(call)
     }
 }
