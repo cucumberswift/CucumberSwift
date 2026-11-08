@@ -138,6 +138,7 @@ jobs:
       no_code: ${{ steps.changes.outputs.no_code }}
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
+      mutation_code: ${{ steps.mutation.outputs.mutation_code }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
@@ -187,6 +188,28 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
+      # the Cucumber report it reads, its plugin, its fixtures and scripts, the package manifests or this workflow.
+      # Not the documentation, which lives in Sources too. Always on any other event.
+      - name: Decide whether the mutation testing fixture runs
+        id: mutation
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|bazel/|BUILD\.bazel$|MODULE\.bazel$|Tests/(BUILD\.bazel|MODULE\.bazel|\.bazelrc|expected-mutants|Grades/|CucumberSwiftCoverageTests/)|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/mutation[-_])'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Mutation testing fixture runs: $run"
+          echo "mutation_code=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -1057,7 +1080,10 @@ jobs:
       # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
       # as a script runs it: `swift run cucumberswift-mutation-test --format xcode`. The run must kill and keep the
       # mutants that the fixture's expected-mutants file lists, and print a warning for each survivor (#519).
+      # It takes minutes, so a pull request runs it only when it changes mutation testing (mutation_code, from the
+      # changes job). The merge queue and every nightly and manual run always run it.
       - name: Run mutation testing on the Swift package fixture
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
         run: .github/scripts/mutation-package-fixture.sh "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the mutation testing reports and log
@@ -1074,7 +1100,9 @@ jobs:
       # destination, for the XCTest and the Swift Testing runner. The run must kill and keep the mutants that the
       # fixture's expected-mutants file lists, and the build log must warn at each survivor (#521). It runs on a copy
       # of the fixture that depends on CucumberSwift by URL, as a project does.
+      # It takes about 10 minutes, so it runs on the same events as the Swift package fixture's step.
       - name: Run mutation testing on the Xcode project fixture
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
@@ -1109,7 +1137,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
-    timeout-minutes: 90
+    timeout-minutes: 60
     permissions:
       contents: read
     strategy:
@@ -1212,9 +1240,10 @@ jobs:
       # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
       # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
       # lists, and print a warning for each survivor (#522). It shares the coverage step's disk cache, and runs with
-      # the newest Bazel only: the oldest runs the other steps to check the module.
+      # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
+      # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
       - name: Run mutation testing on the Bazel fixture
-        if: ${{ matrix.bazel == '' }}
+        if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
         run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Bazel mutation testing reports and log
