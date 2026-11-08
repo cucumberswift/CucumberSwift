@@ -1,0 +1,51 @@
+name: tmp-553-carthage-xcode16
+
+# Temporary (#553): runs the steps of "Carthage tests (Xcode 16)" from CI.yml once on this branch. Deleted before review.
+on:
+  push:
+    branches:
+      - fix/553-carthage-scoring-xcode26
+
+permissions:
+  contents: read
+
+jobs:
+  carthage_xcode16:
+    name: Carthage tests (Xcode 16)
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 16.0
+        run: .github/scripts/select-xcode.sh 16.0
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i ios || true
+      - name: Install the iOS platform for Xcode 16.0
+        run: |
+          xcrun simctl list runtimes > /dev/null
+          xcodebuild -downloadPlatform iOS
+      - name: Install Carthage
+        run: command -v carthage || brew install carthage
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Build the framework with Carthage and test a project that uses it
+        env:
+          CARTHAGE_LOG: carthage-build.log
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+        run: mise run test-carthage
+      - name: Show why the build failed
+        if: failure()
+        run: |
+          grep -E '(^|[ /:])error: |\*\* (ARCHIVE|BUILD) (FAILED|SUCCEEDED)' carthage-build.log | sort -u | head -20 || true
