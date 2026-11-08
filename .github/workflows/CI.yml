@@ -198,7 +198,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter)/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/mutation[-_])'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/mutation[-_])'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -1100,7 +1100,9 @@ jobs:
       # destination, for the XCTest and the Swift Testing runner. The run must kill and keep the mutants that the
       # fixture's expected-mutants file lists, and the build log must warn at each survivor (#521). It runs on a copy
       # of the fixture that depends on CucumberSwift by URL, as a project does.
+      # It takes about 10 minutes, so it runs on the same events as the Swift package fixture's step.
       - name: Run mutation testing on the Xcode project fixture
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
