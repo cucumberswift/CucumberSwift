@@ -5,6 +5,7 @@
 # - XCTest: one scenario at a time; with Xcode's parallel testing, in 3 workers; and in 2 shards, one
 #   for each tag, @shard1 and @shard2, as CUCUMBER_TAGS picks them.
 # - Swift Testing: one scenario at a time; and in the same 2 shards, run at the same time.
+# - Both runners in one `swift test` of the package, which writes a run folder for each.
 #
 # The merged scores of a run one scenario at a time must also be the ones its runner printed while it ran,
 # and both runners must give the same scores. Times differ from run to run, so they are left out.
@@ -70,6 +71,13 @@ second=$!
 wait "$first"
 wait "$second"
 
+echo "Running both runners in one swift test"
+# `swift test` runs the XCTest runner and the Swift Testing runner from one test binary, and each writes a run
+# folder in the same coverage folder.
+CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$coverage/swift-test" CUCUMBER_COVERAGE_SOURCES=CoverageMergePackage/Sources \
+  "$keep" swift test --package-path "$fixture" --scratch-path "$work/swiftpm" --enable-code-coverage > "$logs/swift-test.log" 2>&1 \
+  || { tail -80 "$logs/swift-test.log"; echo "error: the swift test run failed; its log is $logs/swift-test.log"; exit 1; }
+
 # The merge's output without times, and with each feature file's name for its path, which each runner gives
 # differently.
 normalized() {
@@ -87,6 +95,20 @@ for way in xctest-serial xctest-parallel xctest-shards swift-serial swift-shards
   fi
   tail -n +2 "$logs/$way.merged" | normalized /dev/stdin > "$logs/$way.scores"
 done
+# One swift test must have written a run folder for each runner, and merging them must score each runner's
+# features as the runner's serial run did: the lines of both serial runs, together.
+"$merge" "$coverage/swift-test" > "$logs/swift-test.merged" || { cat "$logs/swift-test.merged"; echo "error: the merge of swift-test failed"; exit 1; }
+runs=$(find "$coverage/swift-test" -name manifest.json | wc -l | tr -d ' ')
+echo "swift-test: $runs runs: $(head -1 "$logs/swift-test.merged")"
+[ "$runs" -eq 2 ] || { echo "error: swift test wrote $runs run folders, not one for each runner"; status=1; }
+tail -n +2 "$logs/swift-test.merged" | normalized /dev/stdin | sort > "$logs/swift-test.scores"
+sort "$logs/xctest-serial.scores" "$logs/swift-serial.scores" > "$logs/both-serial.scores"
+if diff -u "$logs/both-serial.scores" "$logs/swift-test.scores"; then
+  echo "swift test's merged run gives the scores of both runners' serial runs."
+else
+  echo "error: swift test's merged run gives other scores than the runners' serial runs"
+  status=1
+fi
 [ "$(find "$coverage/xctest-parallel" -name manifest.json | wc -l)" -ge 2 ] \
   || { echo "error: the parallel XCTest run used one worker, so it proves nothing"; status=1; }
 
