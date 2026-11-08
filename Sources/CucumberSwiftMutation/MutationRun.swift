@@ -52,6 +52,12 @@ public final class MutationRun {
     /// The Cucumber report of the first run without a change.
     private var baselineReport: URL { options.output.appendingPathComponent("cucumber-baseline.json") }
 
+    /// The tags that choose the scenarios, as a setting of every test run, so that a caller of `MutationRun` needs no
+    /// `CUCUMBER_TAGS` in its own environment.
+    private var tagSettings: [String: String] {
+        options.tags.map { ["CUCUMBER_TAGS": $0] } ?? [:]
+    }
+
     private var isCancelled: Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -212,9 +218,11 @@ public final class MutationRun {
         for number in 1...options.baselineRuns {
             // The first run measures the code each scenario runs, into regions.json, and writes the Cucumber report that
             // lists every scenario the run tests, for the report's `testFiles`; the mutants' runs measure nothing.
+            // The XCTest and the Swift Testing runner each run in a process of their own: both merge into the report.
+            let settings = tagSettings.merging(["CUCUMBER_COVERAGE_REGIONS": "YES", "CUCUMBERSWIFT_MERGE_REPORT": "YES"]) { _, new in new }
             let request = number == 1
-                ? TestRequest(settings: ["CUCUMBER_COVERAGE_REGIONS": "YES"], measuresCoverage: true, writesReport: true)
-                : TestRequest()
+                ? TestRequest(settings: settings, measuresCoverage: true, writesReport: true)
+                : TestRequest(settings: tagSettings)
             let result = testRunner.test(in: copy, request: request)
             let output = contents(of: result.log)
             guard result.succeeded else {
@@ -263,7 +271,11 @@ public final class MutationRun {
         guard testRunner.build(in: copy, timeout: nil).succeeded else {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
-        let settings = ["CUCUMBERSWIFT_MUTANT": String(mutant.id), "CUCUMBER_COVERAGE": "NO"]
+        let settings = tagSettings.merging([
+            "CUCUMBERSWIFT_MERGE_REPORT": "YES",
+            "CUCUMBERSWIFT_MUTANT": String(mutant.id),
+            "CUCUMBER_COVERAGE": "NO"
+        ]) { _, new in new }
         let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? contents(of: result.log).write(to: logFile, atomically: true, encoding: .utf8)
