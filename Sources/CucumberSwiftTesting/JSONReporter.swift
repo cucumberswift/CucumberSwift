@@ -28,11 +28,11 @@ public final class CucumberJSONReporter: CucumberTestObserver {
     private let recorder: CucumberJSONRecorder
 
     private static func makeRecorder(explicit: URL?, default defaultURL: URL) -> CucumberJSONRecorder {
-        CucumberJSONRecorder(reportURL: {
+        CucumberJSONRecorder {
             if let explicit { return explicit }
             if let path = CucumberSettings.reportPath { return URL(fileURLWithPath: path) }
             return defaultURL
-        })
+        }
     }
 
     private static func entry(for feature: Feature) -> CucumberJSONReport.Feature {
