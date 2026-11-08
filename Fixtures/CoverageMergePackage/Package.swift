@@ -1,6 +1,6 @@
 // swift-tools-version:6.1
 // Scores the same feature files run one at a time, in parallel and in shards, with each runner, and checks
-// that cucumberswift-coverage-merge gives every way the same scores. See README.md.
+// that cucumberswift coverage merge gives every way the same scores. See README.md.
 
 import PackageDescription
 

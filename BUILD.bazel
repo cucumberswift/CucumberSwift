@@ -43,12 +43,12 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
-# Scores the scenarios of several runs as one run, such as a parallel run's workers or a suite's shards:
-# `bazel run @cucumberswift//:cucumberswift-coverage-merge -- <coverage folder>`.
+# CucumberSwift's command-line tool: `bazel run @cucumberswift//:cucumberswift -- coverage merge <folder>`
+# scores the scenarios of several runs as one run, such as a parallel run's workers or a suite's shards.
 swift_binary(
-    name = "cucumberswift-coverage-merge",
-    srcs = glob(["Sources/CucumberSwiftCoverageMergeTool/*.swift"]),
-    module_name = "CucumberSwiftCoverageMergeTool",
+    name = "cucumberswift",
+    srcs = glob(["Sources/CucumberSwiftCommand/*.swift"]),
+    module_name = "CucumberSwiftCommand",
     visibility = ["//visibility:public"],
     deps = [":CucumberSwiftCoverageMerge"],
 )

@@ -2,7 +2,7 @@
 //  MergedCoverageTests.swift
 //  CucumberSwiftCoverageMergeTests
 //
-//  What mutation testing and cucumberswift-coverage-merge read through MergedCoverage (#515).
+//  What mutation testing and cucumberswift coverage merge read through MergedCoverage (#515).
 //
 
 import Foundation
@@ -72,5 +72,15 @@ final class MergedCoverageTests: XCTestCase {
     func testAManifestWithoutSpansGivesNoSpansRatherThanMadeUpOnes() throws {
         try writeRun("a", scenario: "one", spans: false)
         XCTAssertEqual(try MergedCoverage(folders: [folder]).functions.map(\.spans), [[], []])
+    }
+
+    func testTheCoverageCommandExitsWithItsStatus() throws {
+        XCTAssertEqual(CoverageCommand.run(arguments: []), 2)
+        XCTAssertEqual(CoverageCommand.run(arguments: ["unknown"]), 2)
+        XCTAssertEqual(CoverageCommand.run(arguments: ["merge"]), 2)
+        XCTAssertEqual(CoverageCommand.run(arguments: ["--help"]), 0)
+        XCTAssertEqual(CoverageCommand.run(arguments: ["merge", folder.appendingPathComponent("none").path]), 2)
+        try writeRun("a", scenario: "one")
+        XCTAssertEqual(CoverageCommand.run(arguments: ["merge", folder.path]), 0)
     }
 }

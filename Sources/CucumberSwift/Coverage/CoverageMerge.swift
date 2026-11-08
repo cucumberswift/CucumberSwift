@@ -3,7 +3,7 @@
 //  CucumberSwift
 //
 //  Shared with CucumberSwiftTesting through the Sources/CucumberSwiftTesting/Coverage symlink, and with
-//  cucumberswift-coverage-merge through a symlink of this file, so it uses neither runner's types.
+//  cucumberswift coverage merge through a symlink of this file, so it uses neither runner's types.
 //
 
 import Foundation

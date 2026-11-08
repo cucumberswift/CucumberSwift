@@ -1,22 +1,27 @@
 import CucumberSwiftCoverageMerge
 import Foundation
 
-// cucumberswift-coverage-merge <folder>…
+// cucumberswift <command> …
 //
-// Scores the scenarios of several runs as one run: the workers of a parallel run, or the shards of a suite.
-// Each folder is a run's folder, run-<id>, or a coverage folder that holds them, as CUCUMBER_COVERAGE_PATH
-// sets it. Prints each feature's and each Rule's scores, and each issue as `file:line: warning: message`,
-// with the levels the runs checked. Exits 1 when an issue is an error, and 2 when the runs can't be merged.
+// CucumberSwift's command-line tool, run with `swift run cucumberswift`. It picks the command by its first
+// argument, and the command's library target runs it with `run(arguments:) -> Int32`, which returns the exit
+// status. Another command is another case here and a library target that the tool depends on.
+//
+//   coverage merge <folder>…   scores the scenarios of several runs as one run (CoverageCommand)
 
+let usage = "usage: cucumberswift coverage merge <coverage folder or run folder>…"
 let arguments = Array(CommandLine.arguments.dropFirst())
-guard !arguments.isEmpty, !arguments.contains(where: { ["-h", "--help"].contains($0) }) else {
-    print("usage: cucumberswift-coverage-merge <coverage folder or run folder>…")
-    exit(arguments.isEmpty ? 2 : 0)
-}
-let folders = arguments.map { URL(fileURLWithPath: $0, isDirectory: true) }
-do {
-    exit(try MergedCoverage(folders: folders).report { print($0) } ? 1 : 0)
-} catch {
-    FileHandle.standardError.write(Data("error: \(error)\n".utf8))
-    exit(2)
+switch arguments.first {
+    case "coverage":
+        exit(CoverageCommand.run(arguments: Array(arguments.dropFirst())))
+    case "-h", "--help":
+        print(usage)
+        exit(0)
+    case nil:
+        print(usage)
+        exit(2)
+    default:
+        FileHandle.standardError.write(Data("error: unknown command \(arguments[0])\n".utf8))
+        print(usage)
+        exit(2)
 }

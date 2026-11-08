@@ -2,7 +2,7 @@
 //  CoverageMergeTests.swift
 //  CucumberSwiftTests
 //
-//  cucumberswift-coverage-merge scores the scenarios of several runs, such as a parallel run's workers or a
+//  cucumberswift coverage merge scores the scenarios of several runs, such as a parallel run's workers or a
 //  suite's shards, as one run (#515).
 //
 

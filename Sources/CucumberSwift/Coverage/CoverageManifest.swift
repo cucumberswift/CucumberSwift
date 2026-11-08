@@ -3,13 +3,13 @@
 //  CucumberSwift
 //
 //  Shared with CucumberSwiftTesting through the Sources/CucumberSwiftTesting/Coverage symlink, and with
-//  cucumberswift-coverage-merge through a symlink of this file, so it uses neither runner's types.
+//  cucumberswift coverage merge through a symlink of this file, so it uses neither runner's types.
 //
 
 import Foundation
 
 /// The `manifest.json` that each run writes in its folder: the binaries, the scenarios that ran and their
-/// files, the scores of the features that finished, and what `cucumberswift-coverage-merge` needs to score the
+/// files, the scores of the features that finished, and what `cucumberswift coverage merge` needs to score the
 /// scenarios of several runs as one run.
 struct CoverageManifest: Codable, Equatable {
     /// Changes when the manifest's form changes, so that a reader can refuse one it doesn't know.

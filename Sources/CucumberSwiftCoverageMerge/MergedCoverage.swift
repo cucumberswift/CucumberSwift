@@ -2,7 +2,7 @@
 //  MergedCoverage.swift
 //  CucumberSwiftCoverageMerge
 //
-//  The public face of the merge: what cucumberswift-coverage-merge and the mutation testing tool import.
+//  The public face of the merge: what cucumberswift coverage merge and the mutation testing tool import.
 //
 
 import Foundation

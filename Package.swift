@@ -20,11 +20,11 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftLint",
             targets: ["CucumberSwiftLintPlugin"]),
-        // Scores the scenarios of several runs as one run, such as a parallel run's workers or a suite's
-        // shards, from their coverage folders: `swift run cucumberswift-coverage-merge <folder>`.
+        // CucumberSwift's command-line tool. `swift run cucumberswift coverage merge <folder>` scores the
+        // scenarios of several runs as one run, such as a parallel run's workers or a suite's shards.
         .executable(
-            name: "cucumberswift-coverage-merge",
-            targets: ["CucumberSwiftCoverageMergeTool"]),
+            name: "cucumberswift",
+            targets: ["CucumberSwiftCommand"]),
         // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
         // or Fix Feature Files on the project's or package's menu in Xcode.
         .plugin(
@@ -98,11 +98,11 @@ let package = Package(
         .target(
             name: "CucumberSwiftCoverageMerge",
             path: "Sources/CucumberSwiftCoverageMerge"),
-        // The tool behind cucumberswift-coverage-merge.
+        // The tool behind the cucumberswift product: one file for each command.
         .executableTarget(
-            name: "CucumberSwiftCoverageMergeTool",
+            name: "CucumberSwiftCommand",
             dependencies: ["CucumberSwiftCoverageMerge"],
-            path: "Sources/CucumberSwiftCoverageMergeTool"),
+            path: "Sources/CucumberSwiftCommand"),
         // The tool the CucumberSwiftLint plugin runs. It builds for the Mac that builds the tests.
         // CucumberSwiftGherkin for the keywords of feature files in other languages.
         .executableTarget(

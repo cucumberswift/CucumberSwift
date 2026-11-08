@@ -267,7 +267,7 @@ python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
 '''
 
 [tasks.test-coverage-merge]
-description = "Check that cucumberswift-coverage-merge scores parallel and sharded runs as one run"
+description = "Check that cucumberswift coverage merge scores parallel and sharded runs as one run"
 # Runs Fixtures/CoverageMergePackage with code coverage one scenario at a time, with Xcode's parallel
 # testing and in 2 shards, with each runner, and fails unless the merged scores are the same every way.
 # See "Fixtures" in CONTRIBUTING.md.

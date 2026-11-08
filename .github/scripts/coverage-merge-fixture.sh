@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs Fixtures/CoverageMergePackage's feature files with code coverage in every way the merge scores, with
-# each runner, and fails unless cucumberswift-coverage-merge gives each way the same scores (#515):
+# each runner, and fails unless cucumberswift coverage merge gives each way the same scores (#515):
 #
 # - XCTest: one scenario at a time; with Xcode's parallel testing, in 3 workers; and in 2 shards, one
 #   for each tag, @shard1 and @shard2, as CUCUMBER_TAGS picks them.
@@ -25,10 +25,10 @@ rm -rf "$coverage" "$logs"
 mkdir -p "$coverage" "$logs"
 keep="$root/.github/scripts/keep-package-resolved.sh"
 
-echo "Building cucumberswift-coverage-merge"
-swift build --package-path "$root" --scratch-path "$work/tool" --product cucumberswift-coverage-merge > "$logs/tool.log" 2>&1 \
+echo "Building cucumberswift coverage merge"
+swift build --package-path "$root" --scratch-path "$work/tool" --product cucumberswift > "$logs/tool.log" 2>&1 \
   || { cat "$logs/tool.log"; exit 1; }
-merge="$work/tool/debug/cucumberswift-coverage-merge"
+merge="$work/tool/debug/cucumberswift"
 # Puts back the lockfile that resolving the tool's package rewrites without the Macros trait.
 git -C "$root" checkout -q -- Package.resolved
 
@@ -87,7 +87,7 @@ normalized() {
 status=0
 for way in xctest-serial xctest-parallel xctest-shards swift-serial swift-shards; do
   runs=$(find "$coverage/$way" -name manifest.json | wc -l | tr -d ' ')
-  "$merge" "$coverage/$way" > "$logs/$way.merged" || { cat "$logs/$way.merged"; echo "error: the merge of $way failed"; exit 1; }
+  "$merge" coverage merge "$coverage/$way" > "$logs/$way.merged" || { cat "$logs/$way.merged"; echo "error: the merge of $way failed"; exit 1; }
   echo "$way: $runs runs: $(head -1 "$logs/$way.merged")"
   if ! grep -q "^CucumberSwift coverage: 10 scenarios from" "$logs/$way.merged"; then
     echo "error: $way: the merge didn't score the fixture's 10 scenarios"
@@ -97,7 +97,7 @@ for way in xctest-serial xctest-parallel xctest-shards swift-serial swift-shards
 done
 # One swift test must have written a run folder for each runner, and merging them must score each runner's
 # features as the runner's serial run did: the lines of both serial runs, together.
-"$merge" "$coverage/swift-test" > "$logs/swift-test.merged" || { cat "$logs/swift-test.merged"; echo "error: the merge of swift-test failed"; exit 1; }
+"$merge" coverage merge "$coverage/swift-test" > "$logs/swift-test.merged" || { cat "$logs/swift-test.merged"; echo "error: the merge of swift-test failed"; exit 1; }
 runs=$(find "$coverage/swift-test" -name manifest.json | wc -l | tr -d ' ')
 echo "swift-test: $runs runs: $(head -1 "$logs/swift-test.merged")"
 [ "$runs" -eq 2 ] || { echo "error: swift test wrote $runs run folders, not one for each runner"; status=1; }

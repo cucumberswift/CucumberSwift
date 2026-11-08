@@ -93,7 +93,7 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(recorder.scoresProblem, "parallel testing")
     }
 
-    // A parallel run's worker scores nothing, and records each scenario's code for cucumberswift-coverage-merge
+    // A parallel run's worker scores nothing, and records each scenario's code for cucumberswift coverage merge
     // (#515).
     func testWithScoresOffTheRecorderScoresNothingAndRecordsTheCodeForTheMerge() throws {
         let counters = ProfileCounters.loaded()

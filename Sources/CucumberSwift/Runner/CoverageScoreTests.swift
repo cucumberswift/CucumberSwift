@@ -35,12 +35,12 @@ enum CoverageScoreTests {
     /// The coverage settings for the XCTest runner. With parallel testing, a feature can end after its
     /// worker's last test, where an error couldn't fail a test: when Xcode hands out its scenarios to
     /// different workers, or runs only some of its tests. The runner then scores nothing, and each worker
-    /// records its scenarios' coverage for `cucumberswift-coverage-merge`, which scores them together.
+    /// records its scenarios' coverage for `cucumberswift coverage merge`, which scores them together.
     static func settings(environment: [String: String] = Cucumber.shared.environment) -> CoverageSettings {
         var settings = CoverageSettings.read(environment: environment)
         if FeatureFlags.isParallelTesting {
             settings.scoresOffReason = "with parallel testing, a feature can end after its worker's last test, where a score's error "
-                + "couldn't fail a test. Score the workers' runs together with cucumberswift-coverage-merge, or turn parallel testing off"
+                + "couldn't fail a test. Score the workers' runs together with cucumberswift coverage merge, or turn parallel testing off"
         }
         return settings
     }
