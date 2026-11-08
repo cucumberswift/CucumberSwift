@@ -1108,8 +1108,10 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
       # The same run with an iOS Simulator as the test destination (#536): the same mutants with the same statuses.
-      # The run script's build runs on the Mac, and the tests run on the Simulator.
+      # The run script's build runs on the Mac, and the tests run on the Simulator. It runs on the same events as the
+      # macOS run.
       - name: Run mutation testing on the Xcode project fixture with an iOS Simulator
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: |
