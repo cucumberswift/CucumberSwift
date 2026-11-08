@@ -167,7 +167,14 @@ public struct ScenarioTestNames {
     private func namesTheSame(_ first: String, _ second: String) -> Bool {
         first == second
             || TestNames.name(first, readable: readable) == TestNames.name(second, readable: readable)
-            || FeatureFile.typeName(for: first) == FeatureFile.typeName(for: second)
+            || suiteName(first) == suiteName(second)
+    }
+
+    /// The name of a feature's Swift Testing suite on its own, after the plugin's fallback for an empty or reserved name:
+    /// `Test` and `Feature` both give `Feature`.
+    private func suiteName(_ title: String) -> String {
+        var used = Set<String>()
+        return FeatureFile.uniqueSwiftTestingName(FeatureFile.typeName(for: title), fallback: "Feature", in: &used)
     }
 
     private mutating func parse(_ url: URL) throws -> FeatureFile.Feature {
