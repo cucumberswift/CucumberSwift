@@ -100,12 +100,17 @@ struct MutationReport: Equatable {
     }
 
     /// The path of the feature file at `uri` inside its test bundle: after the last `.xctest/`, where Xcode puts the
-    /// feature files, or `.bundle/`, where SwiftPM puts a target's resources. The whole path when it has neither. The
-    /// mutation-test tool names scenarios the same way, in `ScenarioID`, and the two must agree.
+    /// feature files, or `.bundle/`, where SwiftPM puts a target's resources. The whole path when it has neither. A
+    /// macOS or Mac Catalyst bundle keeps its resources in `Contents/Resources`, which is left out, so that the path is
+    /// the same on every platform. The mutation-test tool names scenarios the same way, in `ScenarioID`, and the two
+    /// must agree.
     static func feature(ofURI uri: String) -> String {
         let path = uri.hasPrefix("file:") ? (URL(string: uri)?.path ?? uri) : uri
         let marker = [".xctest/", ".bundle/"].compactMap { path.range(of: $0, options: .backwards) }.max { $0.upperBound < $1.upperBound }
-        return marker.map { String(path[$0.upperBound...]) } ?? path
+        guard let marker else { return path }
+        let inBundle = path[marker.upperBound...]
+        let resources = "Contents/Resources/"
+        return String(inBundle.hasPrefix(resources) ? inBundle.dropFirst(resources.count) : inBundle)
     }
 
     /// The text from `start` up to `end`, as line and column, both 1-based and counted in UTF-8 bytes, as swift-syntax

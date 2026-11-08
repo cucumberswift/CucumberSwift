@@ -186,6 +186,14 @@ final class MutationFindingsTests: XCTestCase {
         XCTAssertFalse(findings.isOutOfDate)
     }
 
+    /// The same cases as the mutation-test tool's ScenarioID, in FeatureURICases.swift, so the two agree on every
+    /// platform's bundle, including the macOS and Mac Catalyst one with its Contents/Resources.
+    func testAFeatureIsNamedByItsPathInsideTheTestBundle() {
+        for (uri, feature) in featureURICases {
+            XCTAssertEqual(MutationReport.feature(ofURI: uri), feature, uri)
+        }
+    }
+
     /// The findings for `scenarios` of the feature at `feature`, from a report whose run tested `ran`.
     private func findings(ran: [String], feature: String, scenarios: [CoverageScores.Scenario]) throws -> MutationFindings? {
         let source = "let a = b > c\n"

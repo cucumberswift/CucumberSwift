@@ -94,11 +94,11 @@ final class ReportTests: XCTestCase {
         XCTAssertEqual(annotated.failedScenarios.first?.id, "Features/Voting.feature:3")
     }
 
+    /// The same cases as MutationReport's, in FeatureURICases.swift, so the two agree on every platform's bundle.
     func testAScenarioIsNamedByItsFeaturesPathInsideTheTestBundle() {
-        XCTAssertEqual(ScenarioID.feature(ofURI: "file:///tmp/Shop_ShopTests.bundle/Features/Basket.feature"), "Features/Basket.feature")
-        XCTAssertEqual(ScenarioID.feature(ofURI: "/Users/me/DerivedData/ShopTests.xctest/Features/Basket.feature"), "Features/Basket.feature")
-        XCTAssertEqual(ScenarioID.feature(ofURI: "file:///tmp/My%20Tests.xctest/Features/My%20Basket.feature"), "Features/My Basket.feature")
-        XCTAssertEqual(ScenarioID.feature(ofURI: "/tmp/Features/Basket.feature"), "/tmp/Features/Basket.feature")
+        for (uri, feature) in featureURICases {
+            XCTAssertEqual(ScenarioID.feature(ofURI: uri), feature, uri)
+        }
     }
 
     func testTheStrykerReportNamesTheScenariosThatKilledAndRanEachMutant() throws {
