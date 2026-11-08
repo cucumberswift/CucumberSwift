@@ -137,7 +137,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             let bundle = folder.appendingPathComponent("results/test-\(name).xcresult")
             var arguments = ["test-without-building"] + common(in: copy)
             arguments += ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
-            arguments += onlyTestingArguments(for: group, identifiers: identifiers, selectsTargets: groups.count > 1)
+            arguments += onlyTestingArguments(for: group, identifiers: identifiers, selectsTargets: !target.testTargets.isEmpty)
             // The prefixed variables are how xcodebuild gives the tests a setting.
             var prefixed = [String: String]()
             for (key, value) in runSettings { prefixed["TEST_RUNNER_\(key)"] = value }
@@ -176,7 +176,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
 
     /// The `-only-testing` arguments of a run of the test targets in `group`: each of `identifiers` in each target, because a
     /// scenario doesn't say which target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. With no
-    /// identifiers, a run of one of several targets names its target, and a run of all of them names nothing.
+    /// identifiers, a run of a named target selects it, so that `--test-target` limits the run to the targets it names, and
+    /// a run with no test target named selects nothing.
     private func onlyTestingArguments(for group: [String], identifiers: [String]?, selectsTargets: Bool) -> [String] {
         guard let identifiers else { return selectsTargets ? group.flatMap { ["-only-testing", $0] } : [] }
         var seen = Set<String>()

@@ -38,6 +38,19 @@ final class MutationRunWithRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(cleaned.value, 2, "After the run that finished and after the one that stopped at its baseline")
     }
 
+    func testTheTagsReachEveryTestRunAsASettingWithoutAnEnvironmentVariable() {
+        var settings = options()
+        settings.tags = "@smoke"
+        let spy = SpyRunner(prepared: Counter(), cleaned: Counter())
+        _ = MutationRun(options: settings, discoverer: FakeDiscoverer(), testRunner: spy) { [weak self] in self?.log.append($0) }.run()
+        let requests = spy.requests
+        XCTAssertGreaterThanOrEqual(requests.count, 4, "Two baseline runs and a run for each mutant")
+        XCTAssertTrue(requests.allSatisfy { $0.settings["CUCUMBER_TAGS"] == "@smoke" })
+        let withoutTags = SpyRunner(prepared: Counter(), cleaned: Counter())
+        _ = MutationRun(options: options(), discoverer: FakeDiscoverer(), testRunner: withoutTags) { [weak self] in self?.log.append($0) }.run()
+        XCTAssertTrue(withoutTags.requests.allSatisfy { $0.settings["CUCUMBER_TAGS"] == nil })
+    }
+
     func testARunnerThatCannotPrepareFailsTheRunAndStillCleansUp() {
         let prepared = Counter()
         let cleaned = Counter()
