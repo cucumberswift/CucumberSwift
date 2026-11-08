@@ -32,8 +32,7 @@ public final class CucumberJSONReporter: CucumberTestObserver {
             if let explicit { return explicit }
             if let path = CucumberSettings.reportPath { return URL(fileURLWithPath: path) }
             return defaultURL
-            // Swift Testing doesn't promise the order of the tests in a suite.
-        }, ordersByFile: true)
+        })
     }
 
     private static func entry(for feature: Feature) -> CucumberJSONReport.Feature {
