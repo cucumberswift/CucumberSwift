@@ -165,7 +165,8 @@ final class CoverageRecorder {
                                                                 readableName: ReadableName.of(function.name),
                                                                 file: function.file,
                                                                 line: function.line,
-                                                                regions: function.regions.count))
+                                                                regions: function.regions.count,
+                                                                spans: function.regions.map { [$0.lineStart, $0.columnStart, $0.lineEnd, $0.columnEnd] }))
             }
         }
         code = MeasuredCode(functions: measured)

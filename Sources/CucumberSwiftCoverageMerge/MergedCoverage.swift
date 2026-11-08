@@ -24,6 +24,39 @@ public struct MergedCoverage {
         public let line: Int
         /// How many regions the function has.
         public let regionCount: Int
+        /// The number of the function's first region in the merged numbering: its regions are
+        /// `firstRegion..<firstRegion + regionCount`.
+        public let firstRegion: Int
+        /// Where each region is, in region order: first line, first column, last line, last column, with columns
+        /// counted in UTF-8 bytes from 1. Nil when the runs' manifests don't record them.
+        public let spans: [[Int]]?
+    }
+
+    /// How the regions of several runs of one build are numbered as one.
+    public struct Renumbering: Equatable, Sendable {
+        public let functions: [Function]
+        /// For each run, in the order of ``runFolders``, the merged number of each region, by its number in the run.
+        public let localToGlobal: [[Int]]
+        /// The run folders, in order.
+        public let runFolders: [URL]
+    }
+
+    /// Reads the manifests in `folders`, as ``init(folders:)`` does, and numbers the regions of the functions that
+    /// the runs measured again, as one build, without scoring them. Throws when there is no run, or when two runs
+    /// are of different builds.
+    public static func renumbering(ofRunsIn folders: [URL]) throws -> Renumbering {
+        let runs = try CoverageMerge.read(folders)
+        let renumbering = try CoverageMerge.renumber(runs.map { $0.manifest.measured ?? [] })
+        return Renumbering(functions: function(list: renumbering.functions, spans: renumbering.spans),
+                           localToGlobal: renumbering.maps,
+                           runFolders: runs.map(\.folder))
+    }
+
+    private static func function(list: [MeasuredCode.Function], spans: [[[Int]]?]) -> [Function] {
+        zip(list, spans).map { function, spans in
+            Function(name: function.name, file: function.file, line: function.line, regionCount: function.regions.count,
+                     firstRegion: function.regions.lowerBound, spans: spans)
+        }
     }
 
     /// A scenario that ran, once, whichever runs it ran in.
@@ -49,7 +82,8 @@ public struct MergedCoverage {
         let merge = try CoverageMerge(runs: CoverageMerge.read(folders))
         self.merge = merge
         let code = merge.code
-        functions = code.functions.map { Function(name: $0.name, file: $0.file, line: $0.line, regionCount: $0.regions.count) }
+        let renumbering = try CoverageMerge.renumber(merge.runs.map { $0.manifest.measured ?? [] })
+        functions = Self.function(list: renumbering.functions, spans: renumbering.spans)
         let starts = code.functions.map(\.regions.lowerBound)
         scenarios = merge.scenarios.map { merged in
             let scenario = merged.scenario

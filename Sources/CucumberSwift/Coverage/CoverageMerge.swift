@@ -125,6 +125,51 @@ struct CoverageMerge {
         let scenario: CoverageScores.Scenario
     }
 
+    /// The functions of several runs of one build, and how each run's region numbers become the merged ones.
+    struct Renumbering: Equatable {
+        /// The measured functions of all the runs, each once, in the order the runs list them, with their regions
+        /// numbered one after the other.
+        let functions: [MeasuredCode.Function]
+        /// Where each function's regions are placed, `spans` of the manifest's function: the first run's.
+        let spans: [[[Int]]?]
+        /// For each run, the merged number of each of its regions, by the region's number in the run.
+        let maps: [[Int]]
+    }
+
+    /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
+    /// regions, so a function is the same one in two runs when its binary, name, file and place among the
+    /// functions with those three are. Throws ``MergeError/differentBuilds(_:)`` when the same function has a
+    /// different number of regions in two runs.
+    static func renumber(_ runs: [[CoverageManifest.MeasuredFunction]]) throws -> Renumbering {
+        var functions = [MeasuredCode.Function]()
+        var spans = [[[Int]]?]()
+        var numbers = [FunctionKey: Range<Int>]()
+        var maps = [[Int]]()
+        for run in runs {
+            var occurrences = [String: Int]()
+            var map = [Int]()
+            for function in run {
+                let id = "\(function.binary)\u{0}\(function.name)\u{0}\(function.file)"
+                let key = FunctionKey(binary: function.binary, name: function.name, file: function.file, occurrence: occurrences[id, default: 0])
+                occurrences[id, default: 0] += 1
+                let regions: Range<Int>
+                if let known = numbers[key] {
+                    guard known.count == function.regions else { throw MergeError.differentBuilds(function.readableName) }
+                    regions = known
+                } else {
+                    let start = functions.last?.regions.upperBound ?? 0
+                    regions = start..<start + function.regions
+                    numbers[key] = regions
+                    functions.append(MeasuredCode.Function(name: function.readableName, file: function.file, line: function.line, regions: regions))
+                    spans.append(function.spans)
+                }
+                map += Array(regions)
+            }
+            maps.append(map)
+        }
+        return Renumbering(functions: functions, spans: spans, maps: maps)
+    }
+
     init(runs: [Run]) throws {
         self.runs = runs
         guard let first = runs.first else { throw MergeError.noRuns([]) }
@@ -141,31 +186,9 @@ struct CoverageMerge {
         let settings = first.manifest.settings?.coverageSettings ?? CoverageSettings()
         self.settings = settings
 
-        // Every run numbers its own regions, so each function is numbered again, in the order the runs list them.
-        var functions = [MeasuredCode.Function]()
-        var numbers = [FunctionKey: Range<Int>]()
-        var renumbered = [[Int]]()
-        for run in runs {
-            var occurrences = [String: Int]()
-            var map = [Int]()
-            for function in run.manifest.measured ?? [] {
-                let id = "\(function.binary)\u{0}\(function.name)\u{0}\(function.file)"
-                let key = FunctionKey(binary: function.binary, name: function.name, file: function.file, occurrence: occurrences[id, default: 0])
-                occurrences[id, default: 0] += 1
-                let regions: Range<Int>
-                if let known = numbers[key] {
-                    guard known.count == function.regions else { throw MergeError.differentBuilds(function.readableName) }
-                    regions = known
-                } else {
-                    let start = functions.last?.regions.upperBound ?? 0
-                    regions = start..<start + function.regions
-                    numbers[key] = regions
-                    functions.append(MeasuredCode.Function(name: function.readableName, file: function.file, line: function.line, regions: regions))
-                }
-                map += Array(regions)
-            }
-            renumbered.append(map)
-        }
+        let renumbering = try Self.renumber(runs.map { $0.manifest.measured ?? [] })
+        let renumbered = renumbering.maps
+        let functions = renumbering.functions
         let code = MeasuredCode(functions: functions)
         self.code = code
 

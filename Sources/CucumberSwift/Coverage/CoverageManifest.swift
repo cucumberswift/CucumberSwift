@@ -74,6 +74,9 @@ struct CoverageManifest: Codable, Equatable {
         var line: Int
         /// How many regions the function has.
         var regions: Int
+        /// Where each region is, in region order: its first line, first column, last line and last column, with
+        /// columns counted in UTF-8 bytes from 1. Nil in a manifest from before the spans were recorded.
+        var spans: [[Int]]?
     }
 
     /// The levels a run checks its scores against, from ``CoverageSettings``. A level is a percentage, or nil

@@ -266,6 +266,28 @@ final class CoverageMergeTests: XCTestCase {
         }
     }
 
+    func testRenumberingGivesEachFunctionOnePlaceWhateverOrderARunListsItsFunctionsIn() throws {
+        func listed(_ order: [Function]) -> [CoverageManifest.MeasuredFunction] {
+            order.map { .init(binary: "MyTests", name: "$s5Calc\($0.name)", readableName: "Calc.\($0.name)()", file: "/src/Calc.swift",
+                              line: 1, regions: $0.regions, spans: (0..<$0.regions).map { [$0 + 1, 1, $0 + 1, 9] }) }
+        }
+        let renumbering = try CoverageMerge.renumber([listed(functions), listed(functions.reversed()), []])
+        XCTAssertEqual(renumbering.functions.map(\.name), ["Calc.add()", "Calc.classify()", "Calc.unused()"])
+        XCTAssertEqual(renumbering.functions.map(\.regions), [0..<2, 2..<6, 6..<9])
+        XCTAssertEqual(renumbering.maps, [Array(0..<9), [6, 7, 8, 2, 3, 4, 5, 0, 1], []])
+        XCTAssertEqual(renumbering.spans.first??.first, [1, 1, 1, 9])
+        XCTAssertThrowsError(try CoverageMerge.renumber([listed(functions), listed([Function(name: "add", regions: 3)])])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .differentBuilds("Calc.add()"))
+        }
+    }
+
+    func testAManifestFromBeforeTheSpansWereRecordedStillDecodes() throws {
+        let json = #"{"binary":"B","name":"n","readableName":"r","file":"/f.swift","line":1,"regions":2}"#
+        let function = try JSONDecoder().decode(CoverageManifest.MeasuredFunction.self, from: Data(json.utf8))
+        XCTAssertNil(function.spans)
+        XCTAssertEqual(function.regions, 2)
+    }
+
     func testTheLevelsRoundTripThroughTheManifest() {
         var settings = CoverageSettings()
         settings.warningLevel = .off

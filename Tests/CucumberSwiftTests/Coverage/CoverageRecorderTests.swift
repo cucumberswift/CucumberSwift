@@ -133,6 +133,11 @@ final class CoverageRecorderTests: XCTestCase {
         let ran = coverage.regions.filter { (first..<first + measured[function].regions).contains($0) }
         XCTAssertEqual(ran.count, measured[function].regions - 1)
         XCTAssertEqual(coverage.steps.first?.regions, coverage.regions)
+        // Each region has a span, in the file this test is in, where the function's two branches are on later lines
+        // than its first.
+        let spans = try XCTUnwrap(measured[function].spans)
+        XCTAssertEqual(spans.count, measured[function].regions)
+        XCTAssertTrue(spans.allSatisfy { $0.count == 4 && $0[0] > 0 && $0[1] > 0 && $0[2] >= $0[0] }, "\(spans)")
     }
 
     func testAFolderThatCantBeMadeIsTheManifestsProblem() throws {
