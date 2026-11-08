@@ -179,7 +179,11 @@ if [[ "$coverage" == true && -n "${COVERAGE_OUTPUT_FILE:-}" ]]; then
     xcrun llvm-cov export -format lcov \
       -instr-profile "$profdata" -ignore-filename-regex='.*external/.+' -path-equivalence=".,$PWD" \
       "$binary" ${manifest:+@"$manifest"} > "$COVERAGE_OUTPUT_FILE" 2> "$export_error" || export_status=$?
-    if [[ -s "$export_error" || "$export_status" -ne 0 ]]; then
+    # llvm-cov warns when the binary is newer than the profile, which a bundle with a modification time in
+    # the future causes although the profile came from that binary. That warning alone doesn't fail the
+    # run; any other message does.
+    other_errors="$(grep -v 'profile data may be out of date' "$export_error" || true)"
+    if [[ -n "$other_errors" || "$export_status" -ne 0 ]]; then
       echo "error: while exporting the coverage report" >&2
       cat "$export_error" >&2
       exit 1
