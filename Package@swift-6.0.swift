@@ -91,6 +91,9 @@ let package = Package(
             dependencies: ["CucumberSwiftLintTool"],
             path: "Plugins/FixFeatureFilesPlugin"),
         .testTarget(
+            name: "CucumberSwiftCoverageMergeTests",
+            dependencies: ["CucumberSwiftCoverageMerge"]),
+        .testTarget(
             name: "CucumberSwiftGherkinTests",
             // CucumberSwift too, to check that both read feature files alike.
             dependencies: ["CucumberSwiftGherkin", "CucumberSwift"]),

@@ -27,9 +27,25 @@ public struct MergedCoverage {
         /// The number of the function's first region in the merged numbering: its regions are
         /// `firstRegion..<firstRegion + regionCount`.
         public let firstRegion: Int
-        /// Where each region is, in region order: first line, first column, last line, last column, with columns
-        /// counted in UTF-8 bytes from 1. Nil when the runs' manifests don't record them.
-        public let spans: [[Int]]?
+        /// Where each region is, one for each region in region order, so `spans.count == regionCount`. Empty when
+        /// the runs' manifests don't record them: a span is never made up.
+        public let spans: [Span]
+    }
+
+    /// Where a region is in its file, as LLVM's coverage map gives it: lines and columns count from 1, and
+    /// columns count UTF-8 bytes.
+    public struct Span: Equatable, Hashable, Sendable {
+        public let lineStart: Int
+        public let columnStart: Int
+        public let lineEnd: Int
+        public let columnEnd: Int
+
+        public init(lineStart: Int, columnStart: Int, lineEnd: Int, columnEnd: Int) {
+            self.lineStart = lineStart
+            self.columnStart = columnStart
+            self.lineEnd = lineEnd
+            self.columnEnd = columnEnd
+        }
     }
 
     /// How the regions of several runs of one build are numbered as one.
@@ -54,8 +70,11 @@ public struct MergedCoverage {
 
     private static func function(list: [MeasuredCode.Function], spans: [[[Int]]?]) -> [Function] {
         zip(list, spans).map { function, spans in
-            Function(name: function.name, file: function.file, line: function.line, regionCount: function.regions.count,
-                     firstRegion: function.regions.lowerBound, spans: spans)
+            let spans = (spans ?? []).filter { $0.count == 4 }.map {
+                Span(lineStart: $0[0], columnStart: $0[1], lineEnd: $0[2], columnEnd: $0[3])
+            }
+            return Function(name: function.name, file: function.file, line: function.line, regionCount: function.regions.count,
+                            firstRegion: function.regions.lowerBound, spans: spans.count == function.regions.count ? spans : [])
         }
     }
 

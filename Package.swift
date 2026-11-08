@@ -189,6 +189,9 @@ let package = Package(
             dependencies: ["CucumberSwiftTestingGenerator"],
             path: "Plugins/CucumberSwiftTestingPlugin"),
         .testTarget(
+            name: "CucumberSwiftCoverageMergeTests",
+            dependencies: ["CucumberSwiftCoverageMerge"]),
+        .testTarget(
             name: "CucumberSwiftTestingGeneratorTests",
             dependencies: ["CucumberSwiftTestingGenerator"]),
         .testTarget(
