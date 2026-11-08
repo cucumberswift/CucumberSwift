@@ -33,15 +33,11 @@ struct RunStarter: Equatable {
     /// Whether the starter has exited, so its run is over: no process has its ID, or the process that has it
     /// started at another time. A starter whose state can't be read is taken to be running.
     var hasExited: Bool {
-        switch Self.process(pid) {
-            case .none: return false
-            case .some(.none): return true
-            case let .some(.some(process)): return process.started != started
-        }
+        Self.process(pid).map { $0.map { $0.started != started } ?? true } ?? false
     }
 
-    /// The process with the ID when it is one of the `commands`.
-    static func command(_ pid: Int32) -> RunStarter? {
+    /// The process with the ID when its name is one of `commands`.
+    static func command(_ pid: Int32, in commands: Set<String> = RunStarter.commands) -> RunStarter? {
         guard case let .some(.some(process)) = process(pid), commands.contains(process.name) else { return nil }
         return RunStarter(pid: pid, started: process.started)
     }
@@ -87,14 +83,18 @@ struct RunStarter: Equatable {
 /// bundle that joins again starts a new run. That is how a rerun in Xcode, or on a Simulator, is told from
 /// the run before it: neither has a command that starts every process of a run.
 struct RunRecord: Equatable {
-    var starter: RunStarter?
-    var keys = Set<String>()
-
     /// The name of the test bundle this process runs, from the `XCTestBundlePath` that Xcode, `xcodebuild`
     /// and a Simulator set, without its folders, which change with each install. `nil` for `swift test`, whose
     /// one bundle runs once with each runner.
     static var currentBundle: String? {
         ProcessInfo.processInfo.environment["XCTestBundlePath"].map { URL(fileURLWithPath: $0).lastPathComponent }
+    }
+
+    var starter: RunStarter?
+    var keys = Set<String>()
+
+    var recorded: String {
+        ([starter?.recorded ?? ""] + keys.sorted()).joined(separator: "\n")
     }
 
     static func key(runner: String, bundle: String?) -> String {
@@ -111,10 +111,6 @@ struct RunRecord: Equatable {
         let lines = recorded.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         starter = lines.first.flatMap { RunStarter(recorded: $0) }
         keys = Set(lines.dropFirst().filter { !$0.isEmpty })
-    }
-
-    var recorded: String {
-        ([starter?.recorded ?? ""] + keys.sorted()).joined(separator: "\n")
     }
 
     /// Whether a worker that no other worker is running beside starts a new run.

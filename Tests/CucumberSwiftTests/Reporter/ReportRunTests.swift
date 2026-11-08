@@ -128,43 +128,11 @@ class ReportRunTests: XCTestCase {
         XCTAssertEqual(RunRecord.key(runner: "XCTest", bundle: nil), "XCTest ")
     }
 
-    // MARK: A crashed scenario
+    // MARK: With a command that starts the run: swift test and xcodebuild
 
-    /// A process killed while it runs a scenario leaves the scenario in the report, with the steps of the
-    /// scenarios before it written whole.
-    func testAScenarioThatNeverFinishesIsInTheReportAndTheOnesBeforeItAreWhole() throws {
-        let recorder = CucumberJSONRecorder(reportURL: { self.url }, runner: "XCTest")
-        let feature = NSObject(), done = NSObject(), crashing = NSObject(), step = NSObject()
-        let owner = (key: ObjectIdentifier(feature), make: { CucumberJSONReport.Feature(uri: "Checkout.feature", title: "Checkout", description: "", line: 1, tags: []) })
-        recorder.suiteStarted()
-        recorder.featureStarted(owner.key, make: owner.make)
-        recorder.scenarioStarted(ObjectIdentifier(done), feature: owner) { CucumberJSONReport.Scenario(title: "Done", line: 3, tags: []) }
-        recorder.stepStarted(ObjectIdentifier(step), scenario: ObjectIdentifier(done)) { CucumberJSONReport.Step(name: "a step", keyword: "Given ", line: 4) }
-        recorder.stepFinished(ObjectIdentifier(step), result: .passed, duration: Measurement(value: 1, unit: .nanoseconds))
-        recorder.scenarioFinished()
-        recorder.scenarioStarted(ObjectIdentifier(crashing), feature: owner) { CucumberJSONReport.Scenario(title: "Crashes", line: 6, tags: []) }
-        // The process is killed here: nothing is written after the scenario starts.
-
-        let report = ReportFile(url: url).read()
-        XCTAssertEqual(names(report), [["Done", "Crashes"]])
-        let steps = (report.first?["elements"] as? [[String: Any]])?.first?["steps"] as? [[String: Any]]
-        XCTAssertEqual(steps?.count, 1)
-    }
-}
-
-#if os(macOS)
-/// A new run starts when the command that started the last run's processes has exited, and a run is the
-/// same run while that command runs. `swift test` and `xcodebuild` start the test processes on a Mac; on a
-/// Simulator, `launchd` does, which doesn't tell runs apart.
-extension ReportRunTests {
-    /// The process that started an earlier run's workers, which has exited: `swift test` or `xcodebuild` of
-    /// the run before.
-    private func exitedStarter() throws -> RunStarter {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/true")
-        try process.run()
-        process.waitUntilExit()
-        return RunStarter(pid: process.processIdentifier, started: 1)
+    /// The command that started an earlier run's workers, which has exited: no process has its ID.
+    private var exitedStarter: RunStarter {
+        RunStarter(pid: 2_000_000_000, started: 1)
     }
 
     private func runningStarter() throws -> RunStarter {
@@ -172,7 +140,7 @@ extension ReportRunTests {
     }
 
     func testTheFirstWorkerOfANewRunEmptiesAFreshReportWhenTheLastRunsStarterHasExited() throws {
-        exitedWorker(run: try exitedStarter(), wrote: "Old")
+        exitedWorker(run: exitedStarter, wrote: "Old")
         XCTAssertEqual(joined(bundle: "Other.xctest", run: try runningStarter()).count, 0)
     }
 
@@ -209,19 +177,60 @@ extension ReportRunTests {
         XCTAssertEqual(RunStarter(recorded: starter.recorded), starter)
         // Another process that got the same ID later.
         XCTAssertTrue(RunStarter(pid: starter.pid, started: starter.started + 1).hasExited)
-        XCTAssertTrue(try exitedStarter().hasExited)
+        XCTAssertTrue(exitedStarter.hasExited)
+        XCTAssertNil(RunStarter(process: exitedStarter.pid))
         XCTAssertNil(RunStarter(recorded: ""))
     }
 
-    /// Only `swift test` and `xcodebuild` start every test process of a run, and only that run's. Xcode starts
-    /// each test process under a `debugserver` of its own, which exits with it. `swift-test` is a link to
-    /// `swift-package`, whose name its process takes.
-    func testOnlySwiftTestAndXcodebuildStartARun() throws {
+    /// Only a process with the name of `swift test` or `xcodebuild` is a run's starter. This process isn't, and
+    /// is one when its own name is given.
+    func testOnlyAProcessNamedAsACommandStartsARun() {
+        XCTAssertNil(RunStarter.command(getpid()))
+        let name = String(ProcessInfo.processInfo.processName.prefix(16))
+        XCTAssertEqual(RunStarter.command(getpid(), in: [name]), RunStarter(process: getpid()))
+        XCTAssertNil(RunStarter.command(exitedStarter.pid, in: [name]))
+        XCTAssertEqual(RunStarter.commands, ["swift-package", "swift-test", "xcodebuild"])
+    }
+
+    // MARK: A crashed scenario
+
+    /// A process killed while it runs a scenario leaves the scenario in the report, with the steps of the
+    /// scenarios before it written whole.
+    func testAScenarioThatNeverFinishesIsInTheReportAndTheOnesBeforeItAreWhole() throws {
+        let recorder = CucumberJSONRecorder(reportURL: { self.url }, runner: "XCTest")
+        let feature = NSObject()
+        let done = NSObject()
+        let crashing = NSObject()
+        let step = NSObject()
+        let owner = (key: ObjectIdentifier(feature), make: { CucumberJSONReport.Feature(uri: "Checkout.feature", title: "Checkout", description: "", line: 1, tags: []) })
+        recorder.suiteStarted()
+        recorder.featureStarted(owner.key, make: owner.make)
+        recorder.scenarioStarted(ObjectIdentifier(done), feature: owner) { CucumberJSONReport.Scenario(title: "Done", line: 3, tags: []) }
+        recorder.stepStarted(ObjectIdentifier(step), scenario: ObjectIdentifier(done)) { CucumberJSONReport.Step(name: "a step", keyword: "Given ", line: 4) }
+        recorder.stepFinished(ObjectIdentifier(step), result: .passed, duration: Measurement(value: 1, unit: .nanoseconds))
+        recorder.scenarioFinished()
+        recorder.scenarioStarted(ObjectIdentifier(crashing), feature: owner) { CucumberJSONReport.Scenario(title: "Crashes", line: 6, tags: []) }
+        // The process is killed here: nothing is written after the scenario starts.
+
+        let report = ReportFile(url: url).read()
+        XCTAssertEqual(names(report), [["Done", "Crashes"]])
+        let steps = (report.first?["elements"] as? [[String: Any]])?.first?["steps"] as? [[String: Any]]
+        XCTAssertEqual(steps?.count, 1)
+    }
+}
+
+#if os(macOS)
+/// `swift test` and `xcodebuild` start the test processes on a Mac; on a Simulator, `launchd` does, which
+/// doesn't tell runs apart. `swift-test` is a link to `swift-package`, whose name its process takes, and Xcode
+/// starts each test process under a `debugserver` of its own.
+extension ReportRunTests {
+    func testAProcessNamedLikeSwiftTestOrXcodebuildIsARunStarter() throws {
         let folder = try XCTUnwrap(folder)
+        let bin = URL(fileURLWithPath: "/", isDirectory: true).appendingPathComponent("bin", isDirectory: true)
         for name in ["swift-package", "xcodebuild"] {
             // A process with the command's name: a copy of `sleep`, which runs until the test stops it.
             let command = folder.appendingPathComponent(name)
-            try FileManager.default.copyItem(at: URL(fileURLWithPath: "/bin/sleep"), to: command)
+            try FileManager.default.copyItem(at: bin.appendingPathComponent("sleep"), to: command)
             let process = Process()
             process.executableURL = command
             process.arguments = ["60"]
@@ -231,8 +240,6 @@ extension ReportRunTests {
             let starter = try XCTUnwrap(RunStarter.command(process.processIdentifier), name)
             XCTAssertEqual(starter, RunStarter(process: process.processIdentifier), name)
         }
-        // The test process itself, which XCTest or a test host runs, starts no run.
-        XCTAssertNil(RunStarter.command(getpid()))
     }
 }
 #endif

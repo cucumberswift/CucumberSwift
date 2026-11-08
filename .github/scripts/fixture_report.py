@@ -26,7 +26,8 @@ the first run's report, not add to it.
 
   python3 .github/scripts/fixture_report.py get <expected file> <key>
 
-prints a setting.
+prints a setting. Both commands read only files in the working folder, the home
+folder or a temporary folder, as the fixtures' files and reports are.
 
 The expected-report file of a Swift package fixture whose test run ages the
 report, by `ages-report: <suffix>`, also needs the file `<report><suffix>`.
@@ -38,12 +39,24 @@ in the report. Only the standard library is used.
 import json
 import os
 import sys
+import tempfile
 
 SETTINGS = ("tags", "only-testing", "ages-report")
 
 
+def confined(path):
+    """The real path of a file in the working folder, the home folder or a temporary folder, else an error."""
+    real = os.path.realpath(path)
+    roots = [os.getcwd(), os.path.expanduser("~"), tempfile.gettempdir(), os.environ.get("RUNNER_TEMP", "")]
+    for root in filter(None, roots):
+        base = os.path.realpath(root)
+        if os.path.commonpath([real, base]) == base:
+            return real
+    raise ValueError(f"{path} is not in the working folder, the home folder or a temporary folder")
+
+
 def lines(path):
-    with open(path, encoding="utf-8") as file:
+    with open(confined(path), encoding="utf-8") as file:
         stripped = (line.strip() for line in file)
         return [line for line in stripped if line and not line.startswith("#")]
 
@@ -84,6 +97,14 @@ def problems(expected, report):
 
 
 def main(argv):
+    try:
+        return run(argv)
+    except ValueError as error:
+        print(f"error: {error}")
+        return 1
+
+
+def run(argv):
     if len(argv) == 4 and argv[1] == "get":
         settings, _ = expectation(argv[2])
         if argv[3] not in settings:
@@ -95,11 +116,12 @@ def main(argv):
         print(__doc__)
         return 2
     settings, expected = expectation(argv[2])
-    if "ages-report" in settings and not os.path.exists(argv[3] + settings["ages-report"]):
-        print(f"error: {argv[2]}: the fixture didn't age the report: there is no {argv[3] + settings['ages-report']}")
+    report_path = confined(argv[3])
+    if "ages-report" in settings and not os.path.exists(report_path + settings["ages-report"]):
+        print(f"error: {argv[2]}: the fixture didn't age the report: there is no {report_path + settings['ages-report']}")
         return 1
     try:
-        with open(argv[3], encoding="utf-8") as file:
+        with open(report_path, encoding="utf-8") as file:
             report = json.load(file)
     except (OSError, ValueError) as error:
         print(f"error: {argv[2]}: can't read the report {argv[3]}: {error}")

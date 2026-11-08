@@ -98,12 +98,15 @@ class FixtureReportTests(unittest.TestCase):
         self.assertIn("no `tags:` setting", output)
 
     def test_a_file_without_features_or_a_setting_value_is_an_error(self):
+        for name, text in (("empty", "# Nothing.\n"), ("only-settings", "tags: x\n"), ("no-value", "tags:\nCukes\n")):
+            path = self.write(name, text)
+            with self.assertRaises(ValueError):
+                fixture_report.expectation(path)
+
+    def test_a_path_outside_the_working_folder_home_and_temp_folders_is_refused(self):
         with self.assertRaises(ValueError):
-            fixture_report.expectation(self.write("empty", "# Nothing.\n"))
-        with self.assertRaises(ValueError):
-            fixture_report.expectation(self.write("only-settings", "tags: x\n"))
-        with self.assertRaises(ValueError):
-            fixture_report.expectation(self.write("no-value", "tags:\nCukes\n"))
+            fixture_report.confined(os.path.join(os.sep, "etc", "hosts"))
+        self.assertTrue(fixture_report.confined(self.folder).startswith(os.path.realpath(tempfile.gettempdir())))
 
 
 if __name__ == "__main__":
