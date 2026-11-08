@@ -40,3 +40,13 @@ consumer_tests(
     name = "CucumberSwiftSwift6ConsumerTests",
     copts = ["-swift-version", "6"],
 )
+
+# The step definition macros fixture, through a symlink to its folder, with the macros from
+# @cucumberswift//:CucumberSwiftMacros. Its regex literals need macOS 13, iOS 16, tvOS 16 and
+# watchOS 9 at run time.
+consumer_tests(
+    name = "StepDefinitionMacrosPackageTests",
+    copts = ["-swift-version", "6"],
+    deps = ["@cucumberswift//:CucumberSwiftMacros"],
+    minimum_os_versions = {"ios": "16.0", "macos": "13.0", "tvos": "16.0", "watchos": "9.0"},
+)

@@ -12,3 +12,7 @@ bazel_dep(name = "rules_cc", version = "0.2.25")
 bazel_dep(name = "rules_swift", version = "4.1.2")
 # At least the version Package.swift starts from (CI checks this).
 bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
+# For the step definition macros' compiler plugin. Bazel fetches and builds it only for a target that
+# depends on the macros. 601.0.1.1 is the oldest registry version that allows rules_swift 4; Bazel
+# uses a newer one if another module asks for it.
+bazel_dep(name = "swift-syntax", version = "601.0.1.1")

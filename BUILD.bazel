@@ -1,4 +1,5 @@
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_swift//swift:swift_compiler_plugin.bzl", "swift_compiler_plugin")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 
 # The Objective-C base classes of the tests CucumberSwift generates for each step and scenario.
@@ -29,6 +30,39 @@ swift_library(
     visibility = ["//visibility:public"],
     deps = [
         ":CucumberSwiftObjC",
+        "@cucumberswift_expressions//:CucumberSwiftExpressions",
+    ],
+)
+
+# Expands the step definition and hook macros, such as #Given. It runs on the Mac that builds.
+# -DMacros stands in for Package.swift's Macros trait, which the sources check with #if.
+swift_compiler_plugin(
+    name = "CucumberSwiftMacrosPlugin",
+    srcs = glob(["Sources/CucumberSwiftMacrosPlugin/*.swift"]),
+    copts = ["-DMacros"],
+    module_name = "CucumberSwiftMacrosPlugin",
+    deps = [
+        "@cucumberswift_expressions//:CucumberSwiftExpressions",
+        "@swift-syntax//:SwiftCompilerPlugin",
+        "@swift-syntax//:SwiftDiagnostics",
+        "@swift-syntax//:SwiftSyntax",
+        "@swift-syntax//:SwiftSyntaxBuilder",
+        "@swift-syntax//:SwiftSyntaxMacros",
+    ],
+)
+
+# The step definition macros for the XCTest runner. Depend on it instead of CucumberSwift, which it
+# re-exports, to write step definitions such as #Given("I have {int} cukes").
+swift_library(
+    name = "CucumberSwiftMacros",
+    srcs = glob(["Sources/CucumberSwiftMacros/*.swift"]),
+    copts = ["-DMacros"],
+    module_name = "CucumberSwiftMacros",
+    plugins = [":CucumberSwiftMacrosPlugin"],
+    testonly = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":CucumberSwift",
         "@cucumberswift_expressions//:CucumberSwiftExpressions",
     ],
 )
