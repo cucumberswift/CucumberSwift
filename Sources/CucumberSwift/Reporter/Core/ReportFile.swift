@@ -152,6 +152,11 @@ final class ReportFile: @unchecked Sendable {
     private var runDescriptor: Int32 = -1
     private let joinLock = NSLock()
     private let writeLock = NSLock()
+    /// How long a report can go unwritten before a worker takes it for an earlier run's: 10 minutes, so that
+    /// a slow test target of the same run, such as a UI target that waits for a Simulator to boot, never
+    /// empties what the targets before it wrote.
+    static let staleAfter: TimeInterval = 600
+
     /// How many times this process merged into the report, for the reporter's tests.
     private(set) var merges = 0
 
@@ -274,7 +279,7 @@ final class ReportFile: @unchecked Sendable {
                  bundle: String? = RunRecord.currentBundle,
                  isParallel: Bool = false,
                  run: RunStarter? = .current,
-                 staleAfter: TimeInterval = 60) {
+                 staleAfter: TimeInterval = ReportFile.staleAfter) {
         joinLock.lock()
         defer { joinLock.unlock() }
         guard runDescriptor < 0 else { return }

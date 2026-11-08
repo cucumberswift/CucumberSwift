@@ -46,7 +46,7 @@ class ReportRunTests: XCTestCase {
                         bundle: String? = "Tests.xctest",
                         isParallel: Bool = false,
                         run: RunStarter? = nil,
-                        staleAfter: TimeInterval = 60) -> [[String: Any]] {
+                        staleAfter: TimeInterval = ReportFile.staleAfter) -> [[String: Any]] {
         let worker = ReportFile(url: url)
         worker.joinRun(runner: runner, bundle: bundle, isParallel: isParallel, run: run, staleAfter: staleAfter)
         return worker.read()
@@ -88,8 +88,30 @@ class ReportRunTests: XCTestCase {
 
     func testAStaleReportIsEmptiedByAnyWorker() throws {
         exitedWorker(bundle: "Unit.xctest", wrote: "Old")
-        try ageReport(by: 3_600)
+        try ageReport(by: ReportFile.staleAfter + 60)
         XCTAssertEqual(joined(bundle: "Other.xctest").count, 0)
+    }
+
+    /// A target of the same run that starts minutes after the one before it, as a UI target does while its
+    /// Simulator boots, keeps the report.
+    func testASlowTargetOfTheSameRunKeepsTheReport() throws {
+        exitedWorker(bundle: "Unit.xctest", wrote: "A")
+        try ageReport(by: ReportFile.staleAfter - 60)
+        XCTAssertEqual(names(joined(runner: "XCTest", bundle: "UI.xctest")), [["A"]])
+    }
+
+    /// The cost of that: a parallel run in Xcode, or on a Simulator, that starts within the limit of the last
+    /// run adds to its report, because its workers can't be told from the last run's.
+    func testAParallelRunThatStartsWithinTheLimitAddsToTheLastRunsReport() throws {
+        exitedWorker(isParallel: true, wrote: "A")
+        try ageReport(by: ReportFile.staleAfter - 60)
+        XCTAssertEqual(names(joined(isParallel: true)), [["A"]])
+        try ageReport(by: ReportFile.staleAfter + 60)
+        XCTAssertEqual(joined(isParallel: true).count, 0)
+    }
+
+    func testTheLimitIsTenMinutes() {
+        XCTAssertEqual(ReportFile.staleAfter, 600)
     }
 
     func testTheRunRecordKeepsItsStarterAndItsBundles() {
@@ -161,7 +183,7 @@ extension ReportRunTests {
         XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: nil, run: starter)), [["A"]])
     }
 
-    /// The first runner finished more than a minute before the second starts, as when the first one's tests
+    /// The first runner finished more than 10 minutes before the second starts, as when the first one's tests
     /// are followed by a long tear-down.
     func testTheNextTargetOfARunKeepsAnOldReportWhileTheRunsStarterRuns() throws {
         let starter = try runningStarter()
