@@ -82,6 +82,61 @@ struct RunStarter: Equatable {
     }
 }
 
+/// What the run lock file records about the run that writes a report: the command that started it, and the
+/// test bundles that have joined it, each with its runner. A bundle runs once in a run, with each runner, so a
+/// bundle that joins again starts a new run. That is how a rerun in Xcode, or on a Simulator, is told from
+/// the run before it: neither has a command that starts every process of a run.
+struct RunRecord: Equatable {
+    var starter: RunStarter?
+    var keys = Set<String>()
+
+    /// The name of the test bundle this process runs, from the `XCTestBundlePath` that Xcode, `xcodebuild`
+    /// and a Simulator set, without its folders, which change with each install. `nil` for `swift test`, whose
+    /// one bundle runs once with each runner.
+    static var currentBundle: String? {
+        ProcessInfo.processInfo.environment["XCTestBundlePath"].map { URL(fileURLWithPath: $0).lastPathComponent }
+    }
+
+    static func key(runner: String, bundle: String?) -> String {
+        "\(runner) \(bundle ?? "")"
+    }
+
+    init(starter: RunStarter? = nil) {
+        self.starter = starter
+    }
+
+    /// The record from the run lock file's text: the starter on the first line, a bundle's key on each line
+    /// after it. Anything that can't be read is no record.
+    init(recorded: String) {
+        let lines = recorded.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        starter = lines.first.flatMap { RunStarter(recorded: $0) }
+        keys = Set(lines.dropFirst().filter { !$0.isEmpty })
+    }
+
+    var recorded: String {
+        ([starter?.recorded ?? ""] + keys.sorted()).joined(separator: "\n")
+    }
+
+    /// Whether a worker that no other worker is running beside starts a new run.
+    ///
+    /// - The recorded command has exited: the run it started is over.
+    /// - The recorded command is `current`, which is still running: this is the same run, whatever the
+    ///   report's age, as `swift test` starts the Swift Testing process after the XCTest process has finished.
+    /// - Nothing was recorded, and this process has a command: no run of that command has written the report.
+    /// - A bundle that is not one of several parallel workers joins with the same runner again.
+    /// - Otherwise, when the report is stale.
+    func isNewRun(by current: RunStarter?, key: String, isParallel: Bool, isStale: () -> Bool) -> Bool {
+        if let starter {
+            if starter.hasExited { return true }
+            if starter == current { return false }
+        } else if current != nil {
+            return true
+        }
+        if !isParallel, keys.contains(key) { return true }
+        return isStale()
+    }
+}
+
 final class ReportFile: @unchecked Sendable {
     private static let filesLock = NSLock()
     private static var files = [String: ReportFile]()
@@ -202,17 +257,24 @@ final class ReportFile: @unchecked Sendable {
         if runDescriptor >= 0 { close(runDescriptor) }
     }
 
-    /// Joins the run that writes the report, once. The first worker of a new run empties the report an
-    /// earlier run left; every other worker of the run leaves it alone. Every process that writes the report
+    /// Joins the run that writes the report, once. The first process of a new run empties the report an
+    /// earlier run left; every other process of the run leaves it alone. Every process that writes the report
     /// is a worker: each parallel worker, and each test target's process, whichever runner it uses.
     ///
-    /// A worker is the first of a new run when no other worker holds the run lock, and either the report
-    /// hasn't been written for `staleAfter` seconds or the process that started the last run's workers has
-    /// exited. Xcode can start a worker after another has finished, and `swift test` starts the Swift Testing
-    /// process after the XCTest process has finished, and neither may empty what the earlier one wrote.
-    /// - Parameter run: The process that started this worker, which `swift test` and `xcodebuild` start once
-    ///   for each run. `nil` when that process doesn't tell runs apart.
-    func joinRun(run: RunStarter? = .current, staleAfter: TimeInterval = 60) {
+    /// The first worker of a run records, in the run lock file, the command that started it and the test
+    /// bundles that have joined it. A worker starts a new run when no other worker holds the run lock and
+    /// ``RunRecord/isNewRun(by:key:isParallel:isStale:)`` says so.
+    /// - Parameters:
+    ///   - runner: The runner that writes: `XCTest` or `Swift Testing`.
+    ///   - bundle: The name of the test bundle that the process runs, `nil` where it can't be known.
+    ///   - isParallel: Whether the process is one of several workers that run one test bundle.
+    ///   - run: The command that started this process, `swift test` or `xcodebuild`. `nil` when the process
+    ///     doesn't tell runs apart.
+    func joinRun(runner: String,
+                 bundle: String? = RunRecord.currentBundle,
+                 isParallel: Bool = false,
+                 run: RunStarter? = .current,
+                 staleAfter: TimeInterval = 60) {
         joinLock.lock()
         defer { joinLock.unlock() }
         guard runDescriptor < 0 else { return }
@@ -223,26 +285,30 @@ final class ReportFile: @unchecked Sendable {
         // Getting the lock exclusively means no other worker holds the run, so this may be a new run's
         // first worker. Then `flock` below turns it into a shared lock, which on some systems drops the
         // lock for a moment, and another worker can take it exclusively. That worker finds a report the
-        // first one has just written, which isn't stale, and the run this worker recorded, whose starter is
-        // running, so it leaves it alone: two first workers never both empty it.
+        // first one has just written, which isn't stale, and the run this worker recorded, so it leaves
+        // it alone: two first workers never both empty it.
         if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
-            if isStale(after: staleAfter) || RunStarter(recorded: recordedRun())?.hasExited == true {
+            let key = RunRecord.key(runner: runner, bundle: bundle)
+            var record = RunRecord(recorded: recordedRun())
+            if record.isNewRun(by: run, key: key, isParallel: isParallel, isStale: { isStale(after: staleAfter) }) {
                 withWriteLock { write([]) }
+                record = RunRecord(starter: run)
             }
-            record(run)
+            record.keys.insert(key)
+            store(record)
         }
         flock(descriptor, LOCK_SH)
     }
 
-    /// The run the last first worker recorded in the run lock file.
+    /// The run recorded in the run lock file.
     private func recordedRun() -> String {
-        var bytes = [UInt8](repeating: 0, count: 128)
+        var bytes = [UInt8](repeating: 0, count: 4_096)
         let count = pread(runDescriptor, &bytes, bytes.count, 0)
         return count > 0 ? String(bytes: bytes[..<count], encoding: .utf8) ?? "" : ""
     }
 
-    private func record(_ run: RunStarter?) {
-        let bytes = Array((run?.recorded ?? "").utf8)
+    private func store(_ record: RunRecord) {
+        let bytes = Array(record.recorded.utf8)
         ftruncate(runDescriptor, 0)
         _ = pwrite(runDescriptor, bytes, bytes.count, 0)
     }

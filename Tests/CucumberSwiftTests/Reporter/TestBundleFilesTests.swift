@@ -73,7 +73,40 @@ final class TestBundleFilesTests: XCTestCase {
 
         TestBundleFiles.copyReport(at: report, forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
 
-        XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
+        let features = try JSONSerialization.jsonObject(with: Data(contentsOf: copy)) as? [[String: Any]]
+        XCTAssertEqual(features?.count, 1)
+    }
+
+    private func copiedNames(forBundle bundle: String, report: [[String: Any]]) throws -> [String] {
+        let reportURL = folder.appendingPathComponent("report.json")
+        try XCTUnwrap(ReportFile.serialize(report)).write(to: reportURL)
+        TestBundleFiles.copyReport(at: reportURL, forBundleAt: folder.appendingPathComponent(bundle), into: folder)
+        let name = TestBundleFiles.resultsFileName(forBundleAt: folder.appendingPathComponent(bundle))
+        let copy = try JSONSerialization.jsonObject(with: Data(contentsOf: folder.appendingPathComponent(name))) as? [[String: Any]]
+        return (copy ?? []).compactMap { $0["name"] as? String }
+    }
+
+    private func feature(_ name: String, uri: String) -> [String: Any] {
+        ["name": name, "uri": uri, "line": 1, "keyword": "Feature", "elements": [[String: Any]]()]
+    }
+
+    /// A run of several test bundles writes one report, and each bundle's copy has only its own features (#546).
+    func testTheCopyOfABundleHasOnlyTheFeaturesInThatBundle() throws {
+        let report = [
+            feature("Unit", uri: "file:///Build/Unit%20Tests.xctest/Contents/Resources/Features/Unit.feature"),
+            feature("UI", uri: "file:///Build/UITests.xctest/Features/UI.feature"),
+            feature("Elsewhere", uri: "file:///Sources/Features/Elsewhere.feature")
+        ]
+        XCTAssertEqual(try copiedNames(forBundle: "Unit Tests.xctest", report: report).sorted(), ["Elsewhere", "Unit"])
+    }
+
+    /// A Swift package has one test bundle for every target, whose features are in resource bundles.
+    func testTheCopyOfASwiftPackagesBundleHasEveryFeature() throws {
+        let report = [
+            feature("XCTest", uri: "file:///.build/Package_XTTests.bundle/Features/A.feature"),
+            feature("Swift Testing", uri: "file:///Tests/ST/Features/B.feature")
+        ]
+        XCTAssertEqual(try copiedNames(forBundle: "PackageTests.xctest", report: report).sorted(), ["Swift Testing", "XCTest"])
     }
 
     /// A report written where the copy goes, as when `reportPath` names it, stays.

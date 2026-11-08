@@ -1,6 +1,7 @@
 # The features `mise run test-fixtures` expects in this fixture's Cucumber JSON report, one per line, and
 # no others: the Swift Testing target's and the XCTest target's, which one `swift test` run writes to one
 # report. See .github/scripts/fixture_report.py.
+ages-report: .aged
 Pepinos en español
 Lint check
 Rules

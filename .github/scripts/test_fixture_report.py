@@ -74,22 +74,36 @@ class FixtureReportTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("isn't a list of features", output)
 
-    def test_the_rerun_file_gives_its_tags_and_its_features(self):
-        path = self.write("expected-report-rerun", "# The rerun.\ntags: checkout\nCheckout with XCTest\n")
-        status, output = self.run_main("tags", path)
-        self.assertEqual((status, output), (0, "checkout\n"))
+    def test_the_rerun_file_gives_its_settings_and_its_features(self):
+        path = self.write("expected-report-rerun", "# The rerun.\ntags: checkout\nonly-testing: Unit\nCheckout with XCTest\n")
+        self.assertEqual(self.run_main("get", path, "tags"), (0, "checkout\n"))
+        self.assertEqual(self.run_main("get", path, "only-testing"), (0, "Unit\n"))
         status, output = self.run_main("check", path, self.write("report.json", json.dumps([feature("Checkout with XCTest")])))
         self.assertEqual(status, 0, output)
         self.assertIn("the 1 feature it lists", output)
 
-    def test_a_file_without_tags_or_features_is_an_error(self):
-        status, output = self.run_main("tags", self.write("expected-report", "Cukes\n"))
+    def test_a_report_the_fixture_should_have_aged_needs_its_marker(self):
+        expected = self.write("expected-report", "ages-report: .aged\nCukes\n")
+        report = self.write("report.json", json.dumps([feature("Cukes")]))
+        status, output = self.run_main("check", expected, report)
         self.assertEqual(status, 1)
-        self.assertIn("isn't `tags: <tags>`", output)
+        self.assertIn("didn't age the report", output)
+        self.write("report.json.aged", "")
+        status, output = self.run_main("check", expected, report)
+        self.assertEqual(status, 0, output)
+
+    def test_a_setting_a_file_does_not_have_is_an_error(self):
+        status, output = self.run_main("get", self.write("expected-report", "Cukes\n"), "tags")
+        self.assertEqual(status, 1)
+        self.assertIn("no `tags:` setting", output)
+
+    def test_a_file_without_features_or_a_setting_value_is_an_error(self):
         with self.assertRaises(ValueError):
             fixture_report.expectation(self.write("empty", "# Nothing.\n"))
         with self.assertRaises(ValueError):
-            fixture_report.expectation(self.write("no-tags", "tags:\nCukes\n"))
+            fixture_report.expectation(self.write("only-settings", "tags: x\n"))
+        with self.assertRaises(ValueError):
+            fixture_report.expectation(self.write("no-value", "tags:\nCukes\n"))
 
 
 if __name__ == "__main__":

@@ -31,26 +31,109 @@ class ReportRunTests: XCTestCase {
         features.map { ($0["elements"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String } }
     }
 
-    /// A worker of `run` that wrote `features` and has exited, so it no longer holds the run lock.
-    private func exitedWorker(of run: RunStarter?, wrote features: [[String: Any]]) {
+    /// A worker that joins the run, writes `name`'s scenario and exits, so it no longer holds the run lock.
+    private func exitedWorker(runner: String = "XCTest",
+                              bundle: String? = "Tests.xctest",
+                              isParallel: Bool = false,
+                              run: RunStarter? = nil,
+                              wrote name: String) {
         let worker = ReportFile(url: url)
-        worker.joinRun(run: run)
-        worker.merge(features)
+        worker.joinRun(runner: runner, bundle: bundle, isParallel: isParallel, run: run)
+        worker.merge([feature([scenario(name, line: name.utf8.reduce(1) { $0 + Int($1) })])])
     }
 
-    func testAWorkerThatCantTellRunsApartKeepsAFreshReport() throws {
-        exitedWorker(of: nil, wrote: [feature([scenario("A", line: 3)])])
-
-        let next = ReportFile(url: url)
-        next.joinRun(run: nil)
-        XCTAssertEqual(names(next.read()), [["A"]])
+    private func joined(runner: String = "XCTest",
+                        bundle: String? = "Tests.xctest",
+                        isParallel: Bool = false,
+                        run: RunStarter? = nil,
+                        staleAfter: TimeInterval = 60) -> [[String: Any]] {
+        let worker = ReportFile(url: url)
+        worker.joinRun(runner: runner, bundle: bundle, isParallel: isParallel, run: run, staleAfter: staleAfter)
+        return worker.read()
     }
 
+    private func ageReport(by seconds: TimeInterval) throws {
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -seconds)], ofItemAtPath: url.path)
+    }
+
+    // MARK: Without a command that starts the run: Xcode, and a Simulator
+
+    func testAnotherBundleOfTheSameRunKeepsTheReport() {
+        exitedWorker(bundle: "Unit.xctest", wrote: "A")
+        XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: "Features.xctest")), [["A"]])
+    }
+
+    func testABundleThatRunsAgainStartsANewRunWithoutWaitingForTheReportToGoStale() {
+        exitedWorker(bundle: "Unit.xctest", wrote: "A")
+        exitedWorker(runner: "Swift Testing", bundle: "Features.xctest", wrote: "B")
+        // A rerun of the scheme starts with the first bundle again, seconds after the run before.
+        XCTAssertEqual(joined(bundle: "Unit.xctest").count, 0)
+    }
+
+    func testARerunOfOneBundleReplacesTheReportOfBothBundles() {
+        exitedWorker(bundle: "Unit.xctest", wrote: "A")
+        exitedWorker(runner: "Swift Testing", bundle: "Features.xctest", wrote: "B")
+        XCTAssertEqual(joined(runner: "Swift Testing", bundle: "Features.xctest").count, 0)
+    }
+
+    func testTheSameBundleWithAnotherRunnerIsAnotherWorkerOfTheRun() {
+        exitedWorker(runner: "XCTest", bundle: nil, wrote: "A")
+        XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: nil)), [["A"]])
+    }
+
+    func testTheWorkersOfOneBundleOfAParallelRunAreOneRunWhicheverWorkerStartsLater() {
+        exitedWorker(isParallel: true, wrote: "A")
+        XCTAssertEqual(names(joined(isParallel: true)), [["A"]])
+    }
+
+    func testAStaleReportIsEmptiedByAnyWorker() throws {
+        exitedWorker(bundle: "Unit.xctest", wrote: "Old")
+        try ageReport(by: 3_600)
+        XCTAssertEqual(joined(bundle: "Other.xctest").count, 0)
+    }
+
+    func testTheRunRecordKeepsItsStarterAndItsBundles() {
+        var record = RunRecord(starter: RunStarter(pid: 42, started: 7))
+        record.keys = ["XCTest A.xctest", "Swift Testing B.xctest"]
+        XCTAssertEqual(RunRecord(recorded: record.recorded), record)
+        XCTAssertEqual(RunRecord(recorded: ""), RunRecord())
+        XCTAssertEqual(RunRecord(recorded: "not a starter\nXCTest A.xctest").keys, ["XCTest A.xctest"])
+        XCTAssertNil(RunRecord(recorded: "not a starter").starter)
+    }
+
+    func testTheBundleIsNamedByTheLastFolderOfItsPath() {
+        XCTAssertEqual(RunRecord.key(runner: "XCTest", bundle: "Unit.xctest"), "XCTest Unit.xctest")
+        XCTAssertEqual(RunRecord.key(runner: "XCTest", bundle: nil), "XCTest ")
+    }
+
+    // MARK: A crashed scenario
+
+    /// A process killed while it runs a scenario leaves the scenario in the report, with the steps of the
+    /// scenarios before it written whole.
+    func testAScenarioThatNeverFinishesIsInTheReportAndTheOnesBeforeItAreWhole() throws {
+        let recorder = CucumberJSONRecorder(reportURL: { self.url }, runner: "XCTest")
+        let feature = NSObject(), done = NSObject(), crashing = NSObject(), step = NSObject()
+        let owner = (key: ObjectIdentifier(feature), make: { CucumberJSONReport.Feature(uri: "Checkout.feature", title: "Checkout", description: "", line: 1, tags: []) })
+        recorder.suiteStarted()
+        recorder.featureStarted(owner.key, make: owner.make)
+        recorder.scenarioStarted(ObjectIdentifier(done), feature: owner) { CucumberJSONReport.Scenario(title: "Done", line: 3, tags: []) }
+        recorder.stepStarted(ObjectIdentifier(step), scenario: ObjectIdentifier(done)) { CucumberJSONReport.Step(name: "a step", keyword: "Given ", line: 4) }
+        recorder.stepFinished(ObjectIdentifier(step), result: .passed, duration: Measurement(value: 1, unit: .nanoseconds))
+        recorder.scenarioFinished()
+        recorder.scenarioStarted(ObjectIdentifier(crashing), feature: owner) { CucumberJSONReport.Scenario(title: "Crashes", line: 6, tags: []) }
+        // The process is killed here: nothing is written after the scenario starts.
+
+        let report = ReportFile(url: url).read()
+        XCTAssertEqual(names(report), [["Done", "Crashes"]])
+        let steps = (report.first?["elements"] as? [[String: Any]])?.first?["steps"] as? [[String: Any]]
+        XCTAssertEqual(steps?.count, 1)
+    }
 }
 
 #if os(macOS)
-/// A new run starts when the command that started the last run's processes has exited. `swift test` and
-/// `xcodebuild` start the test processes on a Mac; on a Simulator, `launchd` does, which doesn't tell runs apart.
+/// A new run starts when the command that started the last run's processes has exited, and a run is the
+/// same run while that command runs. `swift test` and `xcodebuild` start the test processes on a Mac; on a
+/// Simulator, `launchd` does, which doesn't tell runs apart.
 extension ReportRunTests {
     /// The process that started an earlier run's workers, which has exited: `swift test` or `xcodebuild` of
     /// the run before.
@@ -62,36 +145,44 @@ extension ReportRunTests {
         return RunStarter(pid: process.processIdentifier, started: 1)
     }
 
-    func testTheFirstWorkerOfANewRunEmptiesAFreshReportWhenTheLastRunsStarterHasExited() throws {
-        exitedWorker(of: try exitedStarter(), wrote: [feature([scenario("Old", line: 3)])])
+    private func runningStarter() throws -> RunStarter {
+        try XCTUnwrap(RunStarter(process: getpid()))
+    }
 
-        let first = ReportFile(url: url)
-        first.joinRun(run: RunStarter(process: getpid()))
-        XCTAssertEqual(first.read().count, 0)
+    func testTheFirstWorkerOfANewRunEmptiesAFreshReportWhenTheLastRunsStarterHasExited() throws {
+        exitedWorker(run: try exitedStarter(), wrote: "Old")
+        XCTAssertEqual(joined(bundle: "Other.xctest", run: try runningStarter()).count, 0)
     }
 
     func testTheNextTargetOfARunKeepsTheReportWhileTheRunsStarterRuns() throws {
-        let starter = try XCTUnwrap(RunStarter(process: getpid()))
+        let starter = try runningStarter()
         // The XCTest process has exited, and the Swift Testing process of the same `swift test` starts.
-        exitedWorker(of: starter, wrote: [feature([scenario("A", line: 3)])])
-        let swiftTesting = ReportFile(url: url)
-        swiftTesting.joinRun(run: starter)
-        swiftTesting.merge([feature([scenario("B", line: 6)])])
-        XCTAssertEqual(names(swiftTesting.read()), [["A", "B"]])
+        exitedWorker(bundle: nil, run: starter, wrote: "A")
+        XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: nil, run: starter)), [["A"]])
     }
 
-    func testAStaleReportIsEmptiedEvenWhileTheRunsStarterRuns() throws {
-        let starter = try XCTUnwrap(RunStarter(process: getpid()))
-        exitedWorker(of: starter, wrote: [feature([scenario("Old", line: 3)])])
-        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -3_600)], ofItemAtPath: url.path)
+    /// The first runner finished more than a minute before the second starts, as when the first one's tests
+    /// are followed by a long tear-down.
+    func testTheNextTargetOfARunKeepsAnOldReportWhileTheRunsStarterRuns() throws {
+        let starter = try runningStarter()
+        exitedWorker(bundle: nil, run: starter, wrote: "A")
+        try ageReport(by: 3_600)
+        XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: nil, run: starter)), [["A"]])
+    }
 
-        let first = ReportFile(url: url)
-        first.joinRun(run: starter)
-        XCTAssertEqual(first.read().count, 0)
+    func testAReportNoRunWroteIsEmptiedByARunWithAStarterHoweverNewItIs() throws {
+        // A report that an earlier run left without recording its command, such as one from Xcode.
+        ReportFile(url: url).merge([feature([scenario("Old", line: 3)])])
+        XCTAssertEqual(joined(bundle: nil, run: try runningStarter()).count, 0)
+    }
+
+    func testARunWhoseStarterStillRunsIsNotEmptiedByAWorkerOfAnotherCommand() throws {
+        exitedWorker(bundle: "Unit.xctest", run: try runningStarter(), wrote: "A")
+        XCTAssertEqual(names(joined(runner: "Swift Testing", bundle: "Features.xctest", run: nil)), [["A"]])
     }
 
     func testARunStarterIsKnownByItsProcessIDAndStartTime() throws {
-        let starter = try XCTUnwrap(RunStarter(process: getpid()))
+        let starter = try runningStarter()
         XCTAssertFalse(starter.hasExited)
         XCTAssertEqual(RunStarter(recorded: starter.recorded), starter)
         // Another process that got the same ID later.

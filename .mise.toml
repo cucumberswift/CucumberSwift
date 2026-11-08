@@ -58,9 +58,11 @@ description = "Build and test every project in Fixtures/"
 # A fixture must run at least as many XCTest and Swift Testing tests as its expected-tests lists, since
 # a run can exit with success having run none (.github/scripts/fixture_tests.py).
 # A fixture with expected-report writes its Cucumber JSON report to the caller's CUCUMBER_REPORT_PATH, or
-# to a new path, which every test target shares, and the report must have exactly the features it lists. A Swift package fixture with
-# expected-report-rerun then runs `swift test` again at once, with CUCUMBER_TAGS set to the tags it gives,
-# and the report must have only the features that file lists: a new run replaces the report
+# to a new path, which every test target shares, and the report must have exactly the features it lists.
+# A Swift package fixture's run starts with a report that an earlier run left, so the report must not have
+# its feature. A fixture with expected-report-rerun then runs its tests again at once: a Swift package
+# with CUCUMBER_TAGS set to the tags it gives, an Xcode project with -only-testing for the target it gives.
+# The report must then have only the features that file lists: a new run replaces the report
 # (.github/scripts/fixture_report.py).
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
@@ -139,6 +141,11 @@ for fixture in Fixtures/*/; do
       report="$report_folder/report.json"
     fi
     export CUCUMBER_REPORT_PATH="$report" TEST_RUNNER_CUCUMBER_REPORT_PATH="$report"
+    # A report that an earlier run left, as new as one can be: the run must start with an empty report
+    # without anything deleting it first. The report has no record of a run, as one from Xcode has none.
+    if [ -f "$fixture/Package.swift" ]; then
+      printf '%s\n' '[{"id":"stale","keyword":"Feature","line":1,"name":"Stale feature from an earlier run","uri":"Stale.feature","elements":[]}]' > "$report"
+    fi
   fi
   if [ -f "$fixture/Package.swift" ]; then
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
@@ -170,18 +177,18 @@ for fixture in Fixtures/*/; do
   python3 .github/scripts/fixture_tests.py "$fixture" "$log"
   if [ -n "$report" ]; then
     python3 .github/scripts/fixture_report.py check "$fixture/expected-report" "$report"
-    if [ -f "$fixture/Package.swift" ] && [ -f "$fixture/expected-report-rerun" ]; then
-      # A report this recent would be kept by a worker that can't tell runs apart, so the rerun shows that
-      # a new `swift test` replaces it.
-      age=$(( $(date +%s) - $(stat -f %m "$report") ))
-      if [ "$age" -ge 30 ]; then
-        echo "error: $name: the report is ${age} seconds old before the rerun, too old to show that a new run replaces it"
-        exit 1
-      fi
-      rerun_tags=$(python3 .github/scripts/fixture_report.py tags "$fixture/expected-report-rerun")
+    if [ -f "$fixture/expected-report-rerun" ]; then
       rerun_log=$(mktemp)
       rerun_status=0
-      CUCUMBER_TAGS="$rerun_tags" with_xcode swift test --package-path "$fixture" > "$rerun_log" 2>&1 || rerun_status=$?
+      if [ -f "$fixture/Package.swift" ]; then
+        rerun_tags=$(python3 .github/scripts/fixture_report.py get "$fixture/expected-report-rerun" tags)
+        CUCUMBER_TAGS="$rerun_tags" with_xcode swift test --package-path "$fixture" > "$rerun_log" 2>&1 || rerun_status=$?
+      else
+        rerun_target=$(python3 .github/scripts/fixture_report.py get "$fixture/expected-report-rerun" only-testing)
+        with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" \
+          -destination "$destination" -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO \
+          -only-testing:"$rerun_target" > "$rerun_log" 2>&1 || rerun_status=$?
+      fi
       cat "$rerun_log"
       rm -f "$rerun_log"
       if [ "$rerun_status" -ne 0 ]; then exit "$rerun_status"; fi

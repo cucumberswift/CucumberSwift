@@ -11,22 +11,35 @@ Each line of the expected file, other than comments and blank lines, names a
 feature the report must have, with at least one scenario. The report must have
 no other feature, so a feature an earlier run left in it fails the check.
 
-A Swift package fixture can also have an expected-report-rerun file. Its first
-line, other than comments and blank lines, is `tags: <tags>`, and the rest name
-features as above. The task runs `swift test` again with CUCUMBER_TAGS set to
-the tags, straight after the first run, and checks the report with this script:
-the new run must replace the first run's report, not add to it. Tags, because
-`swift test --filter` can't choose the XCTest runner's scenarios, whose test
-classes exist only while the tests run.
+A fixture can also have an expected-report-rerun file. Its first lines, other
+than comments and blank lines, are `<key>: <value>` settings, and the rest name
+features as above. The task then runs the fixture's tests again, straight after
+the first run, and checks the report with this script: the new run must replace
+the first run's report, not add to it.
 
-  python3 .github/scripts/fixture_report.py tags <expected file>
+  tags: <tags>              a Swift package: `swift test` with CUCUMBER_TAGS set
+                            to the tags. `swift test --filter` can't choose the
+                            XCTest runner's scenarios, whose test classes exist
+                            only while the tests run.
+  only-testing: <target>    an Xcode project: `xcodebuild test` of the scheme
+                            with -only-testing:<target>.
 
-prints the tags. Only the standard library is used.
+  python3 .github/scripts/fixture_report.py get <expected file> <key>
+
+prints a setting.
+
+The expected-report file of a Swift package fixture whose test run ages the
+report, by `ages-report: <suffix>`, also needs the file `<report><suffix>`.
+The fixture's first runner writes that file as it exits, after it sets the
+report's age to 2 hours, so that the next runner starts when the report is
+stale. The next runner must still keep it: the features of both runners are
+in the report. Only the standard library is used.
 """
 import json
+import os
 import sys
 
-TAGS = "tags:"
+SETTINGS = ("tags", "only-testing", "ages-report")
 
 
 def lines(path):
@@ -36,16 +49,17 @@ def lines(path):
 
 
 def expectation(path):
-    """The tags, or None, and the feature names an expected file gives."""
+    """The settings, as a dictionary, and the feature names an expected file gives."""
     names = lines(path)
-    tags = None
-    if names and names[0].startswith(TAGS):
-        tags = names.pop(0)[len(TAGS):].strip()
-        if not tags:
-            raise ValueError(f"{path}: `{TAGS}` gives no tags")
+    settings = {}
+    while names and names[0].partition(":")[0] in SETTINGS:
+        key, _, value = names.pop(0).partition(":")
+        if not value.strip():
+            raise ValueError(f"{path}: `{key}:` gives no value")
+        settings[key] = value.strip()
     if not names:
         raise ValueError(f"{path}: names no feature")
-    return tags, names
+    return settings, names
 
 
 def problems(expected, report):
@@ -70,17 +84,20 @@ def problems(expected, report):
 
 
 def main(argv):
-    if len(argv) == 3 and argv[1] == "tags":
-        tags, _ = expectation(argv[2])
-        if tags is None:
-            print(f"error: {argv[2]}: its first line isn't `{TAGS} <tags>`")
+    if len(argv) == 4 and argv[1] == "get":
+        settings, _ = expectation(argv[2])
+        if argv[3] not in settings:
+            print(f"error: {argv[2]}: has no `{argv[3]}:` setting")
             return 1
-        print(tags)
+        print(settings[argv[3]])
         return 0
     if len(argv) != 4 or argv[1] != "check":
         print(__doc__)
         return 2
-    _, expected = expectation(argv[2])
+    settings, expected = expectation(argv[2])
+    if "ages-report" in settings and not os.path.exists(argv[3] + settings["ages-report"]):
+        print(f"error: {argv[2]}: the fixture didn't age the report: there is no {argv[3] + settings['ages-report']}")
+        return 1
     try:
         with open(argv[3], encoding="utf-8") as file:
             report = json.load(file)

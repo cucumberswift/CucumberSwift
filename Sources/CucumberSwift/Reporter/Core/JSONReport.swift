@@ -138,6 +138,7 @@ final class CucumberJSONRecorder {
     typealias Key = ObjectIdentifier
 
     private let reportURL: () -> URL
+    private let runner: String
     private let isParallel: () -> Bool
 
     private(set) var features: [CucumberJSONReport.Feature] = []
@@ -159,10 +160,12 @@ final class CucumberJSONRecorder {
     /// - Parameters:
     ///   - reportURL: Asked each time the report is written, because the setting that decides it can
     ///     change after the recorder exists.
+    ///   - runner: The runner that writes the report: `XCTest` or `Swift Testing`.
     ///   - isParallel: Whether this process is one of several parallel workers, which keep their features
     ///     when the suite starts again.
-    init(reportURL: @escaping () -> URL, isParallel: @escaping () -> Bool = { false }) {
+    init(reportURL: @escaping () -> URL, runner: String, isParallel: @escaping () -> Bool = { false }) {
         self.reportURL = reportURL
+        self.runner = runner
         self.isParallel = isParallel
     }
 
@@ -170,7 +173,7 @@ final class CucumberJSONRecorder {
 
     /// Joins the run that writes the report, which empties the report an earlier run left (#546).
     func suiteStarted() {
-        ReportFile.at(reportURL()).joinRun()
+        ReportFile.at(reportURL()).joinRun(runner: runner, isParallel: isParallel())
         defer { save() }
         // XCTest asks for CucumberTest's suite again while a parallel worker runs scenarios. Clearing the
         // features then would leave the scenario in progress with a feature that is no longer in the
@@ -201,6 +204,8 @@ final class CucumberJSONRecorder {
         owner?.elements.append(scenario)
         scenarioEntries[key] = scenario
         currentScenario = scenario
+        // A scenario that crashes the process is in the report, with the steps of an earlier write.
+        save()
     }
 
     func stepStarted(_ key: Key, scenario: Key?, make: () -> CucumberJSONReport.Step) {
@@ -242,10 +247,10 @@ final class CucumberJSONRecorder {
     /// test target's process, whichever runner it uses. So this merges the process's features into the report
     /// under a lock, which puts the features and scenarios in the order of their files, whichever ran first.
     ///
-    /// It merges only where a scenario or a feature finishes, and where the suite starts and finishes: a merge
-    /// reads, parses, sorts and rewrites the whole report, and a merge for every step would grow with the
-    /// report. A scenario that never finishes, because its process was killed, isn't in the report; every
-    /// scenario that finished is.
+    /// It merges only where a scenario starts or finishes, where a feature finishes, and where the suite starts
+    /// and finishes: a merge reads, parses, sorts and rewrites the whole report, and a merge for every step
+    /// would grow with the report. A scenario whose process was killed is in the report without the steps
+    /// that it ran; every scenario that finished is there whole.
     private func save() {
         guard let data = try? encoder.encode(features),
               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }

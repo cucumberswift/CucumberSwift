@@ -1,0 +1,6 @@
+# `mise run test-fixtures` runs the unit tests again straight after the first run, as Xcode does when you
+# test again: the unit test target's run replaces the first run's report, so the report then has only
+# these features. See .github/scripts/fixture_report.py.
+only-testing: BasketUnitTests
+Basket
+Basket in Swift
