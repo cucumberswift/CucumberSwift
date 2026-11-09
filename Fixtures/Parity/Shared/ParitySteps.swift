@@ -21,6 +21,23 @@ import ParityShop
 import Testing
 import XCTest
 
+struct ParityError: Error, CustomStringConvertible {
+    var description: String { "The step threw an error on purpose" }
+}
+
+enum World {
+    static var order: Order { Scenario.state(Order.init) }
+}
+
+/// The state the steps of one scenario share.
+final class Order {
+    let basket = Basket()
+    var lastItem = ""
+    var note = ""
+    var delivered = false
+    var madeByHook = false
+}
+
 /// What the scenarios record, for the parity comparison: each scenario's steps and hooks, in the order
 /// they ran, and each feature's hooks. Written to the folder in PARITY_TRACE_DIR, one file per scenario
 /// run and one per feature hook run, because parallel workers are separate processes and their output
@@ -67,23 +84,6 @@ final class Trace: @unchecked Sendable {
     }
 }
 
-/// The state the steps of one scenario share.
-final class Order {
-    let basket = Basket()
-    var lastItem = ""
-    var note = ""
-    var delivered = false
-    var madeByHook = false
-}
-
-enum World {
-    static var order: Order { Scenario.state(Order.init) }
-}
-
-struct ParityError: Error, CustomStringConvertible {
-    var description: String { "The step threw an error on purpose" }
-}
-
 extension Cucumber: @retroactive StepImplementation {
     /// Where the XCTest runner finds the feature files: SwiftPM bundles them in the target's resource bundle,
     /// and Xcode in the test bundle. The Swift Testing runner doesn't need it.
@@ -95,15 +95,26 @@ extension Cucumber: @retroactive StepImplementation {
         #endif
     }
 
-    public func shouldRunWith(scenario: Scenario?, tags: [String]) -> Bool {
+    public func shouldRunWith(scenario _: Scenario?, tags: [String]) -> Bool {
         !tags.contains("skip")
     }
 
     public func setupSteps() {
         // CucumberSwift never measures the files in its own package folder, and this fixture is inside it.
         // Shop.swift is the code under test, whichever folder or symbolic link a leg compiles it from.
-        Cucumber.coverageSources = ["/Shop.swift"]
+        Cucumber.coverageSources = ["Shop.swift"]
 
+        registerHooks()
+        matching()
+        tablesAndWaiting()
+        hooks()
+        tags()
+        state()
+        coverage()
+        failures()
+    }
+
+    private func registerHooks() {
         BeforeFeature { feature in
             Trace.shared.record(feature, "BeforeFeature")
             if feature.title == "Scenario state in a feature hook" {
@@ -128,13 +139,6 @@ extension Cucumber: @retroactive StepImplementation {
         AfterStep { step in
             Trace.shared.record(step.scenario, "AfterStep \(step.match)")
         }
-
-        matching()
-        hooks()
-        tags()
-        state()
-        coverage()
-        failures()
     }
 
     private func matching() {
@@ -165,6 +169,9 @@ extension Cucumber: @retroactive StepImplementation {
             Trace.shared.record(step.scenario, "step: add by regular expression")
             World.order.basket.add(Int(match.output.1) ?? -1, of: String(match.output.2))
         }
+    }
+
+    private func tablesAndWaiting() {
         When("I add these to the basket:") { _, step in
             Trace.shared.record(step.scenario, "step: add table")
             for row in step.dataTable?.rows.dropFirst() ?? [] {

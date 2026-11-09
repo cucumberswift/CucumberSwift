@@ -43,7 +43,9 @@ SOURCES = ("CucumberSwift", "CucumberSwiftTesting", "CucumberSwiftMacros", "Cucu
 LOCALIZED = ("Generated/I18n.swift", "LocalizedStepTypes.swift", "LocalizedDSLStepMacros.swift",
              "LocalizedStepDefinitionMacros.swift")
 
-DECLARATION = re.compile(r"^\s*(?:@[\w.]+(?:\([^)]*\))?\s+)*(?:public|open)\b(?!\s*\()")
+# An attribute at the start of a line, such as `@MainActor` or `@available(macOS 13, *)`.
+ATTRIBUTE = re.compile(r"@[\w.]+(?:\([^)]*\))?\s+")
+PUBLIC = re.compile(r"(?:public|open)\b(?!\s*\()")
 SETTING = re.compile(r"^\|\s*`((?:Cucumber|StepImplementation)\.[A-Za-z]+(?:\([^`]*\))?)`")
 SCENARIO = re.compile(r"^\s*(?:Scenario Outline|Scenario|Example):\s*(.+?)\s*$")
 
@@ -52,27 +54,45 @@ class CoverageError(Exception):
     """A file this check reads that is missing or isn't valid."""
 
 
+def is_declaration(line):
+    """Whether a line of Swift starts a public or open declaration, after any attributes."""
+    text = line.lstrip()
+    if text.startswith("//"):
+        return False
+    match = ATTRIBUTE.match(text)
+    while match:
+        text = text[match.end():]
+        match = ATTRIBUTE.match(text)
+    return bool(PUBLIC.match(text))
+
+
+def signature(line):
+    """A declaration's line up to its `{` or `=`, with its spaces collapsed."""
+    text = re.split(r"[{=]", line, maxsplit=1)[0]
+    return re.sub(r"\s+", " ", text).strip().rstrip(",").strip()
+
+
+def swift_files():
+    """The path under Sources/ of each Swift file of both runners and their macros, and its full path."""
+    for source in SOURCES:
+        for directory, _, files in os.walk(os.path.join(ROOT, "Sources", source)):
+            for name in sorted(files):
+                if name.endswith(".swift"):
+                    path = os.path.join(directory, name)
+                    yield os.path.relpath(path, os.path.join(ROOT, "Sources")), path
+
+
 def declarations():
     """{key: line number} for each public declaration, keyed by `path::signature`."""
     found = {}
-    for source in SOURCES:
-        folder = os.path.join(ROOT, "Sources", source)
-        for directory, _, files in os.walk(folder):
-            for name in sorted(files):
-                if not name.endswith(".swift"):
-                    continue
-                path = os.path.join(directory, name)
-                relative = os.path.relpath(path, os.path.join(ROOT, "Sources"))
-                if relative.endswith(LOCALIZED):
-                    found[f"{relative}::(localized declarations)"] = 1
-                    continue
-                with open(path, encoding="utf-8") as f:
-                    for number, line in enumerate(f, start=1):
-                        if line.lstrip().startswith("//") or not DECLARATION.match(line):
-                            continue
-                        signature = re.split(r"[{=]", line, maxsplit=1)[0]
-                        signature = re.sub(r"\s+", " ", signature).strip().rstrip(",").strip()
-                        found.setdefault(f"{relative}::{signature}", number)
+    for relative, path in swift_files():
+        if relative.endswith(LOCALIZED):
+            found[f"{relative}::(localized declarations)"] = 1
+            continue
+        with open(path, encoding="utf-8") as f:
+            for number, line in enumerate(f, start=1):
+                if is_declaration(line):
+                    found.setdefault(f"{relative}::{signature(line)}", number)
     return found
 
 

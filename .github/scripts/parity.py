@@ -68,7 +68,7 @@ The entry applies to every combination that matches its pattern, or any of
 its patterns if `combination` is a list (fnmatch). Each
 change replaces the golden value at `path` (keys into the result) with
 `value`, or removes it when `value` is absent. `compare` fails on an entry
-without a behaviour, an issue, an approval or a change, and on a change that
+without a behaviour, an issue, an approval or a change (or `ignore`), and on a change that
 applies but no longer differs from the golden result, so that a fixed
 difference leaves the file.
 
@@ -76,6 +76,10 @@ A parallel run can't measure coverage per scenario, so the golden result has
 a `parallel` object: the values that replace the golden ones in a parallel run
 (the coverage-off message, and each runner's test count without the coverage
 tests). `golden` run on a parallel result writes only those two values there.
+
+An entry may instead (or also) list `ignore`: paths the comparison leaves out of both results. Use it only for
+behaviour that varies from run to run, such as steps that lose their state in
+a different order, which no value can pin.
 
 `known` prints the changes that make the golden result equal a result, as the
 JSON to put in an entry's `changes`, for the combination the result names.
@@ -92,8 +96,10 @@ import difflib
 import fnmatch
 import json
 import os
+import pathlib
 import re
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fixture_tests import count_tests  # noqa: E402
@@ -108,11 +114,11 @@ MODES = ("serial", "parallel")
 # The tag on a scenario whose failure message is its assertion API's own.
 ASSERTION_TEXT = "assertion-text"
 # A path, as tools print one: absolute, or a file:// URL.
-PATH = re.compile(r"(file://)?(/[^\s:'\"()]+/)+")
+PATH = re.compile(r"(?:file://)?(?:/[^/\s:'\"()]+)*/")
 # CucumberSwift's lines: its coverage report and its notes.
 CUCUMBER_LINE = re.compile(r"^\s*(CucumberSwift( coverage)?:(?!\s*/).*)$")
 # A warning on a feature file, as the coverage scores give one.
-FEATURE_WARNING = re.compile(r"(?:^|\s)\S*?([^/\s]+\.feature):(\d+)(?::\d+)?: (warning): (.*)$")
+FEATURE_WARNING = re.compile(r"([^/\s:]+\.feature):(\d+)(?::\d+)?: (warning): (.*)$")
 TRACE_HEADER = re.compile(r"^(scenario|feature): (.*)$")
 # A failed scenario: the XCTest runner's suite for it, named "Feature › Scenario", or the Swift Testing runner's test.
 XCTEST_FAILED = re.compile(r"^Test Suite '(?:.+ › )?(.+)' failed at ")
@@ -154,29 +160,33 @@ def first_line(text):
     return strip_paths(text.strip().splitlines()[0].strip()) if text.strip() else ""
 
 
+def normalize_step(step, tags):
+    """One step as `line keyword name: status (first line of the error)`. An assertion's message is the assertion
+    API's own, such as XCTAssertEqual's or #expect's, so a scenario tagged @assertion-text compares only that its
+    step failed."""
+    result = step.get("result", {})
+    text = f"{step.get('line')} {step.get('keyword', '').strip()} {step.get('name')}: {result.get('status')}"
+    error = "" if ASSERTION_TEXT in tags else strip_noise(first_line(result.get("error_message", "")))
+    return f"{text} ({error})" if error else text
+
+
+def normalize_scenario(element):
+    tags = [tag.get("name") for tag in element.get("tags", [])]
+    return {
+        "keyword": element.get("keyword"),
+        "tags": tags,
+        "steps": [normalize_step(step, tags) for step in element.get("steps", [])],
+    }
+
+
 def normalize_report(report):
     """{feature name: {tags, scenarios: {name (line N): {tags, steps}}}} from a Cucumber JSON report."""
     features = {}
     for feature in report:
         scenarios = {}
         for element in feature.get("elements", []):
-            steps = []
-            tags = [tag.get("name") for tag in element.get("tags", [])]
-            for step in element.get("steps", []):
-                result = step.get("result", {})
-                text = f"{step.get('line')} {step.get('keyword', '').strip()} {step.get('name')}: {result.get('status')}"
-                # An assertion's message is the assertion API's own, such as XCTAssertEqual's or #expect's, so a
-                # scenario tagged @assertion-text compares only that its step failed.
-                error = "" if ASSERTION_TEXT in tags else strip_noise(first_line(result.get("error_message", "")))
-                if error:
-                    text += f" ({error})"
-                steps.append(text)
             key = f"{element.get('name')} (line {element.get('line')})"
-            scenarios.setdefault(key, []).append({
-                "keyword": element.get("keyword"),
-                "tags": tags,
-                "steps": steps,
-            })
+            scenarios.setdefault(key, []).append(normalize_scenario(element))
         features[feature.get("name")] = {
             "tags": [tag.get("name") for tag in feature.get("tags", [])],
             "file": os.path.basename(feature.get("uri", "")),
@@ -185,27 +195,29 @@ def normalize_report(report):
     return features
 
 
+def trace_files(folder):
+    """The lines of each trace file in `folder`, in the order of the file names. An empty file is left out."""
+    if not folder or not os.path.isdir(folder):
+        return
+    for name in sorted(os.listdir(folder)):
+        if name.endswith(".trace"):
+            with open(os.path.join(folder, name), encoding="utf-8", errors="replace") as f:
+                lines = f.read().splitlines()
+            if lines:
+                yield lines
+
+
 def read_trace(folder):
     """(hooks, trace) from the trace files the step definitions wrote."""
     hooks, trace = {}, {}
-    if not folder or not os.path.isdir(folder):
-        return hooks, trace
-    for name in sorted(os.listdir(folder)):
-        if not name.endswith(".trace"):
-            continue
-        with open(os.path.join(folder, name), encoding="utf-8", errors="replace") as f:
-            lines = f.read().splitlines()
-        if not lines:
-            continue
+    for lines in trace_files(folder):
         match = TRACE_HEADER.match(lines[0])
-        events = lines[1:]
         if match and match.group(1) == "feature":
             counts = hooks.setdefault(match.group(2), {})
-            for event in events:
+            for event in lines[1:]:
                 counts[event] = counts.get(event, 0) + 1
         else:
-            title = match.group(2) if match else lines[0]
-            trace.setdefault(title, []).append(events)
+            trace.setdefault(match.group(2) if match else lines[0], []).append(lines[1:])
     for runs in trace.values():
         runs.sort()
     return hooks, trace
@@ -254,13 +266,12 @@ def failed_from_summary(summary):
 
 
 def normalize(combination, output, report, trace_folder, status, summary=None):
-    _, runner, _, _ = parse_combination(combination)
+    tool, runner, mode, _ = parse_combination(combination)
     framework = RUNNERS[runner]
     hooks, trace = read_trace(trace_folder)
-    tool, _, mode, _ = parse_combination(combination)
     workers = tool == "xcode" and mode == "parallel"
     if workers:
-        hooks = {feature: {hook: 1 for hook in counts} for feature, counts in hooks.items()}
+        hooks = {feature: dict.fromkeys(counts, 1) for feature, counts in hooks.items()}
     tests = summary["totalTestCount"] if summary else count_tests(output)[framework]
     result = {
         "exit": "passed" if status == 0 else "failed",
@@ -313,11 +324,41 @@ def get_path(value, path):
     return value
 
 
-def expected_for(golden, combination, known):
-    """The golden result as `combination` should give it: the runner's test count, and the known differences
-    that apply. Returns it with the applied changes as (entry number, entry, change, golden value). Raises
-    ParityError on a malformed entry."""
-    _, runner, mode, _ = parse_combination(combination)
+def check_entry(index, entry):
+    """Raises ParityError unless the known difference has every field, and its issues are a list."""
+    for field in ("combination", "behaviour", "issues", "approved"):
+        if not entry.get(field):
+            raise ParityError(f"known difference {index} has no {field}")
+    if not entry.get("changes") and not entry.get("ignore"):
+        raise ParityError(f"known difference {index} has no changes or ignore")
+    if not isinstance(entry["issues"], list):
+        raise ParityError(f"known difference {index}'s issues must be a list of issue numbers")
+
+
+def applies_to(entry, combination):
+    patterns = entry["combination"] if isinstance(entry["combination"], list) else [entry["combination"]]
+    return any(fnmatch.fnmatchcase(combination, pattern) for pattern in patterns)
+
+
+def apply_change(expected, index, change):
+    """Applies one change to `expected` and returns the value it replaced."""
+    path = change.get("path")
+    if not isinstance(path, list) or not path:
+        raise ParityError(f"known difference {index} has a change whose path isn't a list of keys")
+    parent = get_path(expected, path[:-1])
+    if not isinstance(parent, dict):
+        raise ParityError(f"known difference {index}'s path {path} isn't in the golden result")
+    before = copy.deepcopy(parent.get(path[-1]))
+    if "value" in change:
+        parent[path[-1]] = change["value"]
+    else:
+        parent.pop(path[-1], None)
+    return before
+
+
+def golden_for(golden, runner, mode):
+    """The golden result for a runner and a run mode: the parallel values replace the golden ones in a parallel run,
+    and the result has only the runner's test count."""
     expected = copy.deepcopy(golden)
     overlay = expected.pop("parallel", {})
     if mode == "parallel":
@@ -326,29 +367,24 @@ def expected_for(golden, combination, known):
     if framework not in expected.get("tests", {}):
         raise ParityError(f"the golden result has no {framework} test count")
     expected["tests"] = {framework: expected["tests"][framework]}
+    return expected
+
+
+def expected_for(golden, combination, known):
+    """The golden result as `combination` should give it: the runner's test count, and the known differences
+    that apply. Returns it with the applied changes as (entry number, entry, change, golden value). Raises
+    ParityError on a malformed entry."""
+    _, runner, mode, _ = parse_combination(combination)
+    expected = golden_for(golden, runner, mode)
     applied = []
     for index, entry in enumerate(known, start=1):
-        for field in ("combination", "changes", "behaviour", "issues", "approved"):
-            if not entry.get(field):
-                raise ParityError(f"known difference {index} has no {field}")
-        if not isinstance(entry["issues"], list):
-            raise ParityError(f"known difference {index}'s issues must be a list of issue numbers")
-        patterns = entry["combination"] if isinstance(entry["combination"], list) else [entry["combination"]]
-        if not any(fnmatch.fnmatchcase(combination, pattern) for pattern in patterns):
-            continue
-        for change in entry["changes"]:
-            path = change.get("path")
-            if not isinstance(path, list) or not path:
-                raise ParityError(f"known difference {index} has a change whose path isn't a list of keys")
-            parent = get_path(expected, path[:-1])
-            if not isinstance(parent, dict):
-                raise ParityError(f"known difference {index}'s path {path} isn't in the golden result")
-            before = copy.deepcopy(parent.get(path[-1]))
-            if "value" in change:
-                parent[path[-1]] = change["value"]
-            else:
-                parent.pop(path[-1], None)
-            applied.append((index, entry, change, before))
+        check_entry(index, entry)
+        if applies_to(entry, combination):
+            for key in entry.get("ignore", []):
+                expected.pop(key, None)
+                expected.setdefault("_ignored", []).append(key)
+            for change in entry.get("changes") or []:
+                applied.append((index, entry, change, apply_change(expected, index, change)))
     return expected, applied
 
 
@@ -357,6 +393,8 @@ def compare(result, golden, known, combination):
     expected, applied = expected_for(golden, combination, known)
     if "messages" not in result:
         expected.pop("messages", None)
+    result = {key: value for key, value in result.items() if key not in expected.get("_ignored", [])}
+    expected.pop("_ignored", None)
     errors = []
     for index, entry, change, before in applied:
         if get_path(result, change["path"]) == before:
@@ -370,82 +408,115 @@ def compare(result, golden, known, combination):
     return errors
 
 
-def main(argv):
+def allowed_roots():
+    """The folders a path argument may be in: the checkout, the working folder, and the temporary folders."""
+    roots = [ROOT, os.getcwd(), tempfile.gettempdir(), os.environ.get("RUNNER_TEMP"), os.environ.get("PARITY_OUTPUT")]
+    return [pathlib.Path(root).resolve() for root in roots if root]
+
+
+def contained(path):
+    """`path` as an absolute path, if it is inside one of the allowed folders. Raises ParityError otherwise."""
+    resolved = pathlib.Path(path).resolve()
+    if not any(resolved.is_relative_to(root) for root in allowed_roots()):
+        raise ParityError(f"{path} isn't in the checkout, the working folder or a temporary folder")
+    return str(resolved)
+
+
+def command_normalize(args):
+    with open(contained(args.log), encoding="utf-8", errors="replace") as f:
+        output = f.read()
+    report_path = contained(args.report)
+    report = read_json(report_path, "Cucumber JSON report") if os.path.exists(report_path) else []
+    summary = read_json(contained(args.xcresult_summary), "xcresult summary") if args.xcresult_summary else None
+    result = normalize(args.combination, output, report, contained(args.trace), args.status, summary)
+    result["combination"] = args.combination
+    with open(contained(args.out), "w", encoding="utf-8") as f:
+        f.write(dump(result))
+
+
+def command_golden(args, result, combination):
+    """Writes the result into the golden file: a serial result replaces the golden values, and a parallel one only
+    the `parallel` values. The other runner's test count stays."""
+    path = contained(args.golden)
+    golden = read_json(path, "golden result") if os.path.exists(path) else {"tests": {}}
+    if combination.split("/")[2] == "parallel":
+        overlay = golden.setdefault("parallel", {"tests": dict(golden.get("tests", {}))})
+        overlay["tests"].update(result["tests"])
+        if "messages" in result and not args.tests_only:
+            overlay["messages"] = result["messages"]
+        result = golden
+    else:
+        tests = {**golden.get("tests", {}), **result["tests"]}
+        if args.tests_only:
+            result = golden
+        else:
+            result["parallel"] = golden.get("parallel", {})
+        result["tests"] = tests
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(dump(result))
+    print(f"Wrote {combination}'s result to {path}.")
+
+
+def command_known(golden, result, combination):
+    expected, _ = expected_for(golden, combination, [])
+    if "messages" not in result:
+        expected.pop("messages", None)
+    print(json.dumps(diff_changes(expected, result), indent=2, sort_keys=True, ensure_ascii=False))
+
+
+def parse_arguments(argv):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
     n = commands.add_parser("normalize")
-    n.add_argument("--combination", required=True)
-    n.add_argument("--log", required=True)
-    n.add_argument("--report", required=True)
-    n.add_argument("--trace", required=True)
+    for name in ("combination", "log", "report", "trace", "out"):
+        n.add_argument(f"--{name}", required=True)
     n.add_argument("--status", required=True, type=int)
-    n.add_argument("--out", required=True)
     n.add_argument("--xcresult-summary")
-    c = commands.add_parser("compare")
-    c.add_argument("--result", required=True)
-    c.add_argument("--golden", default=GOLDEN)
-    c.add_argument("--known", default=KNOWN)
-    g = commands.add_parser("golden")
-    g.add_argument("--result", required=True)
-    g.add_argument("--golden", default=GOLDEN)
-    g.add_argument("--tests-only", action="store_true")
-    k = commands.add_parser("known")
-    k.add_argument("--result", required=True)
-    k.add_argument("--golden", default=GOLDEN)
-    args = parser.parse_args(argv[1:])
+    for name in ("compare", "golden", "known"):
+        c = commands.add_parser(name)
+        c.add_argument("--result", required=True)
+        c.add_argument("--golden", default=GOLDEN)
+        if name == "compare":
+            c.add_argument("--known", default=KNOWN)
+        if name == "golden":
+            c.add_argument("--tests-only", action="store_true")
+    return parser.parse_args(argv[1:])
+
+
+def run(args):
+    """Runs the command and returns the errors it found."""
+    if args.command == "normalize":
+        command_normalize(args)
+        return []
+    result = read_json(contained(args.result), "result")
+    combination = result.pop("combination", None)
+    if not combination:
+        raise ParityError(f"{args.result} names no combination")
+    if args.command == "golden":
+        command_golden(args, result, combination)
+        return []
+    golden = read_json(contained(args.golden), "golden result")
+    if args.command == "known":
+        command_known(golden, result, combination)
+        return []
+    known_path = contained(args.known)
+    known = read_json(known_path, "known differences") if os.path.exists(known_path) else []
+    errors = compare(result, golden, known, combination)
+    if not errors:
+        print(f"{combination} matches the golden result.")
+    return errors
+
+
+def main(argv):
+    args = parse_arguments(argv)
     try:
-        if args.command == "normalize":
-            with open(args.log, encoding="utf-8", errors="replace") as f:
-                output = f.read()
-            report = read_json(args.report, "Cucumber JSON report") if os.path.exists(args.report) else []
-            summary = read_json(args.xcresult_summary, "xcresult summary") if args.xcresult_summary else None
-            result = normalize(args.combination, output, report, args.trace, args.status, summary)
-            result["combination"] = args.combination
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(dump(result))
-            return 0
-        result = read_json(args.result, "result")
-        combination = result.pop("combination", None)
-        if not combination:
-            raise ParityError(f"{args.result} names no combination")
-        if args.command == "golden":
-            golden = read_json(args.golden, "golden result") if os.path.exists(args.golden) else {"tests": {}}
-            if combination.split("/")[2] == "parallel":
-                overlay = golden.setdefault("parallel", {"tests": dict(golden.get("tests", {}))})
-                overlay["tests"].update(result["tests"])
-                if "messages" in result and not args.tests_only:
-                    overlay["messages"] = result["messages"]
-                result = golden
-            else:
-                tests = dict(golden.get("tests", {}))
-                tests.update(result["tests"])
-                if args.tests_only:
-                    result = golden
-                else:
-                    result["parallel"] = golden.get("parallel", {})
-                result["tests"] = tests
-            with open(args.golden, "w", encoding="utf-8") as f:
-                f.write(dump(result))
-            print(f"Wrote {combination}'s result to {args.golden}.")
-            return 0
-        golden = read_json(args.golden, "golden result")
-        if args.command == "known":
-            expected, _ = expected_for(golden, combination, [])
-            if "messages" not in result:
-                expected.pop("messages", None)
-            print(json.dumps(diff_changes(expected, result), indent=2, sort_keys=True, ensure_ascii=False))
-            return 0
-        known = read_json(args.known, "known differences") if os.path.exists(args.known) else []
-        errors = compare(result, golden, known, combination)
+        errors = run(args)
     except ParityError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     for error in errors:
         print(error, file=sys.stderr)
-    if errors:
-        return 1
-    print(f"{combination} matches the golden result.")
-    return 0
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":

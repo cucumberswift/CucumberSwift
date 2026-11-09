@@ -26,7 +26,7 @@ fixture="$root/Fixtures/Parity"
 
 case "$runner" in xctest|swift-testing) ;; *) echo "error: the runner must be xctest or swift-testing, not '$runner'" >&2; exit 2 ;; esac
 case "$mode" in serial|parallel) ;; *) echo "error: the mode must be serial or parallel, not '$mode'" >&2; exit 2 ;; esac
-if [ "$platform" != macOS ]; then
+if [[ "$platform" != macOS ]]; then
   echo "error: $combination: only macOS runs so far" >&2
   exit 2
 fi
@@ -42,13 +42,13 @@ status=0
 case "$tool" in
   swiftpm)
     args=(--package-path "$fixture/SwiftPM" --enable-code-coverage)
-    if [ "$runner" = xctest ]; then args+=(--disable-swift-testing); else args+=(--disable-xctest); fi
+    if [[ "$runner" = xctest ]]; then args+=(--disable-swift-testing); else args+=(--disable-xctest); fi
     parallel=NO
-    if [ "$mode" = parallel ]; then
+    if [[ "$mode" = parallel ]]; then
       parallel=YES
       # Swift Testing runs the scenarios together in one process once CucumberSwift is told to. XCTest runs
       # them in worker processes with --parallel.
-      if [ "$runner" = xctest ]; then args+=(--parallel); fi
+      if [[ "$runner" = xctest ]]; then args+=(--parallel); fi
     fi
     PARITY_TRACE_DIR="$out/trace" CUCUMBER_REPORT_PATH="$report" CUCUMBER_PARALLEL_TESTING=$parallel \
       swift test "${args[@]}" > "$log" 2>&1 || status=$?
@@ -58,12 +58,12 @@ case "$tool" in
     # checkout's Package.resolved, so each step puts it back.
     "$root/.github/scripts/keep-package-resolved.sh" tuist generate --no-open --path "$fixture/Xcode" > "$out/generate.log" 2>&1 \
       || { cat "$out/generate.log"; echo "error: $combination: tuist generate failed" >&2; exit 1; }
-    if [ "$runner" = xctest ]; then scheme=ParityXCTests; else scheme=ParitySwiftTests; fi
+    if [[ "$runner" = xctest ]]; then scheme=ParityXCTests; else scheme=ParitySwiftTests; fi
     args=(-project "$fixture/Xcode/Parity.xcodeproj" -scheme "$scheme" -destination 'platform=macOS'
       -derivedDataPath "${PARITY_DERIVED_DATA:-$fixture/Xcode/Derived}" -enableCodeCoverage YES
       -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO)
     parallel=NO
-    if [ "$mode" = parallel ]; then
+    if [[ "$mode" = parallel ]]; then
       parallel=YES
       # XCTest runs the scenarios in Xcode's worker processes. Swift Testing runs them together in one
       # process once CucumberSwift is told to, and Xcode's setting doesn't change that.
@@ -85,9 +85,9 @@ esac
 # Xcode's parallel workers print to their own output, which xcodebuild's log leaves out, so the test count and the
 # failures come from the result bundle, for every run it makes.
 summary=()
-if [ "$tool" = xcode ]; then
+if [[ "$tool" = xcode ]]; then
   bundle=$(sed -n '/^Test session results, code coverage, and logs:/{n;s/^[[:space:]]*//;p;}' "$log" | tail -1)
-  if [ -n "$bundle" ] && cp -R "$bundle" "$out/result.xcresult" && xcrun xcresulttool get test-results tests --path "$bundle" > "$out/xcresult-tests.json" 2>/dev/null \
+  if [[ -n "$bundle" ]] && xcrun xcresulttool get test-results tests --path "$bundle" > "$out/xcresult-tests.json" 2>/dev/null \
     && xcrun xcresulttool get test-results summary --path "$bundle" > "$out/xcresult-summary.json" 2>/dev/null; then
     summary=(--xcresult-summary "$out/xcresult-summary.json")
   else
@@ -97,9 +97,9 @@ if [ "$tool" = xcode ]; then
 fi
 python3 "$root/.github/scripts/parity.py" normalize --combination "$combination" --log "$log" --report "$report" \
   --trace "$out/trace" --status "$status" --out "$out/result.json" ${summary[@]+"${summary[@]}"} || exit 1
-if [ "${PARITY_GOLDEN:-}" = YES ]; then
+if [[ "${PARITY_GOLDEN:-}" = YES ]]; then
   python3 "$root/.github/scripts/parity.py" golden --result "$out/result.json"
-elif [ "${PARITY_GOLDEN:-}" = TESTS ]; then
+elif [[ "${PARITY_GOLDEN:-}" = TESTS ]]; then
   python3 "$root/.github/scripts/parity.py" golden --tests-only --result "$out/result.json"
 else
   python3 "$root/.github/scripts/parity.py" compare --result "$out/result.json"

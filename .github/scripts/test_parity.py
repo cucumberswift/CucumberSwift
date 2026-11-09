@@ -150,8 +150,9 @@ class CompareTests(unittest.TestCase):
     def test_a_known_difference_needs_every_field(self):
         for field in ("combination", "changes", "behaviour", "issues", "approved"):
             entry = {key: value for key, value in KNOWN.items() if key != field}
+            matching = result()
             with self.assertRaises(parity.ParityError, msg=field):
-                parity.compare(result(), GOLDEN, [entry], "swiftpm/xctest/serial/macOS")
+                parity.compare(matching, GOLDEN, [entry], "swiftpm/xctest/serial/macOS")
 
     def test_a_change_without_a_value_removes_the_golden_key(self):
         known = dict(KNOWN, changes=[{"path": ["messages"]}])
@@ -190,6 +191,12 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(parity.compare(parallel, golden, [], "swiftpm/xctest/parallel/macOS"), [])
         self.assertTrue(parity.compare(result(tests={"XCTest": 83}, messages=["off"]), golden, [], "swiftpm/xctest/parallel/macOS"))
         self.assertEqual(parity.compare(result(), golden, [], "swiftpm/xctest/serial/macOS"), [])
+
+    def test_ignored_paths_are_not_compared(self):
+        known = dict(KNOWN, combination="*", changes=None, ignore=["messages", "features"])
+        varying = result(messages=["x"], features={"G": {}})
+        self.assertEqual(parity.compare(varying, GOLDEN, [known], "swiftpm/xctest/serial/macOS"), [])
+        self.assertTrue(parity.compare(result(exit="passed"), GOLDEN, [known], "swiftpm/xctest/serial/macOS"))
 
     def test_messages_are_skipped_when_the_result_has_none(self):
         without = result()
