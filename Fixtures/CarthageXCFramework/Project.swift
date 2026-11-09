@@ -6,6 +6,17 @@ import ProjectDescription
 let project = Project(
     name: "CarthageXCFramework",
     targets: [
+        // The code under test, built from source with code coverage, as an app's own code is.
+        .target(
+            name: "Cukes",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "org.cucumberswift.fixtures.Cukes",
+            deploymentTargets: .iOS("13.0"),
+            infoPlist: .default,
+            sources: ["Sources/**"],
+            settings: .settings(base: ["SWIFT_VERSION": "5.0", "CODE_SIGN_IDENTITY": "-"])
+        ),
         .target(
             name: "CarthageXCFrameworkTests",
             destinations: .iOS,
@@ -26,7 +37,10 @@ let project = Project(
                 )
             ],
             // Linked.
-            dependencies: [.xcframework(path: "../../Carthage/Build/CucumberSwift.xcframework")],
+            dependencies: [
+                .target(name: "Cukes"),
+                .xcframework(path: "../../Carthage/Build/CucumberSwift.xcframework")
+            ],
             settings: .settings(base: [
                 // Where the CucumberSwiftExpressions module is, inside the framework.
                 "SWIFT_INCLUDE_PATHS": "$(BUILT_PRODUCTS_DIR)/CucumberSwift.framework/Modules",
@@ -41,8 +55,16 @@ let project = Project(
     schemes: [
         .scheme(
             name: "CarthageXCFramework",
-            buildAction: .buildAction(targets: ["CarthageXCFrameworkTests"]),
-            testAction: .targets(["CarthageXCFrameworkTests"])
+            buildAction: .buildAction(targets: ["Cukes", "CarthageXCFrameworkTests"]),
+            // Code Coverage on for the framework. CucumberSwift never measures the files in its own package
+            // folder, which holds this fixture, so CUCUMBER_COVERAGE_SOURCES names the framework's folder.
+            testAction: .targets(
+                ["CarthageXCFrameworkTests"],
+                arguments: .arguments(environmentVariables: [
+                    "CUCUMBER_COVERAGE_SOURCES": .environmentVariable(value: "CarthageXCFramework/Sources", isEnabled: true)
+                ]),
+                options: .options(coverage: true, codeCoverageTargets: ["Cukes"])
+            )
         )
     ]
 )
