@@ -109,6 +109,45 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertEqual(events, [])
     }
 
+    func testStepHooksRunOnlyAroundStepsThatRun() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Checkout
+           Scenario: Pay
+             Given a cart
+             When nothing matches this step
+             Then I get a receipt
+        """)
+        var events = [String]()
+        BeforeStep { step in events.append("before \(step.match)") }
+        AfterStep { step in events.append("after \(step.match)") }
+        Given("a cart") { _, _ in events.append("Given") }
+        Then("I get a receipt") { _, _ in events.append("Then") }
+
+        _ = try runFirstScenario()
+
+        XCTAssertEqual(events, ["before a cart", "Given", "after a cart"])
+    }
+
+    func testStepHooksRunAroundAStepThatFailsButNotAfterIt() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Checkout
+           Scenario: Pay
+             Given a cart
+             When I pay
+             Then I get a receipt
+        """)
+        var events = [String]()
+        BeforeStep { step in events.append("before \(step.match)") }
+        AfterStep { step in events.append("after \(step.match)") }
+        Given("a cart") { _, _ in events.append("Given") }
+        When("I pay") { _, _ in XCTFail("The payment failed") }
+        Then("I get a receipt") { _, _ in events.append("Then") }
+
+        _ = try runFirstScenario()
+
+        XCTAssertEqual(events, ["before a cart", "Given", "after a cart", "before I pay", "after I pay"])
+    }
+
     // A step that records a failure and then throws XCTSkip leaves the scenario failed, not skipped.
     func testAFailureThenXCTSkipLeavesTheScenarioFailed() throws {
         Cucumber.shared.parseIntoFeatures("""
