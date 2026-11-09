@@ -41,8 +41,8 @@ diagnose() {
   vm_stat || true
   memory_pressure 2>&1 | head -15 || true
   ps -Ao rss,comm -m | head -8 || true
-  codesign --verify --verbose=2 "$tool" 2>&1 || true
-  log show --last 15m --predicate 'eventMessage CONTAINS[c] "jetsam" OR eventMessage CONTAINS[c] "memorystatus" OR eventMessage CONTAINS[c] "cucumberswift-mutation-test"' 2>&1 | tail -30 || true
+  codesign --verify --strict -vv "$tool" 2>&1 || true
+  log show --last 3m --predicate 'eventMessage CONTAINS[c] "killed" OR eventMessage CONTAINS[c] "AMFI" OR eventMessage CONTAINS[c] "memorystatus" OR eventMessage CONTAINS[c] "jetsam"' 2>&1 | tail -30 || true
   echo "::endgroup::"
 }
 
