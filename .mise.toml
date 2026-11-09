@@ -281,7 +281,7 @@ fi
 description = "Run the parity suite in Fixtures/Parity and compare each result with the golden one"
 # One set of feature files and one step-definition file, run with each build tool, runner and run mode, and
 # compared with Fixtures/Parity/golden.json (#561). See "The parity suite" in CONTRIBUTING.md.
-# PARITY_COMBINATIONS, a space-separated list of tool/runner/mode, runs only those, such as
+# PARITY_COMBINATIONS, a space-separated list of tool/runner/mode or tool/runner/mode/platform, runs only those, such as
 # PARITY_COMBINATIONS="swiftpm/xctest/serial" mise run test-parity. Every combination runs even when one
 # differs, so one run reports every difference. PARITY_OUTPUT is the folder for each run's output, a
 # temporary folder by default. PARITY_GOLDEN=YES writes each combination's result as the golden one instead of
@@ -292,8 +292,8 @@ combinations=${PARITY_COMBINATIONS:-"swiftpm/xctest/serial swiftpm/xctest/parall
 export PARITY_OUTPUT=${PARITY_OUTPUT:-$(mktemp -d)}
 status=0
 for combination in $combinations; do
-  IFS=/ read -r tool runner mode <<< "$combination"
-  .github/scripts/parity-fixture.sh "$tool" "$runner" "$mode" || status=1
+  IFS=/ read -r tool runner mode platform <<< "$combination"
+  .github/scripts/parity-fixture.sh "$tool" "$runner" "$mode" ${platform:+"$platform"} || status=1
 done
 exit $status
 '''
