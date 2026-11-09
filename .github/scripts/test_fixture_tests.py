@@ -233,8 +233,9 @@ class FixturesTests(unittest.TestCase):
                                 os.pardir, os.pardir, "Fixtures")
         if not os.path.isdir(fixtures):
             self.skipTest("Fixtures/ isn't in this checkout")
+        # Parity is the conformance suite, not a fixture: its golden result holds the test counts.
         names = sorted(name for name in os.listdir(fixtures)
-                       if os.path.isdir(os.path.join(fixtures, name)))
+                       if os.path.isdir(os.path.join(fixtures, name)) and name != "Parity")
         self.assertTrue(names)
         for name in names:
             with self.subTest(fixture=name):

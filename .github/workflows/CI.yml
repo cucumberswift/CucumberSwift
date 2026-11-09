@@ -352,11 +352,15 @@ jobs:
             .github/scripts
             .github/workflows
             Fixtures
-            Sources/CucumberSwift/CucumberSwift.docc
+            Sources
             Tests/DocumentationExamples
             Tools/Xcode
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
+      # Every public declaration and setting has a scenario in the parity suite (#561), or is one that was
+      # public before this check. A pull request that adds one without a scenario fails here.
+      - name: Check that every public API and setting has a parity scenario
+        run: python3 .github/scripts/parity_coverage.py
       # The Swift Package Index lists what `swift package dump-package` reads, run in the official
       # Swift image on Linux with SPI_PROCESSING set. Swift 6.4 must read Package.swift, which has the
       # macros and Swift Testing (#492). The sparse checkout has the manifests: it keeps the root's files.
@@ -1085,6 +1089,56 @@ jobs:
       # cancelled, which hides whether it passed (#480).
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # The parity suite (#561): one set of feature files and one step-definition file, run with the XCTest runner and the
+  # Swift Testing runner, serial and in parallel, from a Swift package and from an Xcode project that uses
+  # CucumberSwift as a package, on macOS. Each run's normalized result must equal Fixtures/Parity/golden.json,
+  # apart from the differences in Fixtures/Parity/known-differences.json. `mise run test-parity` runs the 8
+  # combinations and reports every difference. Bazel, Carthage and the other platforms join in the merge queue and
+  # the nightly run. See "The parity suite" in CONTRIBUTING.md.
+  parity_tests:
+    name: Parity tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Run the parity suite
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          PARITY_OUTPUT: ${{ runner.temp }}/parity
+        run: mise run test-parity
+      # Each combination's output, report, trace and normalized result. Only on a failure.
+      - name: Upload the parity runs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: parity-runs
+          path: |
+            ${{ runner.temp }}/parity/**/result.json
+            ${{ runner.temp }}/parity/**/output.log
+            ${{ runner.temp }}/parity/**/report.json
+          if-no-files-found: ignore
+          retention-days: 3
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:

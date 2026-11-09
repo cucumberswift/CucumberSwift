@@ -1,0 +1,792 @@
+{
+  "exit": "failed",
+  "failed": [
+    "A recorded issue fails a step",
+    "A requirement stops a step",
+    "A step with no step definition fails",
+    "A thrown error fails a step",
+    "An XCTest assertion fails a step",
+    "An expectation fails a step"
+  ],
+  "features": {
+    "Coverage": {
+      "file": "Coverage.feature",
+      "scenarios": {
+        "A cuke has a price (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Then a \"cuke\" costs 50 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Another cuke has the same price (line 6)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "7 Then a \"cuke\" costs 50 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Something the shop doesn't sell costs nothing (line 9)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "10 Then a \"melon\" costs 0 cents: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Failures": {
+      "file": "Failures.feature",
+      "scenarios": {
+        "A recorded issue fails a step (line 11)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "12 When an issue is recorded: passed",
+              "13 Then this step never runs: failed (failed - This step should never run)"
+            ],
+            "tags": []
+          }
+        ],
+        "A requirement stops a step (line 15)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "16 When a requirement fails: failed (XCTAssertNoThrow failed: threw error \"ExpectationFailedError(expectation: Testing.Expectation(evaluatedExpression: Testing.__Expression.Kind.binaryOperation(lhs: Testing.__Expression.Kind.generic(\"1\"), operator: \"==\", rhs: Testing.__Expression.Kind.generic(\"2\")), mismatchedErrorDescription: nil, differenceDescription: nil, mismatchedExitConditionDescription: nil, isPassing: false, isRequired: true, sourceLocation: <step definition>))\")"
+            ],
+            "tags": []
+          }
+        ],
+        "A skipped step skips the rest of the scenario (line 27)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "28 When a step skips the scenario: skipped"
+            ],
+            "tags": []
+          }
+        ],
+        "A step with no step definition fails (line 23)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "24 When a step that nothing matches: failed (No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file:)"
+            ],
+            "tags": []
+          }
+        ],
+        "A thrown error fails a step (line 19)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "20 When a step throws an error: failed (XCTAssertNoThrow failed: threw error \"The step threw an error on purpose\")"
+            ],
+            "tags": []
+          }
+        ],
+        "An XCTest assertion fails a step (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 When an XCTest assertion fails: failed (XCTAssertEqual failed: (\"1\") is not equal to (\"2\") - An XCTest assertion failed on purpose)"
+            ],
+            "tags": []
+          }
+        ],
+        "An expectation fails a step (line 7)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "8 When an expectation fails: passed",
+              "9 Then this step never runs: failed (failed - This step should never run)"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Hooks": {
+      "file": "Hooks.feature",
+      "scenarios": {
+        "Hooks run around a scenario and its steps (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given a step runs: passed",
+              "5 When another step runs: passed",
+              "6 Then the hooks so far ran in order: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Hooks run around the next scenario too (line 8)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "9 Given a step runs: passed",
+              "10 Then the hooks so far ran in order: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Matching steps": {
+      "file": "Matching.feature",
+      "scenarios": {
+        "A data table (line 13)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "14 When I add these to the basket:: passed",
+              "18 Then the basket costs 130 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "A doc string (line 20)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "21 When I write this note:: passed",
+              "25 Then the note has 3 words: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "A regular expression reads its groups (line 9)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "10 When I add 2 tomatoes by regular expression: passed",
+              "11 Then the basket costs 60 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "An async step definition (line 33)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "34 When I wait for the delivery: passed",
+              "35 Then the delivery has arrived: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "And and But continue the step before them (line 27)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "28 Given the basket is empty: passed",
+              "29 And I add 1 \"lettuce\" to the basket: passed",
+              "30 But I add 0 \"pepper\" to the basket: passed",
+              "31 Then the basket costs 120 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Cucumber expressions read their parameters (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given the shop sells a cuke for 50 cents: passed",
+              "5 When I add 3 \"cuke\" to the basket: passed",
+              "6 Then the basket costs 1.5 dollars: passed",
+              "7 And the last item added is a cuke: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Rules and Backgrounds": {
+      "file": "Rules.feature",
+      "scenarios": {
+        "Each scenario starts again from the Backgrounds (line 14)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given the basket is empty: passed",
+              "9 Given I add 1 \"cuke\" to the basket: passed",
+              "15 When I add 1 \"tomato\" to the basket: passed",
+              "16 Then the basket costs 80 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "The feature's Background runs before the rule's (line 11)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given the basket is empty: passed",
+              "9 Given I add 1 \"cuke\" to the basket: passed",
+              "12 Then the basket costs 50 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "The other rule's Background doesn't run (line 20)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given the basket is empty: passed",
+              "21 Then the basket costs 0 cents: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Scenario Outlines": {
+      "file": "Outlines.feature",
+      "scenarios": {
+        "Each example runs the steps with its values (count: 1, item: cuke, cents: 50) (line 9)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 When I add 1 \"cuke\" to the basket: passed",
+              "5 Then the basket costs 50 cents: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Each example runs the steps with its values (count: 1, item: lettuce, cents: 120) (line 15)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 When I add 1 \"lettuce\" to the basket: passed",
+              "5 Then the basket costs 120 cents: passed"
+            ],
+            "tags": [
+              "fast"
+            ]
+          }
+        ],
+        "Each example runs the steps with its values (count: 2, item: tomato, cents: 60) (line 10)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 When I add 2 \"tomato\" to the basket: passed",
+              "5 Then the basket costs 60 cents: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Scenario state": {
+      "file": "State.feature",
+      "scenarios": {
+        "A scenario hook reaches the scenario's state (line 13)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "14 Then my scenario's basket was made by a hook: passed"
+            ],
+            "tags": []
+          }
+        ],
+        "Another scenario keeps another basket (line 8)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "9 Given I add 5 \"cuke\" to my scenario's basket: passed",
+              "10 When I wait for the delivery: passed",
+              "11 Then my scenario's basket holds 5 \"cuke\": passed"
+            ],
+            "tags": []
+          }
+        ],
+        "One scenario keeps its own basket (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Given I add 3 \"cuke\" to my scenario's basket: passed",
+              "5 When I wait for the delivery: passed",
+              "6 Then my scenario's basket holds 3 \"cuke\": passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Scenario state in a feature hook": {
+      "file": "FeatureHookState.feature",
+      "scenarios": {
+        "Scenario state outside a scenario fails (line 3)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Then a feature hook asked for scenario state: passed"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      "tags": []
+    },
+    "Tags": {
+      "file": "Tags.feature",
+      "scenarios": {
+        "A scenario has its feature's tags and its own (line 4)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "6 Then the scenario's tags are \"@shop @fast\": passed"
+            ],
+            "tags": [
+              "shop",
+              "fast"
+            ]
+          }
+        ],
+        "A scenario has its rule's tags too (line 15)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "17 Then the scenario's tags are \"@shop @slow @fast\": passed"
+            ],
+            "tags": [
+              "shop",
+              "slow",
+              "fast"
+            ]
+          }
+        ]
+      },
+      "tags": [
+        "shop"
+      ]
+    }
+  },
+  "hooks": {
+    "Coverage": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Failures": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Hooks": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Matching steps": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Rules and Backgrounds": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Scenario Outlines": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Scenario state": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Scenario state in a feature hook": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    },
+    "Tags": {
+      "AfterFeature": 1,
+      "BeforeFeature": 1
+    }
+  },
+  "messages": [
+    "CucumberSwift coverage: 30 scenarios in run-<id>",
+    "CucumberSwift coverage: Coverage: 57% of the code its scenarios ran (4 of 7 regions in 1 function), 31% of all measured code, redundancy 33%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Failures: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Hooks: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Matching steps: 92% of the code its scenarios ran (12 of 13 regions in 7 functions), 92% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Rules and Backgrounds › A rule adds its own Background: 77% of the code its scenarios ran (10 of 13 regions in 7 functions), 77% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Rules and Backgrounds › Another rule has only the feature's Background: 100% of the code its scenarios ran (3 of 3 regions in 3 functions), 23% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Scenario Outlines: 85% of the code its scenarios ran (11 of 13 regions in 7 functions), 85% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Scenario state in a feature hook: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Scenario state: 100% of the code its scenarios ran (4 of 4 regions in 4 functions), 31% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Tags › A rule's tags reach its scenarios: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Tags: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios"
+  ],
+  "tests": {
+    "Swift Testing": 30,
+    "XCTest": 83
+  },
+  "trace": {
+    "Coverage › A cuke has a price (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a \"cuke\" costs 50 cents",
+        "step: a costs",
+        "AfterStep a \"cuke\" costs 50 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Coverage › Another cuke has the same price (line 6)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a \"cuke\" costs 50 cents",
+        "step: a costs",
+        "AfterStep a \"cuke\" costs 50 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Coverage › Something the shop doesn't sell costs nothing (line 9)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a \"melon\" costs 0 cents",
+        "step: a costs",
+        "AfterStep a \"melon\" costs 0 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › A recorded issue fails a step (line 11)": [
+      [
+        "BeforeScenario",
+        "BeforeStep an issue is recorded",
+        "step: issue recorded",
+        "AfterStep an issue is recorded",
+        "BeforeStep this step never runs",
+        "step: never runs",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › A requirement stops a step (line 15)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a requirement fails",
+        "step: requirement fails",
+        "AfterStep a requirement fails",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › A skipped step skips the rest of the scenario (line 27)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a step skips the scenario",
+        "step: skips",
+        "AfterStep a step skips the scenario",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › A step with no step definition fails (line 23)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a step that nothing matches",
+        "AfterStep a step that nothing matches",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › A thrown error fails a step (line 19)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a step throws an error",
+        "step: throws",
+        "AfterStep a step throws an error",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › An XCTest assertion fails a step (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep an XCTest assertion fails",
+        "step: XCTest assertion fails",
+        "AfterStep an XCTest assertion fails",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Failures › An expectation fails a step (line 7)": [
+      [
+        "BeforeScenario",
+        "BeforeStep an expectation fails",
+        "step: expectation fails",
+        "AfterStep an expectation fails",
+        "BeforeStep this step never runs",
+        "step: never runs",
+        "AfterStep this step never runs",
+        "AfterScenario"
+      ]
+    ],
+    "Hooks › Hooks run around a scenario and its steps (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a step runs",
+        "step: a step runs",
+        "AfterStep a step runs",
+        "BeforeStep another step runs",
+        "step: another step runs",
+        "AfterStep another step runs",
+        "BeforeStep the hooks so far ran in order",
+        "step: hooks in order",
+        "AfterStep the hooks so far ran in order",
+        "AfterScenario"
+      ]
+    ],
+    "Hooks › Hooks run around the next scenario too (line 8)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a step runs",
+        "step: a step runs",
+        "AfterStep a step runs",
+        "BeforeStep the hooks so far ran in order",
+        "step: hooks in order",
+        "AfterStep the hooks so far ran in order",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › A data table (line 13)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add these to the basket:",
+        "step: add table",
+        "AfterStep I add these to the basket:",
+        "BeforeStep the basket costs 130 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 130 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › A doc string (line 20)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I write this note:",
+        "step: note",
+        "AfterStep I write this note:",
+        "BeforeStep the note has 3 words",
+        "step: note words",
+        "AfterStep the note has 3 words",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › A regular expression reads its groups (line 9)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 2 tomatoes by regular expression",
+        "step: add by regular expression",
+        "AfterStep I add 2 tomatoes by regular expression",
+        "BeforeStep the basket costs 60 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 60 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › An async step definition (line 33)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I wait for the delivery",
+        "step: wait",
+        "AfterStep I wait for the delivery",
+        "BeforeStep the delivery has arrived",
+        "step: arrived",
+        "AfterStep the delivery has arrived",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › And and But continue the step before them (line 27)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the basket is empty",
+        "step: empty",
+        "AfterStep the basket is empty",
+        "BeforeStep I add 1 \"lettuce\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"lettuce\" to the basket",
+        "BeforeStep I add 0 \"pepper\" to the basket",
+        "step: add",
+        "AfterStep I add 0 \"pepper\" to the basket",
+        "BeforeStep the basket costs 120 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 120 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Matching steps › Cucumber expressions read their parameters (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the shop sells a cuke for 50 cents",
+        "step: shop sells",
+        "AfterStep the shop sells a cuke for 50 cents",
+        "BeforeStep I add 3 \"cuke\" to the basket",
+        "step: add",
+        "AfterStep I add 3 \"cuke\" to the basket",
+        "BeforeStep the basket costs 1.5 dollars",
+        "step: costs dollars",
+        "AfterStep the basket costs 1.5 dollars",
+        "BeforeStep the last item added is a cuke",
+        "step: last item",
+        "AfterStep the last item added is a cuke",
+        "AfterScenario"
+      ]
+    ],
+    "Rules and Backgrounds › Each scenario starts again from the Backgrounds (line 14)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the basket is empty",
+        "step: empty",
+        "AfterStep the basket is empty",
+        "BeforeStep I add 1 \"cuke\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"cuke\" to the basket",
+        "BeforeStep I add 1 \"tomato\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"tomato\" to the basket",
+        "BeforeStep the basket costs 80 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 80 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Rules and Backgrounds › The feature's Background runs before the rule's (line 11)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the basket is empty",
+        "step: empty",
+        "AfterStep the basket is empty",
+        "BeforeStep I add 1 \"cuke\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"cuke\" to the basket",
+        "BeforeStep the basket costs 50 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 50 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Rules and Backgrounds › The other rule's Background doesn't run (line 20)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the basket is empty",
+        "step: empty",
+        "AfterStep the basket is empty",
+        "BeforeStep the basket costs 0 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 0 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario Outlines › Each example runs the steps with its values (count: 1, item: cuke, cents: 50) (line 9)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 1 \"cuke\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"cuke\" to the basket",
+        "BeforeStep the basket costs 50 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 50 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario Outlines › Each example runs the steps with its values (count: 1, item: lettuce, cents: 120) (line 15)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 1 \"lettuce\" to the basket",
+        "step: add",
+        "AfterStep I add 1 \"lettuce\" to the basket",
+        "BeforeStep the basket costs 120 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 120 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario Outlines › Each example runs the steps with its values (count: 2, item: tomato, cents: 60) (line 10)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 2 \"tomato\" to the basket",
+        "step: add",
+        "AfterStep I add 2 \"tomato\" to the basket",
+        "BeforeStep the basket costs 60 cents",
+        "step: costs cents",
+        "AfterStep the basket costs 60 cents",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario state in a feature hook › Scenario state outside a scenario fails (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep a feature hook asked for scenario state",
+        "step: feature hook state",
+        "AfterStep a feature hook asked for scenario state",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario state › A scenario hook reaches the scenario's state (line 13)": [
+      [
+        "BeforeScenario",
+        "BeforeStep my scenario's basket was made by a hook",
+        "step: made by a hook",
+        "AfterStep my scenario's basket was made by a hook",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario state › Another scenario keeps another basket (line 8)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 5 \"cuke\" to my scenario's basket",
+        "step: add to my basket",
+        "AfterStep I add 5 \"cuke\" to my scenario's basket",
+        "BeforeStep I wait for the delivery",
+        "step: wait",
+        "AfterStep I wait for the delivery",
+        "BeforeStep my scenario's basket holds 5 \"cuke\"",
+        "step: my basket holds",
+        "AfterStep my scenario's basket holds 5 \"cuke\"",
+        "AfterScenario"
+      ]
+    ],
+    "Scenario state › One scenario keeps its own basket (line 3)": [
+      [
+        "BeforeScenario",
+        "BeforeStep I add 3 \"cuke\" to my scenario's basket",
+        "step: add to my basket",
+        "AfterStep I add 3 \"cuke\" to my scenario's basket",
+        "BeforeStep I wait for the delivery",
+        "step: wait",
+        "AfterStep I wait for the delivery",
+        "BeforeStep my scenario's basket holds 3 \"cuke\"",
+        "step: my basket holds",
+        "AfterStep my scenario's basket holds 3 \"cuke\"",
+        "AfterScenario"
+      ]
+    ],
+    "Tags › A scenario has its feature's tags and its own (line 4)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the scenario's tags are \"@shop @fast\"",
+        "step: tags shop fast",
+        "AfterStep the scenario's tags are \"@shop @fast\"",
+        "AfterScenario"
+      ]
+    ],
+    "Tags › A scenario has its rule's tags too (line 15)": [
+      [
+        "BeforeScenario",
+        "BeforeStep the scenario's tags are \"@shop @slow @fast\"",
+        "step: tags shop slow fast",
+        "AfterStep the scenario's tags are \"@shop @slow @fast\"",
+        "AfterScenario"
+      ]
+    ]
+  }
+}

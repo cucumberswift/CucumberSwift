@@ -77,6 +77,9 @@ LINUX_SCRIPTS = {
     ".github/scripts/test_check_lockfiles.py",
     ".github/scripts/test_fixture_tests.py",
     ".github/scripts/test_gherkin_highlighting.py",
+    ".github/scripts/parity_coverage.py",
+    ".github/scripts/test_parity.py",
+    ".github/scripts/test_parity_coverage.py",
     ".github/scripts/publish-docs.sh",
 }
 # The documentation that Script tests checks: test_gherkin_highlighting.py reads

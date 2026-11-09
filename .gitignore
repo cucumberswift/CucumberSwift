@@ -52,6 +52,10 @@ Fixtures/*/.swiftpm/
 # A local package inside a Tuist fixture, such as SwiftTestingAndXCTestMacrosTuist/MacrosTrait.
 Fixtures/*/*/Package.resolved
 Fixtures/*/*/.swiftpm/
+# The parity suite's legs, each in a folder of its own, such as Fixtures/Parity/Xcode.
+Fixtures/Parity/*/*.xcodeproj
+Fixtures/Parity/*/*.xcworkspace
+Fixtures/Parity/*/Derived/
 
 # Carthage
 #
