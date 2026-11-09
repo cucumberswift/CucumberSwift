@@ -12,6 +12,8 @@ swift test --enable-code-coverage
 
 In Xcode, turn on the **Code Coverage** option of the scheme or test plan.
 
+With Bazel, run `bazel coverage`, as <doc:Running-Tests-With-Bazel#Measure-code-coverage> shows.
+
 The `CUCUMBER_COVERAGE` environment variable and `Cucumber.coverage` default to `auto`, which is `nil` for `Cucumber.coverage`. With `auto`, CucumberSwift measures coverage when the test binary is built with code coverage, and does nothing, with no message, when it isn't. Set the variable to `YES` or `true` to always measure, and print the cause at the end of the run if the target has no code coverage. Set it to `NO` or `false` to never measure.
 
 CucumberSwift prints each feature's scores when the feature finishes:
@@ -288,7 +290,7 @@ The environment variable `CUCUMBER_COVERAGE_SOURCES` takes the strings separated
 
 ## Choose where the files go
 
-CucumberSwift also writes each scenario's coverage to a file, for a coverage report of your own, whenever it measures coverage. It writes the files to `_cucumberCoverage` in the documents folder. On a Simulator, that folder is inside the Simulator. Each run first deletes the run folders in that default folder that started more than an hour earlier. Set `CUCUMBER_COVERAGE_PATH`, or `Cucumber.coveragePath`, to a folder you can collect, such as one under your home folder:
+CucumberSwift also writes each scenario's coverage to a file, for a coverage report of your own, whenever it measures coverage. It writes the files to `_cucumberCoverage` in the documents folder, or in the test's outputs folder under Bazel. On a Simulator, the documents folder is inside the Simulator. Each run first deletes the run folders in that default folder that started more than an hour earlier. Set `CUCUMBER_COVERAGE_PATH`, or `Cucumber.coveragePath`, to a folder you can collect, such as one under your home folder:
 
 ```bash
 CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$HOME/coverage" swift test --enable-code-coverage
