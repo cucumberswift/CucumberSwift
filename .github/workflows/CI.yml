@@ -139,6 +139,7 @@ jobs:
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      coverage_merge: ${{ steps.merge.outputs.coverage_merge }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
@@ -187,6 +188,28 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes the coverage merge: the code that writes the coverage files and
+      # scores them, the cucumberswift tool, its fixture and script, the package manifests or this workflow. Not
+      # the documentation, which lives in Sources too. Always on any other event, such as the merge queue.
+      - name: Decide whether the coverage merge fixture runs
+        id: merge
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Coverage merge fixture runs: $run"
+          echo "coverage_merge=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -1055,8 +1078,10 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
       # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
-      # their coverage folders, and fails unless every way gives the same scores (#515).
+      # their coverage folders, and fails unless every way gives the same scores (#515). It takes minutes, so a pull
+      # request runs it only when it changes the coverage merge (coverage_merge, from the changes job).
       - name: Merge the coverage of parallel and sharded runs
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.coverage_merge == 'true' }}
         run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
       # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
       # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
