@@ -115,8 +115,10 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GOLDEN = os.path.join(ROOT, "Fixtures", "Parity", "golden.json")
 KNOWN = os.path.join(ROOT, "Fixtures", "Parity", "known-differences.json")
 
+TOOLS = ("swiftpm", "xcode")
 RUNNERS = {"xctest": "XCTest", "swift-testing": "Swift Testing"}
 MODES = ("serial", "parallel")
+PLATFORMS = ("macOS", "Catalyst", "iOS", "tvOS", "watchOS")
 
 # The tag on a scenario whose failure message is its assertion API's own.
 ASSERTION_TEXT = "assertion-text"
@@ -145,10 +147,14 @@ def parse_combination(combination):
     parts = combination.split("/")
     if len(parts) != 4 or not all(parts):
         raise ParityError(f"a combination is tool/runner/mode/platform, not {combination!r}")
+    if parts[0] not in TOOLS:
+        raise ParityError(f"the build tool must be one of {', '.join(TOOLS)}, not {parts[0]!r}")
     if parts[1] not in RUNNERS:
         raise ParityError(f"the runner must be one of {', '.join(RUNNERS)}, not {parts[1]!r}")
     if parts[2] not in MODES:
         raise ParityError(f"the mode must be one of {', '.join(MODES)}, not {parts[2]!r}")
+    if parts[3] not in PLATFORMS:
+        raise ParityError(f"the platform must be one of {', '.join(PLATFORMS)}, not {parts[3]!r}")
     return parts
 
 
@@ -273,10 +279,11 @@ def failed_from_summary(summary):
 
 
 def normalize(combination, output, report, trace_folder, status, summary=None):
-    tool, runner, mode, _ = parse_combination(combination)
+    _, runner, mode, _ = parse_combination(combination)
     framework = RUNNERS[runner]
     hooks, trace = read_trace(trace_folder)
-    workers = tool == "xcode" and mode == "parallel"
+    # A run that has an xcresult summary is xcodebuild's, whose parallel workers' output is not in its log.
+    workers = summary is not None and mode == "parallel"
     if workers:
         hooks = {feature: dict.fromkeys(counts, 1) for feature, counts in hooks.items()}
     tests = summary["totalTestCount"] if summary else count_tests(output)[framework]

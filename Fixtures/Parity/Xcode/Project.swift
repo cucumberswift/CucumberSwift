@@ -2,7 +2,24 @@ import ProjectDescription
 
 // The parity suite's Xcode project leg: a framework and its tests, run with each runner, as a project that
 // uses CucumberSwift as a Swift package would. Both test targets compile ../Shared/ParitySteps.swift and
-// bundle ../Shared/Features, as the Swift package leg does. See ../README.md.
+// bundle ../Shared/Features, as the Swift package leg does. A step-definition file added to ../Shared joins both
+// test targets with no change here. See ../README.md.
+
+// The platform to build for, from TUIST_PARITY_PLATFORM: macOS, iOS, tvOS or Catalyst. There is no watchOS: the
+// Xcode project doesn't build for it, as Carthage doesn't deliver it. .github/scripts/parity-fixture.sh sets it.
+let platform = Environment.parityPlatform.getString(default: "macOS")
+let destinations: Destinations = switch platform {
+case "iOS": [.iPhone]
+case "tvOS": [.appleTv]
+case "Catalyst": [.macCatalyst]
+default: [.mac]
+}
+let deploymentTargets: DeploymentTargets = switch platform {
+case "iOS", "Catalyst": .iOS("16.0")
+case "tvOS": .tvOS("16.0")
+default: .macOS("13.0")
+}
+
 let settings: Settings = .settings(base: [
     "SWIFT_VERSION": "6.0",
     // Builds and runs without a signing team.
@@ -17,10 +34,10 @@ let project = Project(
     targets: [
         .target(
             name: "ParityShop",
-            destinations: [.mac],
+            destinations: destinations,
             product: .framework,
             bundleId: "org.cucumberswift.fixtures.parity.ParityShop",
-            deploymentTargets: .macOS("13.0"),
+            deploymentTargets: deploymentTargets,
             sources: ["../Shop/**"],
             settings: settings
         ),
@@ -28,12 +45,12 @@ let project = Project(
         // folder in the test bundle.
         .target(
             name: "ParityXCTests",
-            destinations: [.mac],
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.parity.ParityXCTests",
-            deploymentTargets: .macOS("13.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
-            sources: ["../Shared/ParitySteps.swift"],
+            sources: ["../Shared/*.swift"],
             resources: [.folderReference(path: "../Shared/Features")],
             dependencies: [
                 .target(name: "ParityShop"),
@@ -45,12 +62,12 @@ let project = Project(
         // a test for each scenario.
         .target(
             name: "ParitySwiftTests",
-            destinations: [.mac],
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.parity.ParitySwiftTests",
-            deploymentTargets: .macOS("13.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
-            sources: ["../Shared/ParitySteps.swift"],
+            sources: ["../Shared/*.swift"],
             resources: [.folderReference(path: "../Shared/Features")],
             dependencies: [
                 .target(name: "ParityShop"),

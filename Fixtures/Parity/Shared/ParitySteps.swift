@@ -2,8 +2,9 @@
 //  ParitySteps.swift
 //  Parity
 //
-//  The parity suite's step definitions: one file, compiled unchanged into an XCTest test target and a
-//  Swift Testing test target in every leg. Only the runner's import differs, chosen by the
+//  The parity suite's core step definitions. Every Swift file in Shared, this one and each feature family's
+//  own file, is compiled unchanged into an XCTest test target and a Swift Testing test target in every leg.
+//  Only the runner's import differs, chosen by the
 //  PARITY_SWIFT_TESTING compilation condition that the Swift Testing targets define. Anything else
 //  that would need a runner-specific line here is a parity gap: report it, don't add an #if. The one
 //  other #if is SwiftPM's own SWIFT_PACKAGE, for the bundle, which differs by build tool as it does

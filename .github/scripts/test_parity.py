@@ -45,7 +45,7 @@ def trace_folder(files):
 class CombinationTests(unittest.TestCase):
     def test_a_combination_has_four_parts(self):
         self.assertEqual(parity.parse_combination("xcode/xctest/serial/macOS"), ["xcode", "xctest", "serial", "macOS"])
-        for bad in ("xcode/xctest/serial", "xcode/junit/serial/macOS", "xcode/xctest/fast/macOS", "a//b/c"):
+        for bad in ("xcode/xctest/serial", "bazel/xctest/serial/macOS", "xcode/xctest/serial/Linux", "xcode/junit/serial/macOS", "xcode/xctest/fast/macOS", "a//b/c"):
             with self.assertRaises(parity.ParityError, msg=bad):
                 parity.parse_combination(bad)
 

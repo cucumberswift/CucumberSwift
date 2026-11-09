@@ -8,13 +8,14 @@
 #   tool      swiftpm or xcode
 #   runner    xctest or swift-testing
 #   mode      serial or parallel
-#   platform  macOS, the default
+#   platform  macOS, the default, Catalyst, iOS, tvOS or watchOS. A simulator or Mac Catalyst run uses xcodebuild:
+#             the package's scheme for swiftpm, and a project that Tuist generates for xcode, which has no watchOS.
 #
 # Each run gets its own folder in PARITY_OUTPUT, or a temporary folder: the test output (output.log), the
 # Cucumber JSON report (report.json), the trace (trace/) and the normalized result (result.json). With
 # PARITY_GOLDEN=YES, the result is written to golden.json instead of compared, for a deliberate change to
-# the suite, and with PARITY_GOLDEN=TESTS only the runner's test count is. The suite fails some scenarios on purpose, so the run's own exit status is part of the result,
-# and this script fails only when the result differs.
+# the suite, and with PARITY_GOLDEN=TESTS only the runner's test count is. The suite fails some scenarios on
+# purpose, so the run's own exit status is part of the result, and this script fails only when the result differs.
 set -u
 tool=${1:?usage: parity-fixture.sh <swiftpm|xcode> <xctest|swift-testing> <serial|parallel> [platform]}
 runner=${2:?usage: parity-fixture.sh <swiftpm|xcode> <xctest|swift-testing> <serial|parallel> [platform]}
@@ -26,8 +27,15 @@ fixture="$root/Fixtures/Parity"
 
 case "$runner" in xctest|swift-testing) ;; *) echo "error: the runner must be xctest or swift-testing, not '$runner'" >&2; exit 2 ;; esac
 case "$mode" in serial|parallel) ;; *) echo "error: the mode must be serial or parallel, not '$mode'" >&2; exit 2 ;; esac
-if [[ "$platform" != macOS ]]; then
-  echo "error: $combination: only macOS runs so far" >&2
+case "$tool" in swiftpm|xcode) ;; *) echo "error: the tool must be swiftpm or xcode, not '$tool'" >&2; exit 2 ;; esac
+case "$platform" in
+  macOS) destination='platform=macOS' ;;
+  Catalyst) destination='platform=macOS,variant=Mac Catalyst' ;;
+  iOS|tvOS|watchOS) destination=$("$root/.github/scripts/simulator-destination.sh" "$platform Simulator") || exit 1 ;;
+  *) echo "error: the platform must be macOS, Catalyst, iOS, tvOS or watchOS, not '$platform'" >&2; exit 2 ;;
+esac
+if [[ "$tool" = xcode && "$platform" = watchOS ]]; then
+  echo "error: $combination: the Xcode project doesn't build for watchOS, as Carthage doesn't deliver it" >&2
   exit 2
 fi
 
@@ -38,54 +46,56 @@ log="$out/output.log"
 report="$out/report.json"
 echo "$combination: running, with its output in $out"
 
+# xcodebuild passes each TEST_RUNNER_ variable to the tests without the prefix. Xcode's parallel testing runs
+# XCTest in worker processes; Swift Testing runs the scenarios together in one process once CucumberSwift is
+# told to, and Xcode's setting doesn't change that.
+run_xcodebuild() { # <directory> <project or package arguments...>
+  local directory=$1; shift
+  local derived=$fixture/SwiftPM/Derived
+  [[ "$tool" = xcode ]] && derived=$fixture/Xcode/Derived
+  local parallel=NO args=(-destination "$destination" -derivedDataPath "${PARITY_DERIVED_DATA:-$derived}"
+    -enableCodeCoverage YES -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO)
+  if [[ "$mode" = parallel ]]; then
+    parallel=YES
+    args+=(-parallel-testing-enabled YES -parallel-testing-worker-count 3)
+  else
+    args+=(-parallel-testing-enabled NO)
+  fi
+  (cd "$directory" && TEST_RUNNER_PARITY_TRACE_DIR="$out/trace" TEST_RUNNER_CUCUMBER_REPORT_PATH="$report" \
+    TEST_RUNNER_CUCUMBER_PARALLEL_TESTING=$parallel \
+    "$root/.github/scripts/keep-package-resolved.sh" xcodebuild test "$@" "${args[@]}")
+}
+
 status=0
-case "$tool" in
-  swiftpm)
-    args=(--package-path "$fixture/SwiftPM" --enable-code-coverage)
-    if [[ "$runner" = xctest ]]; then args+=(--disable-swift-testing); else args+=(--disable-xctest); fi
-    parallel=NO
-    if [[ "$mode" = parallel ]]; then
-      parallel=YES
-      # Swift Testing runs the scenarios together in one process once CucumberSwift is told to. XCTest runs
-      # them in worker processes with --parallel.
-      if [[ "$runner" = xctest ]]; then args+=(--parallel); fi
-    fi
-    PARITY_TRACE_DIR="$out/trace" CUCUMBER_REPORT_PATH="$report" CUCUMBER_PARALLEL_TESTING=$parallel \
-      swift test "${args[@]}" > "$log" 2>&1 || status=$?
-    ;;
-  xcode)
-    # Generated here, not committed, as for the other Tuist fixtures. Resolving the project rewrites the
-    # checkout's Package.resolved, so each step puts it back.
-    "$root/.github/scripts/keep-package-resolved.sh" tuist generate --no-open --path "$fixture/Xcode" > "$out/generate.log" 2>&1 \
-      || { cat "$out/generate.log"; echo "error: $combination: tuist generate failed" >&2; exit 1; }
-    if [[ "$runner" = xctest ]]; then scheme=ParityXCTests; else scheme=ParitySwiftTests; fi
-    args=(-project "$fixture/Xcode/Parity.xcodeproj" -scheme "$scheme" -destination 'platform=macOS'
-      -derivedDataPath "${PARITY_DERIVED_DATA:-$fixture/Xcode/Derived}" -enableCodeCoverage YES
-      -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO)
-    parallel=NO
-    if [[ "$mode" = parallel ]]; then
-      parallel=YES
-      # XCTest runs the scenarios in Xcode's worker processes. Swift Testing runs them together in one
-      # process once CucumberSwift is told to, and Xcode's setting doesn't change that.
-      args+=(-parallel-testing-enabled YES -parallel-testing-worker-count 3)
-    else
-      args+=(-parallel-testing-enabled NO)
-    fi
-    # xcodebuild passes each TEST_RUNNER_ variable to the tests without the prefix.
-    TEST_RUNNER_PARITY_TRACE_DIR="$out/trace" TEST_RUNNER_CUCUMBER_REPORT_PATH="$report" \
-      TEST_RUNNER_CUCUMBER_PARALLEL_TESTING=$parallel \
-      "$root/.github/scripts/keep-package-resolved.sh" xcodebuild test "${args[@]}" > "$log" 2>&1 || status=$?
-    ;;
-  *)
-    echo "error: the tool must be swiftpm or xcode, not '$tool'" >&2
-    exit 2
-    ;;
-esac
+if [[ "$runner" = xctest ]]; then target=ParityXCTests; else target=ParitySwiftTests; fi
+if [[ "$tool" = swiftpm && "$platform" = macOS ]]; then
+  args=(--package-path "$fixture/SwiftPM" --enable-code-coverage)
+  if [[ "$runner" = xctest ]]; then args+=(--disable-swift-testing); else args+=(--disable-xctest); fi
+  parallel=NO
+  if [[ "$mode" = parallel ]]; then
+    parallel=YES
+    # Swift Testing runs the scenarios together in one process once CucumberSwift is told to. XCTest runs
+    # them in worker processes with --parallel.
+    if [[ "$runner" = xctest ]]; then args+=(--parallel); fi
+  fi
+  PARITY_TRACE_DIR="$out/trace" CUCUMBER_REPORT_PATH="$report" CUCUMBER_PARALLEL_TESTING=$parallel \
+    swift test "${args[@]}" > "$log" 2>&1 || status=$?
+elif [[ "$tool" = swiftpm ]]; then
+  # The package's own scheme, through xcodebuild, because swift test runs on a Mac only.
+  run_xcodebuild "$fixture/SwiftPM" -scheme Parity-Package "-only-testing:$target" > "$log" 2>&1 || status=$?
+else
+  # Generated here, not committed, as for the other Tuist fixtures. Resolving the project rewrites the
+  # checkout's Package.resolved, so each step puts it back.
+  TUIST_PARITY_PLATFORM=$platform "$root/.github/scripts/keep-package-resolved.sh" tuist generate --no-open \
+    --path "$fixture/Xcode" > "$out/generate.log" 2>&1 \
+    || { cat "$out/generate.log"; echo "error: $combination: tuist generate failed" >&2; exit 1; }
+  run_xcodebuild "$root" -project "$fixture/Xcode/Parity.xcodeproj" -scheme "$target" > "$log" 2>&1 || status=$?
+fi
 
 # Xcode's parallel workers print to their own output, which xcodebuild's log leaves out, so the test count and the
-# failures come from the result bundle, for every run it makes.
+# failures come from the result bundle, for every run xcodebuild makes.
 summary=()
-if [[ "$tool" = xcode ]]; then
+if [[ "$tool" = xcode || ( "$tool" = swiftpm && "$platform" != macOS ) ]]; then
   bundle=$(sed -n '/^Test session results, code coverage, and logs:/{n;s/^[[:space:]]*//;p;}' "$log" | tail -1)
   if [[ -n "$bundle" ]] && xcrun xcresulttool get test-results tests --path "$bundle" > "$out/xcresult-tests.json" 2>/dev/null \
     && xcrun xcresulttool get test-results summary --path "$bundle" > "$out/xcresult-summary.json" 2>/dev/null; then
