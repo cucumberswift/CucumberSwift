@@ -324,6 +324,34 @@ extension CucumberTests {
         #expect(results.last?["error_message"] as? String == "the card was declined")
     }
 
+    /// The error message that the report gives the one step that throws.
+    private func reportedMessage(ofStepThrowing error: @escaping @Sendable () throws -> Void) async throws -> String? {
+        let url = reportURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        Cucumber.reportPath = url.path
+        Cucumber.shared.reporters = [try #require(CucumberJSONReporter())]
+        Given("a basket") { _, _ in }
+        When("I pay by card") { _, _ in try error() }
+
+        await withKnownIssue(isIntermittent: true) {
+            await Cucumber.shared.run(parityScenarios()[0])
+        }
+
+        let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
+        let steps = try #require(elements.first?["steps"] as? [[String: Any]])
+        return (steps.last?["result"] as? [String: Any])?["error_message"] as? String
+    }
+
+    @Test func aThrownLocalizedErrorIsReportedByItsErrorDescription() async throws {
+        struct Expired: LocalizedError { var errorDescription: String? { "the voucher expired" } }
+
+        #expect(try await reportedMessage(ofStepThrowing: { throw Expired() }) == "the voucher expired")
+    }
+
+    @Test func aFailedRequireIsReportedByItsExpectation() async throws {
+        #expect(try await reportedMessage(ofStepThrowing: { try #require(1 == 2) }) == "Expectation failed: 1 == 2")
+    }
+
     #if compiler(>=6.2)
     /// A failed `#expect` doesn't throw, so the report learns of it from the issue handling trait.
     @Test(.reportedInFeatureFiles)

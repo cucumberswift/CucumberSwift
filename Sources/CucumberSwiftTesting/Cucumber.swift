@@ -122,7 +122,7 @@ public final class Cucumber {
     }
 
     private static func describe(_ error: any Error) -> String {
-        (error as? any LocalizedError)?.errorDescription ?? String(describing: error)
+        ThrownErrorDescription.of(error)
     }
 
     /// The scenario that a hook's argument belongs to: the scenario itself, or a step's. A feature hook has none.
