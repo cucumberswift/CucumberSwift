@@ -97,7 +97,9 @@ final class RawProfileFormatTests: XCTestCase {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for file in try counters.writeProfiles(named: "merge", in: folder, since: counters.snapshot()) {
             let process = Process()
-            process.executableURL = ["usr", "bin", "xcrun"].reduce(URL(fileURLWithPath: "/")) { $0.appendingPathComponent($1) }
+            // The file system's root is the first component of any absolute path, such as the temporary folder's.
+            let root = FileManager.default.temporaryDirectory.pathComponents.prefix(1).joined()
+            process.executableURL = ["usr", "bin", "xcrun"].reduce(URL(fileURLWithPath: root)) { $0.appendingPathComponent($1) }
             process.arguments = [
                 "llvm-profdata",
                 "merge",
