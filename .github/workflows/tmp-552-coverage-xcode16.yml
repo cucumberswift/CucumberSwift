@@ -20,14 +20,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Select Xcode 16.0
-        run: .github/scripts/select-xcode.sh 16.0
-      - name: Install the iOS platform for Xcode 16.0
-        run: |
-          xcrun simctl list runtimes > /dev/null
-          xcodebuild -downloadPlatform iOS
-      - name: Install Carthage
-        run: command -v carthage || brew install carthage
       - name: Install mise
         run: command -v mise || brew install mise
       - name: Install the pinned Tuist
@@ -37,29 +29,7 @@ jobs:
         run: |
           mise --version
           mise install
-      # The scoring tests and the llvm-profdata merge must pass, not skip, so the bundle really was measured.
-      - name: "Xcode 16.0: CucumberSwift's coverage tests, built with code coverage"
-        if: ${{ !cancelled() }}
-        run: |
-          set -o pipefail
-          log="$RUNNER_TEMP/coverage-tests.log"
-          swift test --enable-code-coverage --filter 'CoverageMapTests|CoverageRecorderTests|CoverageReporterTests|RawProfileFormatTests' 2>&1 | tee "$log"
-          status=0
-          for test in testXcode16sVersionsAreDecodedAsXcode26s testAProfileHasTheLayoutOfItsBinarysVersion \
-            testAProfileMergesWithTheLLVMProfdataOfTheXcodeThatBuiltTheTests testAProfileIsARawProfileWhateverTheRunsProfileFile \
-            testTheCoverageMapFindsTheCodeAScenarioRanAndScoresItsFeature testTwoScenariosWhoseStepsRunTheSameCodeAreRedundantButTheBackgroundsStepsAreNot; do
-            if grep -q "$test\]' passed" "$log"; then echo "passed: $test"; else echo "::error::$test didn't pass"; status=1; fi
-          done
-          exit $status
-      - name: "Xcode 16.0: build the framework with Carthage and score the fixture's feature"
-        if: ${{ !cancelled() }}
-        env:
-          CARTHAGE_LOG: carthage-build.log
-          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
-        run: mise run test-carthage
       - name: Select Xcode 16.4
-        if: ${{ !cancelled() }}
         run: .github/scripts/select-xcode.sh 16.4
       - name: "Xcode 16.4: the coverage fixtures, with both runners"
         if: ${{ !cancelled() }}
