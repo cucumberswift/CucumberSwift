@@ -43,7 +43,7 @@ extension CucumberTests {
             Cucumber.shared.reportInvalidStepDefinitions()
         } matching: { issue in
             issue.sourceLocation?.line == line
-                && issue.sourceLocation?.filePath == #filePath
+                && issue.sourceLocation?.fileID.hasSuffix("RegularExpressionStepDefinitionTests.swift") == true
                 && issue.comments.contains { $0.rawValue == "Invalid regular expression '(unclosed': expected ')'" }
         }
         await withKnownIssue {
@@ -60,7 +60,7 @@ extension CucumberTests {
             Cucumber.shared.reportInvalidStepDefinitions()
         } matching: { issue in
             issue.sourceLocation?.line == line
-                && issue.sourceLocation?.filePath == #filePath
+                && issue.sourceLocation?.fileID.hasSuffix("RegularExpressionStepDefinitionTests.swift") == true
                 && issue.comments.contains { $0.rawValue.contains("^(unclosed$") }
         }
         // It matches nothing, and the step is undefined rather than trapping.
