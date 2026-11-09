@@ -24,12 +24,35 @@ reports="$folder/mutation-Bazel"
 log="$folder/mutation-Bazel.log"
 rm -rf "$reports"
 
+# The job's earlier steps leave a Bazel server for Tests/ running, with the memory it built up. The tool starts its
+# own for the copy it makes, so stop the old one before the Swift build and the runs need the memory.
+(cd "$fixture" && bazel shutdown) || true
+
+# Build the tool on its own and run the binary, so a failure to start is not mistaken for a failed build.
+build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
+"${build[@]}"
+tool="$("${build[@]}" --show-bin-path)/cucumberswift-mutation-test"
+
+# What a run killed by a signal (status 128 + the signal) leaves to explain it: the memory, the processes that held it,
+# the binary's signature and the kernel's own account of a kill.
+diagnose() {
+  echo "::group::The tool was killed by signal $(($1 - 128))"
+  echo "Memory: $(sysctl -n hw.memsize) bytes"
+  vm_stat || true
+  memory_pressure 2>&1 | head -15 || true
+  ps -Ao rss,comm -m | head -8 || true
+  codesign --verify --strict -vv "$tool" 2>&1 || true
+  log show --last 3m --predicate 'eventMessage CONTAINS[c] "killed" OR eventMessage CONTAINS[c] "AMFI" OR eventMessage CONTAINS[c] "memorystatus" OR eventMessage CONTAINS[c] "jetsam"' 2>&1 | tail -30 || true
+  echo "::endgroup::"
+}
+
 status=0
-swift run --package-path "$repo" --traits Macros cucumberswift-mutation-test \
+"$tool" \
   --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
   --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
   --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \
   --format xcode --output "$reports" 2>&1 | tee "$log" || status=$?
+if [[ "$status" -gt 128 ]]; then diagnose "$status"; fi
 if [[ "$status" -ne 0 ]]; then
   echo "::error::Bazel fixture: cucumberswift-mutation-test exited with $status"
   exit 1
