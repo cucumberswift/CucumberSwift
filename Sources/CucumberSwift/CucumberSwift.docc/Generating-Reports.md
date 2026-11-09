@@ -36,23 +36,30 @@ A Simulator's test process doesn't get your shell's environment. Set the variabl
 TEST_RUNNER_CUCUMBER_REPORT_PATH="$HOME/CucumberReports/report.json" xcodebuild test -scheme MyApp -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
-### The report of a parallel run
+### One report for each test run
 
-All the workers write 1 report when scenarios run in parallel (see <doc:Running-Scenarios-In-Parallel>), even though each worker is a separate process. Each scenario appears in it once. A feature whose scenarios ran in several workers lists all of them, in the order of the feature file.
+Every process of a test run adds its scenarios to one report. A parallel run has a process for each worker (see <doc:Running-Scenarios-In-Parallel>). A run of several test targets has a process for each target, whichever runner it uses. So a `swift test` run of a package with an XCTest target and a Swift Testing target writes both targets' scenarios to the same report. Each scenario appears in it once. A feature whose scenarios ran in several processes lists all of them, in the order of the feature file.
 
-To do this, a worker locks the report each time it writes. It reads the report, adds its own features, and writes the result to a temporary file in the same folder. Then it moves that file into place and unlocks the report.
+To do this, a process locks the report each time it writes. It reads the report, adds its own features, and writes the result to a temporary file in the same folder. Then it moves that file into place and unlocks the report. A process writes when a scenario starts, when a scenario or a feature finishes, and when its tests start and finish. If a test crashes the process, the report has every scenario that finished and the scenario that crashed, without its steps.
+
+A new run replaces the report. The first process of a run empties the report that the last run left. A process is the first of a new run when no other process is writing the report and one of these is true:
+
+- The `swift test` or `xcodebuild` command that started the last run has finished. A process that one of these commands starts is part of that command's run for as long as the command runs, however long ago the report was written.
+- The process runs a test bundle that already ran in this run with the same runner. Xcode and a Simulator don't tell a process which run started it, so this is how running the tests again replaces the report. It doesn't apply to the workers of a parallel run, which all run the same bundle.
+- Nothing has written the report for 10 minutes.
+
+A parallel run in Xcode, or on a Simulator, that starts sooner than that after another run adds to its report, because its workers look like the last run's. Delete the report first.
 
 Keep these points in mind for the shared report:
 
-- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone has its own documents folder. Without `reportPath`, each clone writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
-- A new run replaces the old report. The first worker of a run empties the report that the last run left, if nothing is writing it and nothing has written it for a minute. If you start a run within a minute of another, delete the report first.
-- The report's folder must be writable. The workers also create `<report>.lock` and `<report>.run` next to the report. These files are empty, and you can delete them between runs.
+- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone, and each app on a Simulator, has its own documents folder. Without `reportPath`, each of them writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
+- The report's folder must be writable. Every process also creates `<report>.lock` and `<report>.run` next to the report. You can delete them between runs.
+- The copy in `CucumberTestResultsFor<target>.json` has the features of that test bundle, from the report as it was when the bundle's tests finished. A package that you run with `swift test` has 1 test bundle for all its targets, so its copy has the features of every target.
 - We haven't tried a physical device. A device is expected to run 1 worker and write its own file.
-- A serial run writes the report in the same way as before.
 
 ### Swift Testing
 
-The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process writes the report once, with every scenario in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process adds its scenarios to the run's report, as above, in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
 
 ## Verbose output
 

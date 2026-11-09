@@ -389,7 +389,7 @@ The runner copies the report to `CucumberTestResultsFor<target>.json` in the doc
 
 These rules also apply to the report:
 
-- **A test run replaces the report.** A test target's tests run in 1 process, so each run starts a report of its own. When 2 test targets run in 1 `xcodebuild` or `swift test` run, they write to the same path in turn. If you need both reports, give each target its own `CUCUMBER_REPORT_PATH`.
+- **A test run writes one report.** A test target's tests run in one process. When two test targets run in one `xcodebuild` or `swift test` run, both add their scenarios to the same report, whichever runner each target uses. The next run replaces the report, as <doc:Generating-Reports#One-report-for-each-test-run> describes.
 - **A step is `failed` when its step definition throws, when no step definition matches it, and when one of its step hooks throws.** Its `error_message` is the error. An ambiguous step is `ambiguous`. The steps after a failed step aren't in the report, as with CucumberSwift.
 - **A failed `#expect` fails its step in the report too, with Swift 6.2 or later.** Swift Testing doesn't tell the running code when an expectation fails. The runner learns of it from the same issue handling that moves the issue to the feature file's line. With Swift 6.1, such a step is reported as `passed`, though Swift Testing still fails the test. A step that throws, with `try #require` or otherwise, is `failed` in every version.
 
