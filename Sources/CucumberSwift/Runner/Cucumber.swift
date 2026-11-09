@@ -97,6 +97,9 @@ import XCTest
     /// The features whose `AfterFeature` hooks have run, so that none finishes twice.
     var finishedFeatures     = [Feature]()
     var hookedScenarios      = [Scenario]()
+    /// Whether `BeforeFeature` or `AfterFeature` hooks are running. The current step is set then, but no
+    /// scenario is running, so `Scenario.state(_:)` fails.
+    private(set) var isRunningFeatureHooks = false
     var failedScenarios      = [Scenario]()
     lazy var reporters: [CucumberTestObserver] = {
         // Always installed, because the reporters are built before `setupSteps()` can set
@@ -166,7 +169,7 @@ import XCTest
            !hookedFeatures.contains(where: { $0 === feature }) {
             hookedFeatures.append(feature)
             feature.startDate = Date()
-            beforeFeatureHooks.forEach { $0.hook(feature) }
+            runFeatureHooks(beforeFeatureHooks, for: feature)
             reporters.forEach { $0.didStart(feature: feature, at: Date()) }
         }
         if let scenario = step.scenario,
@@ -205,6 +208,12 @@ import XCTest
         }
     }
 
+    private func runFeatureHooks(_ hooks: [FeatureHook], for feature: Feature) {
+        isRunningFeatureHooks = true
+        defer { isRunningFeatureHooks = false }
+        hooks.forEach { $0.hook(feature) }
+    }
+
     /// Runs the feature's `AfterFeature` hooks and tells the reporters it finished. In a parallel run, only
     /// for a feature this worker started, and once.
     func finish(_ feature: Feature) {
@@ -213,7 +222,7 @@ import XCTest
             guard hookedFeatures.contains(where: { $0 === feature }) else { return }
         }
         finishedFeatures.append(feature)
-        Cucumber.shared.afterFeatureHooks.forEach { $0.hook(feature) }
+        runFeatureHooks(afterFeatureHooks, for: feature)
         let result: Reporter.Result = (feature.scenarios.contains { $0.steps.contains { $0.result == .failed || $0.result == .ambiguous } }) ? .failed : .passed
         reporters.forEach { $0.didFinish(feature: feature,
                                          result: result,
