@@ -38,12 +38,12 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
         XCTAssertTrue(runner.build(in: copy, timeout: nil).succeeded)
     }
 
-    /// The names of the scenarios in the Cucumber report at `report`.
     /// What the run printed, for a failure's message.
     private func output(of run: TestRun) -> String {
         run.log.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
     }
 
+    /// The names of the scenarios in the Cucumber report at `report`.
     private func scenarios(in report: URL?) throws -> [String] {
         let data = try Data(contentsOf: XCTUnwrap(report))
         let features = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])

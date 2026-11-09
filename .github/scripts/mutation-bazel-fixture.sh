@@ -8,7 +8,9 @@
 # scenarios with `bazel test`, and mutates the Grades library. .github/scripts/mutation_fixture.py then fails unless
 # every mutant has the status that Tests/expected-mutants lists, and the output has a warning for each survivor. The
 # tool needs the Macros trait for swift-syntax, and copies Tests/ to a temporary folder, where `..` doesn't reach CucumberSwift, so the modules come from the two
-# folders the arguments name, as the Bazel job's other commands get them with --override_module.
+# folders the arguments name, as the Bazel job's other commands get them with --override_module. Tests/.bazelrc
+# applies its instrumentation filter to `bazel coverage` only, so the run passes the filter itself and builds with
+# coverage only the code under test.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
@@ -26,7 +28,7 @@ status=0
 swift run --package-path "$repo" --traits Macros cucumberswift-mutation-test \
   --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
   --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
-  --bazel-arg --xcode_version=26.2 \
+  --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \
   --format xcode --output "$reports" 2>&1 | tee "$log" || status=$?
 if [[ "$status" -ne 0 ]]; then
   echo "::error::Bazel fixture: cucumberswift-mutation-test exited with $status"

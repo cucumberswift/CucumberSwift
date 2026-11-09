@@ -48,6 +48,8 @@ description = "Build and test every project in Fixtures/"
 # A fixture with an xcode-version file, such as 26.4, runs with /Applications/Xcode_<version>.app,
 # so CI checks it with exactly the Xcode the docs give; without that Xcode it fails in CI and
 # runs with the selected Xcode elsewhere.
+# A Swift package fixture with a swift-test-arguments file runs `swift test` with the arguments it gives,
+# such as --enable-code-coverage.
 # A fixture's output must have no warnings from CucumberSwift other than those its expected-warnings
 # lists, and every one of those (.github/scripts/fixture-warnings.sh). A fixture that uses the
 # CucumberSwiftLint plugin must show that the plugin ran: its stamps are deleted first, since the
@@ -121,7 +123,11 @@ for fixture in Fixtures/*/; do
   build="$fixture/.build"
   if [ -f "$fixture/Package.swift" ]; then
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
-    with_xcode swift test --package-path "$fixture" > "$log" 2>&1 || status=$?
+    # A swift-test-arguments file gives the fixture's extra `swift test` arguments, such as --enable-code-coverage.
+    swift_test_arguments=
+    if [ -f "$fixture/swift-test-arguments" ]; then swift_test_arguments=$(cat "$fixture/swift-test-arguments"); fi
+    # shellcheck disable=SC2086
+    with_xcode swift test --package-path "$fixture" $swift_test_arguments > "$log" 2>&1 || status=$?
   fi
   if [ -f "$fixture/Project.swift" ]; then
     destination='platform=macOS'
@@ -215,7 +221,7 @@ done
 description = "Build the framework with Carthage and test a project that uses it"
 # Builds Carthage/Build/CucumberSwift.xcframework as `carthage update` does for a consumer, then
 # runs Fixtures/CarthageXCFramework, an iOS test target that links and embeds it, on a simulator.
-# The fixture must run as many tests as its expected-tests lists.
+# The fixture must run as many tests as its expected-tests lists, and CucumberSwift must score its feature.
 # See "Fixtures" in CONTRIBUTING.md.
 run = '''
 set -eu
@@ -259,6 +265,11 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
   exit 1
 fi
 python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
+# The fixture's framework is built with code coverage, so CucumberSwift must score the feature.
+if ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xcframework: 100% of the code its scenarios ran (4 of 4 regions in 1 function).*redundancy 33%" "$log"; then
+  echo "CucumberSwift did not score the fixture's feature"
+  exit 1
+fi
 '''
 
 [tasks.test-docs-examples]

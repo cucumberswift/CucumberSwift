@@ -208,7 +208,7 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         let run = XcodebuildRunner(target: scoped, commands: commands).test(in: try makeCopy(), request: TestRequest(writesReport: true))
         let tests = commands.calls.filter { $0.arguments.first == "test-without-building" }
         XCTAssertEqual(tests.count, 2)
-        XCTAssertEqual(tests.map { $0.arguments.firstIndex(of: "-only-testing").map { tests[0].arguments.indices.contains($0 + 1) } ?? false }, [true, true])
+        XCTAssertEqual(tests.map { value(after: "-only-testing", in: $0.arguments) }, ["A", "B"], "Each run selects its own target")
         XCTAssertEqual(Set(tests.compactMap { $0.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"] }).count, 2, "A report of its own, so one doesn't replace the other")
         XCTAssertEqual(run.testsRun, 4, "The tests of both result bundles")
         let merged = try JSONSerialization.jsonObject(with: Data(contentsOf: XCTUnwrap(run.cucumberReport))) as? [[String: Any]]
