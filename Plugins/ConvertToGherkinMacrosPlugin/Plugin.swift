@@ -11,7 +11,7 @@ private enum ConvertError: Error, CustomStringConvertible {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .notSetUp(let message): return message
-            case .failed(let status): return "CucumberSwiftMacroConverterTool exited with status \(status)"
+            case .failed(let status): return "cucumberswift convert-to-gherkin-macros exited with status \(status)"
             case .missingValue(let option): return "\(option) needs a value: \(option == "--path" ? "the file or folder to convert" : "the name of a target")"
         }
     }
@@ -55,7 +55,7 @@ struct ConvertToGherkinMacrosPlugin: CommandPlugin {
             }
             return missingMacrosProduct(forDependencies: products).map { "\(target.name)=\($0)" }
         }
-        try convert(tool: context.tool(named: "CucumberSwiftMacroConverterTool").url,
+        try convert(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                     root: root,
                     paths: converted.compactMap { ($0 as? SourceModuleTarget)?.directoryURL },
                     chosen: chosen,
@@ -93,7 +93,7 @@ extension ConvertToGherkinMacrosPlugin: XcodeCommandPlugin {
             }
             return missingMacrosProduct(forDependencies: products).map { "\(target.displayName)=\($0)" }
         }
-        try convert(tool: context.tool(named: "CucumberSwiftMacroConverterTool").url,
+        try convert(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                     root: root,
                     paths: converted.flatMap { $0.inputFiles.map(\.url) },
                     chosen: chosen,
@@ -151,7 +151,7 @@ private func convert(tool: URL, root: URL, paths: [URL], chosen: [String], missi
     }
     let process = Process()
     process.executableURL = tool
-    process.arguments = ["--root", root.path] + missing.flatMap { ["--missing-macros", $0] }
+    process.arguments = ["convert-to-gherkin-macros", "--root", root.path] + missing.flatMap { ["--missing-macros", $0] }
         + chosen.flatMap { ["--path", $0] } + (dryRun ? ["--dry-run"] : []) + files
     let standardOutput = Pipe()
     let standardError = Pipe()

@@ -43,6 +43,58 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
+# The Gherkin parser that the cucumberswift tool's lint and generate commands link, as Package.swift's
+# CucumberSwiftGherkin target does: CucumberSwift's own Core sources, compiled a second time without XCTest. Not
+# testonly, so the tool can build for the Mac that builds the tests.
+swift_library(
+    name = "CucumberSwiftGherkin",
+    srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
+    module_name = "CucumberSwiftGherkin",
+    visibility = ["//visibility:public"],
+)
+
+# The cucumberswift tool's lint and fix-feature-files commands.
+swift_library(
+    name = "CucumberSwiftLintTool",
+    srcs = glob(["Sources/CucumberSwiftLintTool/*.swift"]),
+    module_name = "CucumberSwiftLintTool",
+    deps = [
+        ":CucumberSwiftGherkin",
+        "@cucumberswift_expressions//:CucumberSwiftExpressions",
+    ],
+)
+
+# The cucumberswift tool's convert-to-gherkin-macros command. Bazel builds it without swift-syntax, so it says what
+# to turn on and changes nothing, as the Swift package does without its Macros trait.
+swift_library(
+    name = "CucumberSwiftMacroConverterTool",
+    srcs = glob(["Sources/CucumberSwiftMacroConverterTool/*.swift"]),
+    module_name = "CucumberSwiftMacroConverterTool",
+    deps = ["@cucumberswift_expressions//:CucumberSwiftExpressions"],
+)
+
+# The cucumberswift tool's generate command, which writes the Swift Testing tests of feature files.
+swift_library(
+    name = "CucumberSwiftTestingGenerator",
+    srcs = glob(["Sources/CucumberSwiftTestingGenerator/*.swift"]),
+    module_name = "CucumberSwiftTestingGenerator",
+    deps = [":CucumberSwiftGherkin"],
+)
+
+# The cucumberswift tool's command line: the commands, and the line that picks one.
+swift_library(
+    name = "CucumberSwiftCommandLine",
+    srcs = glob(["Sources/CucumberSwiftCommandLine/*.swift"]),
+    module_name = "CucumberSwiftCommandLine",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":CucumberSwiftCoverageMerge",
+        ":CucumberSwiftLintTool",
+        ":CucumberSwiftMacroConverterTool",
+        ":CucumberSwiftTestingGenerator",
+    ],
+)
+
 # The sources of the cucumberswift tool, which cli/BUILD.bazel builds in a package of its own: Bazel's output
 # folders are not case-sensitive on macOS, so a binary named cucumberswift can't sit next to the CucumberSwift
 # library.

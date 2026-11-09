@@ -311,6 +311,8 @@ for binary in "$xcf"/*/CucumberSwift.framework/CucumberSwift; do
     exit 1
   fi
 done
+# The commands a Carthage project runs from the checkout, as its Run Script phase does: see the fixture's README.
+Fixtures/CarthageXCFramework/check-commands.sh
 # The pinned Tuist can't compile the fixture's manifest with Xcode 16.0's Swift 6.0, so when CI tests
 # that Xcode, TUIST_DEVELOPER_DIR names a newer one for this step. The fixture still builds and
 # tests with the selected Xcode.

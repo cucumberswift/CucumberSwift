@@ -1,5 +1,6 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
+load("@cucumberswift//bazel:cucumberswift.bzl", "cucumberswift_fix_feature_files", "cucumberswift_generate", "cucumberswift_lint")
 load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
@@ -39,4 +40,51 @@ consumer_tests(name = "CucumberSwiftDSLConsumerTests")
 consumer_tests(
     name = "CucumberSwiftSwift6ConsumerTests",
     copts = ["-swift-version", "6"],
+)
+
+# The commands of the cucumberswift tool that the plugins run, run as a Bazel project runs them: directly
+# (cucumberswift_commands_test), and through the rules in bazel/cucumberswift.bzl.
+sh_test(
+    name = "cucumberswift_commands_test",
+    srcs = ["cucumberswift_commands_test.sh"],
+    args = ["$(rootpath @cucumberswift//cli:cucumberswift)"],
+    data = ["@cucumberswift//cli:cucumberswift"],
+)
+
+cucumberswift_lint(
+    name = "commands_lint",
+    feature_files = ["CommandsFixture/Greeting.feature"],
+    swift_srcs = ["CommandsFixture/Steps.swift"],
+)
+
+cucumberswift_generate(
+    name = "commands_generated",
+    feature_files = ["CommandsFixture/Greeting.feature"],
+    swift_srcs = ["CommandsFixture/Steps.swift"],
+)
+
+cucumberswift_fix_feature_files(
+    name = "commands_fix_feature_files",
+    paths = ["Features"],
+)
+
+# Builds the lint stamp and the generated tests with the rules, and checks the generated tests name the scenario.
+sh_test(
+    name = "cucumberswift_rules_test",
+    srcs = ["cucumberswift_rules_test.sh"],
+    args = [
+        "$(rootpath :commands_lint)",
+        "$(rootpath :commands_generated)",
+    ],
+    data = [
+        ":commands_generated",
+        ":commands_lint",
+    ],
+)
+
+sh_test(
+    name = "cucumberswift_fix_launcher_test",
+    srcs = ["cucumberswift_fix_launcher_test.sh"],
+    args = ["$(rootpath :commands_fix_feature_files)"],
+    data = [":commands_fix_feature_files"],
 )

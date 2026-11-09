@@ -7,7 +7,7 @@
 import Foundation
 import XCTest
 
-/// Runs the converter tool, built next to the test bundle. The tests run it as a program because SwiftPM
+/// Runs `cucumberswift convert-to-gherkin-macros`, built next to the test bundle. The tests run it as a program because SwiftPM
 /// links every test target into one bundle, and linking swift-syntax into a second target breaks the
 /// macros' tests with Swift 6.2's prebuilt swift-syntax.
 enum ConverterTool {
@@ -39,8 +39,8 @@ enum ConverterTool {
 
     static var url: URL {
         let bundle = Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }
-        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwiftMacroConverterTool") }
-            ?? URL(fileURLWithPath: "CucumberSwiftMacroConverterTool")
+        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("CucumberSwiftPluginCommand") }
+            ?? URL(fileURLWithPath: "CucumberSwiftPluginCommand")
     }
 
     /// `--stdin`: one file's source in, its converted source out, and a line for each step definition.
@@ -79,7 +79,7 @@ enum ConverterTool {
     private static func launch(_ arguments: [String], input: String?) throws -> Launched {
         let process = Process()
         process.executableURL = url
-        process.arguments = arguments
+        process.arguments = ["convert-to-gherkin-macros"] + arguments
         let standardInput = Pipe()
         let standardOutput = Pipe()
         let standardError = Pipe()

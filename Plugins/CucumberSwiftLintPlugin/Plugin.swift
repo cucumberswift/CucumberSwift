@@ -7,7 +7,7 @@ import PackagePlugin
 struct CucumberSwiftLintPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
         guard let target = target as? SourceModuleTarget else { return [] }
-        return try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").url,
+        return try lintCommands(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                                 workDirectory: context.pluginWorkDirectoryURL,
                                 targetName: target.name,
                                 paths: target.sourceFiles.map(\.url.path) + [directoryPath(of: target)].compactMap { $0 })
@@ -19,7 +19,7 @@ import XcodeProjectPlugin
 
 extension CucumberSwiftLintPlugin: XcodeBuildToolPlugin {
     func createBuildCommands(context: XcodePluginContext, target: XcodeTarget) throws -> [Command] {
-        try lintCommands(tool: context.tool(named: "CucumberSwiftLintTool").url,
+        try lintCommands(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                          workDirectory: context.pluginWorkDirectoryURL,
                          targetName: target.displayName,
                          paths: target.inputFiles.map(\.url.path))
@@ -48,7 +48,7 @@ private func lintCommands(tool: URL, workDirectory: URL, targetName: String, pat
     return [
         .buildCommand(displayName: "Checking feature files in \(targetName)",
                       executable: tool,
-                      arguments: ["--stamp", stamp.path, "--features"] + sortedFeatures
+                      arguments: ["lint", "--stamp", stamp.path, "--features"] + sortedFeatures
                         + ["--step-definitions"] + sortedSwiftFiles,
                       inputFiles: (sortedFeatures + sortedSwiftFiles).map { URL(fileURLWithPath: $0) },
                       outputFiles: [stamp])
