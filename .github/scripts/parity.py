@@ -72,6 +72,11 @@ without a behaviour, an issue, an approval or a change, and on a change that
 applies but no longer differs from the golden result, so that a fixed
 difference leaves the file.
 
+A parallel run can't measure coverage per scenario, so the golden result has
+a `parallel` object: the values that replace the golden ones in a parallel run
+(the coverage-off message, and each runner's test count without the coverage
+tests). `golden` run on a parallel result writes only those two values there.
+
 `known` prints the changes that make the golden result equal a result, as the
 JSON to put in an entry's `changes`, for the combination the result names.
 
@@ -312,12 +317,15 @@ def expected_for(golden, combination, known):
     """The golden result as `combination` should give it: the runner's test count, and the known differences
     that apply. Returns it with the applied changes as (entry number, entry, change, golden value). Raises
     ParityError on a malformed entry."""
-    _, runner, _, _ = parse_combination(combination)
+    _, runner, mode, _ = parse_combination(combination)
     expected = copy.deepcopy(golden)
+    overlay = expected.pop("parallel", {})
+    if mode == "parallel":
+        expected.update(copy.deepcopy(overlay))
     framework = RUNNERS[runner]
-    if framework not in golden.get("tests", {}):
+    if framework not in expected.get("tests", {}):
         raise ParityError(f"the golden result has no {framework} test count")
-    expected["tests"] = {framework: golden["tests"][framework]}
+    expected["tests"] = {framework: expected["tests"][framework]}
     applied = []
     for index, entry in enumerate(known, start=1):
         for field in ("combination", "changes", "behaviour", "issues", "approved"):
@@ -402,11 +410,20 @@ def main(argv):
             raise ParityError(f"{args.result} names no combination")
         if args.command == "golden":
             golden = read_json(args.golden, "golden result") if os.path.exists(args.golden) else {"tests": {}}
-            tests = dict(golden.get("tests", {}))
-            tests.update(result["tests"])
-            if args.tests_only:
+            if combination.split("/")[2] == "parallel":
+                overlay = golden.setdefault("parallel", {"tests": dict(golden.get("tests", {}))})
+                overlay["tests"].update(result["tests"])
+                if "messages" in result and not args.tests_only:
+                    overlay["messages"] = result["messages"]
                 result = golden
-            result["tests"] = tests
+            else:
+                tests = dict(golden.get("tests", {}))
+                tests.update(result["tests"])
+                if args.tests_only:
+                    result = golden
+                else:
+                    result["parallel"] = golden.get("parallel", {})
+                result["tests"] = tests
             with open(args.golden, "w", encoding="utf-8") as f:
                 f.write(dump(result))
             print(f"Wrote {combination}'s result to {args.golden}.")

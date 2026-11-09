@@ -184,6 +184,13 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(scenarios["A (line 1)"][0]["steps"], ["2 When s: failed"])
         self.assertEqual(scenarios["B (line 4)"][0]["steps"], ["5 When s: failed (boom)"])
 
+    def test_a_parallel_run_is_compared_with_the_golden_parallel_values(self):
+        golden = dict(GOLDEN, parallel={"messages": ["off"], "tests": {"XCTest": 65, "Swift Testing": 30}})
+        parallel = result(tests={"XCTest": 65}, messages=["off"])
+        self.assertEqual(parity.compare(parallel, golden, [], "swiftpm/xctest/parallel/macOS"), [])
+        self.assertTrue(parity.compare(result(tests={"XCTest": 83}, messages=["off"]), golden, [], "swiftpm/xctest/parallel/macOS"))
+        self.assertEqual(parity.compare(result(), golden, [], "swiftpm/xctest/serial/macOS"), [])
+
     def test_messages_are_skipped_when_the_result_has_none(self):
         without = result()
         del without["messages"]

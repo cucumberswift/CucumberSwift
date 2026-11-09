@@ -448,19 +448,17 @@
     ]
   },
   {
-    "approved": "Ian, 2026-11-08, a stated limit",
-    "behaviour": "With the Swift Testing runner, parallel testing turns coverage and redundancy off, and the run prints a note saying so.",
+    "approved": "Ian, 2026-11-09, pending #515",
+    "behaviour": "With the XCTest runner, a parallel run prints no 'coverage: off, because parallel testing is on' line, as the Swift Testing runner does. Xcode's workers' output isn't in the log, so the suite can't see the line either way.",
     "changes": [
       {
         "path": [
           "messages"
         ],
-        "value": [
-          "CucumberSwift coverage: off, because parallel testing is on. Set CUCUMBER_COVERAGE to YES to measure coverage, with the scenarios run one at a time."
-        ]
+        "value": []
       }
     ],
-    "combination": "*/swift-testing/parallel/*",
+    "combination": "xcode/xctest/parallel/*",
     "issues": [
       515
     ]
