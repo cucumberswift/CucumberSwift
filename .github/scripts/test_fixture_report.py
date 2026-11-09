@@ -25,24 +25,23 @@ def feature(name, scenarios=1):
 
 class FixtureReportTests(unittest.TestCase):
     def setUp(self):
-        self.folder = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.folder)
+        self.root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.root)
+        os.makedirs(os.path.join(self.root, "Demo"))
 
-    def write(self, name, text):
-        path = os.path.join(self.folder, name)
-        with open(path, "w", encoding="utf-8") as file:
+    def write(self, kind, text):
+        with open(os.path.join(self.root, "Demo", kind), "w", encoding="utf-8") as file:
             file.write(text)
-        return path
 
-    def run_main(self, *args):
+    def run_main(self, *args, report=None):
         output = io.StringIO()
         with redirect_stdout(output):
-            status = fixture_report.main(["fixture_report.py", *args])
+            status = fixture_report.run(["fixture_report.py", *args], io.StringIO(report or ""), self.root)
         return status, output.getvalue()
 
-    def check(self, expected, features):
-        return self.run_main("check", self.write("expected-report", expected),
-                             self.write("report.json", json.dumps(features)))
+    def check(self, expected, features, kind="expected-report"):
+        self.write(kind, expected)
+        return self.run_main("check", "Demo", kind, report=json.dumps(features))
 
     def test_a_report_with_each_feature_of_both_runners_passes(self):
         status, output = self.check("# Both targets.\nCheckout with XCTest\n\nCukes\n",
@@ -65,48 +64,46 @@ class FixtureReportTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("has no scenarios", output)
 
-    def test_a_missing_or_broken_report_fails(self):
-        expected = self.write("expected-report", "Cukes\n")
-        status, output = self.run_main("check", expected, os.path.join(self.folder, "missing.json"))
-        self.assertEqual(status, 1)
-        self.assertIn("can't read the report", output)
-        status, output = self.run_main("check", expected, self.write("report.json", "{\"not\": \"a list\"}"))
+    def test_a_report_that_is_not_a_list_of_features_or_not_json_fails(self):
+        self.write("expected-report", "Cukes\n")
+        status, output = self.run_main("check", "Demo", "expected-report", report='{"not": "a list"}')
         self.assertEqual(status, 1)
         self.assertIn("isn't a list of features", output)
+        status, output = self.run_main("check", "Demo", "expected-report", report="")
+        self.assertEqual(status, 1)
+        self.assertIn("can't read the report", output)
 
     def test_the_rerun_file_gives_its_settings_and_its_features(self):
-        path = self.write("expected-report-rerun", "# The rerun.\ntags: checkout\nonly-testing: Unit\nCheckout with XCTest\n")
-        self.assertEqual(self.run_main("get", path, "tags"), (0, "checkout\n"))
-        self.assertEqual(self.run_main("get", path, "only-testing"), (0, "Unit\n"))
-        status, output = self.run_main("check", path, self.write("report.json", json.dumps([feature("Checkout with XCTest")])))
+        self.write("expected-report-rerun", "# The rerun.\ntags: checkout\nonly-testing: Unit\nCheckout with XCTest\n")
+        self.assertEqual(self.run_main("get", "Demo", "expected-report-rerun", "tags"), (0, "checkout\n"))
+        self.assertEqual(self.run_main("get", "Demo", "expected-report-rerun", "only-testing"), (0, "Unit\n"))
+        status, output = self.run_main("check", "Demo", "expected-report-rerun", report=json.dumps([feature("Checkout with XCTest")]))
         self.assertEqual(status, 0, output)
         self.assertIn("the 1 feature it lists", output)
 
-    def test_a_report_the_fixture_should_have_aged_needs_its_marker(self):
-        expected = self.write("expected-report", "ages-report: .aged\nCukes\n")
-        report = self.write("report.json", json.dumps([feature("Cukes")]))
-        status, output = self.run_main("check", expected, report)
-        self.assertEqual(status, 1)
-        self.assertIn("didn't age the report", output)
-        self.write("report.json.aged", "")
-        status, output = self.run_main("check", expected, report)
-        self.assertEqual(status, 0, output)
+    def test_a_fixture_that_ages_its_report_gives_the_marker_suffix(self):
+        self.write("expected-report", "ages-report: .aged\nCukes\n")
+        self.assertEqual(self.run_main("get", "Demo", "expected-report", "ages-report"), (0, ".aged\n"))
 
     def test_a_setting_a_file_does_not_have_is_an_error(self):
-        status, output = self.run_main("get", self.write("expected-report", "Cukes\n"), "tags")
+        self.write("expected-report", "Cukes\n")
+        status, output = self.run_main("get", "Demo", "expected-report", "tags")
         self.assertEqual(status, 1)
         self.assertIn("no `tags:` setting", output)
 
     def test_a_file_without_features_or_a_setting_value_is_an_error(self):
-        for name, text in (("empty", "# Nothing.\n"), ("only-settings", "tags: x\n"), ("no-value", "tags:\nCukes\n")):
-            path = self.write(name, text)
+        for text in ("# Nothing.\n", "tags: x\n", "tags:\nCukes\n"):
+            self.write("expected-report", text)
+            path = fixture_report.expected_file("Demo", "expected-report", self.root)
             with self.assertRaises(ValueError):
                 fixture_report.expectation(path)
 
-    def test_a_path_outside_the_working_folder_home_and_temp_folders_is_refused(self):
-        with self.assertRaises(ValueError):
-            fixture_report.confined(os.path.join(os.sep, "etc", "hosts"))
-        self.assertTrue(fixture_report.confined(self.folder).startswith(os.path.realpath(tempfile.gettempdir())))
+    def test_only_a_fixture_in_the_folder_and_an_expected_file_are_found(self):
+        self.write("expected-report", "Cukes\n")
+        self.assertTrue(fixture_report.expected_file("Demo", "expected-report", self.root).endswith("Demo/expected-report"))
+        for fixture, kind in (("Missing", "expected-report"), ("Demo", "report.json"), ("../Demo", "expected-report")):
+            with self.assertRaises(ValueError):
+                fixture_report.expected_file(fixture, kind, self.root)
 
 
 if __name__ == "__main__":

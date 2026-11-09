@@ -12,6 +12,8 @@ import XCTest
 class ReportRunTests: XCTestCase {
     private var folder: URL!
     private var url: URL { folder.appendingPathComponent("report.json") }
+    /// The command that started an earlier run's workers, which has exited: no process has its ID.
+    private var exitedStarter: RunStarter { RunStarter(pid: 2_000_000_000, started: 1) }
 
     override func setUpWithError() throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("ReportRunTests-\(UUID().uuidString)")
@@ -130,11 +132,6 @@ class ReportRunTests: XCTestCase {
 
     // MARK: With a command that starts the run: swift test and xcodebuild
 
-    /// The command that started an earlier run's workers, which has exited: no process has its ID.
-    private var exitedStarter: RunStarter {
-        RunStarter(pid: 2_000_000_000, started: 1)
-    }
-
     private func runningStarter() throws -> RunStarter {
         try XCTUnwrap(RunStarter(process: getpid()))
     }
@@ -226,7 +223,7 @@ class ReportRunTests: XCTestCase {
 extension ReportRunTests {
     func testAProcessNamedLikeSwiftTestOrXcodebuildIsARunStarter() throws {
         let folder = try XCTUnwrap(folder)
-        let bin = URL(fileURLWithPath: "/", isDirectory: true).appendingPathComponent("bin", isDirectory: true)
+        let bin = URL(fileURLWithPath: NSOpenStepRootDirectory(), isDirectory: true).appendingPathComponent("bin", isDirectory: true)
         for name in ["swift-package", "xcodebuild"] {
             // A process with the command's name: a copy of `sleep`, which runs until the test stops it.
             let command = folder.appendingPathComponent(name)

@@ -176,15 +176,21 @@ for fixture in Fixtures/*/; do
   fi
   python3 .github/scripts/fixture_tests.py "$fixture" "$log"
   if [ -n "$report" ]; then
-    python3 .github/scripts/fixture_report.py check "$fixture/expected-report" "$report"
+    # The marker that a fixture's first runner writes after it sets the report's age.
+    aged_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report || true)
+    if [ -n "$aged_suffix" ] && [ ! -e "$report$aged_suffix" ]; then
+      echo "error: $name: the fixture didn't age the report: there is no $report$aged_suffix"
+      exit 1
+    fi
+    python3 .github/scripts/fixture_report.py check "$name" expected-report < "$report"
     if [ -f "$fixture/expected-report-rerun" ]; then
       rerun_log=$(mktemp)
       rerun_status=0
       if [ -f "$fixture/Package.swift" ]; then
-        rerun_tags=$(python3 .github/scripts/fixture_report.py get "$fixture/expected-report-rerun" tags)
+        rerun_tags=$(python3 .github/scripts/fixture_report.py get "$name" expected-report-rerun tags)
         CUCUMBER_TAGS="$rerun_tags" with_xcode swift test --package-path "$fixture" > "$rerun_log" 2>&1 || rerun_status=$?
       else
-        rerun_target=$(python3 .github/scripts/fixture_report.py get "$fixture/expected-report-rerun" only-testing)
+        rerun_target=$(python3 .github/scripts/fixture_report.py get "$name" expected-report-rerun only-testing)
         with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" \
           -destination "$destination" -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO \
           -only-testing:"$rerun_target" > "$rerun_log" 2>&1 || rerun_status=$?
@@ -192,7 +198,7 @@ for fixture in Fixtures/*/; do
       cat "$rerun_log"
       rm -f "$rerun_log"
       if [ "$rerun_status" -ne 0 ]; then exit "$rerun_status"; fi
-      python3 .github/scripts/fixture_report.py check "$fixture/expected-report-rerun" "$report"
+      python3 .github/scripts/fixture_report.py check "$name" expected-report-rerun < "$report"
     fi
     if [ -n "$report_folder" ]; then rm -rf "$report_folder"; fi
     if [ -n "$caller_report" ]; then export CUCUMBER_REPORT_PATH="$caller_report"; else unset CUCUMBER_REPORT_PATH; fi
