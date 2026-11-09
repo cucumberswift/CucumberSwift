@@ -15,7 +15,7 @@ name: CI
 # narrow the parallel tests to some combinations, and skip every other job.
 # The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
 # the nightly and manual runs (tvOS and watchOS tests, Older runtime tests), and so
-# does mutation testing on Mac Catalyst, tvOS and watchOS (Mutation tests (Catalyst, tvOS and watchOS)); pull
+# does mutation testing on Mac Catalyst, tvOS and watchOS; pull
 # requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
 #
 # A pull request that merges through the merge queue is tested twice on one
