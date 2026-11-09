@@ -1,8 +1,10 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
 load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
+load("@rules_apple//apple:ios.bzl", "ios_unit_test")
 load("@rules_apple//apple:macos.bzl", "macos_unit_test")
 load("@rules_apple//apple:resources.bzl", "apple_resource_group")
+load("@rules_apple//apple:watchos.bzl", "watchos_unit_test")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
@@ -76,5 +78,25 @@ macos_unit_test(
     env = {"CUCUMBER_COVERAGE_SOURCES": "Grades.swift"},
     minimum_os_version = "10.15",
     runner = ":macos_xctest_runner",
+    deps = [":CucumberSwiftCoverageTestsLib"],
+)
+
+# The same features on an iOS simulator, with rules_apple's runner, and on a watchOS simulator, with the
+# cucumberswift module's runner (#534). Tagged "manual" so that `bazel test //...` leaves them out: only
+# `bazel coverage` on these targets runs them.
+ios_unit_test(
+    name = "CucumberSwiftCoverageTests_iOS",
+    env = {"CUCUMBER_COVERAGE_SOURCES": "Grades.swift"},
+    minimum_os_version = "13.0",
+    tags = ["manual"],
+    deps = [":CucumberSwiftCoverageTestsLib"],
+)
+
+watchos_unit_test(
+    name = "CucumberSwiftCoverageTests_watchOS",
+    env = {"CUCUMBER_COVERAGE_SOURCES": "Grades.swift"},
+    minimum_os_version = "7.4",
+    runner = "@cucumberswift//bazel:watchos_xctest_runner",
+    tags = ["manual"],
     deps = [":CucumberSwiftCoverageTestsLib"],
 )
