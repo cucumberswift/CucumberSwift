@@ -31,6 +31,17 @@ private func payAtTheTill() async throws {
     Shop.current.cukes = 0
 }
 
+@MainActor
+private func checkTheShopIsPaid() async throws {
+    #expect(Shop.current.opened)
+    #expect(Shop.current.cukes == 0)
+}
+
+@MainActor
+private func checkOneCuke() async throws {
+    #expect(Shop.current.cukes == 1)
+}
+
 extension Cucumber {
     func swiftDSLFeatures() {
         Feature("Swift DSL", tags: ["dsl"]) {
@@ -44,19 +55,12 @@ extension Cucumber {
                 When(I: addCukes(2))
                 And(I: addCukes(3))
                 Then(I: payAtTheTill)
-                // swiftlint:disable:next trailing_closure
-                And(the: {
-                    #expect(Shop.current.opened)
-                    #expect(Shop.current.cukes == 0)
-                })
+                And(the: checkTheShopIsPaid)
             }
 
             Scenario("Each scenario has its own state") {
                 When(I: addCukes(1))
-                // swiftlint:disable:next trailing_closure
-                Then(the: {
-                    #expect(Shop.current.cukes == 1)
-                })
+                Then(the: checkOneCuke)
             }
         }
     }
