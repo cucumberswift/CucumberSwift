@@ -73,6 +73,15 @@ class ThrownErrorTests: XCTestCase {
         XCTAssertEqual(try messageOfStep { throw Localized() }, "the voucher expired")
     }
 
+    // With no test running there is nowhere to record the failure, so it fails the current test directly.
+    func testAThrownErrorFailsTheCurrentTestWhenNoTestIsRunning() throws {
+        Cucumber.shared.runningTestCaseObserver.testCaseDidFinish(self)
+        defer { Cucumber.shared.runningTestCaseObserver.testCaseWillStart(self) }
+
+        // XCTFail adds its own "failed - " to the message.
+        XCTAssertEqual(try messageOfStep { throw Described() }, "failed - the card was declined")
+    }
+
     #if canImport(Testing)
     func testAFailedRequireIsReportedByItsExpectation() throws {
         XCTAssertEqual(try messageOfStep { try #require(1 == 2) }, "Expectation failed: 1 == 2")
@@ -85,6 +94,17 @@ class ThrownErrorTests: XCTestCase {
 
         XCTAssertEqual(property, "Expectation failed: numbers.isEmpty")
         XCTAssertEqual(call, "Expectation failed: numbers.contains(5)")
+    }
+
+    func testAFailedRequireWithAStringALabelledArgumentAndAnUnknownFormIsReportedAsFarAsItIsKnown() {
+        let numbers = [Int](), word = "a"
+        let string = captureRequireFailure { try #require(word == "b") }
+        let labelled = captureRequireFailure { try #require(numbers.firstIndex(of: 5) != nil) }
+        let unknown = captureRequireFailure { try #require(!numbers.isEmpty || numbers.count > 1) }
+
+        XCTAssertEqual(string, "Expectation failed: word == \"b\"")
+        XCTAssertEqual(labelled, "Expectation failed: numbers.firstIndex(of: 5) != nil")
+        XCTAssertNotNil(unknown)
     }
 
     private func captureRequireFailure(_ body: () throws -> Void) -> String? {
