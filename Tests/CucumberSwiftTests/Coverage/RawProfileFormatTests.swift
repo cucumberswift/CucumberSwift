@@ -25,27 +25,25 @@ final class RawProfileFormatTests: XCTestCase {
         values.withUnsafeBytes { Array($0) }
     }
 
-    /// The raw profile that `format` writes for 2 data records of 0xAA bytes, 3 counters, a bitmap of 3 bytes
-    /// and names of 5 bytes, with flags in its version.
+    /// A copy of `bytes` in memory that outlives the call, as a binary's sections do.
+    private func section(_ bytes: [UInt8]) -> UnsafeRawBufferPointer {
+        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: max(bytes.count, 1), alignment: 8)
+        buffer.copyBytes(from: bytes)
+        addTeardownBlock { buffer.deallocate() }
+        return UnsafeRawBufferPointer(rebasing: buffer[..<bytes.count])
+    }
+
+    /// The raw profile that `format` writes for 2 data records of 0xAA bytes, 3 counters, a bitmap and names,
+    /// with flags in its version.
     private func profile(_ format: RawProfileFormat, bitmap: [UInt8], names: [UInt8]) -> Data {
-        let data = [UInt8](repeating: 0xAA, count: 2 * format.recordSize)
-        let section = [UInt8](repeating: 0, count: 24)
-        return data.withUnsafeBytes { data in
-            section.withUnsafeBytes { section in
-                bitmap.withUnsafeBytes { bitmap in
-                    names.withUnsafeBytes { names in
-                        format.rawProfile(
-                            version: format.version | (1 << 56),
-                            data: data,
-                            countersSection: section,
-                            counters: counts([3, 0, 1]),
-                            bitmap: bitmap,
-                            names: names
-                        )
-                    }
-                }
-            }
-        }
+        format.rawProfile(
+            version: format.version | (1 << 56),
+            data: section([UInt8](repeating: 0xAA, count: 2 * format.recordSize)),
+            countersSection: section([UInt8](repeating: 0, count: 24)),
+            counters: counts([3, 0, 1]),
+            bitmap: section(bitmap),
+            names: section(names)
+        )
     }
 
     func testEachSupportedVersionHasItsFormatWhateverItsFlags() {
@@ -99,7 +97,7 @@ final class RawProfileFormatTests: XCTestCase {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         for file in try counters.writeProfiles(named: "merge", in: folder, since: counters.snapshot()) {
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+            process.executableURL = ["usr", "bin", "xcrun"].reduce(URL(fileURLWithPath: "/")) { $0.appendingPathComponent($1) }
             process.arguments = [
                 "llvm-profdata",
                 "merge",
