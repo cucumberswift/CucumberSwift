@@ -152,14 +152,29 @@ public struct ScenarioTestNames {
     }
 
     /// CucumberSwift numbers a repeated name across every feature in the run, so the number of a test depends on the other
-    /// feature files. Two features with one title could swap numbers, so the helper doesn't guess.
+    /// feature files. Two features whose titles make one name, as `Pay now` and `Pay-now` do, could swap numbers, and the
+    /// Swift Testing plugin numbers a repeated suite name by the order of the target's files, so the helper doesn't guess.
     private mutating func rejectSameFeatureTitle(as feature: FeatureFile.Feature, besides url: URL) throws {
         for other in files.values.joined() where other != url {
-            if (try? parse(other))?.title == feature.title {
-                let files = "\(url.lastPathComponent) and \(other.lastPathComponent)"
-                throw Failure(description: "\(files) are both the feature \"\(feature.title)\", so a scenario's test name could be either one's")
-            }
+            guard let title = (try? parse(other))?.title, namesTheSame(title, feature.title) else { continue }
+            let files = "\(url.lastPathComponent) and \(other.lastPathComponent)"
+            throw Failure(description: "\(files) are the features \"\(title)\" and \"\(feature.title)\", so a scenario's test name could be either one's")
         }
+    }
+
+    /// Whether two feature titles give one test name, for either runner: the XCTest runner's, as written or in camel case,
+    /// and the Swift Testing plugin's type name.
+    private func namesTheSame(_ first: String, _ second: String) -> Bool {
+        first == second
+            || TestNames.name(first, readable: readable) == TestNames.name(second, readable: readable)
+            || suiteName(first) == suiteName(second)
+    }
+
+    /// The name of a feature's Swift Testing suite on its own, after the plugin's fallback for an empty or reserved name:
+    /// `Test` and `Feature` both give `Feature`.
+    private func suiteName(_ title: String) -> String {
+        var used = Set<String>()
+        return FeatureFile.uniqueSwiftTestingName(FeatureFile.typeName(for: title), fallback: "Feature", in: &used)
     }
 
     private mutating func parse(_ url: URL) throws -> FeatureFile.Feature {

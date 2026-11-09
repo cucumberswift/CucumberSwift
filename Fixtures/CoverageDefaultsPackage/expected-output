@@ -1,0 +1,9 @@
+# Lines `mise run test-fixtures` expects in this fixture's test output. They show that each runner measured
+# the coverage and scored the Grading feature, and that the Swift Testing runner printed the feature's warnings.
+CucumberSwift coverage: Grading: 50% of the code its scenarios ran (4 of 8 regions in 1 function), 50% of all measured code, redundancy 33%
+Test Case '-[Grading › Coverage scores Coverage]' passed
+Test Case '-[Grading › Coverage scores Redundancy]' passed
+Grading.feature:1: warning: Feature coverage 50%
+Grading.feature:1: warning: Feature redundancy: 33% of its scenarios are redundant
+Grading.feature:7: warning: Scenario adds no coverage of its own
+Grading.feature:5: warning: Redundant step. 100% of the code in this step is repeated by the step at line 9

@@ -100,12 +100,35 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
         }
     }
 
+    func testRefusesTwoFeatureTitlesThatMakeOneSuiteName() throws {
+        try write("Feature: Pay now\n\n  Scenario: Pay\n    Given a card\n", to: "Features/A.feature")
+        try write("Feature: Pay-now\n\n  Scenario: Pay\n    Given a card\n", to: "Features/B.feature")
+        var names = ScenarioTestNames(root: folder)
+        for feature in ["Features/A.feature", "Features/B.feature"] {
+            XCTAssertThrowsError(try names.swiftTestingIdentifier(for: id(3, feature: feature))) {
+                XCTAssertTrue("\($0)".contains("could be either one's"), "\($0)")
+            }
+            XCTAssertThrowsError(try names.testNames(for: id(3, feature: feature)))
+        }
+    }
+
+    func testRefusesTwoTitlesThatMakeOneSuiteNameOnlyAfterTheFallbackForAReservedName() throws {
+        // The plugin can't name a suite `Test`, so it names it `Feature`, as it does a feature titled `Feature`.
+        try write("Feature: Feature\n\n  Scenario: Pay\n    Given a card\n", to: "Features/A.feature")
+        try write("Feature: Test\n\n  Scenario: Pay\n    Given a card\n", to: "Features/B.feature")
+        var names = ScenarioTestNames(root: folder)
+        XCTAssertThrowsError(try names.swiftTestingIdentifier(for: id(3, feature: "Features/A.feature"))) {
+            XCTAssertTrue("\($0)".contains("could be either one's"), "\($0)")
+        }
+        XCTAssertThrowsError(try names.swiftTestingIdentifier(for: id(3, feature: "Features/B.feature")))
+    }
+
     func testRefusesTwoFeatureFilesWithOneTitleBecauseTheirNumbersCouldSwap() throws {
         try write(voting, to: "Features/Voting.feature")
         try write(voting, to: "Other/Elections.feature")
         var names = ScenarioTestNames(root: folder)
         XCTAssertThrowsError(try names.testNames(for: id(3))) {
-            XCTAssertTrue("\($0)".contains("both the feature \"Voting\""), "\($0)")
+            XCTAssertTrue("\($0)".contains("the features \"Voting\" and \"Voting\""), "\($0)")
         }
     }
 
