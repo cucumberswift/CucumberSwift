@@ -13,6 +13,7 @@ combination and calls this script:
                       [--xcresult-summary <json>]
   parity.py compare --result <file> [--golden <file>] [--known <file>]
   parity.py golden --result <file> [--golden <file>]
+  parity.py known --result <file> [--golden <file>]
 
 A combination names what ran, as build tool/runner/mode/platform, such as
 swiftpm/xctest/serial/macOS. The runner is xctest or swift-testing, and the
@@ -53,20 +54,26 @@ they aren't behaviour a user can change:
     messages to compare, and the result has none; compare skips them.
 
 `compare` fails when the result differs from the golden one, printing a
-unified diff. A known difference is an entry in known-differences.json:
+unified diff. The golden result records the intended behaviour. A known
+difference is an entry in known-differences.json, for a combination whose
+behaviour differs until an issue lands, or for a limit a maintainer accepted:
 
   {"combination": "*/swift-testing/parallel/*",
-   "path": ["messages"],
-   "value": [...],
+   "changes": [{"path": ["messages"], "value": [...]}],
    "behaviour": "What differs, as a user sees it",
-   "issue": 123,
+   "issues": [123],
    "approved": "The maintainer who approved it, and when"}
 
-The entry applies to every combination its pattern matches (fnmatch), and
-replaces the golden value at `path` (keys into the result) with `value`, or
-removes it when `value` is absent. `compare` fails on an entry without a
-behaviour, an issue or an approval, and on an entry that applies but changes
-nothing the result needs, so that a fixed difference leaves the file.
+The entry applies to every combination that matches its pattern, or any of
+its patterns if `combination` is a list (fnmatch). Each
+change replaces the golden value at `path` (keys into the result) with
+`value`, or removes it when `value` is absent. `compare` fails on an entry
+without a behaviour, an issue, an approval or a change, and on a change that
+applies but no longer differs from the golden result, so that a fixed
+difference leaves the file.
+
+`known` prints the changes that make the golden result equal a result, as the
+JSON to put in an entry's `changes`, for the combination the result names.
 
 `golden` writes the result as the golden one, for a deliberate change to the
 suite, keeping the other runner's test count. With --tests-only it writes only
@@ -93,6 +100,8 @@ KNOWN = os.path.join(ROOT, "Fixtures", "Parity", "known-differences.json")
 RUNNERS = {"xctest": "XCTest", "swift-testing": "Swift Testing"}
 MODES = ("serial", "parallel")
 
+# The tag on a scenario whose failure message is its assertion API's own.
+ASSERTION_TEXT = "assertion-text"
 # A path, as tools print one: absolute, or a file:// URL.
 PATH = re.compile(r"(file://)?(/[^\s:'\"()]+/)+")
 # CucumberSwift's lines: its coverage report and its notes.
@@ -147,17 +156,20 @@ def normalize_report(report):
         scenarios = {}
         for element in feature.get("elements", []):
             steps = []
+            tags = [tag.get("name") for tag in element.get("tags", [])]
             for step in element.get("steps", []):
                 result = step.get("result", {})
                 text = f"{step.get('line')} {step.get('keyword', '').strip()} {step.get('name')}: {result.get('status')}"
-                error = strip_noise(first_line(result.get("error_message", "")))
+                # An assertion's message is the assertion API's own, such as XCTAssertEqual's or #expect's, so a
+                # scenario tagged @assertion-text compares only that its step failed.
+                error = "" if ASSERTION_TEXT in tags else strip_noise(first_line(result.get("error_message", "")))
                 if error:
                     text += f" ({error})"
                 steps.append(text)
             key = f"{element.get('name')} (line {element.get('line')})"
             scenarios.setdefault(key, []).append({
                 "keyword": element.get("keyword"),
-                "tags": [tag.get("name") for tag in element.get("tags", [])],
+                "tags": tags,
                 "steps": steps,
             })
         features[feature.get("name")] = {
@@ -224,12 +236,13 @@ def read_failed(output):
 
 def failed_from_summary(summary):
     """The sorted scenario titles of the failures in an xcresult summary. The XCTest runner's failed test is
-    a step in the suite `F01 S02 › Feature › Scenario/1`, and the Swift Testing runner's a scenario."""
+    a step, identified as `Feature › Scenario/1 › Step`, with `F01 S02 › ` before it when Xcode makes a test
+    class for each scenario. The Swift Testing runner's is the scenario, named by its testName."""
     failed = set()
     for failure in summary.get("testFailures", []):
-        parts = failure.get("testIdentifierString", "").split(" › ")
-        if len(parts) >= 3 and re.match(r"^F\d+ S\d+$", parts[0]):
-            failed.add(parts[2].rsplit("/", 1)[0])
+        parts = re.sub(r"^F\d+ S\d+ › ", "", failure.get("testIdentifierString", "")).split(" › ")
+        if len(parts) >= 3:
+            failed.add(parts[1].rsplit("/", 1)[0])
         else:
             failed.add(failure.get("testName", ""))
     return sorted(failed)
@@ -272,9 +285,33 @@ def dump(value):
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
 
+def diff_changes(expected, actual, path=()):
+    """The changes that turn `expected` into `actual`: the paths where they differ, as {path, value} (a missing key
+    in `actual` has no value). It descends through objects and replaces lists and scalars whole."""
+    changes = []
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        for key in sorted(set(expected) | set(actual)):
+            if key not in actual:
+                changes.append({"path": list(path) + [key]})
+            elif key not in expected:
+                changes.append({"path": list(path) + [key], "value": actual[key]})
+            else:
+                changes += diff_changes(expected[key], actual[key], path + (key,))
+    elif expected != actual:
+        changes.append({"path": list(path), "value": actual})
+    return changes
+
+
+def get_path(value, path):
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
+
+
 def expected_for(golden, combination, known):
     """The golden result as `combination` should give it: the runner's test count, and the known differences
-    that apply. Raises ParityError on a malformed entry."""
+    that apply. Returns it with the applied changes as (entry number, entry, change, golden value). Raises
+    ParityError on a malformed entry."""
     _, runner, _, _ = parse_combination(combination)
     expected = copy.deepcopy(golden)
     framework = RUNNERS[runner]
@@ -282,26 +319,28 @@ def expected_for(golden, combination, known):
         raise ParityError(f"the golden result has no {framework} test count")
     expected["tests"] = {framework: golden["tests"][framework]}
     applied = []
-    for index, entry in enumerate(known):
-        for field in ("combination", "path", "behaviour", "issue", "approved"):
+    for index, entry in enumerate(known, start=1):
+        for field in ("combination", "changes", "behaviour", "issues", "approved"):
             if not entry.get(field):
-                raise ParityError(f"known difference {index + 1} has no {field}")
-        if not isinstance(entry["path"], list):
-            raise ParityError(f"known difference {index + 1}'s path must be a list of keys")
-        if not fnmatch.fnmatchcase(combination, entry["combination"]):
+                raise ParityError(f"known difference {index} has no {field}")
+        if not isinstance(entry["issues"], list):
+            raise ParityError(f"known difference {index}'s issues must be a list of issue numbers")
+        patterns = entry["combination"] if isinstance(entry["combination"], list) else [entry["combination"]]
+        if not any(fnmatch.fnmatchcase(combination, pattern) for pattern in patterns):
             continue
-        parent = expected
-        for key in entry["path"][:-1]:
-            if not isinstance(parent, dict) or key not in parent:
-                raise ParityError(f"known difference {index + 1}'s path {entry['path']} isn't in the golden result")
-            parent = parent[key]
-        last = entry["path"][-1]
-        before = copy.deepcopy(parent.get(last)) if isinstance(parent, dict) else None
-        if "value" in entry:
-            parent[last] = entry["value"]
-        elif isinstance(parent, dict):
-            parent.pop(last, None)
-        applied.append((index, entry, before))
+        for change in entry["changes"]:
+            path = change.get("path")
+            if not isinstance(path, list) or not path:
+                raise ParityError(f"known difference {index} has a change whose path isn't a list of keys")
+            parent = get_path(expected, path[:-1])
+            if not isinstance(parent, dict):
+                raise ParityError(f"known difference {index}'s path {path} isn't in the golden result")
+            before = copy.deepcopy(parent.get(path[-1]))
+            if "value" in change:
+                parent[path[-1]] = change["value"]
+            else:
+                parent.pop(path[-1], None)
+            applied.append((index, entry, change, before))
     return expected, applied
 
 
@@ -311,13 +350,11 @@ def compare(result, golden, known, combination):
     if "messages" not in result:
         expected.pop("messages", None)
     errors = []
-    for index, entry, before in applied:
-        actual = result
-        for key in entry["path"]:
-            actual = actual.get(key) if isinstance(actual, dict) else None
-        if actual == before:
-            errors.append(f"error: known difference {index + 1} ({entry['behaviour']}) applies to {combination}, "
-                          f"but the result no longer differs there. Remove it from known-differences.json.")
+    for index, entry, change, before in applied:
+        if get_path(result, change["path"]) == before:
+            errors.append(f"error: known difference {index} ({entry['behaviour']}) changes {'/'.join(change['path'])} "
+                          f"for {combination}, but the result no longer differs there. Remove the change from "
+                          f"known-differences.json.")
     if result != expected:
         diff = difflib.unified_diff(dump(expected).splitlines(), dump(result).splitlines(),
                                     "golden.json (with known differences)", combination, lineterm="")
@@ -344,6 +381,9 @@ def main(argv):
     g.add_argument("--result", required=True)
     g.add_argument("--golden", default=GOLDEN)
     g.add_argument("--tests-only", action="store_true")
+    k = commands.add_parser("known")
+    k.add_argument("--result", required=True)
+    k.add_argument("--golden", default=GOLDEN)
     args = parser.parse_args(argv[1:])
     try:
         if args.command == "normalize":
@@ -372,6 +412,12 @@ def main(argv):
             print(f"Wrote {combination}'s result to {args.golden}.")
             return 0
         golden = read_json(args.golden, "golden result")
+        if args.command == "known":
+            expected, _ = expected_for(golden, combination, [])
+            if "messages" not in result:
+                expected.pop("messages", None)
+            print(json.dumps(diff_changes(expected, result), indent=2, sort_keys=True, ensure_ascii=False))
+            return 0
         known = read_json(args.known, "known differences") if os.path.exists(args.known) else []
         errors = compare(result, golden, known, combination)
     except ParityError as error:

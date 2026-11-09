@@ -86,6 +86,7 @@ class NormalizeTests(unittest.TestCase):
     def test_the_failures_in_a_result_bundle_name_the_scenario(self):
         summary = {"testFailures": [
             {"testIdentifierString": "F02 S04 › Failures › A requirement stops a step/1 › When it fails", "testName": "1 › When it fails"},
+            {"testIdentifierString": "Failures › A requirement stops a step/2 › Then it never runs", "testName": "2 › Then it never runs"},
             {"testIdentifierString": "Features/Failures/ARequirement", "testName": "An expectation fails a step"},
         ]}
         self.assertEqual(parity.failed_from_summary(summary), ["A requirement stops a step", "An expectation fails a step"])
@@ -104,8 +105,8 @@ class NormalizeTests(unittest.TestCase):
 
 GOLDEN = {"exit": "failed", "tests": {"XCTest": 83, "Swift Testing": 30}, "messages": ["a", "b"],
           "features": {"F": {"tags": []}}}
-KNOWN = {"combination": "*/swift-testing/parallel/*", "path": ["messages"], "value": ["c"],
-         "behaviour": "Coverage is off", "issue": 1, "approved": "Ian, 2026-11-09"}
+KNOWN = {"combination": "*/swift-testing/parallel/*", "changes": [{"path": ["messages"], "value": ["c"]}],
+         "behaviour": "Coverage is off", "issues": [1], "approved": "Ian, 2026-11-09"}
 
 
 def result(**changes):
@@ -147,10 +148,41 @@ class CompareTests(unittest.TestCase):
         self.assertTrue(any("no longer differs" in error for error in errors), errors)
 
     def test_a_known_difference_needs_every_field(self):
-        for field in ("combination", "path", "behaviour", "issue", "approved"):
+        for field in ("combination", "changes", "behaviour", "issues", "approved"):
             entry = {key: value for key, value in KNOWN.items() if key != field}
             with self.assertRaises(parity.ParityError, msg=field):
                 parity.compare(result(), GOLDEN, [entry], "swiftpm/xctest/serial/macOS")
+
+    def test_a_change_without_a_value_removes_the_golden_key(self):
+        known = dict(KNOWN, changes=[{"path": ["messages"]}])
+        without = result(tests={"Swift Testing": 30})
+        del without["messages"]
+        self.assertEqual(parity.compare(without, GOLDEN, [known], "swiftpm/swift-testing/parallel/macOS"), [])
+
+    def test_known_prints_the_changes_that_make_the_golden_result_equal_a_result(self):
+        actual = result(messages=["c"], features={"F": {"tags": ["@x"]}}, extra=1)
+        del actual["exit"]
+        changes = parity.diff_changes(GOLDEN, actual)
+        self.assertEqual(changes, [
+            {"path": ["exit"]},
+            {"path": ["extra"], "value": 1},
+            {"path": ["features", "F", "tags"], "value": ["@x"]},
+            {"path": ["messages"], "value": ["c"]},
+            {"path": ["tests", "Swift Testing"]},
+        ])
+        # compare() gives a result only its runner's test count, which is not a known difference.
+        entry = dict(KNOWN, combination="*", changes=[change for change in changes if change["path"][0] != "tests"])
+        self.assertEqual(parity.compare(actual, GOLDEN, [entry], "swiftpm/xctest/serial/macOS"), [])
+
+    def test_assertion_text_is_dropped_only_for_scenarios_tagged_assertion_text(self):
+        report = [{"name": "F", "uri": "x/F.feature", "elements": [
+            {"name": "A", "line": 1, "keyword": "Scenario", "tags": [{"name": "assertion-text"}], "steps": [
+                {"line": 2, "keyword": "When ", "name": "s", "result": {"status": "failed", "error_message": "XCTAssertEqual failed"}}]},
+            {"name": "B", "line": 4, "keyword": "Scenario", "tags": [], "steps": [
+                {"line": 5, "keyword": "When ", "name": "s", "result": {"status": "failed", "error_message": "boom"}}]}]}]
+        scenarios = parity.normalize_report(report)["F"]["scenarios"]
+        self.assertEqual(scenarios["A (line 1)"][0]["steps"], ["2 When s: failed"])
+        self.assertEqual(scenarios["B (line 4)"][0]["steps"], ["5 When s: failed (boom)"])
 
     def test_messages_are_skipped_when_the_result_has_none(self):
         without = result()

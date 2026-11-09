@@ -6,7 +6,8 @@
     "A step with no step definition fails",
     "A thrown error fails a step",
     "An XCTest assertion fails a step",
-    "An expectation fails a step"
+    "An expectation fails a step",
+    "Scenario state outside a scenario fails"
   ],
   "features": {
     "Coverage": {
@@ -45,48 +46,49 @@
     "Failures": {
       "file": "Failures.feature",
       "scenarios": {
-        "A recorded issue fails a step (line 11)": [
+        "A recorded issue fails a step (line 13)": [
           {
             "keyword": "Scenario",
             "steps": [
-              "12 When an issue is recorded: passed",
-              "13 Then this step never runs: failed (failed - This step should never run)"
+              "15 When an issue is recorded: failed"
+            ],
+            "tags": [
+              "assertion-text"
+            ]
+          }
+        ],
+        "A requirement stops a step (line 18)": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "19 When a requirement fails: failed (Expectation failed: 1 == 2)"
             ],
             "tags": []
           }
         ],
-        "A requirement stops a step (line 15)": [
+        "A skipped step skips the rest of the scenario (line 30)": [
           {
             "keyword": "Scenario",
             "steps": [
-              "16 When a requirement fails: failed (XCTAssertNoThrow failed: threw error \"ExpectationFailedError(expectation: Testing.Expectation(evaluatedExpression: Testing.__Expression.Kind.binaryOperation(lhs: Testing.__Expression.Kind.generic(\"1\"), operator: \"==\", rhs: Testing.__Expression.Kind.generic(\"2\")), mismatchedErrorDescription: nil, differenceDescription: nil, mismatchedExitConditionDescription: nil, isPassing: false, isRequired: true, sourceLocation: <step definition>))\")"
+              "31 When a step skips the scenario: skipped"
             ],
             "tags": []
           }
         ],
-        "A skipped step skips the rest of the scenario (line 27)": [
+        "A step with no step definition fails (line 26)": [
           {
             "keyword": "Scenario",
             "steps": [
-              "28 When a step skips the scenario: skipped"
+              "27 When a step that nothing matches: failed (No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file:)"
             ],
             "tags": []
           }
         ],
-        "A step with no step definition fails (line 23)": [
+        "A thrown error fails a step (line 22)": [
           {
             "keyword": "Scenario",
             "steps": [
-              "24 When a step that nothing matches: failed (No CucumberSwift expression found that matches this step. Try adding the following Swift code to your step implementation file:)"
-            ],
-            "tags": []
-          }
-        ],
-        "A thrown error fails a step (line 19)": [
-          {
-            "keyword": "Scenario",
-            "steps": [
-              "20 When a step throws an error: failed (XCTAssertNoThrow failed: threw error \"The step threw an error on purpose\")"
+              "23 When a step throws an error: failed (The step threw an error on purpose)"
             ],
             "tags": []
           }
@@ -95,19 +97,22 @@
           {
             "keyword": "Scenario",
             "steps": [
-              "4 When an XCTest assertion fails: failed (XCTAssertEqual failed: (\"1\") is not equal to (\"2\") - An XCTest assertion failed on purpose)"
+              "5 When an XCTest assertion fails: failed"
             ],
-            "tags": []
+            "tags": [
+              "assertion-text"
+            ]
           }
         ],
-        "An expectation fails a step (line 7)": [
+        "An expectation fails a step (line 8)": [
           {
             "keyword": "Scenario",
             "steps": [
-              "8 When an expectation fails: passed",
-              "9 Then this step never runs: failed (failed - This step should never run)"
+              "10 When an expectation fails: failed"
             ],
-            "tags": []
+            "tags": [
+              "assertion-text"
+            ]
           }
         ]
       },
@@ -331,7 +336,7 @@
           {
             "keyword": "Scenario",
             "steps": [
-              "4 Then a feature hook asked for scenario state: passed"
+              "4 Then a feature hook asked for scenario state: failed (Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.)"
             ],
             "tags": []
           }
@@ -412,6 +417,11 @@
     }
   },
   "messages": [
+    "Coverage.feature:1: warning: Feature coverage 57%: its scenarios ran 4 of the 7 regions in the 1 function they entered (warning at or below 80%). Not run: static ParityShop.Shop.price(of: String), 3 regions, entered by the scenarios at lines 3, 6, 9.",
+    "Coverage.feature:1: warning: Feature redundancy: 33% of its scenarios are redundant, because other scenarios run all the code they run after the Background, about <n> s of <n> s in redundant scenarios (warning at or above 30%).",
+    "Coverage.feature:4: warning: Redundant step. 100% of the code in this step is repeated by the step at line 7. Consider a Scenario Outline for different values.",
+    "Coverage.feature:6: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "Coverage.feature:7: warning: Redundant step. 100% of the code in this step is repeated by the step at line 4. Consider a Scenario Outline for different values.",
     "CucumberSwift coverage: 30 scenarios in run-<id>",
     "CucumberSwift coverage: Coverage: 57% of the code its scenarios ran (4 of 7 regions in 1 function), 31% of all measured code, redundancy 33%, about <n> s of <n> s in redundant scenarios",
     "CucumberSwift coverage: Failures: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
@@ -421,9 +431,29 @@
     "CucumberSwift coverage: Rules and Backgrounds › Another rule has only the feature's Background: 100% of the code its scenarios ran (3 of 3 regions in 3 functions), 23% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
     "CucumberSwift coverage: Scenario Outlines: 85% of the code its scenarios ran (11 of 13 regions in 7 functions), 85% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
     "CucumberSwift coverage: Scenario state in a feature hook: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
-    "CucumberSwift coverage: Scenario state: 100% of the code its scenarios ran (4 of 4 regions in 4 functions), 31% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+    "CucumberSwift coverage: Scenario state: 100% of the code its scenarios ran (4 of 4 regions in 4 functions), 31% of all measured code, redundancy 67%, about <n> s of <n> s in redundant scenarios",
     "CucumberSwift coverage: Tags › A rule's tags reach its scenarios: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
-    "CucumberSwift coverage: Tags: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios"
+    "CucumberSwift coverage: Tags: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+    "Matching.feature:10: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:13: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "Matching.feature:14: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:1: warning: Feature redundancy: 50% of its scenarios are redundant, because other scenarios run all the code they run after the Background, about <n> s of <n> s in redundant scenarios (warning at or above 30%).",
+    "Matching.feature:20: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "Matching.feature:21: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:28: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:29: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:30: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:33: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "Matching.feature:34: warning: Redundant step. 100% of the code in this step is repeated by the step at line 5. Consider moving it to the Background.",
+    "Matching.feature:5: warning: Redundant step. 100% of the code in this step is repeated by the step at line 10. Consider moving it to the Background.",
+    "Rules.feature:11: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "Rules.feature:6: warning: Rule coverage 77%: its scenarios ran 10 of the 13 regions in the 7 functions they entered (warning at or below 80%). Not run: static ParityShop.Shop.price(of: String), 3 regions, entered by the scenarios at lines 11, 14.",
+    "Rules.feature:6: warning: Rule redundancy: 50% of its scenarios are redundant, because other scenarios run all the code they run after the Background, about <n> s of <n> s in redundant scenarios (warning at or above 30%).",
+    "State.feature:13: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "State.feature:1: warning: Feature redundancy: 67% of its scenarios are redundant, because other scenarios run all the code they run after the Background, about <n> s of <n> s in redundant scenarios (warning at or above 30%).",
+    "State.feature:4: warning: Redundant step. 100% of the code in this step is repeated by the step at line 9. Consider a Scenario Outline for different values.",
+    "State.feature:8: warning: Scenario adds no coverage of its own: other scenarios run all the code it runs after the Background. It took <n> s. Consider a Scenario Outline for other values, or remove it.",
+    "State.feature:9: warning: Redundant step. 100% of the code in this step is repeated by the step at line 4. Consider a Scenario Outline for different values."
   ],
   "tests": {
     "Swift Testing": 30,
@@ -457,54 +487,45 @@
         "AfterScenario"
       ]
     ],
-    "Failures › A recorded issue fails a step (line 11)": [
+    "Failures › A recorded issue fails a step (line 13)": [
       [
         "BeforeScenario",
         "BeforeStep an issue is recorded",
         "step: issue recorded",
         "AfterStep an issue is recorded",
-        "BeforeStep this step never runs",
-        "step: never runs",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
-    "Failures › A requirement stops a step (line 15)": [
+    "Failures › A requirement stops a step (line 18)": [
       [
         "BeforeScenario",
         "BeforeStep a requirement fails",
         "step: requirement fails",
         "AfterStep a requirement fails",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
-    "Failures › A skipped step skips the rest of the scenario (line 27)": [
+    "Failures › A skipped step skips the rest of the scenario (line 30)": [
       [
         "BeforeScenario",
         "BeforeStep a step skips the scenario",
         "step: skips",
         "AfterStep a step skips the scenario",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
-    "Failures › A step with no step definition fails (line 23)": [
+    "Failures › A step with no step definition fails (line 26)": [
       [
         "BeforeScenario",
-        "BeforeStep a step that nothing matches",
-        "AfterStep a step that nothing matches",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
-    "Failures › A thrown error fails a step (line 19)": [
+    "Failures › A thrown error fails a step (line 22)": [
       [
         "BeforeScenario",
         "BeforeStep a step throws an error",
         "step: throws",
         "AfterStep a step throws an error",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
@@ -514,19 +535,15 @@
         "BeforeStep an XCTest assertion fails",
         "step: XCTest assertion fails",
         "AfterStep an XCTest assertion fails",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],
-    "Failures › An expectation fails a step (line 7)": [
+    "Failures › An expectation fails a step (line 8)": [
       [
         "BeforeScenario",
         "BeforeStep an expectation fails",
         "step: expectation fails",
         "AfterStep an expectation fails",
-        "BeforeStep this step never runs",
-        "step: never runs",
-        "AfterStep this step never runs",
         "AfterScenario"
       ]
     ],

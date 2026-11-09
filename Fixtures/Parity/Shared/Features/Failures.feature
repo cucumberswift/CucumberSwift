@@ -1,13 +1,16 @@
 Feature: Failures
 
+  @assertion-text
   Scenario: An XCTest assertion fails a step
     When an XCTest assertion fails
     Then this step never runs
 
+  @assertion-text
   Scenario: An expectation fails a step
     When an expectation fails
     Then this step never runs
 
+  @assertion-text
   Scenario: A recorded issue fails a step
     When an issue is recorded
     Then this step never runs
