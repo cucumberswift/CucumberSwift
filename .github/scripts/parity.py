@@ -58,11 +58,17 @@ unified diff. The golden result records the intended behaviour. A known
 difference is an entry in known-differences.json, for a combination whose
 behaviour differs until an issue lands, or for a limit a maintainer accepted:
 
-  {"combination": "*/swift-testing/parallel/*",
+  {"kind": "pending",
+   "combination": "*/swift-testing/parallel/*",
    "changes": [{"path": ["messages"], "value": [...]}],
    "behaviour": "What differs, as a user sees it",
    "issues": [123],
    "approved": "The maintainer who approved it, and when"}
+
+The `kind` is `pending`, behaviour that differs until the open issues in `issues` fix it, or `accepted`, a limit
+a maintainer approved, with the maintainer and the date in `approved`. parity_known.py checks the kinds, fails
+the Parity tests job when a pending entry cites a closed issue, and fails a release while a pending entry cites
+an issue that is open in the release's milestone.
 
 The entry applies to every combination that matches its pattern, or any of
 its patterns if `combination` is a list (fnmatch). Each
@@ -102,6 +108,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import parity_known  # noqa: E402
 from fixture_tests import count_tests  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -333,6 +340,9 @@ def check_entry(index, entry):
         raise ParityError(f"known difference {index} has no changes or ignore")
     if not isinstance(entry["issues"], list):
         raise ParityError(f"known difference {index}'s issues must be a list of issue numbers")
+    if entry.get("kind") not in parity_known.KINDS:
+        raise ParityError(f"known difference {index} has kind {entry.get('kind')!r}, not one of "
+                          f"{', '.join(parity_known.KINDS)}")
 
 
 def applies_to(entry, combination):

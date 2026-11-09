@@ -22,6 +22,8 @@ import subprocess
 import sys
 import tarfile
 
+import parity_known
+
 SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\Z")
 BRANCH = re.compile(r"^(main|support/(0|[1-9][0-9]*)\.x)\Z")
 RANK = {"patch": 1, "minor": 2, "major": 3}
@@ -225,6 +227,21 @@ def ref_pattern(pattern):
     return re.compile("".join(out))
 
 
+def check_parity_differences(repo, version):
+    """Stop before anything is written while a pending known difference of the parity suite cites an issue that is
+    open in the milestone named `version`. The way past it is the issue's fix, which removes the entry, or a
+    maintainer approving the entry as accepted. A dry run stops here too, and no input skips the check. A branch
+    without the parity suite has nothing to check."""
+    try:
+        entries = parity_known.load()
+        errors = parity_known.check_kinds(entries) + parity_known.release_blockers(
+            entries, lambda number: parity_known.fetch_issue(repo, number), version)
+    except parity_known.KnownError as error:
+        fail(str(error))
+    if errors:
+        fail("The parity suite's known differences block this release. " + " ".join(errors))
+
+
 def check_rulesets(repo, branch, version):
     """Stop before anything is written if a ruleset would block the version
     commit or the tag. A ruleset counts only if the token that writes them cannot
@@ -416,6 +433,7 @@ def plan():
             fail(f"Releasing {version} needs {support_branch}, created from {fmt(last)}. "
                  f"An admin creates it with: git push origin '{fmt(last)}^{{commit}}:refs/heads/{support_branch}'")
 
+    check_parity_differences(repo, version)
     check_rulesets(repo, branch, version)
     issues, lone_pulls, direct, authors = changes(repo, branch, fmt(last), sha)
     needed, reasons = 0, []

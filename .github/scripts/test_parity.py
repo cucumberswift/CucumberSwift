@@ -105,7 +105,7 @@ class NormalizeTests(unittest.TestCase):
 
 GOLDEN = {"exit": "failed", "tests": {"XCTest": 83, "Swift Testing": 30}, "messages": ["a", "b"],
           "features": {"F": {"tags": []}}}
-KNOWN = {"combination": "*/swift-testing/parallel/*", "changes": [{"path": ["messages"], "value": ["c"]}],
+KNOWN = {"kind": "pending", "combination": "*/swift-testing/parallel/*", "changes": [{"path": ["messages"], "value": ["c"]}],
          "behaviour": "Coverage is off", "issues": [1], "approved": "Ian, 2026-11-09"}
 
 
@@ -148,7 +148,7 @@ class CompareTests(unittest.TestCase):
         self.assertTrue(any("no longer differs" in error for error in errors), errors)
 
     def test_a_known_difference_needs_every_field(self):
-        for field in ("combination", "changes", "behaviour", "issues", "approved"):
+        for field in ("kind", "combination", "changes", "behaviour", "issues", "approved"):
             entry = {key: value for key, value in KNOWN.items() if key != field}
             matching = result()
             with self.assertRaises(parity.ParityError, msg=field):

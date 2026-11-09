@@ -202,6 +202,8 @@ class ReleaseTestCase(unittest.TestCase):
             mock.patch.object(release, "api", self.fake.api),
             mock.patch.object(release, "run", self.fake.run),
             mock.patch.object(release, "succeeds", self.fake.succeeds),
+            # parity_known.py has its own tests; here the parity suite's known differences never block.
+            mock.patch.object(release, "check_parity_differences"),
             mock.patch.object(release.subprocess, "run", self.fake.process),
             mock.patch.dict(os.environ, {"GITHUB_REPOSITORY": REPO, "RELEASE_SHA": SHA,
                                          "GITHUB_OUTPUT": self.output,

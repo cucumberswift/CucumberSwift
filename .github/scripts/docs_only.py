@@ -79,6 +79,7 @@ LINUX_SCRIPTS = {
     ".github/scripts/test_gherkin_highlighting.py",
     ".github/scripts/parity_coverage.py",
     ".github/scripts/test_parity.py",
+    ".github/scripts/test_parity_known.py",
     ".github/scripts/test_parity_coverage.py",
     ".github/scripts/publish-docs.sh",
 }

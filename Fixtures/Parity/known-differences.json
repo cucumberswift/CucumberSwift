@@ -50,7 +50,8 @@
     ],
     "issues": [
       562
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #563",
@@ -97,7 +98,8 @@
     ],
     "issues": [
       563
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #566",
@@ -127,7 +129,8 @@
     ],
     "issues": [
       566
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #562 and #566",
@@ -154,7 +157,8 @@
     "issues": [
       562,
       566
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #562 and #565",
@@ -204,7 +208,8 @@
     "issues": [
       562,
       565
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #565",
@@ -296,7 +301,8 @@
     ],
     "issues": [
       565
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #531 and #520",
@@ -329,7 +335,8 @@
     "issues": [
       531,
       520
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #562",
@@ -390,7 +397,8 @@
     "combination": "*/swift-testing/*",
     "issues": [
       562
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #563 and #564",
@@ -418,7 +426,8 @@
     "issues": [
       563,
       564
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #566",
@@ -445,7 +454,8 @@
     "combination": "*/swift-testing/*",
     "issues": [
       566
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "pending #515 (PR #551), coordinator's call 2026-11-09, awaiting Ian",
@@ -461,7 +471,8 @@
     "combination": "xcode/xctest/parallel/*",
     "issues": [
       515
-    ]
+    ],
+    "kind": "pending"
   },
   {
     "approved": "Ian, 2026-11-09, pending #567",
@@ -477,6 +488,7 @@
     ],
     "issues": [
       567
-    ]
+    ],
+    "kind": "pending"
   }
 ]

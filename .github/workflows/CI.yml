@@ -1104,10 +1104,19 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      # To read the state of the issues that the known differences cite.
+      issues: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # A fix removes its own known difference. This fails while a pending entry cites a closed issue, and
+      # when it can't read an issue's state. The Release workflow fails while one cites an issue that is open
+      # in the milestone it releases (.github/scripts/parity_known.py).
+      - name: Check that no known difference cites a closed issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/parity_known.py stale
       - name: Show the toolchain
         run: |
           xcodebuild -version
