@@ -12,9 +12,6 @@ import Foundation
 /// files, the scores of the features that finished, and what `cucumberswift coverage merge` needs to score the
 /// scenarios of several runs as one run.
 struct CoverageManifest: Codable, Equatable {
-    /// Changes when the manifest's form changes, so that a reader can refuse one it doesn't know.
-    static let currentVersion = 1
-
     /// A binary built with code coverage. A report needs it, with the profiles, to map the counters back to
     /// source lines, and its UUID identifies the build that ran.
     struct Binary: Codable, Equatable {
@@ -103,6 +100,9 @@ struct CoverageManifest: Codable, Equatable {
         var scores: CoverageScores
     }
 
+    /// Changes when the manifest's form changes, so that a reader can refuse one it doesn't know.
+    static let currentVersion = 1
+
     var version = CoverageManifest.currentVersion
     var run: String
     var startDate: Date
@@ -121,19 +121,6 @@ struct CoverageManifest: Codable, Equatable {
 }
 
 extension CoverageManifest.Settings {
-    init(_ settings: CoverageSettings) {
-        func percent(_ level: CoverageLevel) -> Int? {
-            guard case .percent(let value) = level else { return nil }
-            return value
-        }
-        self.init(warningLevel: percent(settings.warningLevel),
-                  errorLevel: percent(settings.errorLevel),
-                  redundancy: settings.isRedundancy,
-                  redundancyWarningLevel: percent(settings.redundancyWarningLevel),
-                  redundancyErrorLevel: percent(settings.redundancyErrorLevel),
-                  redundantStepWarningLevel: percent(settings.redundantStepWarningLevel))
-    }
-
     /// The settings these levels are from.
     var coverageSettings: CoverageSettings {
         func level(_ percent: Int?) -> CoverageLevel { percent.map(CoverageLevel.percent) ?? .off }
@@ -145,5 +132,18 @@ extension CoverageManifest.Settings {
         settings.redundancyErrorLevel = level(redundancyErrorLevel)
         settings.redundantStepWarningLevel = level(redundantStepWarningLevel)
         return settings
+    }
+
+    init(_ settings: CoverageSettings) {
+        func percent(_ level: CoverageLevel) -> Int? {
+            guard case .percent(let value) = level else { return nil }
+            return value
+        }
+        self.init(warningLevel: percent(settings.warningLevel),
+                  errorLevel: percent(settings.errorLevel),
+                  redundancy: settings.isRedundancy,
+                  redundancyWarningLevel: percent(settings.redundancyWarningLevel),
+                  redundancyErrorLevel: percent(settings.redundancyErrorLevel),
+                  redundantStepWarningLevel: percent(settings.redundantStepWarningLevel))
     }
 }

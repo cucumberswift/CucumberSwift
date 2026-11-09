@@ -42,8 +42,8 @@ struct CoverageMap {
         let lineStart: Int
         let lineEnd: Int
         /// The columns the region starts and ends at, counted in UTF-8 bytes from 1.
-        var columnStart = 0
-        var columnEnd = 0
+        let columnStart: Int
+        let columnEnd: Int
     }
 
     /// A function, with the code regions in its own file.
@@ -308,8 +308,11 @@ extension CoverageMap {
                     // Only the code regions in the function's own file count, as `llvm-cov report`
                     // counts them.
                     guard isCode, columnEnd & (1 << 31) == 0, fileIndex == 0 else { continue }
-                    regions.append(Region(counter: counter, lineStart: line, lineEnd: line + lineCount,
-                                          columnStart: Int(columnStart), columnEnd: Int(columnEnd)))
+                    regions.append(Region(counter: counter,
+                                          lineStart: line,
+                                          lineEnd: line + lineCount,
+                                          columnStart: Int(columnStart),
+                                          columnEnd: Int(columnEnd)))
                 }
             }
             let (name, firstCounter) = lookUp(nameRef, hash)

@@ -22,20 +22,40 @@ final class MergedCoverageTests: XCTestCase {
     /// The functions of one test binary: `add`, which scenarios run, and `unused`, which none enters.
     private func measured(spans: Bool) -> [CoverageManifest.MeasuredFunction] {
         [("add", 2), ("unused", 3)].enumerated().map { index, function in
-            .init(binary: "MyTests", name: "$s\(function.0)", readableName: "Calc.\(function.0)()", file: "/src/Calc.swift",
-                  line: 10 * (index + 1), regions: function.1,
-                  spans: spans ? (0..<function.1).map { [10 * (index + 1) + $0, 5, 10 * (index + 1) + $0, 20] } : nil)
+            let first = 10 * (index + 1)
+            return CoverageManifest.MeasuredFunction(binary: "MyTests",
+                                                     name: "$s\(function.0)",
+                                                     readableName: "Calc.\(function.0)()",
+                                                     file: "/src/Calc.swift",
+                                                     line: first,
+                                                     regions: function.1,
+                                                     spans: spans ? (0..<function.1).map { [first + $0, 5, first + $0, 20] } : nil)
         }
     }
 
     /// Writes a run's folder, `run-<name>`, with one scenario that ran the first region of `add`.
     private func writeRun(_ name: String, scenario: String, spans: Bool = true) throws {
-        let record = CoverageManifest.ScenarioRecord(
-            feature: "file:///b.xctest/Features/A.feature", featureName: "A", line: scenario == "one" ? 3 : 7, name: scenario, tags: [],
-            profiles: [], duration: 0.1, featureLine: 1, issueFile: nil,
-            coverage: .init(regions: [0], backgroundRegions: [], steps: [], group: "line", rule: nil, ruleLine: nil))
-        let manifest = CoverageManifest(run: name, startDate: Date(), binaries: [], scenarios: [record],
-                                        measured: measured(spans: spans), settings: .init(CoverageSettings()))
+        let record = CoverageManifest.ScenarioRecord(feature: "file:///b.xctest/Features/A.feature",
+                                                     featureName: "A",
+                                                     line: scenario == "one" ? 3 : 7,
+                                                     name: scenario,
+                                                     tags: [],
+                                                     profiles: [],
+                                                     duration: 0.1,
+                                                     featureLine: 1,
+                                                     issueFile: nil,
+                                                     coverage: .init(regions: [0],
+                                                                     backgroundRegions: [],
+                                                                     steps: [],
+                                                                     group: "line",
+                                                                     rule: nil,
+                                                                     ruleLine: nil))
+        let manifest = CoverageManifest(run: name,
+                                        startDate: Date(),
+                                        binaries: [],
+                                        scenarios: [record],
+                                        measured: measured(spans: spans),
+                                        settings: .init(CoverageSettings()))
         let run = folder.appendingPathComponent("run-\(name)")
         try FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
         let encoder = JSONEncoder()

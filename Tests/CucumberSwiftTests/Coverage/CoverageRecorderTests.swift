@@ -109,8 +109,16 @@ final class CoverageRecorderTests: XCTestCase {
         recorder.stepStarted()
         _ = Self.coveredHalf(of: 3)
         recorder.stepFinished(line: 9, isBackground: false)
-        recorder.scenarioFinished(.init(feature: featureURI, featureName: "A", line: 8, name: "Small", tags: ["fast"], duration: 0.5,
-                                        group: "9", rule: rule, featureLine: 2, issueFile: URL(fileURLWithPath: "/src/a.feature")))
+        recorder.scenarioFinished(.init(feature: featureURI,
+                                        featureName: "A",
+                                        line: 8,
+                                        name: "Small",
+                                        tags: ["fast"],
+                                        duration: 0.5,
+                                        group: "9",
+                                        rule: rule,
+                                        featureLine: 2,
+                                        issueFile: URL(fileURLWithPath: "/src/a.feature")))
         XCTAssertEqual(recorder.featureFinished(feature: featureURI, featureName: "A", line: 2), [])
 
         let manifest = recorder.manifest

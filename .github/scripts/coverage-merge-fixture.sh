@@ -50,7 +50,7 @@ run_tests() {
     TEST_RUNNER_CUCUMBER_COVERAGE_SOURCES=CoverageMergePackage/Sources \
     xcodebuild_tests test-without-building -resultBundlePath "$work/$log.xcresult" "$@" > "$logs/$log.log" 2>&1; then
     tail -80 "$logs/$log.log"
-    echo "error: the $log run failed; its log is $logs/$log.log"
+    echo "error: the $log run failed; its log is $logs/$log.log" >&2
     exit 1
   fi
 }
@@ -76,48 +76,50 @@ echo "Running both runners in one swift test"
 # folder in the same coverage folder.
 CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$coverage/swift-test" CUCUMBER_COVERAGE_SOURCES=CoverageMergePackage/Sources \
   "$keep" swift test --package-path "$fixture" --scratch-path "$work/swiftpm" --enable-code-coverage > "$logs/swift-test.log" 2>&1 \
-  || { tail -80 "$logs/swift-test.log"; echo "error: the swift test run failed; its log is $logs/swift-test.log"; exit 1; }
+  || { tail -80 "$logs/swift-test.log"; echo "error: the swift test run failed; its log is $logs/swift-test.log" >&2; exit 1; }
 
 # The merge's output without times, and with each feature file's name for its path, which each runner gives
 # differently.
 normalized() {
-  sed -E -e 's/[0-9]+\.[0-9]+ ?s([^[:alnum:]]|$)/<time>\1/g' -e 's#^[^ ]*/([^/]+\.feature):#\1:#' "$1"
+  local file=$1
+  sed -E -e 's/[0-9]+\.[0-9]+ ?s([^[:alnum:]]|$)/<time>\1/g' -e 's#^[^ ]*/([^/]+\.feature):#\1:#' "$file"
 }
 
 status=0
 for way in xctest-serial xctest-parallel xctest-shards swift-serial swift-shards; do
   runs=$(find "$coverage/$way" -name manifest.json | wc -l | tr -d ' ')
-  "$merge" coverage merge "$coverage/$way" > "$logs/$way.merged" || { cat "$logs/$way.merged"; echo "error: the merge of $way failed"; exit 1; }
+  "$merge" coverage merge "$coverage/$way" > "$logs/$way.merged" || { cat "$logs/$way.merged"; echo "error: the merge of $way failed" >&2; exit 1; }
   echo "$way: $runs runs: $(head -1 "$logs/$way.merged")"
   if ! grep -q "^CucumberSwift coverage: 10 scenarios from" "$logs/$way.merged"; then
-    echo "error: $way: the merge didn't score the fixture's 10 scenarios"
+    echo "error: $way: the merge didn't score the fixture's 10 scenarios" >&2
     status=1
   fi
   tail -n +2 "$logs/$way.merged" | normalized /dev/stdin > "$logs/$way.scores"
 done
 # One swift test must have written a run folder for each runner, and merging them must score each runner's
 # features as the runner's serial run did: the lines of both serial runs, together.
-"$merge" coverage merge "$coverage/swift-test" > "$logs/swift-test.merged" || { cat "$logs/swift-test.merged"; echo "error: the merge of swift-test failed"; exit 1; }
+"$merge" coverage merge "$coverage/swift-test" > "$logs/swift-test.merged" || { cat "$logs/swift-test.merged"; echo "error: the merge of swift-test failed" >&2; exit 1; }
 runs=$(find "$coverage/swift-test" -name manifest.json | wc -l | tr -d ' ')
 echo "swift-test: $runs runs: $(head -1 "$logs/swift-test.merged")"
-[ "$runs" -eq 2 ] || { echo "error: swift test wrote $runs run folders, not one for each runner"; status=1; }
+[[ "$runs" -eq 2 ]] || { echo "error: swift test wrote $runs run folders, not one for each runner" >&2; status=1; }
 tail -n +2 "$logs/swift-test.merged" | normalized /dev/stdin | sort > "$logs/swift-test.scores"
 sort "$logs/xctest-serial.scores" "$logs/swift-serial.scores" > "$logs/both-serial.scores"
 if diff -u "$logs/both-serial.scores" "$logs/swift-test.scores"; then
   echo "swift test's merged run gives the scores of both runners' serial runs."
 else
-  echo "error: swift test's merged run gives other scores than the runners' serial runs"
+  echo "error: swift test's merged run gives other scores than the runners' serial runs" >&2
   status=1
 fi
-[ "$(find "$coverage/xctest-parallel" -name manifest.json | wc -l)" -ge 2 ] \
-  || { echo "error: the parallel XCTest run used one worker, so it proves nothing"; status=1; }
+[[ "$(find "$coverage/xctest-parallel" -name manifest.json | wc -l)" -ge 2 ]] \
+  || { echo "error: the parallel XCTest run used one worker, so it proves nothing" >&2; status=1; }
 
 # Fails unless the scores in $1 and $2 are the same.
 same() {
-  if diff -u "$logs/$1.scores" "$logs/$2.scores"; then
-    echo "$2 gives the same scores as $1."
+  local first=$1 second=$2
+  if diff -u "$logs/$first.scores" "$logs/$second.scores"; then
+    echo "$second gives the same scores as $first."
   else
-    echo "error: $2 gives other scores than $1"
+    echo "error: $second gives other scores than $first" >&2
     status=1
   fi
 }
@@ -132,10 +134,10 @@ for runner in xctest swift; do
   grep -hE '^(CucumberSwift coverage: .*% of the code its scenarios ran|[^ ]*\.feature:[0-9]+: (warning|error): )' "$logs/$runner-serial.log" \
     | normalized /dev/stdin | sort -u > "$logs/$runner-printed"
   pattern='^CucumberSwift coverage: .*% of the code its scenarios ran'
-  [ "$runner" = swift ] && pattern="$pattern|\\.feature:[0-9]+: (warning|error): "
+  [[ "$runner" = swift ]] && pattern="$pattern|\\.feature:[0-9]+: (warning|error): "
   grep -E "$pattern" "$logs/$runner-serial.scores" | sort -u > "$logs/$runner-expected"
-  if [ ! -s "$logs/$runner-printed" ] || ! diff -u "$logs/$runner-expected" "$logs/$runner-printed"; then
-    echo "error: the merge doesn't print what the $runner runner printed while its scenarios ran"
+  if [[ ! -s "$logs/$runner-printed" ]] || ! diff -u "$logs/$runner-expected" "$logs/$runner-printed"; then
+    echo "error: the merge doesn't print what the $runner runner printed while its scenarios ran" >&2
     status=1
   else
     echo "The merge prints what the $runner runner printed: $(wc -l < "$logs/$runner-printed" | tr -d ' ') lines."

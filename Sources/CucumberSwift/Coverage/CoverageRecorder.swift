@@ -278,8 +278,12 @@ final class CoverageRecorder {
               problem == nil, settings.scoresOffReason == nil, let code else { return [] }
         let parts = CoverageScores.parts(of: ran, code: code, isRedundancy: settings.isRedundancy)
         for part in parts {
-            features.append(FeatureRecord(feature: feature, featureName: featureName, line: line,
-                                          rule: part.rule?.title, ruleLine: part.rule?.line, scores: part.scores))
+            features.append(FeatureRecord(feature: feature,
+                                          featureName: featureName,
+                                          line: line,
+                                          rule: part.rule?.title,
+                                          ruleLine: part.rule?.line,
+                                          scores: part.scores))
         }
         return parts
     }

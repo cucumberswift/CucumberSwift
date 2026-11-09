@@ -9,6 +9,10 @@ public final class Calculator {
     public private(set) var display = "0"
     private var memory: Int?
 
+    private static func name(of number: Int) -> String {
+        number < 0 ? "minus \(-number)" : "\(number)"
+    }
+
     public init() {
         // A new calculator shows 0 and has no memory.
     }
@@ -50,9 +54,5 @@ public final class Calculator {
         if memory == nil {
             memory = 0
         }
-    }
-
-    private static func name(of number: Int) -> String {
-        number < 0 ? "minus \(-number)" : "\(number)"
     }
 }

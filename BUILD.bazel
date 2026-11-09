@@ -43,10 +43,10 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
-# CucumberSwift's command-line tool: `bazel run @cucumberswift//:cucumberswift -- coverage merge <folder>`
+# CucumberSwift's command-line tool: `bazel run @cucumberswift//:cucumberswift_cli -- coverage merge <folder>`
 # scores the scenarios of several runs as one run, such as a parallel run's workers or a suite's shards.
 swift_binary(
-    name = "cucumberswift",
+    name = "cucumberswift_cli",
     srcs = glob(["Sources/CucumberSwiftCommand/*.swift"]),
     module_name = "CucumberSwiftCommand",
     visibility = ["//visibility:public"],

@@ -57,27 +57,6 @@ public struct MergedCoverage {
         public let runFolders: [URL]
     }
 
-    /// Reads the manifests in `folders`, as ``init(folders:)`` does, and numbers the regions of the functions that
-    /// the runs measured again, as one build, without scoring them. Throws when there is no run, or when two runs
-    /// are of different builds.
-    public static func renumbering(ofRunsIn folders: [URL]) throws -> Renumbering {
-        let runs = try CoverageMerge.read(folders)
-        let renumbering = try CoverageMerge.renumber(runs.map { $0.manifest.measured ?? [] })
-        return Renumbering(functions: function(list: renumbering.functions, spans: renumbering.spans),
-                           localToGlobal: renumbering.maps,
-                           runFolders: runs.map(\.folder))
-    }
-
-    private static func function(list: [MeasuredCode.Function], spans: [[[Int]]?]) -> [Function] {
-        zip(list, spans).map { function, spans in
-            let spans = (spans ?? []).filter { $0.count == 4 }.map {
-                Span(lineStart: $0[0], columnStart: $0[1], lineEnd: $0[2], columnEnd: $0[3])
-            }
-            return Function(name: function.name, file: function.file, line: function.line, regionCount: function.regions.count,
-                            firstRegion: function.regions.lowerBound, spans: spans.count == function.regions.count ? spans : [])
-        }
-    }
-
     /// A scenario that ran, once, whichever runs it ran in.
     public struct Scenario: Equatable, Sendable {
         /// The feature file's URI, by the part that is the same in every run.
@@ -95,28 +74,55 @@ public struct MergedCoverage {
     public let scenarios: [Scenario]
     private let merge: CoverageMerge
 
+    /// Reads the manifests in `folders`, as ``init(folders:)`` does, and numbers the regions of the functions that
+    /// the runs measured again, as one build, without scoring them. Throws when there is no run, or when two runs
+    /// are of different builds.
+    public static func renumbering(ofRunsIn folders: [URL]) throws -> Renumbering {
+        let runs = try CoverageMerge.read(folders)
+        let renumbering = try CoverageMerge.renumber(runs.map { $0.manifest.measured ?? [] })
+        return Renumbering(functions: functions(of: renumbering),
+                           localToGlobal: renumbering.maps,
+                           runFolders: runs.map(\.folder))
+    }
+
+    private static func functions(of renumbering: CoverageMerge.Renumbering) -> [Function] {
+        zip(renumbering.functions, renumbering.spans).map { function, recorded in
+            let spans = (recorded ?? []).filter { $0.count == 4 }.map {
+                Span(lineStart: $0[0], columnStart: $0[1], lineEnd: $0[2], columnEnd: $0[3])
+            }
+            return Function(name: function.name,
+                            file: function.file,
+                            line: function.line,
+                            regionCount: function.regions.count,
+                            firstRegion: function.regions.lowerBound,
+                            spans: spans.count == function.regions.count ? spans : [])
+        }
+    }
+
+    /// The region that the merged number `number` is, in the code `code` measures.
+    private static func region(numbered number: Int, in code: MeasuredCode) -> Region? {
+        guard let function = code.function(of: number),
+              let index = code.functions.firstIndex(of: function) else { return nil }
+        return Region(function: index, index: number - function.regions.lowerBound)
+    }
+
     /// Merges the runs in `folders`: run folders, `run-<id>`, or coverage folders that hold them. Throws when
     /// there is none, or the runs can't be merged, with a message that says why.
     public init(folders: [URL]) throws {
         let merge = try CoverageMerge(runs: CoverageMerge.read(folders))
         self.merge = merge
-        let code = merge.code
         let renumbering = try CoverageMerge.renumber(merge.runs.map { $0.manifest.measured ?? [] })
-        functions = Self.function(list: renumbering.functions, spans: renumbering.spans)
-        let starts = code.functions.map(\.regions.lowerBound)
+        functions = Self.functions(of: renumbering)
+        let code = merge.code
         scenarios = merge.scenarios.map { merged in
             let scenario = merged.scenario
-            let ran = scenario.regions.compactMap { number -> Region? in
-                guard let function = code.functions.firstIndex(where: { $0.regions.contains(number) }) else { return nil }
-                return Region(function: function, index: number - starts[function])
-            }
             return Scenario(feature: merged.feature,
                             featureName: merged.featureName,
                             line: scenario.line,
                             name: scenario.name,
                             tags: scenario.tags,
                             duration: scenario.duration,
-                            ran: Set(ran))
+                            ran: Set(scenario.regions.compactMap { Self.region(numbered: $0, in: code) }))
         }
     }
 

@@ -50,6 +50,36 @@ struct CoverageMerge {
         let part: CoverageScores.Part
     }
 
+    /// A scenario as the merge scores it.
+    struct MergedScenario {
+        let feature: String
+        let featureName: String
+        let featureLine: Int
+        let file: URL?
+        let rule: ScenarioRule?
+        let scenario: CoverageScores.Scenario
+    }
+
+    /// The functions of several runs of one build, and how each run's region numbers become the merged ones.
+    struct Renumbering: Equatable {
+        /// The measured functions of all the runs, each once, in the order the runs list them, with their regions
+        /// numbered one after the other.
+        let functions: [MeasuredCode.Function]
+        /// Where each function's regions are placed, `spans` of the manifest's function: the first run's.
+        let spans: [[[Int]]?]
+        /// For each run, the merged number of each of its regions, by the region's number in the run.
+        let maps: [[Int]]
+    }
+
+    /// A function the runs measure, the same in every run of one build.
+    private struct FunctionKey: Hashable {
+        let binary: String
+        let name: String
+        let file: String
+        /// Which of the functions with this binary, name and file it is, in the run's order.
+        let occurrence: Int
+    }
+
     let runs: [Run]
     let settings: CoverageSettings
     /// Each feature's parts, features in the order of their files' paths.
@@ -106,34 +136,56 @@ struct CoverageMerge {
         return String(uri[range.upperBound...])
     }
 
-    /// A function the runs measure, the same in every run of one build.
-    private struct FunctionKey: Hashable {
-        let binary: String
-        let name: String
-        let file: String
-        /// Which of the functions with this binary, name and file it is, in the run's order.
-        let occurrence: Int
+    /// The levels that every run in `runs` checked its scores against. Throws when a run has no code coverage to
+    /// score, or checked other levels than the first.
+    private static func commonSettings(of runs: [Run]) throws -> CoverageSettings {
+        guard let first = runs.first else { throw MergeError.noRuns([]) }
+        for run in runs {
+            guard run.manifest.problem == nil, run.manifest.measured != nil, run.manifest.settings != nil else {
+                let reason = run.manifest.problem ?? run.manifest.scoresProblem
+                    ?? "its manifest is from a version of CucumberSwift that doesn't record what the scores need"
+                throw MergeError.notMeasured(run.folder.path, reason)
+            }
+            guard run.manifest.settings == first.manifest.settings else {
+                throw MergeError.differentSettings(first.folder.path, run.folder.path)
+            }
+        }
+        return first.manifest.settings?.coverageSettings ?? CoverageSettings()
     }
 
-    /// A scenario as the merge scores it.
-    struct MergedScenario {
-        let feature: String
-        let featureName: String
-        let featureLine: Int
-        let file: URL?
-        let rule: ScenarioRule?
-        let scenario: CoverageScores.Scenario
-    }
-
-    /// The functions of several runs of one build, and how each run's region numbers become the merged ones.
-    struct Renumbering: Equatable {
-        /// The measured functions of all the runs, each once, in the order the runs list them, with their regions
-        /// numbered one after the other.
-        let functions: [MeasuredCode.Function]
-        /// Where each function's regions are placed, `spans` of the manifest's function: the first run's.
-        let spans: [[[Int]]?]
-        /// For each run, the merged number of each of its regions, by the region's number in the run.
-        let maps: [[Int]]
+    /// The scenarios of `runs`, each once, with the regions they ran numbered by `maps`, ``Renumbering/maps``.
+    private static func scenarios(of runs: [Run], maps: [[Int]]) -> (scenarios: [MergedScenario], repeated: Int) {
+        var seen = Set<[String]>()
+        var scenarios = [MergedScenario]()
+        var repeated = 0
+        for (run, map) in zip(runs, maps) {
+            func number(_ regions: [Int]) -> Set<Int> {
+                Set(regions.compactMap { map.indices.contains($0) ? map[$0] : nil })
+            }
+            for record in run.manifest.scenarios {
+                guard let coverage = record.coverage else { continue }
+                let key = featureKey(record.feature)
+                guard seen.insert([key, "\(record.line)", record.name]).inserted else {
+                    repeated += 1
+                    continue
+                }
+                let scenario = CoverageScores.Scenario(name: record.name,
+                                                       line: record.line,
+                                                       tags: record.tags,
+                                                       duration: record.duration ?? 0,
+                                                       regions: number(coverage.regions),
+                                                       group: coverage.group)
+                    .with(backgroundRegions: number(coverage.backgroundRegions))
+                    .with(steps: coverage.steps.map { CoverageScores.StepRun(line: $0.line, regions: number($0.regions)) })
+                scenarios.append(MergedScenario(feature: key,
+                                                featureName: record.featureName,
+                                                featureLine: record.featureLine ?? 1,
+                                                file: record.issueFile.flatMap(URL.init(string:)),
+                                                rule: coverage.rule.map { ScenarioRule(title: $0, line: coverage.ruleLine ?? 0) },
+                                                scenario: scenario))
+            }
+        }
+        return (scenarios, repeated)
     }
 
     /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
@@ -172,61 +224,17 @@ struct CoverageMerge {
 
     init(runs: [Run]) throws {
         self.runs = runs
-        guard let first = runs.first else { throw MergeError.noRuns([]) }
-        for run in runs {
-            guard run.manifest.problem == nil, run.manifest.measured != nil, run.manifest.settings != nil else {
-                let reason = run.manifest.problem ?? run.manifest.scoresProblem
-                    ?? "its manifest is from a version of CucumberSwift that doesn't record what the scores need"
-                throw MergeError.notMeasured(run.folder.path, reason)
-            }
-            guard run.manifest.settings == first.manifest.settings else {
-                throw MergeError.differentSettings(first.folder.path, run.folder.path)
-            }
-        }
-        let settings = first.manifest.settings?.coverageSettings ?? CoverageSettings()
+        let settings = try Self.commonSettings(of: runs)
         self.settings = settings
-
         let renumbering = try Self.renumber(runs.map { $0.manifest.measured ?? [] })
-        let renumbered = renumbering.maps
-        let functions = renumbering.functions
-        let code = MeasuredCode(functions: functions)
+        let code = MeasuredCode(functions: renumbering.functions)
         self.code = code
+        let merged = Self.scenarios(of: runs, maps: renumbering.maps)
+        scenarios = merged.scenarios
+        scenarioCount = merged.scenarios.count
+        repeatedCount = merged.repeated
 
-        var seen = Set<[String]>()
-        var scenarios = [MergedScenario]()
-        var repeated = 0
-        for (run, map) in zip(runs, renumbered) {
-            func number(_ regions: [Int]) -> Set<Int> {
-                Set(regions.compactMap { map.indices.contains($0) ? map[$0] : nil })
-            }
-            for record in run.manifest.scenarios {
-                guard let coverage = record.coverage else { continue }
-                let key = Self.featureKey(record.feature)
-                guard seen.insert([key, "\(record.line)", record.name]).inserted else {
-                    repeated += 1
-                    continue
-                }
-                let scenario = CoverageScores.Scenario(name: record.name,
-                                                       line: record.line,
-                                                       tags: record.tags,
-                                                       duration: record.duration ?? 0,
-                                                       regions: number(coverage.regions),
-                                                       group: coverage.group)
-                    .with(backgroundRegions: number(coverage.backgroundRegions))
-                    .with(steps: coverage.steps.map { CoverageScores.StepRun(line: $0.line, regions: number($0.regions)) })
-                scenarios.append(MergedScenario(feature: key,
-                                                featureName: record.featureName,
-                                                featureLine: record.featureLine ?? 1,
-                                                file: record.issueFile.flatMap(URL.init(string:)),
-                                                rule: coverage.rule.map { ScenarioRule(title: $0, line: coverage.ruleLine ?? 0) },
-                                                scenario: scenario))
-            }
-        }
-        scenarioCount = scenarios.count
-        repeatedCount = repeated
-        self.scenarios = scenarios
-
-        let byFeature = Dictionary(grouping: scenarios, by: \.feature)
+        let byFeature = Dictionary(grouping: merged.scenarios, by: \.feature)
         features = byFeature.keys.sorted().flatMap { key -> [FeatureScores] in
             let scenarios = byFeature[key] ?? []
             guard let first = scenarios.first else { return [] }
