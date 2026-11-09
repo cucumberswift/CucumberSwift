@@ -12,6 +12,17 @@ import XCTest
 
 final class CoverageIssuesTests: XCTestCase {
     private let file = FileManager.default.temporaryDirectory.appendingPathComponent("Arithmetic.feature")
+    private var capturing = false
+    private var recordedIssues = [XCTIssue]()
+
+    // While a test captures, keep the issues the runner records; other issues are recorded as usual.
+    override func record(_ issue: XCTIssue) {
+        guard capturing else {
+            super.record(issue)
+            return
+        }
+        recordedIssues.append(issue)
+    }
 
     func testAnIssueIsAtItsLineOfTheFeatureFile() {
         let issue = CoverageIssue(severity: .warning, message: "Feature coverage 71%", file: file, line: 3).xcTestIssue
@@ -32,8 +43,18 @@ final class CoverageIssuesTests: XCTestCase {
     // as the Swift Testing runner does (#531).
     func testAWarningIsPrintedAsWellAsRecorded() {
         var printed = [String]()
+        capturing = true
         CoverageIssue(severity: .warning, message: "Feature coverage 71%", file: file, line: 1).record(in: self) { printed.append($0) }
+        capturing = false
         XCTAssertEqual(printed, ["\(file.path):1: warning: Feature coverage 71%"])
+        #if compiler(>=6.2)
+        XCTAssertEqual(recordedIssues.map(\.compactDescription), ["Feature coverage 71%"])
+        XCTAssertEqual(recordedIssues.first?.sourceCodeContext.location?.fileURL, file)
+        XCTAssertEqual(recordedIssues.first?.sourceCodeContext.location?.lineNumber, 1)
+        #else
+        // XCTest before Xcode 26 can't record a warning, so the runner only prints it.
+        XCTAssertTrue(recordedIssues.isEmpty)
+        #endif
     }
 
     func testAnErrorFailsTheTest() {
