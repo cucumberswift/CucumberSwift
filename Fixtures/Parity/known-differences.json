@@ -448,7 +448,7 @@
     ]
   },
   {
-    "approved": "Ian, 2026-11-09, pending #515",
+    "approved": "pending #515 (PR #551), coordinator's call 2026-11-09, awaiting Ian",
     "behaviour": "With the XCTest runner, a parallel run prints no 'coverage: off, because parallel testing is on' line, as the Swift Testing runner does. Xcode's workers' output isn't in the log, so the suite can't see the line either way.",
     "changes": [
       {
