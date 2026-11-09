@@ -1,0 +1,21 @@
+name: Interop probe 562
+on:
+  push:
+    branches: [bugfix/562-cross-framework-assertions]
+    paths: [.github/workflows/interop-probe-562.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: macos-26
+    steps:
+      - name: Which Xcode has the Swift Testing interop
+        run: |
+          for v in 26.0 26.1 26.2 26.3 26.4; do
+            app="/Applications/Xcode_$v.app"
+            dev="$app/Contents/Developer/Platforms/MacOSX.platform/Developer"
+            lib=no; [ -e "$dev/usr/lib/lib_TestingInterop.dylib" ] && lib=yes
+            core="$dev/Library/PrivateFrameworks/XCTestCore.framework/XCTestCore"
+            reads=$(strings "$core" 2>/dev/null | grep -c SWIFT_TESTING_XCTEST_INTEROP_MODE || true)
+            echo "Xcode $v: $(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist" 2>/dev/null) lib_TestingInterop=$lib XCTestCore_mentions_variable=$reads"
+          done
