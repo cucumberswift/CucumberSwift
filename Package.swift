@@ -156,8 +156,12 @@ let package = Package(
         // the other.
         .target(
             name: "CucumberSwiftTesting",
-            dependencies: ["CucumberSwiftExpressions"],
+            dependencies: ["CucumberSwiftExpressions", "CucumberSwiftTestingInterop"],
             path: "Sources/CucumberSwiftTesting"),
+        // Turns on XCTest's interop with Swift Testing when the test bundle loads, which only C can do.
+        .target(
+            name: "CucumberSwiftTestingInterop",
+            path: "Sources/CucumberSwiftTestingInterop"),
         // StepDefinitionMacros.swift and HookMacros.swift are symlinks to CucumberSwiftMacros' declarations.
         .target(
             name: "CucumberSwiftTestingMacros",
