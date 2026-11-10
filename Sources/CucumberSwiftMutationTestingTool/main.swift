@@ -14,6 +14,9 @@ import Foundation
 // its line when a Run Script build phase runs the tool. `--discover` reads one Swift file from standard input and
 // prints its mutants as JSON, for the tool's tests.
 let arguments = Array(CommandLine.arguments.dropFirst())
+// Writes each line as it's printed, also into a pipe, such as a build server's log or `tee`, which would otherwise get
+// the whole output at the end.
+setvbuf(stdout, nil, _IOLBF, 0)
 
 #if Macros
 if arguments == ["--discover"] {

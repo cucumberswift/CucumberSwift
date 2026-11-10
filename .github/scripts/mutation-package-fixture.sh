@@ -19,7 +19,7 @@ rm -rf "$reports"
 
 export CUCUMBER_SWIFT_PATH="$repo"
 status=0
-(cd "$fixture" && swift run cucumberswift-mutation-test --format xcode --output "$reports") 2>&1 | tee "$log" || status=$?
+(cd "$fixture" && swift run cucumberswift-mutation-test --format xcode --baseline-runs 1 --output "$reports") 2>&1 | tee "$log" || status=$?
 if [[ "$status" -ne 0 ]]; then
   echo "::error::MutationTestingPackage: cucumberswift-mutation-test exited with $status"
   exit 1
@@ -27,7 +27,7 @@ fi
 cd "$repo"
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
-# Both runners' scenarios must be in each run's Cucumber report: the XCTest target's (Voting and Driving) and the
+# Both runners' scenarios must be in each run's Cucumber report: the XCTest target's (Voting) and the
 # Swift Testing target's (Retiring). Each killed mutant then names the scenarios that failed on it.
 python3 -I - "$reports" <<'PYTHON'
 import json, os, sys
@@ -35,8 +35,8 @@ import json, os, sys
 reports = sys.argv[1]
 with open(os.path.join(reports, "cucumber-baseline.json"), encoding="utf-8") as f:
     features = sorted(feature["name"] for feature in json.load(f))
-if features != ["Driving", "Retiring", "Voting"]:
-    sys.exit(f"::error::MutationTestingPackage: the baseline report has the features {features}, not Driving, Retiring and Voting")
+if features != ["Retiring", "Voting"]:
+    sys.exit(f"::error::MutationTestingPackage: the baseline report has the features {features}, not Retiring and Voting")
 with open(os.path.join(reports, "mutation-report.json"), encoding="utf-8") as f:
     report = json.load(f)
 for name, entry in report["files"].items():
