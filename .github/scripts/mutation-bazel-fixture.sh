@@ -33,10 +33,16 @@ started=$SECONDS
 # own for the copy it makes, so stop the old one before the Swift build and the runs need the memory.
 (cd "$fixture" && bazel shutdown) || echo "::notice::bazel shutdown failed, or no Bazel server was running."
 
-# Build the tool on its own and run the binary, so a failure to start is not mistaken for a failed build.
-build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
-"${build[@]}"
-tool="$("${build[@]}" --show-bin-path)/cucumberswift-mutation-test"
+# Our CI builds the tool once with .github/scripts/build-mutation-tool.sh, which it caches, and sets MUTATION_TOOL to
+# its path. Without it, build the tool here on its own and run the binary, so a failure to start is not mistaken for a
+# failed build.
+if [[ -n "${MUTATION_TOOL:-}" ]]; then
+  tool="$MUTATION_TOOL"
+else
+  build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
+  "${build[@]}"
+  tool="$("${build[@]}" --show-bin-path)/cucumberswift-mutation-test"
+fi
 
 built=$SECONDS
 
@@ -59,7 +65,7 @@ status=0
   --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
   --bazel-disk-cache "$folder/bazel-disk-cache" --bazel-arg "--repository_cache=$folder/bazel-repository-cache" \
   --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \
-  --format xcode --output "$reports" 2>&1 | tee "$log" || status=$?
+  --format xcode --baseline-runs 1 --output "$reports" 2>&1 | tee "$log" || status=$?
 echo "Bazel fixture timings: the tool's build $((built - started)) s, its run $((SECONDS - built)) s."
 if [[ "$status" -gt 128 ]]; then diagnose "$status"; fi
 if [[ "$status" -ne 0 ]]; then

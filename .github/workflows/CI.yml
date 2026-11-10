@@ -1280,6 +1280,9 @@ jobs:
       # lists, and print a warning for each survivor (#522). It shares the coverage step's disk cache, and runs with
       # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
       # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
+      - name: Build the mutation testing tool
+        if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+        uses: ./.github/actions/mutation-tool
       - name: Run mutation testing on the Bazel fixture
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
         run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
