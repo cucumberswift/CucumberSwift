@@ -253,7 +253,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-The value is a class, so the next step sees what 1 step changes. Different types are different values, so a scenario can have a `Basket` and a `Beach`. A step that runs another with `ExecuteFirstStep` shares its caller's values. CucumberSwift's XCTest runner has the same `Scenario.state(_:)`, with 1 value of each type per scenario, so step definitions that use it move between the runners unchanged. It needs a running scenario. If you call it from a feature hook, or from a task that a step left running with `Task.detached`, it fails the test with a message that says so. For what lives outside the process, use files, databases and fakes named after the scenario. All this matters only when parallel testing is on. A suite that runs 1 scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel testing off.
+The value is a class, so the next step sees what one step changes. Different types are different values, so a scenario can have a `Basket` and a `Beach`. A step that runs another with `ExecuteFirstStep` shares its caller's values. CucumberSwift's XCTest runner has the same `Scenario.state(_:)`, with one value of each type per scenario, so step definitions that use it move between the runners unchanged. It needs a running scenario. If you call it from a feature hook, or from a task that a step left running with `Task.detached`, it fails the test with a message that says so. For what lives outside the process, use files, databases and fakes named after the scenario. All this matters only when parallel testing is on. A suite that runs one scenario at a time needs no change. If a step definition can't avoid shared state, leave parallel testing off.
 
 ### What behaves differently with parallel on
 
@@ -553,7 +553,7 @@ The Swift Testing runner does everything the XCTest runner does, with these exce
    }
    ```
 
-3. **`parallelTesting` and shared state.** XCTest runs parallel tests in separate processes, so their state is isolated. Swift Testing runs them in 1 process, so scenarios can see each other's state. Parallel testing works with both runners, and both turn it on with `Cucumber.parallelTesting` or the `CUCUMBER_PARALLEL_TESTING` environment variable. Use `Scenario.state(_:)` to share state between steps and to keep it apart between scenarios. Both runners keep 1 value of each type per scenario. See <doc:#Sharing-state-between-steps-in-a-scenario>.
+3. **`parallelTesting` and shared state.** XCTest runs parallel tests in separate processes, so their state is isolated. Swift Testing runs them in one process, so scenarios can see each other's state. Parallel testing works with both runners, and both turn it on with `Cucumber.parallelTesting` or the `CUCUMBER_PARALLEL_TESTING` environment variable. Use `Scenario.state(_:)` to share state between steps and to keep it apart between scenarios. Both runners keep one value of each type per scenario. See <doc:#Sharing-state-between-steps-in-a-scenario>.
 
    ```swift
    import CucumberSwiftTestingMacros
