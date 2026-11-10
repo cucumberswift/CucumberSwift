@@ -1186,6 +1186,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/mutation-xcode-ios"
           destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          # Boots the Simulator once, so that none of the run's xcodebuild test actions boots it again.
+          xcrun simctl boot "${destination##*id=}" || true
+          xcrun simctl bootstatus "${destination##*id=}" -b
           .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-ios" "$destination"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Xcode mutation testing reports and log

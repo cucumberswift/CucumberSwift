@@ -3,7 +3,7 @@
 # build phase of the fixture's Mutation target, where the command runs `xcodebuild` with a scheme and a destination
 # and prints each surviving mutant as a warning. The run must find the mutants, and kill and keep the ones, that the
 # fixture's expected-mutants lists, and the build log must warn at each survivor (.github/scripts/mutation_fixture.py).
-# It then runs XcodebuildRunnerFixtureTests, which selects one scenario of each test runner with xcodebuild.
+# On macOS it then runs XcodebuildRunnerFixtureTests, which selects one scenario of each test runner with xcodebuild.
 # Used by CI's Fixture tests, after `mise run test-fixtures`.
 #
 #   .github/scripts/mutation-xcode-fixture.sh <directory> [<destination>]
@@ -61,7 +61,10 @@ if [[ "$status" -ne 0 ]]; then
 fi
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
-# The same project, one scenario at a time: the runner selects an XCTest scenario and a Swift Testing scenario with
-# the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the folder.
-MUTATION_XCODE_FIXTURE="$project" MUTATION_XCODE_DESTINATION="$destination" \
-  .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests
+# The same project, one scenario at a time, on macOS: the runner selects an XCTest scenario and a Swift Testing scenario
+# with the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the
+# folder. On another destination, the mutation run above already shows the selection: it names how many of the
+# scenarios each mutant's run ran, and the check fails when a mutant's run ran no test.
+if [[ "$destination" == "platform=macOS" ]]; then
+  MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests
+fi
