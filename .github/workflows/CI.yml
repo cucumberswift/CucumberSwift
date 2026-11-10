@@ -1103,8 +1103,28 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+      # The mutation testing steps run the tool that .github/scripts/build-mutation-tool.sh builds once, from this
+      # checkout, into a build folder that actions/cache keeps between runs. Building it from cold compiles swift-syntax,
+      # which takes about a minute. The key names the runner, the Xcode, the resolved packages and the tool's sources,
+      # so a change to any of them builds a new cache. A cache from older sources is still restored, and SwiftPM
+      # rebuilds what changed, so the tool always comes from this checkout's sources. Every job that runs the tool
+      # uses the same key.
+      - name: Choose the mutation testing tool's cache key
+        id: mutation-tool
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        run: echo "xcode=$(xcodebuild -version | tr -cs 'A-Za-z0-9.' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      - name: Restore the mutation testing tool's build
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mutation-tool
+          key: mutation-tool-${{ runner.os }}-${{ steps.mutation-tool.outputs.xcode }}-${{ hashFiles('Package.resolved', 'Package.swift', 'Package@swift-*.swift', 'Sources/CucumberSwiftMutation/**', 'Sources/CucumberSwiftMutationTestingTool/**') }}
+          restore-keys: mutation-tool-${{ runner.os }}-${{ steps.mutation-tool.outputs.xcode }}-
+      - name: Build the mutation testing tool
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        run: echo "MUTATION_TOOL=$(.github/scripts/build-mutation-tool.sh "$RUNNER_TEMP/mutation-tool")" >> "$GITHUB_ENV"
       # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
-      # as a script runs it: `swift run cucumberswift-mutation-test --format xcode`. The run must kill and keep the
+      # as a script runs it, here the tool built above. The run must kill and keep the
       # mutants that the fixture's expected-mutants file lists, and print a warning for each survivor (#519).
       # It takes minutes, so a pull request runs it only when it changes mutation testing (mutation_code, from the
       # changes job). The merge queue and every nightly and manual run always run it.
