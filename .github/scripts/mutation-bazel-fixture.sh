@@ -10,7 +10,9 @@
 # tool needs the Macros trait for swift-syntax, and copies Tests/ to a temporary folder, where `..` doesn't reach CucumberSwift, so the modules come from the two
 # folders the arguments name, as the Bazel job's other commands get them with --override_module. Tests/.bazelrc
 # applies its instrumentation filter to `bazel coverage` only, so the run passes the filter itself and builds with
-# coverage only the code under test.
+# coverage only the code under test. The disk cache and the repository cache are the ones that the Bazel job's
+# earlier steps use (both in the folder of the third argument, $RUNNER_TEMP there), so the copy starts with what they
+# built and fetched instead of cold.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
@@ -24,6 +26,9 @@ reports="$folder/mutation-Bazel"
 log="$folder/mutation-Bazel.log"
 rm -rf "$reports"
 
+# The seconds each part took, which the job's timings can't show: the tool prints its own output only when it ends.
+started=$SECONDS
+
 # The job's earlier steps leave a Bazel server for Tests/ running, with the memory it built up. The tool starts its
 # own for the copy it makes, so stop the old one before the Swift build and the runs need the memory.
 (cd "$fixture" && bazel shutdown) || true
@@ -32,6 +37,8 @@ rm -rf "$reports"
 build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
 "${build[@]}"
 tool="$("${build[@]}" --show-bin-path)/cucumberswift-mutation-test"
+
+built=$SECONDS
 
 # What a run killed by a signal (status 128 + the signal) leaves to explain it: the memory, the processes that held it,
 # the binary's signature and the kernel's own account of a kill.
@@ -50,8 +57,10 @@ status=0
 "$tool" \
   --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
   --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
+  --bazel-disk-cache "$folder/bazel-disk-cache" --bazel-arg "--repository_cache=$folder/bazel-repository-cache" \
   --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \
   --format xcode --output "$reports" 2>&1 | tee "$log" || status=$?
+echo "Bazel fixture timings: the tool's build $((built - started)) s, its run $((SECONDS - built)) s."
 if [[ "$status" -gt 128 ]]; then diagnose "$status"; fi
 if [[ "$status" -ne 0 ]]; then
   echo "::error::Bazel fixture: cucumberswift-mutation-test exited with $status"

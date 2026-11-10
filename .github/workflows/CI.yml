@@ -1215,7 +1215,7 @@ jobs:
           echo "EXPRESSIONS_PATH=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
       - name: Build every target in the module, as a consumer would
         working-directory: Tests
-        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
+        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache"
       # rules_apple can't run tvOS tests, so no run tests the tvOS bundles. Nightly and manual runs
       # build them.
       - name: Run the consumer tests on macOS and on an iOS simulator, and build them for tvOS at night
@@ -1228,7 +1228,7 @@ jobs:
           else
             filters+=("--build_tag_filters=-watchos")
           fi
-          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors "${filters[@]}"
+          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --test_output=errors "${filters[@]}"
       # A run with no features still passes, so this catches a Features folder
       # Bazel left out. The floors are what `swift test` runs for each suite.
       - name: Check every feature ran
@@ -1258,7 +1258,7 @@ jobs:
       - name: Check per-scenario coverage under bazel coverage
         working-directory: Tests
         run: |
-          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --disk_cache="$HOME/Library/Caches/CucumberSwiftMutation/bazel-disk-cache" --test_output=errors
+          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --test_output=errors
           grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
