@@ -137,6 +137,9 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             let bundle = folder.appendingPathComponent("results/test-\(name).xcresult")
             var arguments = ["test-without-building"] + common(in: copy)
             arguments += ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
+            // A failing test, which is how a mutant dies, makes xcodebuild collect diagnostics, such as log archives, for about
+            // 20 seconds longer than a passing run takes. The run needs the result bundle and the report, not those.
+            arguments += ["-collect-test-diagnostics", "never"]
             arguments += onlyTestingArguments(for: group, identifiers: identifiers, selectsTargets: !target.testTargets.isEmpty)
             // The prefixed variables are how xcodebuild gives the tests a setting.
             var prefixed = [String: String]()
