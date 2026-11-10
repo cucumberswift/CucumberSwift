@@ -211,6 +211,29 @@ extension CucumberTests {
         #expect(CucumberSettings.reportPath(environment: [:]) == "/tmp/static.json")
     }
 
+    @Test func theReportIsStaleAfterTenMinutesUnlessTheStaticVariableOrTheEnvironmentVariableSaysOtherwise() {
+        defer { Cucumber.reportStaleAfter = nil }
+        let key = "CUCUMBER_REPORT_STALE_AFTER"
+        #expect(CucumberSettings.reportStaleAfter(environment: [:]) == 600)
+        #expect(CucumberSettings.reportStaleAfter(environment: [key: " 1800 "]) == 1_800)
+
+        Cucumber.reportStaleAfter = 90
+        #expect(CucumberSettings.reportStaleAfter(environment: [key: "1800"]) == 90)
+        #expect(CucumberSettings.reportStaleAfter(environment: [:]) == 90)
+    }
+
+    @Test func aReportStaleAfterThatIsNotANumberAboveZeroIsIgnored() {
+        defer { Cucumber.reportStaleAfter = nil }
+        let key = "CUCUMBER_REPORT_STALE_AFTER"
+        for value in ["", "soon", "0", "-5", "inf", "nan", "10m"] {
+            #expect(CucumberSettings.reportStaleAfter(environment: [key: value]) == 600, "\(value)")
+        }
+        for setting in [0, -1, TimeInterval.infinity, TimeInterval.nan] {
+            Cucumber.reportStaleAfter = setting
+            #expect(CucumberSettings.reportStaleAfter(environment: [key: "1800"]) == 1_800, "\(setting)")
+        }
+    }
+
     /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them,
     /// with their test bundle when given.
     func parityScenarios(in testBundle: URL? = nil) -> [GherkinScenario] {

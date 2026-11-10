@@ -116,6 +116,18 @@ class ReportRunTests: XCTestCase {
         XCTAssertEqual(ReportFile.staleAfter, 600)
     }
 
+    /// A limit that the setting gives decides: a report 5 minutes old is kept with a limit of 10 minutes and
+    /// emptied with a limit of a minute, and one 20 minutes old is kept with a limit of 30.
+    func testALimitThatIsGivenDecidesWhetherTheReportIsStale() throws {
+        exitedWorker(bundle: "Unit.xctest", wrote: "A")
+        try ageReport(by: 300)
+        XCTAssertEqual(names(joined(bundle: "Other.xctest", staleAfter: 600)), [["A"]])
+        try ageReport(by: 1_200)
+        XCTAssertEqual(names(joined(bundle: "Third.xctest", staleAfter: 1_800)), [["A"]])
+        try ageReport(by: 300)
+        XCTAssertEqual(joined(bundle: "Fourth.xctest", staleAfter: 60).count, 0)
+    }
+
     func testTheRunRecordKeepsItsStarterAndItsBundles() {
         var record = RunRecord(starter: RunStarter(pid: 42, started: 7))
         record.keys = ["XCTest A.xctest", "Swift Testing B.xctest"]

@@ -140,6 +140,7 @@ final class CucumberJSONRecorder {
     private let reportURL: () -> URL
     private let runner: String
     private let isParallel: () -> Bool
+    private let staleAfter: () -> TimeInterval
 
     private(set) var features: [CucumberJSONReport.Feature] = []
     private var currentFeature: CucumberJSONReport.Feature?
@@ -163,17 +164,23 @@ final class CucumberJSONRecorder {
     ///   - runner: The runner that writes the report: `XCTest` or `Swift Testing`.
     ///   - isParallel: Whether this process is one of several parallel workers, which keep their features
     ///     when the suite starts again.
-    init(reportURL: @escaping () -> URL, runner: String, isParallel: @escaping () -> Bool = { false }) {
+    ///   - staleAfter: Asked when the suite starts: how long a report can go unwritten before this process
+    ///     takes it for an earlier run's, when no other rule decides.
+    init(reportURL: @escaping () -> URL,
+         runner: String,
+         isParallel: @escaping () -> Bool = { false },
+         staleAfter: @escaping () -> TimeInterval = { ReportFile.staleAfter }) {
         self.reportURL = reportURL
         self.runner = runner
         self.isParallel = isParallel
+        self.staleAfter = staleAfter
     }
 
     // MARK: Events
 
     /// Joins the run that writes the report, which empties the report an earlier run left (#546).
     func suiteStarted() {
-        ReportFile.at(reportURL()).joinRun(runner: runner, isParallel: isParallel())
+        ReportFile.at(reportURL()).joinRun(runner: runner, isParallel: isParallel(), staleAfter: staleAfter())
         defer { save() }
         // XCTest asks for CucumberTest's suite again while a parallel worker runs scenarios. Clearing the
         // features then would leave the scenario in progress with a feature that is no longer in the

@@ -27,7 +27,10 @@ public class CucumberJSONReporter: CucumberTestObserver {
             if let path = FeatureFlags.reportPath { return URL(fileURLWithPath: path) }
             return defaultURL
         }
-        return CucumberJSONRecorder(reportURL: reportURL, runner: "XCTest") { FeatureFlags.isParallelTesting }
+        return CucumberJSONRecorder(reportURL: reportURL,
+                                    runner: "XCTest",
+                                    isParallel: { FeatureFlags.isParallelTesting },
+                                    staleAfter: { FeatureFlags.reportStaleAfter })
     }
 
     public init?() {

@@ -50,16 +50,25 @@ A new run replaces the report. The first process of a run empties the report tha
 
 A parallel run in Xcode, or on a Simulator, that starts sooner than that after another run adds to its report, because its workers look like the last run's. Delete the report first.
 
+To change how long the report can go unwritten, set `Cucumber.reportStaleAfter` to a number of seconds in `setupSteps()`, or set the environment variable `CUCUMBER_REPORT_STALE_AFTER`. The static variable wins over the environment variable. A value that isn't a number above 0 is ignored. Both runners read it.
+
+<!-- swift-example: steps -->
+```swift
+Cucumber.reportStaleAfter = 30 * 60 // 30 minutes
+```
+
+Choose a longer time when something slow runs between one test target ending and the next starting, such as a build or the start of your test infrastructure. Without it, the later target empties the report that the earlier target wrote. Choose a shorter time when you start parallel runs in Xcode close together, so that each new run replaces the report. A test process that is running protects its own run, so a long scenario never needs a longer time.
+
 Keep these points in mind for the shared report:
 
-- On an iOS or tvOS Simulator, set `reportPath` to a path on the Mac, as above. Each Simulator clone, and each app on a Simulator, has its own documents folder. Without `reportPath`, each of them writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
+- On an iOS or tvOS Simulator, set `reportPath` to a path under the Mac's home folder, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes. Each Simulator clone, and each app on a Simulator, has its own documents folder. Without `reportPath`, each of them writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
 - The report's folder must be writable. Every process also creates `<report>.lock` and `<report>.run` next to the report. You can delete them between runs.
 - The copy in `CucumberTestResultsFor<target>.json` has the features of that test bundle, from the report as it was when the bundle's tests finished. A package that you run with `swift test` has 1 test bundle for all its targets, so its copy has the features of every target.
 - We haven't tried a physical device. A device is expected to run 1 worker and write its own file.
 
 ### Swift Testing
 
-The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process adds its scenarios to the run's report, as above, in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path on the Mac, as above.
+The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process adds its scenarios to the run's report, as <doc:Generating-Reports#One-report-for-each-test-run> describes, in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path under the Mac's home folder, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes.
 
 ## Verbose output
 
