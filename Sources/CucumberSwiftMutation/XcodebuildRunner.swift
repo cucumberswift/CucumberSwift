@@ -126,7 +126,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         }
         // Each test bundle runs in a process of its own, and the processes write one report, the last replacing the
         // others. So a project with several test targets gets an `xcodebuild` run for each, and their reports are merged.
-        let groups = target.testTargets.count > 1 ? target.testTargets.map { [$0] } : [target.testTargets]
+        let groups = testTargetGroups(for: request.scenarios, in: copy)
         var runs = [(result: CommandResult, report: URL?, tests: Int)]()
         for (index, group) in groups.enumerated() {
             let name = groups.count > 1 ? "\(number)-\(index + 1)" : "\(number)"
@@ -152,16 +152,54 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             timedOut: runs.contains { $0.result.timedOut },
             duration: runs.map(\.result.duration).reduce(0, +),
             testsRun: runs.map(\.tests).reduce(0, +),
-            log: write(combinedOutput(of: runs.map(\.result)), named: "test-\(number)", in: copy),
+            log: write(combinedOutput(of: zip(groups, runs.map(\.result)).map { ($0.joined(separator: ", "), $1) }), named: "test-\(number)", in: copy),
             cucumberReport: reports.count > 1 ? mergedReport(reports, named: "report-\(number).json", in: folder) : reports.first,
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
     }
 
+    /// The test targets to run, a group for each `xcodebuild` run: one run for all of them, or one for each of several
+    /// targets. A target that holds none of the scenarios is left out: its run would start `xcodebuild` to run no test,
+    /// which takes seconds.
+    private func testTargetGroups(for scenarios: [ScenarioID]?, in copy: URL) -> [[String]] {
+        guard target.testTargets.count > 1 else { return [target.testTargets] }
+        let targets = scenarios.map { testTargets(holding: $0, in: copy) } ?? target.testTargets
+        return targets.map { [$0] }
+    }
+
+    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file, in
+    /// the order of the target's test targets. A target whose bundle isn't found is kept, because it may hold one, and
+    /// so is every target when none of them holds any, so that a run never skips all of them.
+    private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
+        let bundles = builtBundles(in: copy)
+        let holding = target.testTargets.filter { name in
+            guard let bundle = bundles[name] else { return true }
+            return scenarios.contains { scenario in
+                [bundle, bundle.appendingPathComponent("Contents/Resources")].contains { root in
+                    FileManager.default.fileExists(atPath: root.appendingPathComponent(scenario.feature).path)
+                }
+            }
+        }
+        return holding.isEmpty ? target.testTargets : holding
+    }
+
+    /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,
+    /// so the whole products folder is searched, without looking inside a bundle.
+    private func builtBundles(in copy: URL) -> [String: URL] {
+        let products = runnerFolder(for: copy).appendingPathComponent("DerivedData/Build/Products")
+        guard let enumerator = FileManager.default.enumerator(at: products, includingPropertiesForKeys: nil) else { return [:] }
+        var bundles = [String: URL]()
+        for case let url as URL in enumerator where url.pathExtension == "xctest" {
+            enumerator.skipDescendants()
+            bundles[url.deletingPathExtension().lastPathComponent] = url
+        }
+        return bundles
+    }
+
     /// What the runs printed: one run's output as it is, and several runs' each under the name of its test target.
-    private func combinedOutput(of results: [CommandResult]) -> String {
-        guard results.count > 1 else { return results.first?.output ?? "" }
-        let sections = zip(target.testTargets, results).map { "== test target \($0) ==\n\($1.output)" }
+    private func combinedOutput(of results: [(testTarget: String, result: CommandResult)]) -> String {
+        guard results.count > 1 else { return results.first?.result.output ?? "" }
+        let sections = results.map { "== test target \($0.testTarget) ==\n\($0.result.output)" }
         return sections.joined(separator: "\n")
     }
 
