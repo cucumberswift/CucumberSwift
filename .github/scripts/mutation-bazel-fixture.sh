@@ -31,7 +31,7 @@ started=$SECONDS
 
 # The job's earlier steps leave a Bazel server for Tests/ running, with the memory it built up. The tool starts its
 # own for the copy it makes, so stop the old one before the Swift build and the runs need the memory.
-(cd "$fixture" && bazel shutdown) || true
+(cd "$fixture" && bazel shutdown) || echo "::notice::bazel shutdown failed, or no Bazel server was running."
 
 # Build the tool on its own and run the binary, so a failure to start is not mistaken for a failed build.
 build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
