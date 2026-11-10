@@ -60,7 +60,9 @@ python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 selection_log="$(cd "$dir" && pwd -P)/mutation-$name-selection.log"
 MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh \
   swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests 2>&1 | tee "$selection_log"
-if ! grep -Eq 'Executed [1-9][0-9]* tests?, with 0 failures' "$selection_log" || grep -Eq '[1-9][0-9]* tests? skipped' "$selection_log"; then
-  echo "error: $name: XcodebuildRunnerFixtureTests did not run, or skipped a test" >&2
+# Each test method of the class must have run, so a filter that stops selecting one fails the step.
+expected_tests=$(grep -c '^    func test' Tests/CucumberSwiftMutationTests/XcodebuildRunnerFixtureTests.swift)
+if ! grep -Eq "Executed $expected_tests tests?, with 0 failures" "$selection_log" || grep -Eq '[1-9][0-9]* tests? skipped' "$selection_log"; then
+  echo "error: $name: XcodebuildRunnerFixtureTests did not run all $expected_tests tests, or skipped one" >&2
   exit 1
 fi
