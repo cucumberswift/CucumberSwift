@@ -28,7 +28,8 @@ replace the first run's report, not add to it.
 
   python3 .github/scripts/fixture_report.py get <fixture> <expected file> <key>
 
-prints a setting of an expected file: expected-report or expected-report-rerun.
+prints a setting of an expected file: expected-report or expected-report-rerun. A setting that the
+file doesn't have is an error on the standard error and the exit status 1, with nothing on the standard output.
 
 The expected-report file of a Swift package fixture whose test run ages the
 report has `ages-report: <suffix>`. The fixture's first runner writes the file
@@ -99,7 +100,8 @@ def run(argv, stdin, root=FIXTURES):
         path = expected_file(argv[2], argv[3], root)
         settings, _ = expectation(path)
         if argv[4] not in settings:
-            print(f"error: {path}: has no `{argv[4]}:` setting")
+            # On the standard error, so that `$(... get ...)` in a shell script captures only a setting.
+            print(f"error: {path}: has no `{argv[4]}:` setting", file=sys.stderr)
             return 1
         print(settings[argv[4]])
         return 0

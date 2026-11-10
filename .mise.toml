@@ -177,7 +177,7 @@ for fixture in Fixtures/*/; do
   python3 .github/scripts/fixture_tests.py "$fixture" "$log"
   if [ -n "$report" ]; then
     # The marker that a fixture's first runner writes after it sets the report's age.
-    aged_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report || true)
+    aged_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report 2>/dev/null || true)
     if [ -n "$aged_suffix" ] && [ ! -e "$report$aged_suffix" ]; then
       echo "error: $name: the fixture didn't age the report: there is no $report$aged_suffix"
       exit 1

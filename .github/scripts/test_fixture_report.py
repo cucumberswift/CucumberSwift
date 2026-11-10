@@ -13,7 +13,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import fixture_report  # noqa: E402
@@ -38,6 +38,13 @@ class FixtureReportTests(unittest.TestCase):
         with redirect_stdout(output):
             status = fixture_report.run(["fixture_report.py", *args], io.StringIO(report or ""), self.root)
         return status, output.getvalue()
+
+    def run_main_with_errors(self, *args):
+        """The status, the standard output and the standard error."""
+        errors = io.StringIO()
+        with redirect_stderr(errors):
+            status, output = self.run_main(*args)
+        return status, output, errors.getvalue()
 
     def check(self, expected, features, kind="expected-report"):
         self.write(kind, expected)
@@ -87,9 +94,10 @@ class FixtureReportTests(unittest.TestCase):
 
     def test_a_setting_a_file_does_not_have_is_an_error(self):
         self.write("expected-report", "Cukes\n")
-        status, output = self.run_main("get", "Demo", "expected-report", "tags")
+        status, output, errors = self.run_main_with_errors("get", "Demo", "expected-report", "tags")
         self.assertEqual(status, 1)
-        self.assertIn("no `tags:` setting", output)
+        self.assertEqual(output, "")
+        self.assertIn("no `tags:` setting", errors)
 
     def test_a_file_without_features_or_a_setting_value_is_an_error(self):
         for text in ("# Nothing.\n", "tags: x\n", "tags:\nCukes\n"):
