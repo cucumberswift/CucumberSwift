@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+import CucumberSwiftGherkin
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -147,6 +148,35 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
         var names = ScenarioTestNames(root: folder)
         XCTAssertEqual(try names.swiftTestingIdentifier(for: id(3)), "CucumberFeatures/Voting/AnAdultCanVote(_:)")
         XCTAssertEqual(try names.swiftTestingIdentifier(for: id(16)), "CucumberFeatures/Voting/AnAdultCanVote_2(_:)", "A repeated name gets a number")
+    }
+
+    func testNamesTheSwiftTestingTestOfATitleWithNoLettersAReservedTitleAndANonASCIITitle() throws {
+        // The plugin names a test `Scenario` when the title gives no name or a reserved one, numbered as a repeat.
+        try write("""
+        Feature: Names
+
+          Scenario:
+            Given a card
+
+          Scenario: !!!
+            Given a card
+
+          Scenario: Test
+            Given a card
+
+          Scenario: \u{DC}berweisung
+            Given a card
+        """, to: "Features/Names.feature")
+        var names = ScenarioTestNames(root: folder)
+        let identifiers = try [3, 6, 9, 12].map { try names.swiftTestingIdentifier(for: id($0, feature: "Features/Names.feature")) }
+        let letters = FeatureFile.typeName(for: "\u{DC}berweisung")
+        XCTAssertEqual(identifiers, [
+            "CucumberFeatures/Names/Scenario(_:)",
+            "CucumberFeatures/Names/Scenario_2(_:)",
+            "CucumberFeatures/Names/Scenario_3(_:)",
+            "CucumberFeatures/Names/\(letters)(_:)"
+        ])
+        XCTAssertEqual(letters, "\u{DC}berweisung", "The plugin keeps a letter outside ASCII in a name")
     }
 
     func testAnOutlineIsOneSwiftTestingTestWhicheverLineOfItIsGiven() throws {

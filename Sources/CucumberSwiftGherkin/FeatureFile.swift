@@ -256,7 +256,9 @@ extension Step.Keyword {
 // MARK: - Names and suggestions, as CucumberSwift makes them
 
 extension FeatureFile {
-    /// Names the generated Swift Testing code can't use for a suite or a test: they would hide what it refers to.
+    /// Names the generated Swift Testing code can't use for a suite or a test: they would hide what it refers to. This and
+    /// the two functions below are `public` because two other targets use them: the Swift Testing generator, which names
+    /// the tests, and the mutation module, which names a test to select it. CucumberSwiftGherkin is not a product.
     public static let swiftTestingReservedNames: Set<String> = [
         "CucumberFeatures", "CucumberSwiftTesting", "Testing", "Test", "Suite", "Self", "Type", "Protocol", "Any", "Sendable"
     ]
