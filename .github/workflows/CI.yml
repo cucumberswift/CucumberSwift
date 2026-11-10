@@ -1141,6 +1141,7 @@ jobs:
           path: |
             ${{ runner.temp }}/mutation-MutationTestingTuist
             ${{ runner.temp }}/mutation-MutationTestingTuist-build.log
+            ${{ runner.temp }}/mutation-MutationTestingTuist-selection.log
           if-no-files-found: ignore
           retention-days: 3
       # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing

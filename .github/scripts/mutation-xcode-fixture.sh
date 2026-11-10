@@ -55,5 +55,12 @@ fi
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
 # The same project, one scenario at a time: the runner selects an XCTest scenario and a Swift Testing scenario with
-# the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the folder.
-MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests
+# the test names that ScenarioTestNames makes, and each run ran exactly that scenario. The tests skip without the
+# folder, and a skipped test or a filter that matches nothing exits with success, so the output must show tests that ran.
+selection_log="$(cd "$dir" && pwd -P)/mutation-$name-selection.log"
+MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh \
+  swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests 2>&1 | tee "$selection_log"
+if ! grep -Eq 'Executed [1-9][0-9]* tests?, with 0 failures' "$selection_log" || grep -Eq '[1-9][0-9]* tests? skipped' "$selection_log"; then
+  echo "error: $name: XcodebuildRunnerFixtureTests did not run, or skipped a test" >&2
+  exit 1
+fi
