@@ -189,7 +189,8 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
-      # the Cucumber report it reads, its plugin, its fixtures and scripts, the package manifests or this workflow.
+      # the Cucumber report it reads, its plugin, its fixtures, scripts and action, the package manifests or this
+      # workflow.
       # Not the documentation, which lives in Sources too. Always on any other event.
       - name: Decide whether the mutation testing fixture runs
         id: mutation
@@ -198,7 +199,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/mutation[-_])'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -1103,8 +1104,13 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
+      # The mutation testing steps run the tool that this action builds once, with a cache that every job running
+      # the tool shares. See .github/actions/mutation-tool/action.yml.
+      - name: Build the mutation testing tool
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        uses: ./.github/actions/mutation-tool
       # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
-      # as a script runs it: `swift run cucumberswift-mutation-test --format xcode`. The run must kill and keep the
+      # as a script runs it, here the tool built above. The run must kill and keep the
       # mutants that the fixture's expected-mutants file lists, and print a warning for each survivor (#519).
       # It takes minutes, so a pull request runs it only when it changes mutation testing (mutation_code, from the
       # changes job). The merge queue and every nightly and manual run always run it.
