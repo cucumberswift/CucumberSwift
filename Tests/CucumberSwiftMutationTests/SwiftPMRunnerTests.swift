@@ -69,10 +69,10 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         let commands = RecordingCommands()
         _ = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(scenarios: [
             ScenarioID(feature: "Features/Basket, large 100%.feature", line: 3, name: "One"),
-            ScenarioID(feature: " Other.feature", line: 9, name: "Two")
+            ScenarioID(feature: "\t Other.feature", line: 9, name: "Two")
         ]))
-        let expected = "Features/Basket%2C large 100%25.feature:3,%20Other.feature:9"
-        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], expected, "A leading space is escaped: the reader trims")
+        let expected = "Features/Basket%2C large 100%25.feature:3,\t Other.feature:9"
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], expected, "Leading whitespace is written as it is")
     }
 
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {

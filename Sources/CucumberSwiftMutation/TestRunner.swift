@@ -126,11 +126,9 @@ func makeFolder(_ folder: URL) throws -> URL {
 }
 
 extension TestRequest {
-    /// `id` with `%` and `,` written as `%25` and `%2C`, so that a comma in a feature file's path doesn't split the list,
-    /// and a space at its start as `%20`, which the reader would trim off. CucumberSwift's `ScenarioList` reads it back.
+    /// `id` with `%` and `,` written as `%25` and `%2C`, so that a comma in a feature file's path doesn't split the list.
+    /// CucumberSwift's `ScenarioList` reads it back, and reads every other character, whitespace included, as written.
     static func escaped(_ id: String) -> String {
-        let text = id.replacingOccurrences(of: "%", with: "%25").replacingOccurrences(of: ",", with: "%2C")
-        let spaces = text.prefix { $0 == " " }.count
-        return String(repeating: "%20", count: spaces) + text.dropFirst(spaces)
+        id.replacingOccurrences(of: "%", with: "%25").replacingOccurrences(of: ",", with: "%2C")
     }
 }
