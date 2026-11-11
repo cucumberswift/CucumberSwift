@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import CryptoKit
 import Foundation
 
@@ -73,3 +74,4 @@ public struct ProjectFingerprint: Equatable, Sendable {
         return lines
     }
 }
+#endif

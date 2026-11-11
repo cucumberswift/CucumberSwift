@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -179,4 +180,27 @@ final class MutationOptionsTests: XCTestCase {
         try FileManager.default.createDirectory(at: folder.appendingPathComponent("A.xcodeproj"), withIntermediateDirectories: true)
         XCTAssertNil(options.rootProblem)
     }
+
+    func testCountsAreWholeNumbersAboveZero() {
+        // `Int(0.5)` is 0: one baseline run would be the range 1...0, which traps, and no mutant would be tested.
+        for (option, value) in [("--baseline-runs", "0.5"), ("--max-mutants", "0.5"), ("--max-mutants", "1e300"), ("--baseline-runs", "two")] {
+            XCTAssertThrowsError(try MutationOptions.parse(["--root", "/p", option, value])) {
+                XCTAssertEqual("\($0)", "\(option) needs a whole number above 0, not \"\(value)\"")
+            }
+        }
+    }
+
+    func testTheDefaultSwiftIsTheFirstOnThePath() throws {
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("swift-path-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let bin = folder.appendingPathComponent("bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let swift = bin.appendingPathComponent("swift")
+        try "#!/bin/sh\n".write(to: swift, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: swift.path)
+        XCTAssertEqual(MutationOptions.swift(onPath: "\(folder.path)/missing:\(bin.path):/usr/bin"), swift.path)
+        XCTAssertEqual(MutationOptions.swift(onPath: folder.path), "/usr/bin/swift", "No swift on the path")
+        XCTAssertEqual(MutationOptions.swift(onPath: nil), "/usr/bin/swift")
+    }
 }
+#endif

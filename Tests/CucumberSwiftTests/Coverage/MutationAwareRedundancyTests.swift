@@ -159,4 +159,21 @@ final class MutationAwareRedundancyTests: XCTestCase {
         let two = CoverageScores.Overlap(line: 4, regionsHere: 0, regionsThere: 0, detectsHere: ["a", "b"], detectsThere: [])
         XCTAssertTrue(CoverageReport.message(for: two).contains("Only this one fails when a or b."))
     }
+
+    // MARK: Manifests
+
+    func testAManifestFromBeforeMutationTestingReadsAsNotMutationAware() throws {
+        let scores = CoverageScores(scenarios: [scenario(4, [0, 1]), scenario(9, [0, 1])],
+                                    code: code,
+                                    isRedundancy: true,
+                                    detections: detections([9: ["m1"]]))
+        let data = try JSONEncoder().encode(scores)
+        XCTAssertEqual(try JSONDecoder().decode(CoverageScores.self, from: data), scores, "The field is written and read back")
+        // CucumberSwift 6.8 wrote the scores without the field.
+        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        json["isMutationAware"] = nil
+        let older = try JSONDecoder().decode(CoverageScores.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertFalse(older.isMutationAware)
+        XCTAssertEqual(older.scenarios, scores.scenarios)
+    }
 }

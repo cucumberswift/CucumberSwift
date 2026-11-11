@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// What happened when the tests ran against one mutant.
@@ -41,3 +42,4 @@ public enum Verdict: Equatable, Sendable {
         }
     }
 }
+#endif

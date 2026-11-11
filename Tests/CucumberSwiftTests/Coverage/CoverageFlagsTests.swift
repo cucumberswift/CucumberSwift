@@ -112,5 +112,8 @@ final class CoverageFlagsTests: XCTestCase {
         XCTAssertEqual(Cucumber.mutationReport, "/tmp/from-code.json")
         XCTAssertFalse(settings.isMutationTesting)
         XCTAssertEqual(settings.mutationReport, "/tmp/from-code.json")
+        // A blank path in code wins too, and turns off the one the environment sets.
+        Cucumber.mutationReport = "  "
+        XCTAssertNil(CoverageSettings.read(environment: environment).mutationReport)
     }
 }

@@ -347,3 +347,21 @@ struct CoverageScores: Codable, Equatable {
         whole == 0 ? 0 : 100 * Double(part) / Double(whole)
     }
 }
+
+extension CoverageScores {
+    /// Reads the scores from a manifest. A manifest that CucumberSwift 6.8 wrote has no `isMutationAware`, which is
+    /// then false: the field is new, so the manifest's form, and its version, stay the same.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coveredRegions = try container.decode(Int.self, forKey: .coveredRegions)
+        regionsInFunctionsRun = try container.decode(Int.self, forKey: .regionsInFunctionsRun)
+        measuredRegions = try container.decode(Int.self, forKey: .measuredRegions)
+        functionsRun = try container.decode(Int.self, forKey: .functionsRun)
+        redundancy = try container.decodeIfPresent(Double.self, forKey: .redundancy)
+        wastedTime = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedTime)
+        scenarios = try container.decode([ScenarioScore].self, forKey: .scenarios)
+        gaps = try container.decode([Gap].self, forKey: .gaps)
+        redundantSteps = try container.decode([RedundantStep].self, forKey: .redundantSteps)
+        isMutationAware = try container.decodeIfPresent(Bool.self, forKey: .isMutationAware) ?? false
+    }
+}

@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 import XCTest
 @testable import CucumberSwiftMutation
@@ -179,3 +180,4 @@ final class DiscoveryToolTests: XCTestCase {
     }
     #endif
 }
+#endif

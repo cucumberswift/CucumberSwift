@@ -71,6 +71,9 @@ def read_report(path):
         for name, file in report["files"].items():
             for mutant in file["mutants"]:
                 key = (name, mutant["location"]["start"]["line"], mutant["mutatorName"], mutant["replacement"])
+                # A second entry would replace the first: the run would pass with a mutant more than it lists.
+                if key in found:
+                    raise MutantsError(f"has a mutation-report.json that lists a mutant twice: {describe(key)}")
                 found[key] = mutant["status"]
         return found
     except OSError as error:
