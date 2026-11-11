@@ -6,6 +6,7 @@
 //  because a plugin can't import a library. So it uses only Foundation.
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// A surviving mutant, read from the tool's Stryker report, as a warning. The command-line tool prints it in the
@@ -70,3 +71,4 @@ public struct SurvivorWarning: Equatable {
         return String(bytes: bytes[from..<to], encoding: .utf8) ?? ""
     }
 }
+#endif

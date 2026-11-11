@@ -36,6 +36,8 @@ import Testing
         #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == "/a.json")
         Cucumber.mutationReport = "/b.json"
         #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == "/b.json")
+        Cucumber.mutationReport = "  "
+        #expect(CoverageSettings.read(environment: ["CUCUMBER_MUTATION_REPORT": "/a.json"]).mutationReport == nil)
     }
 
     // The static variable is passed in, because other suites set `Cucumber.parallelTesting` while this one runs.

@@ -87,6 +87,11 @@ class ReadReportTests(Folder):
         with self.assertRaisesRegex(m.MutantsError, "isn't a mutation report"):
             m.read_report(path)
 
+    def test_refuses_a_report_that_lists_a_mutant_twice(self):
+        self.write_report(report(mutant(11, "RelationalOperator", "<", "Killed"), mutant(11, "RelationalOperator", "<", "Survived")))
+        with self.assertRaisesRegex(m.MutantsError, "lists a mutant twice: Sources/Voting.swift:11 RelationalOperator <"):
+            m.read_report(os.path.join(self.reports, "mutation-report.json"))
+
 
 class CheckTests(Folder):
     def good_report(self):

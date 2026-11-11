@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -41,3 +42,4 @@ final class MutantTests: XCTestCase {
         XCTAssertEqual(found.summary, "Sources/A.swift:1:38 RelationalOperator >= → >")
     }
 }
+#endif

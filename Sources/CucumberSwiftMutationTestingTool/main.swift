@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTestingTool
 //
 
+#if os(macOS) || os(Linux)
 import CucumberSwiftMutation
 import Foundation
 
@@ -55,7 +56,8 @@ for signalNumber in [SIGINT, SIGTERM] {
 let status = run.run()
 // A cancelled run is still being cleaned up by the signal handler, which exits when it is done.
 if status == MutationRun.Status.cancelled { dispatchMain() }
-if options.format == .xcode {
+// Only a completed run wrote this run's report.
+if options.format == .xcode, status == MutationRun.Status.completed {
     for warning in SurvivorWarning.read(report: options.output.appendingPathComponent("mutation-report.json"), root: options.root) {
         print(warning.xcodeLine)
     }
@@ -66,4 +68,5 @@ exit(status)
 // changes nothing.
 FileHandle.standardError.write(Data(SetupAdvice.traitOffMessage.utf8))
 exit(2)
+#endif
 #endif

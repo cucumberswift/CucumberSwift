@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// What a finished command printed, and how it ended.
@@ -42,3 +43,4 @@ public protocol CommandRunning: Sendable {
         timeout: TimeInterval?
     ) -> CommandResult
 }
+#endif

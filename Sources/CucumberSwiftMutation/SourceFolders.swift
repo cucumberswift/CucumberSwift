@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The folders whose Swift files a run mutates, read from `swift package describe --type json`: those of the
@@ -53,3 +54,4 @@ public enum SourceFolders {
         return chosen.map(\.path)
     }
 }
+#endif
