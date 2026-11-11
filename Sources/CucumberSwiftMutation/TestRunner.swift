@@ -48,7 +48,7 @@ public struct TestRun: Sendable {
     public var coverageFolder: URL?
     /// The command that runs the tests started. A command that never started, because the run was cancelled or the tool
     /// couldn't be launched, tested nothing: its non-zero status is not a failing test.
-    public var started: Bool
+    public var started = true
 
     public var succeeded: Bool { status == 0 && !timedOut }
 
@@ -59,8 +59,7 @@ public struct TestRun: Sendable {
         testsRun: Int = 0,
         log: URL? = nil,
         cucumberReport: URL? = nil,
-        coverageFolder: URL? = nil,
-        started: Bool = true
+        coverageFolder: URL? = nil
     ) {
         self.status = status
         self.timedOut = timedOut
@@ -69,7 +68,6 @@ public struct TestRun: Sendable {
         self.log = log
         self.cucumberReport = cucumberReport
         self.coverageFolder = coverageFolder
-        self.started = started
     }
 }
 
