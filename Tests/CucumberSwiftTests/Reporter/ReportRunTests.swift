@@ -88,6 +88,20 @@ class ReportRunTests: XCTestCase {
         XCTAssertEqual(names(joined(isParallel: true)), [["A"]])
     }
 
+    /// Xcode can start a bundle while another bundle's process still runs. That bundle is part of the run too,
+    /// so running it again alone replaces the report.
+    func testABundleThatJoinsWhileAnotherBundleRunsIsRecordedInTheRun() {
+        do {
+            let first = ReportFile(url: url)
+            first.joinRun(runner: "XCTest", bundle: "Unit.xctest", run: nil)
+            first.merge([feature([scenario("A", line: 1)])])
+            let second = ReportFile(url: url)
+            second.joinRun(runner: "Swift Testing", bundle: "Features.xctest", run: nil)
+            second.merge([feature([scenario("B", line: 2)])])
+        }
+        XCTAssertEqual(joined(runner: "Swift Testing", bundle: "Features.xctest").count, 0)
+    }
+
     func testAStaleReportIsEmptiedByAnyWorker() throws {
         exitedWorker(bundle: "Unit.xctest", wrote: "Old")
         try ageReport(by: ReportFile.staleAfter + 60)

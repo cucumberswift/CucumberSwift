@@ -288,17 +288,30 @@ final class ReportFile: @unchecked Sendable {
         // lock for a moment, and another worker can take it exclusively. That worker finds a report the
         // first one has just written, which isn't stale, and the run this worker recorded, so it leaves
         // it alone: two first workers never both empty it.
+        let key = RunRecord.key(runner: runner, bundle: bundle)
         if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
-            let key = RunRecord.key(runner: runner, bundle: bundle)
-            var record = RunRecord(recorded: recordedRun())
-            if record.isNewRun(by: run, key: key, isParallel: isParallel, isStale: { isStale(after: staleAfter) }) {
+            let isNewRun = RunRecord(recorded: recordedRun())
+                .isNewRun(by: run, key: key, isParallel: isParallel) { isStale(after: staleAfter) }
+            if isNewRun {
                 withWriteLock { write([]) }
-                record = RunRecord(starter: run)
             }
+            record(key, newRunStartedBy: run, isNewRun: isNewRun)
+        } else {
+            // Another worker holds the run, so this one joins it. Its bundle is recorded too, or running
+            // that bundle again alone wouldn't be known as a new run.
+            record(key, newRunStartedBy: nil, isNewRun: false)
+        }
+        flock(descriptor, LOCK_SH)
+    }
+
+    /// Adds a worker's key to the run recorded in the run lock file, or starts the record again for a new run,
+    /// whose starter may be `nil`. The write lock serializes the workers that update the record.
+    private func record(_ key: String, newRunStartedBy starter: RunStarter?, isNewRun: Bool) {
+        withWriteLock {
+            var record = isNewRun ? RunRecord(starter: starter) : RunRecord(recorded: recordedRun())
             record.keys.insert(key)
             store(record)
         }
-        flock(descriptor, LOCK_SH)
     }
 
     /// The run recorded in the run lock file.

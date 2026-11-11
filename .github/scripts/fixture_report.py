@@ -79,11 +79,14 @@ def problems(expected, report):
     if not isinstance(report, list):
         return ["the report isn't a list of features"]
     found = {}
+    duplicates = []
     for feature in report:
         name = feature.get("name") if isinstance(feature, dict) else None
         scenarios = feature.get("elements") if isinstance(feature, dict) else None
+        if name in found:
+            duplicates.append(name)
         found[name] = found.get(name, 0) + (len(scenarios) if isinstance(scenarios, list) else 0)
-    messages = []
+    messages = [f"the report has the feature {name!r} more than once" for name in dict.fromkeys(duplicates)]
     for name in expected:
         if name not in found:
             messages.append(f"the report has no feature {name!r}")

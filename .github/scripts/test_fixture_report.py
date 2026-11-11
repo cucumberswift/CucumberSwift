@@ -66,6 +66,11 @@ class FixtureReportTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("a feature it shouldn't: 'Cukes'", output)
 
+    def test_a_feature_listed_twice_fails_even_when_the_expected_file_lists_it_once(self):
+        status, output = self.check("Cukes\n", [feature("Cukes"), feature("Cukes")])
+        self.assertEqual(status, 1)
+        self.assertIn("the feature 'Cukes' more than once", output)
+
     def test_a_feature_without_scenarios_fails(self):
         status, output = self.check("Cukes\n", [feature("Cukes", 0)])
         self.assertEqual(status, 1)

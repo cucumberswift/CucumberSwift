@@ -146,6 +146,7 @@ for fixture in Fixtures/*/; do
     # A report that an earlier run left, as new as one can be: the run must start with an empty report
     # without anything deleting it first. The report has no record of a run, as one from Xcode has none.
     if [ -f "$fixture/Package.swift" ]; then
+      mkdir -p "$(dirname "$report")"
       printf '%s\n' '[{"id":"stale","keyword":"Feature","line":1,"name":"Stale feature from an earlier run","uri":"Stale.feature","elements":[]}]' > "$report"
     fi
   fi

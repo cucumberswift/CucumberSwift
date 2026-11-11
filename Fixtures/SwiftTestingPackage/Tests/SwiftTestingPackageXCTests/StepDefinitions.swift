@@ -21,8 +21,13 @@ import XCTest
 /// `<report>.aged` as proof.
 private func ageTheReport() {
     guard let path = ProcessInfo.processInfo.environment["CUCUMBER_REPORT_PATH"] else { return }
-    try? FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -7_200)], ofItemAtPath: path)
-    FileManager.default.createFile(atPath: path + ".aged", contents: nil)
+    // The marker only proves the report is aged when the age changed; a missing marker fails the fixture.
+    do {
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -7_200)], ofItemAtPath: path)
+        FileManager.default.createFile(atPath: path + ".aged", contents: nil)
+    } catch {
+        FileHandle.standardError.write(Data("error: can't set the age of the report at \(path): \(error)\n".utf8))
+    }
 }
 
 private let agesTheReport: Void = { atexit(ageTheReport) }()
