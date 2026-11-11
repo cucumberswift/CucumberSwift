@@ -53,6 +53,12 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
         XCTAssertThrowsError(try CoverageMerge.read([stopped])) {
             XCTAssertEqual($0 as? CoverageMerge.MergeError, .incomplete(stopped.path))
         }
+        // Beside a run that finished, it still isn't left out.
+        try write(manifest(scenarios, order: functions), in: "run-a")
+        let finished = folder.appendingPathComponent("run-a")
+        XCTAssertThrowsError(try CoverageMerge.read([finished, stopped])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .incomplete(stopped.path))
+        }
     }
 
     func testAManifestOfAnotherVersionIsRefused() throws {
