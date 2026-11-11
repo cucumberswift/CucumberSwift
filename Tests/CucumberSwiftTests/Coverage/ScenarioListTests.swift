@@ -57,6 +57,13 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Features/Basket", line: 2, environment: environment), "Not split at the comma")
     }
 
+    func testALeadingSpaceInAPathIsNotTrimmedOffTheEntry() {
+        let uri = "file:///x/Tests.xctest/ Basket.feature"
+        let environment = ["CUCUMBER_SCENARIOS": "%20Basket.feature:2"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Basket.feature", line: 2, environment: environment))
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }
