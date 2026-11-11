@@ -170,20 +170,26 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return targets.map { [$0] }
     }
 
-    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file, in
-    /// the order of the target's test targets. A target whose bundle isn't found is kept, because it may hold one, and
-    /// so is every target when none of them holds any, so that a run never skips all of them.
+    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file
+    /// anywhere inside it, in the order of the target's test targets. A feature file can be in the bundle itself, in
+    /// `Contents/Resources` of a macOS bundle, or in a resource bundle inside it, as SwiftPM makes for a target's resources.
+    /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
+    /// any, so that a run never skips all of them.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
             guard let bundle = bundles[name] else { return true }
-            return scenarios.contains { scenario in
-                [bundle, bundle.appendingPathComponent("Contents/Resources")].contains { root in
-                    FileManager.default.fileExists(atPath: root.appendingPathComponent(scenario.feature).path)
-                }
-            }
+            let files = featureFiles(in: bundle)
+            return scenarios.contains { scenario in files.contains { $0 == scenario.feature || $0.hasSuffix("/" + scenario.feature) } }
         }
         return holding.isEmpty ? target.testTargets : holding
+    }
+
+    /// The paths of the feature files anywhere inside `bundle`, relative to it.
+    private func featureFiles(in bundle: URL) -> [String] {
+        guard let enumerator = FileManager.default.enumerator(at: bundle, includingPropertiesForKeys: nil) else { return [] }
+        let base = bundle.resolvingSymlinksInPath().path.count + 1
+        return enumerator.compactMap { ($0 as? URL).flatMap { $0.pathExtension == "feature" ? String($0.resolvingSymlinksInPath().path.dropFirst(base)) : nil } }
     }
 
     /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,

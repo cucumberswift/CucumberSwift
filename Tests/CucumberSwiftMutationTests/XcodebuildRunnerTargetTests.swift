@@ -84,6 +84,19 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(none), ["A", "B"], "A run never skips every target")
     }
 
+    func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
+        let copy = try makeCopy()
+        // A is found by a feature file next to its tests, and B by one in the resource bundle that SwiftPM makes.
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Pkg_B.bundle/Features/Retiring.feature"], in: copy, macOS: false)
+        let both = commands()
+        _ = XcodebuildRunner(target: target, commands: both).test(in: copy, request: TestRequest(scenarios: [voting, retiring]))
+        XCTAssertEqual(testedTargets(both), ["A", "B"], "B's feature is only in its nested bundle")
+        let onlyB = commands()
+        _ = XcodebuildRunner(target: target, commands: onlyB).test(in: copy, request: TestRequest(scenarios: [retiring]))
+        XCTAssertEqual(testedTargets(onlyB), ["B"])
+    }
+
     func testARunOfEveryScenarioStartsEveryTarget() throws {
         let copy = try makeCopy()
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
