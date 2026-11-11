@@ -102,6 +102,19 @@ class ReportRunTests: XCTestCase {
         XCTAssertEqual(joined(runner: "Swift Testing", bundle: "Features.xctest").count, 0)
     }
 
+    /// Workers that join one run at the same moment are all recorded in it, and none empties the report.
+    func testWorkersThatJoinTheSameRunAtOnceAreAllRecordedAndKeepTheReport() throws {
+        let starter = try runningStarter()
+        exitedWorker(bundle: "First.xctest", run: starter, wrote: "A")
+        let workers = (0..<8).map { _ in ReportFile(url: url) }
+        DispatchQueue.concurrentPerform(iterations: workers.count) { index in
+            workers[index].joinRun(runner: "XCTest", bundle: "Bundle\(index).xctest", run: starter)
+        }
+        let record = RunRecord(recorded: (try? String(contentsOfFile: url.path + ".run", encoding: .utf8)) ?? "")
+        XCTAssertEqual(record.keys, Set((0..<8).map { "XCTest Bundle\($0).xctest" } + ["XCTest First.xctest"]))
+        XCTAssertEqual(names(workers[0].read()), [["A"]])
+    }
+
     func testAStaleReportIsEmptiedByAnyWorker() throws {
         exitedWorker(bundle: "Unit.xctest", wrote: "Old")
         try ageReport(by: ReportFile.staleAfter + 60)

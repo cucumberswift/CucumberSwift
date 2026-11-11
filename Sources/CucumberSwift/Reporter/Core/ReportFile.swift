@@ -290,27 +290,28 @@ final class ReportFile: @unchecked Sendable {
         // it alone: two first workers never both empty it.
         let key = RunRecord.key(runner: runner, bundle: bundle)
         if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
-            let isNewRun = RunRecord(recorded: recordedRun())
-                .isNewRun(by: run, key: key, isParallel: isParallel) { isStale(after: staleAfter) }
-            if isNewRun {
-                withWriteLock { write([]) }
+            // The decision, the report's reset and the record are one step under the write lock, so no
+            // worker updates the record while this one reads it.
+            withWriteLock {
+                var record = RunRecord(recorded: recordedRun())
+                if record.isNewRun(by: run, key: key, isParallel: isParallel, isStale: { isStale(after: staleAfter) }) {
+                    write([])
+                    record = RunRecord(starter: run)
+                }
+                record.keys.insert(key)
+                store(record)
             }
-            record(key, newRunStartedBy: run, isNewRun: isNewRun)
+            flock(descriptor, LOCK_SH)
         } else {
-            // Another worker holds the run, so this one joins it. Its bundle is recorded too, or running
-            // that bundle again alone wouldn't be known as a new run.
-            record(key, newRunStartedBy: nil, isNewRun: false)
-        }
-        flock(descriptor, LOCK_SH)
-    }
-
-    /// Adds a worker's key to the run recorded in the run lock file, or starts the record again for a new run,
-    /// whose starter may be `nil`. The write lock serializes the workers that update the record.
-    private func record(_ key: String, newRunStartedBy starter: RunStarter?, isNewRun: Bool) {
-        withWriteLock {
-            var record = isNewRun ? RunRecord(starter: starter) : RunRecord(recorded: recordedRun())
-            record.keys.insert(key)
-            store(record)
+            // Another worker holds the run. Waiting for the shared lock lets a first worker that is still
+            // deciding finish, so that it doesn't discard this worker's key. The bundle is recorded, or
+            // running it again alone wouldn't be known as a new run.
+            flock(descriptor, LOCK_SH)
+            withWriteLock {
+                var record = RunRecord(recorded: recordedRun())
+                record.keys.insert(key)
+                store(record)
+            }
         }
     }
 

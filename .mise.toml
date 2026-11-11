@@ -147,6 +147,9 @@ for fixture in Fixtures/*/; do
     # without anything deleting it first. The report has no record of a run, as one from Xcode has none.
     if [ -f "$fixture/Package.swift" ]; then
       mkdir -p "$(dirname "$report")"
+      # A marker an earlier run left would pass the check without this run ageing the report.
+      stale_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report 2>/dev/null || true)
+      if [ -n "$stale_suffix" ]; then rm -f "$report$stale_suffix"; fi
       printf '%s\n' '[{"id":"stale","keyword":"Feature","line":1,"name":"Stale feature from an earlier run","uri":"Stale.feature","elements":[]}]' > "$report"
     fi
   fi
