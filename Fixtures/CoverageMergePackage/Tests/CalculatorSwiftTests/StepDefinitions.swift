@@ -12,6 +12,11 @@ import Testing
 @MainActor
 enum World {
     static var calculator = Calculator()
+
+    /// Runs `action` on the scenario's calculator.
+    static func use(_ action: (Calculator) -> Void) {
+        action(calculator)
+    }
 }
 
 extension Cucumber: @retroactive StepImplementation {
@@ -20,19 +25,22 @@ extension Cucumber: @retroactive StepImplementation {
             World.calculator = Calculator()
         }
         When("I add {int} and {int}") { match, _ in
-            World.calculator.add(try match.first(\.int), try match.last(\.int))
+            let (first, second) = (try match.first(\.int), try match.last(\.int))
+            World.use { $0.add(first, second) }
         }
         When("I divide {int} by {int}") { match, _ in
-            World.calculator.divide(try match.first(\.int), by: try match.last(\.int))
+            let (dividend, divisor) = (try match.first(\.int), try match.last(\.int))
+            World.use { $0.divide(dividend, by: divisor) }
         }
         When("I classify {int}") { match, _ in
-            World.calculator.classify(try match.first(\.int))
+            let number = try match.first(\.int)
+            World.use { $0.classify(number) }
         }
         When("I read the memory") { _, _ in
-            World.calculator.readMemory()
+            World.use { $0.readMemory() }
         }
         When("I clear the memory") { _, _ in
-            World.calculator.clearMemory()
+            World.use { $0.clearMemory() }
         }
         Then("the display shows {string}") { match, _ in
             let shown = try match.first(\.string)
