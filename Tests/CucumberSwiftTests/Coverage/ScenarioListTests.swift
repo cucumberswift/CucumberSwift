@@ -40,6 +40,14 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///Users/x/Tests.xctest/Features/Other.feature", line: 2, environment: environment))
     }
 
+    func testEmptyAndBlankEntriesNameNoScenario() {
+        let uri = "file:///x/Tests.xctest/Features/Basket.feature"
+        let environment = ["CUCUMBER_SCENARIOS": " Features/Basket.feature:2 ,, ,"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment), "Spaces around an entry are ignored")
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 3, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 2, environment: ["CUCUMBER_SCENARIOS": " , ,"]), "Only blank entries: no scenario")
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }

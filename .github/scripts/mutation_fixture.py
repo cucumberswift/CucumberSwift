@@ -158,7 +158,7 @@ def scenarios_in_report(path):
     except OSError:
         return None
     except (ValueError, AttributeError, TypeError):
-        raise MutantsError(f"{path} isn't a Cucumber JSON report")
+        raise MutantsError(f"{path} isn't a Cucumber JSON report") from None
 
 
 def check_scenarios(name, expected, log, reports):
