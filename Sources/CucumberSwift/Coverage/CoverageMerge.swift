@@ -143,18 +143,19 @@ struct CoverageMerge {
         return String(uri[start...])
     }
 
-    /// The `run-<id>` folders in `folders` that have files but no `manifest.json`: runs that stopped before
-    /// they finished. A folder with nothing in it isn't one.
+    /// The `run-<id>` folders among `folders`, and directly inside them, that have files but no
+    /// `manifest.json`: runs that stopped before they finished. A folder with nothing in it isn't one.
     static func incompleteRunFolders(in folders: [URL]) -> [URL] {
         let fileManager = FileManager.default
+        func isIncomplete(_ folder: URL) -> Bool {
+            folder.lastPathComponent.hasPrefix("run-")
+                && !fileManager.fileExists(atPath: folder.appendingPathComponent("manifest.json").path)
+                && !((try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? []).isEmpty
+        }
         return folders.flatMap { folder -> [URL] in
+            if isIncomplete(folder) { return [folder] }
             let contents = (try? fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-            return contents.filter {
-                $0.lastPathComponent.hasPrefix("run-")
-                    && !fileManager.fileExists(atPath: $0.appendingPathComponent("manifest.json").path)
-                    && !((try? fileManager.contentsOfDirectory(atPath: $0.path)) ?? []).isEmpty
-            }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            return contents.filter(isIncomplete).sorted { $0.lastPathComponent < $1.lastPathComponent }
         }
     }
 

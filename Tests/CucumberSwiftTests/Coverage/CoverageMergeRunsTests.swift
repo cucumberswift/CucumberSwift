@@ -46,6 +46,15 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
         }
     }
 
+    func testARunFolderSuppliedDirectlyThatStoppedBeforeItsManifestIsReported() throws {
+        let stopped = folder.appendingPathComponent("run-c")
+        try FileManager.default.createDirectory(at: stopped, withIntermediateDirectories: true)
+        try Data("profile".utf8).write(to: stopped.appendingPathComponent("scenario.profraw"))
+        XCTAssertThrowsError(try CoverageMerge.read([stopped])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .incomplete(stopped.path))
+        }
+    }
+
     func testAManifestOfAnotherVersionIsRefused() throws {
         var newer = manifest(scenarios, order: functions)
         newer.version = 2
