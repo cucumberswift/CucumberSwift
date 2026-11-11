@@ -453,14 +453,16 @@ jobs:
   # still install the framework. It needs no Tuist: consumers never do.
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
-  # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with, after
-  # installing its iOS platform, which the image doesn't have.
+  # Pull requests run the newest Xcode, the macos-26 image's own, which a new release
+  # most likely breaks. The merge queue and main also run Xcode 16.0, the oldest Xcode
+  # CI builds with, on macos-15, after installing its iOS platform, which the image
+  # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
+  # or later (#553).
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -468,13 +470,14 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)","ios_platform":true}]') }}
+          && '[{"os":"macos-26","variant":""}]'
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","xcode":"16.0","variant":" (Xcode 16)","ios_platform":true,"tuist_developer_dir":"/Applications/Xcode_26.2.app/Contents/Developer"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
         run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
@@ -511,7 +514,7 @@ jobs:
           CARTHAGE_LOG: carthage-build.log
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           # The pinned Tuist can't generate the fixture's project with Xcode 16.0.
-          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+          TUIST_DEVELOPER_DIR: ${{ matrix.tuist_developer_dir }}
         run: mise run test-carthage
       - name: Show what Carthage produced
         if: always()
@@ -520,7 +523,7 @@ jobs:
       # matrix entry, so each run has one artifact. The wildcard keeps the
       # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
       - name: Upload the xcframework
-        if: matrix.xcode == '26.2'
+        if: matrix.variant == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: CucumberSwift.xcframework
@@ -531,7 +534,7 @@ jobs:
       # Nightly and manual runs only, with the newest Xcode: pull requests build for tvOS in
       # Catalyst tests. After the upload, as it replaces the iOS xcframework.
       - name: Build the tvOS framework with Carthage
-        if: matrix.xcode == '26.2' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: matrix.variant == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
           carthage build --no-skip-current --use-xcframeworks --platform tvOS --log-path carthage-build.log
           xcf=Carthage/Build/CucumberSwift.xcframework
@@ -719,6 +722,32 @@ jobs:
             echo "::error::Fewer tests ran on watchOS than the floors. If you removed tests on purpose, lower MIN_TESTS or MIN_SWIFT_TESTING_TESTS in CI.yml."
             status=1
           fi
+          exit $status
+      # Coverage and redundancy scores on iOS, tvOS, watchOS and Mac Catalyst (#526): the tests above run without code
+      # coverage, so the coverage tests skip there. This runs the CoverageDefaultsPackage fixture, which
+      # turns it on, and each runner must print the Grading feature's scores: 50% coverage, 33% redundancy.
+      - name: Measure coverage on iOS, tvOS and watchOS Simulators and Mac Catalyst
+        if: ${{ !cancelled() }}
+        run: |
+          status=0
+          for platform in iOS tvOS watchOS Catalyst; do
+            if [ "$platform" = Catalyst ]; then
+              destination='platform=macOS,variant=Mac Catalyst'
+            else
+              destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
+            fi
+            log="$RUNNER_TEMP/coverage-$platform.log"
+            (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
+              -destination "$destination" -enableCodeCoverage YES -skipPackagePluginValidation \
+              CODE_SIGNING_ALLOWED=NO > "$log" 2>&1) || status=1
+            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+            scores=$(grep -c 'CucumberSwift coverage: Grading: 50% of the code its scenarios ran (4 of 8 regions in 1 function), .*redundancy 33%' "$log" || true)
+            echo "$platform: ${scores:-0} correct coverage summaries (2 expected, one for each runner)"
+            if [ "${scores:-0}" -ne 2 ]; then
+              echo "::error::CucumberSwift gave the Grading feature the expected scores ${scores:-0} times on $platform, not 2."
+              status=1
+            fi
+          done
           exit $status
 
   # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job

@@ -61,14 +61,14 @@ Choose a longer time when something slow runs between one test target ending and
 
 Keep these points in mind for the shared report:
 
-- On an iOS or tvOS Simulator, set `reportPath` to a path under the Mac's home folder, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes. Each Simulator clone, and each app on a Simulator, has its own documents folder. Without `reportPath`, each of them writes its own report, and the script above copies only one of them. On macOS and Mac Catalyst, the default path is already 1 file.
+- On an iOS or tvOS Simulator, set `reportPath` to a path under the Mac's home folder (see <doc:Generating-Reports#Choose-where-the-report-is-written>). Each Simulator clone, and each app on a Simulator, has its own documents folder. Without `reportPath`, each of them writes its own report, and the post-action script in <doc:Generating-Reports#Automatic-reports> copies only one of them. On macOS and Mac Catalyst, the default path is already one file.
 - The report's folder must be writable. Every process also creates `<report>.lock` and `<report>.run` next to the report. You can delete them between runs.
-- The copy in `CucumberTestResultsFor<target>.json` has the features of that test bundle, from the report as it was when the bundle's tests finished. A package that you run with `swift test` has 1 test bundle for all its targets, so its copy has the features of every target.
-- We haven't tried a physical device. A device is expected to run 1 worker and write its own file.
+- The copy in `CucumberTestResultsFor<target>.json` has the features of that test bundle, from the report as it was when the bundle's tests finished. A package that you run with `swift test` has one test bundle for all its targets, so its copy has the features of every target.
+- We haven't tried a physical device. A device is expected to run one worker and write its own file.
 
 ### Swift Testing
 
-The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in 1 process. That process adds its scenarios to the run's report, as <doc:Generating-Reports#One-report-for-each-test-run> describes, in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path under the Mac's home folder, as <doc:Generating-Reports#Choose-where-the-report-is-written> describes.
+The Swift Testing runner writes the same report to the same `Cucumber.reportPath` and `CUCUMBER_REPORT_PATH`, and takes the same custom reporters. See <doc:Running-Feature-Files-With-Swift-Testing#Reports-verbose-output-and-custom-reporters>. Swift Testing runs a test target's tests in one process. That process adds its scenarios to the run's report (see <doc:Generating-Reports#One-report-for-each-test-run>), in the order of the feature files. On an iOS or tvOS Simulator, the default folder is inside the Simulator, so set `reportPath` to a path under the Mac's home folder (see <doc:Generating-Reports#Choose-where-the-report-is-written>).
 
 ## Verbose output
 
