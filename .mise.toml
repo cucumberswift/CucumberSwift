@@ -62,9 +62,11 @@ description = "Build and test every project in Fixtures/"
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either, and run as many tests as expected-tests lists. Its Swift files are put back as they were afterwards.
-# FIXTURES, a comma-separated list of folder names in Fixtures/, runs only those fixtures, such as
-# FIXTURES=SwiftTestingPackage mise run test-fixtures. A name that isn't a fixture is an error, so
-# that a typo fails instead of passing with nothing run.
+# Folder names in Fixtures/ after the task's name run only those fixtures, such as
+# `mise run test-fixtures SwiftTestingPackage`; with none, it runs them all. A name that isn't a
+# fixture is an error, so that a typo fails instead of passing with nothing run. Our CI runs each
+# fixture in a job of its own this way.
+usage = 'arg "[fixture]" var=#true help="Folder names in Fixtures/ to run; all of them when none is given"'
 run = '''
 set -e
 # Fails unless every line of $1, other than comments and blank lines, is in the output $2.
@@ -81,27 +83,23 @@ expect_all() {
 with_xcode() {
   if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
 }
-if [ "${FIXTURES+x}" ]; then
-  if [ -z "$(echo "$FIXTURES" | tr -d ', ')" ]; then
-    echo "error: FIXTURES names no fixture"
+# mise gives the names in usage_fixture, separated by spaces. Fixture folder names have none.
+selected=$(echo "${usage_fixture:-}" | tr -d "'\"")
+for name in $selected; do
+  if [ "$name" = CarthageXCFramework ]; then
+    echo "error: CarthageXCFramework is a fixture that mise run test-carthage runs"
+    exit 1
+  elif [ ! -d "Fixtures/$name" ] || [ "${name#*/}" != "$name" ]; then
+    echo "error: $name is not a folder in Fixtures/"
     exit 1
   fi
-  for name in $(echo "$FIXTURES" | tr ',' ' '); do
-    if [ "$name" = CarthageXCFramework ]; then
-      echo "error: FIXTURES names CarthageXCFramework, which mise run test-carthage runs"
-      exit 1
-    elif [ ! -d "Fixtures/$name" ]; then
-      echo "error: FIXTURES names $name, which is not a folder in Fixtures/"
-      exit 1
-    fi
-  done
-fi
+done
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
-  case ",$(echo "${FIXTURES:-$name}" | tr -d ' ')," in
-    *",$name,"*) ;;
+  case " ${selected:-$name} " in
+    *" $name "*) ;;
     *) continue ;;
   esac
   developer_dir=

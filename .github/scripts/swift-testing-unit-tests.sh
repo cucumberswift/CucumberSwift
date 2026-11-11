@@ -6,7 +6,7 @@
 #
 #   .github/scripts/swift-testing-unit-tests.sh <fewest tests> <output file>
 #
-# Used by CI's Fixture tests job, whose runner image has Swift 6.3; SwiftPM tests runs the same tests
+# Used by CI's Swift 6.3 tests job, whose runner image has Swift 6.3; SwiftPM tests runs the same tests
 # with the oldest Swift supported.
 set -euo pipefail
 

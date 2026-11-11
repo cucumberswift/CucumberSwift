@@ -142,6 +142,7 @@ jobs:
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
+      fixtures: ${{ steps.fixtures.outputs.fixtures }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
       # no file contents.
@@ -187,6 +188,20 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # The folders in Fixtures/, as a JSON list, for Fixture tests' matrix: one job each.
+      # CarthageXCFramework is left out, as `mise run test-fixtures` leaves it out: Carthage
+      # tests runs it. Read from the commit's tree, which the sparse checkout has.
+      - name: List the fixtures
+        id: fixtures
+        run: |
+          fixtures=$(git ls-tree -d --name-only HEAD Fixtures/ | sed 's|^Fixtures/||' | grep -vx CarthageXCFramework \
+            | python3 -c 'import json, sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          echo "Fixtures: $fixtures"
+          if [ "$fixtures" = "[]" ]; then
+            echo "::error::Found no fixtures in Fixtures/"
+            exit 1
+          fi
+          echo "fixtures=$fixtures" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -1039,23 +1054,26 @@ jobs:
           grep -F "swift-syntax.git\", exact: \"$floor\"" Package.swift
           swift test --enable-all-traits --filter 'CucumberSwiftMacrosTests|CucumberSwiftMacroConverterTests'
 
-  # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
-  # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
-  # package trait only compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4,
-  # named in its xcode-version file. A required check.
+  # Builds and tests each project in Fixtures/ as a project that uses CucumberSwift would, Tuist
+  # projects included, in a job of its own (`mise run test-fixtures <fixture>`), so the fixtures run
+  # at the same time (#593). The changes job lists them from the folder, so a new fixture gets a job
+  # with no change here. macos-26, because a Tuist fixture that turns on a package trait only
+  # compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4, named in its
+  # xcode-version file. Fixture tests, below, is the required check that sums them up.
   #
-  # 45 minutes, not 30: a run takes about 13-27 minutes, typically 20-25, and a
-  # slow runner reached 30 with no test failing, which cancelled the job and
-  # dropped a merge queue entry. The timeout only bounds a hung job; a normal
-  # run takes no longer for it.
-  fixture_tests:
-    name: Fixture tests
+  # 30 minutes, what the old single job took for every fixture; the timeout only bounds a hung job.
+  fixture_test:
+    name: Fixture tests (${{ matrix.fixture }})
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: ${{ fromJSON(needs.changes.outputs.fixtures) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1078,16 +1096,58 @@ jobs:
       # fixture depend on it by URL instead, as a project does: a git repository of this commit. So the
       # next step checks that the Macros trait resolves and builds from a URL, as the docs show (#418).
       - name: Use the macros package fixture with CucumberSwift from a URL
+        if: ${{ matrix.fixture == 'StepDefinitionMacrosPackage' }}
         run: .github/scripts/macros-fixture-by-url.sh "$RUNNER_TEMP"
-      - name: Build and test the fixtures
+      - name: Build and test the fixture
         env:
+          FIXTURE: ${{ matrix.fixture }}
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-        run: mise run test-fixtures
-      # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
-      # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
-      # cancelled, which hides whether it passed (#480).
+        run: mise run test-fixtures "$FIXTURE"
+
+  # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
+  # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
+  # cancelled, which hides whether it passed (#480). Fixture tests, below, requires it.
+  swift_6_3_tests:
+    name: Swift 6.3 tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # A required check: passes only when every fixture's job and Swift 6.3 tests passed. A job
+  # without a matrix, so that it reports under this name when the jobs it needs are skipped. It
+  # skips when they skip, on a run with no code, which counts as passing.
+  fixture_tests:
+    name: Fixture tests
+    needs: [changes, fixture_test, swift_6_3_tests]
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check that every fixture's job passed
+        env:
+          FIXTURES: ${{ needs.fixture_test.result }}
+          SWIFT_6_3: ${{ needs.swift_6_3_tests.result }}
+        run: |
+          echo "Fixture jobs: $FIXTURES"
+          echo "Swift 6.3 tests: $SWIFT_6_3"
+          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ]; then
+            echo "::error::A fixture's job or Swift 6.3 tests didn't pass: see the jobs above."
+            exit 1
+          fi
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:
