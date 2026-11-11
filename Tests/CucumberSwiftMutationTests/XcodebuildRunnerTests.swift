@@ -228,6 +228,17 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertFalse(try XCTUnwrap(none.calls.first).arguments.contains("-only-testing"), "No test target named: every test of the scheme")
     }
 
+    func testOneTestTargetThatNeverStartedMeansTheRunNeverStarted() throws {
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(1)) }
+            return call.arguments.contains("B") ? CommandResult(status: 127, output: "no xcodebuild", timedOut: false, duration: 0, started: false) : .finished(0)
+        }
+        var scoped = target
+        scoped.testTargets = ["A", "B"]
+        let run = XcodebuildRunner(target: scoped, commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertFalse(run.started)
+    }
+
     func testOneFailedTestTargetFailsTheRun() throws {
         let commands = RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(1)) }

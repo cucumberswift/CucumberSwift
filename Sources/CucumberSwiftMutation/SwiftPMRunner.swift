@@ -73,7 +73,8 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             testsRun: result.testsRun,
             log: write(result.output, named: "test-\(number)", in: copy),
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
-            coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+            coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
+            started: result.started
         )
     }
 

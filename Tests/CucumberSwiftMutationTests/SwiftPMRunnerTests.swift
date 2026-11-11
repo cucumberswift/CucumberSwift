@@ -78,6 +78,13 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(Set(commands.calls.compactMap { $0.environment["CUCUMBER_REPORT_PATH"] }).count, 2)
     }
 
+    func testACommandThatNeverStartedIsNotAFailingTest() throws {
+        let commands = RecordingCommands { _ in CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0, started: false) }
+        let run = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertFalse(run.started)
+        XCTAssertTrue(SwiftPMRunner(commands: RecordingCommands()).test(in: try makeCopy(), request: TestRequest()).started)
+    }
+
     func testTheTimeoutAndTheTimedOutAnswerPassThrough() throws {
         let commands = RecordingCommands { _ in .finished(15, timedOut: true) }
         let run = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(timeout: 42))

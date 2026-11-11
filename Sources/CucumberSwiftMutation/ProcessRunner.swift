@@ -6,24 +6,21 @@
 #if os(macOS) || os(Linux)
 import Foundation
 
-private final class Registry: @unchecked Sendable {
+/// The commands that are running, so that a cancelled run can stop them.
+final class CommandRegistry: @unchecked Sendable {
     private let lock = NSLock()
     private var pids = Set<Int32>()
     private var cancelled = false
 
-    var isCancelled: Bool {
+    /// Starts a command with `start`, which returns its process ID, and adds it, under the lock that `cancel()` takes
+    /// too: a cancel either comes first, and the command never starts, or comes after, and stops it. Returns false,
+    /// without calling `start`, once cancelled, unless the command `ignoresCancellation`.
+    func launch(ignoresCancellation: Bool, _ start: () throws -> Int32) rethrows -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return cancelled
-    }
-
-    /// Adds a command that started, and returns false when the registry is already cancelled: `cancel()` ran after
-    /// the command's check and before it started, so it didn't stop this one. Checked and added under one lock.
-    func add(_ pid: Int32) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        pids.insert(pid)
-        return !cancelled
+        guard ignoresCancellation || !cancelled else { return false }
+        pids.insert(try start())
+        return true
     }
 
     func remove(_ pid: Int32) {
@@ -61,7 +58,7 @@ private final class Collected: @unchecked Sendable {
 public struct ProcessRunner: CommandRunning {
     /// The commands that are running, so that a signal can stop them: a command that outlives the tool keeps
     /// writing into the copy that the tool is deleting.
-    private static let registry = Registry()
+    private static let registry = CommandRegistry()
 
     /// A runner for the commands that must run even when the run is cancelled, such as `git status` to check
     /// that the package is unchanged.
@@ -119,9 +116,6 @@ public struct ProcessRunner: CommandRunning {
         environment: [String: String] = [:],
         timeout: TimeInterval? = nil
     ) -> CommandResult {
-        guard ignoresCancellation || !Self.registry.isCancelled else {
-            return CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0)
-        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
@@ -132,12 +126,15 @@ public struct ProcessRunner: CommandRunning {
         process.standardError = pipe
         let start = Date()
         do {
-            try process.run()
+            let started = try Self.registry.launch(ignoresCancellation: ignoresCancellation) {
+                try process.run()
+                return process.processIdentifier
+            }
+            guard started else {
+                return CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0, started: false)
+            }
         } catch {
-            return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0)
-        }
-        if !Self.registry.add(process.processIdentifier), !ignoresCancellation {
-            Self.terminateTree(of: process.processIdentifier)
+            return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0, started: false)
         }
         defer { Self.registry.remove(process.processIdentifier) }
         // Read while the command runs, so a long output can't fill the pipe and stop it.
