@@ -86,6 +86,17 @@ final class CoverageMergeTests: CoverageMergeTestCase {
         XCTAssertEqual(CoverageMerge.featureKey(issueFile), issueFile)
     }
 
+    func testTheSameFilePathInTwoTestBundlesIsTwoFeatures() throws {
+        let other = feature.replacingOccurrences(of: "MyTests.xctest", with: "OtherTests.xctest")
+        let merged = try CoverageMerge(runs: [
+            run(manifest(scenarios, order: functions)),
+            run(manifest(scenarios, order: functions, uri: other))
+        ])
+        XCTAssertEqual(merged.scenarioCount, 10)
+        XCTAssertEqual(merged.repeatedCount, 0)
+        XCTAssertEqual(merged.features.count, 4)
+    }
+
     func testRunsOfDifferentBuildsAreNotMerged() {
         let changed = [Function(name: "add", regions: 3)] + functions.dropFirst()
         XCTAssertThrowsError(try CoverageMerge(runs: [
