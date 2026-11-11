@@ -55,6 +55,12 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let lock = NSLock()
     private var runs = 0
 
+    /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
+    private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
+        let features = scenarios.map(\.feature)
+        return files.contains { file in features.contains { file == $0 || file.hasSuffix("/" + $0) } }
+    }
+
     /// `totalTestCount` of the summary that `xcresulttool get test-results summary` prints.
     static func testCount(inSummary json: String) -> Int {
         guard let data = json.data(using: .utf8),
@@ -182,12 +188,6 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             return Self.holds(featureFiles(in: bundle), oneOf: scenarios)
         }
         return holding.isEmpty ? target.testTargets : holding
-    }
-
-    /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
-    private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
-        let features = scenarios.map(\.feature)
-        return files.contains { file in features.contains { file == $0 || file.hasSuffix("/" + $0) } }
     }
 
     /// The paths of the feature files anywhere inside `bundle`, relative to it.
