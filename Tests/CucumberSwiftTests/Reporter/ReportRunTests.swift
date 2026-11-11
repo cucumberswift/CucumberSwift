@@ -115,6 +115,33 @@ class ReportRunTests: XCTestCase {
         XCTAssertEqual(names(workers[0].read()), [["A"]])
     }
 
+    /// The test holds the run lock exclusively, as a first worker does while it decides on a new run. A worker
+    /// that joins then waits, and records its key only after the first worker has stored its record, so the
+    /// first worker's reset can't discard it.
+    func testAWorkerThatJoinsWhileAFirstWorkerDecidesRecordsItsKeyAfterTheDecision() throws {
+        let runPath = url.path + ".run"
+        let firstWorker = open(runPath, O_CREAT | O_RDWR, 0o644)
+        XCTAssertGreaterThanOrEqual(firstWorker, 0)
+        defer { close(firstWorker) }
+        XCTAssertEqual(flock(firstWorker, LOCK_EX), 0)
+        let joined = expectation(description: "the second worker joined")
+        let second = ReportFile(url: url)
+        DispatchQueue.global().async {
+            second.joinRun(runner: "XCTest", bundle: "Second.xctest", run: nil)
+            joined.fulfill()
+        }
+        Thread.sleep(forTimeInterval: 0.3)
+        XCTAssertEqual(try String(contentsOfFile: runPath, encoding: .utf8), "", "the second worker recorded its key during the decision")
+        var record = RunRecord()
+        record.keys.insert("XCTest First.xctest")
+        let bytes = Array(record.recorded.utf8)
+        XCTAssertEqual(pwrite(firstWorker, bytes, bytes.count, 0), bytes.count)
+        XCTAssertEqual(flock(firstWorker, LOCK_SH), 0)
+        wait(for: [joined], timeout: 10)
+        let recorded = RunRecord(recorded: try String(contentsOfFile: runPath, encoding: .utf8))
+        XCTAssertEqual(recorded.keys, ["XCTest First.xctest", "XCTest Second.xctest"])
+    }
+
     func testAStaleReportIsEmptiedByAnyWorker() throws {
         exitedWorker(bundle: "Unit.xctest", wrote: "Old")
         try ageReport(by: ReportFile.staleAfter + 60)
