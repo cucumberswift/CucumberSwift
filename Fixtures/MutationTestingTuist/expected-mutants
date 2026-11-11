@@ -1,12 +1,9 @@
 # The mutants a mutation testing run must find in this fixture, and what happens to each, one per line:
 #   <file>:<line> <mutator> <replacement> <Killed|Survived|Timeout|CompileError>
-# `>` survives in each function because no scenario checks a person of exactly 18, 16 or 65.
+# `>` survives in each function because no scenario checks a person of exactly 18 or 65.
 # Only the Swift Testing target's Retiring feature calls `canRetire`, so its `<` is killed only if the run
 # counts that target's tests.
 Sources/Voting.swift:11 RelationalOperator < Killed
 Sources/Voting.swift:11 RelationalOperator > Survived
 Sources/Voting.swift:15 RelationalOperator < Killed
 Sources/Voting.swift:15 RelationalOperator > Survived
-Sources/Voting.swift:15 LogicalOperator || Killed
-Sources/Voting.swift:19 RelationalOperator < Killed
-Sources/Voting.swift:19 RelationalOperator > Survived

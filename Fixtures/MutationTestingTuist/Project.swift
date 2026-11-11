@@ -72,8 +72,9 @@ let project = Project(
         // mutants as warnings in Xcode. `xcodebuild build -scheme Mutation` runs the phase, and the phase runs the command
         // from a CucumberSwift checkout: CUCUMBERSWIFT_CHECKOUT is the checkout's folder, MUTATION_REPORTS the folder
         // for the reports and MUTATION_DESTINATION the destination of the tests, macOS when it isn't set. The phase itself
-        // always runs on the Mac, whatever that destination is. The build's variables would reach the command's own
-        // `xcodebuild`, so the phase clears them.
+        // always runs on the Mac, whatever that destination is. With MUTATION_TOOL set, the phase runs that built tool
+        // instead of building one with `swift run`. The build's variables would reach the command's own `xcodebuild`, so
+        // the phase clears them.
         .target(
             name: "Mutation",
             destinations: .macOS,
@@ -85,8 +86,12 @@ let project = Project(
                 .pre(
                     script: """
                     set -e
-                    env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin \\
-                        /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift-mutation-test \\
+                    if [ -n "${MUTATION_TOOL:-}" ]; then
+                        set -- "$MUTATION_TOOL"
+                    else
+                        set -- /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift-mutation-test
+                    fi
+                    env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin "$@" \\
                         --root "$SRCROOT" --project MutationTestingTuist.xcodeproj --scheme MutationTestingTuist \\
                         --destination "${MUTATION_DESTINATION:-platform=macOS}" --test-target VotingTests --test-target VotingSwiftTests \\
                         --format xcode --output "$MUTATION_REPORTS" \\
