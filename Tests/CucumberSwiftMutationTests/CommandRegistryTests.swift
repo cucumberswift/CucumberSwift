@@ -41,5 +41,25 @@ final class CommandRegistryTests: XCTestCase {
         XCTAssertTrue(registry.launch(ignoresCancellation: true) { 42 })
         XCTAssertEqual(registry.cancel(), [42])
     }
+
+    func testARunnerReportsACommandItCouldNotLaunchAsNotStarted() {
+        let result = ProcessRunner().run("/nonexistent/swift", ["test"], in: URL(fileURLWithPath: NSTemporaryDirectory()))
+        XCTAssertFalse(result.started)
+        XCTAssertEqual(result.status, 127)
+        XCTAssertTrue(result.output.hasPrefix("Couldn't run /nonexistent/swift"), result.output)
+    }
+
+    func testARunnerReportsACommandACancelKeptFromStartingAsNotStarted() {
+        // A registry of the test's own: cancelling the shared one would stop every later test's commands.
+        let registry = CommandRegistry()
+        _ = registry.cancel()
+        let folder = URL(fileURLWithPath: NSTemporaryDirectory())
+        let refused = ProcessRunner(ignoresCancellation: false, registry: registry).run("/usr/bin/true", [], in: folder)
+        XCTAssertFalse(refused.started)
+        XCTAssertEqual(refused.status, 130)
+        let ran = ProcessRunner(ignoresCancellation: true, registry: registry).run("/usr/bin/true", [], in: folder)
+        XCTAssertTrue(ran.started, "A command that ignores cancellation still runs")
+        XCTAssertEqual(ran.status, 0)
+    }
 }
 #endif
