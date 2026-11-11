@@ -65,6 +65,16 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(commands.calls.last?.environment["CUCUMBER_SCENARIOS"], "A request of every scenario sets nothing")
     }
 
+    func testACommaInAScenariosPathIsEscapedSoTheListIsNotSplit() throws {
+        let commands = RecordingCommands()
+        _ = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(scenarios: [
+            ScenarioID(feature: "Features/Basket, large 100%.feature", line: 3, name: "One"),
+            ScenarioID(feature: "Features/Other.feature", line: 9, name: "Two")
+        ]))
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"],
+                       "Features/Basket%2C large 100%25.feature:3,Features/Other.feature:9")
+    }
+
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {
         let commands = RecordingCommands { call in
             for key in ["CUCUMBER_REPORT_PATH", "CUCUMBER_COVERAGE_PATH"] {

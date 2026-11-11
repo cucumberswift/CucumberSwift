@@ -127,7 +127,10 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
                 identifiers = selection.identifiers
                 if selection.testPerScenario { settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES" }
             } catch {
-                return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
+                // The names can't be resolved, as when two test targets have the same feature file. That isn't a failed
+                // test, so the run neither fails nor counts a mutant as killed: CUCUMBER_SCENARIOS selects the scenarios
+                // alone, in every test target. Nothing is lost but the saved time of -only-testing.
+                _ = write("note: -only-testing isn't used: \(error)\n", named: "selection-\(number)", in: copy)
             }
         }
         // Each test bundle runs in a process of its own, and the processes write one report, the last replacing the

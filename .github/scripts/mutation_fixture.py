@@ -161,8 +161,22 @@ def scenarios_in_report(path):
         raise MutantsError(f"{path} isn't a Cucumber JSON report") from None
 
 
-def check_scenarios(name, expected, log, reports):
-    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them."""
+def read_tested_ids(path):
+    """Return {mutant number: status} for the mutants of a Stryker report that were tested, or None when it has no ids."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            report = json.load(f)
+        return {int(mutant["id"]): mutant["status"] for file in report["files"].values() for mutant in file["mutants"]
+                if mutant["status"] in TESTED}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def check_scenarios(name, expected, log, reports, tested_ids=None):
+    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them.
+
+    With `tested_ids`, the numbers and statuses of the mutants that the report says were tested, the log must show a count
+    for exactly those mutants, each with the status the report gives it."""
     counts = {}
     for line in log.splitlines():
         found = SCENARIO_COUNT.match(line)
@@ -172,6 +186,13 @@ def check_scenarios(name, expected, log, reports):
     if len(counts) != tested:
         return [f"error: {name}: the log shows the number of scenarios run for {len(counts)} mutants, and {tested} were tested"]
     errors = []
+    if tested_ids is not None:
+        for number in sorted(set(counts) ^ set(tested_ids)):
+            side = "the log shows a count for" if number in counts else "the log shows no count for"
+            errors.append(f"error: {name}: {side} mutant {number}, which the report {'doesn' + chr(39) + 't list as tested' if number in counts else 'lists as tested'}")
+        for number in sorted(set(counts) & set(tested_ids)):
+            if counts[number][0] != tested_ids[number]:
+                errors.append(f"error: {name}: the log says mutant {number} is {counts[number][0]}, and the report says {tested_ids[number]}")
     for number, (_status, ran, every) in sorted(counts.items()):
         if not 1 <= ran <= every:
             errors.append(f"error: {name}: mutant {number} ran {ran} of {every} scenarios, which a run of covering scenarios can't")
@@ -208,7 +229,7 @@ def main(argv):
             with open(safe_path(argv[3]), encoding="utf-8", errors="replace") as f:
                 log = f.read()
             errors += check_log(name, expected, log)
-            errors += check_scenarios(name, expected, log, reports)
+            errors += check_scenarios(name, expected, log, reports, read_tested_ids(os.path.join(reports, "mutation-report.json")))
         except (OSError, MutantsError) as error:
             errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:

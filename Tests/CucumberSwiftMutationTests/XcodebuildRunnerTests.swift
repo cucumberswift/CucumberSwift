@@ -251,6 +251,27 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"])
     }
 
+    func testScenariosWhoseTestNamesCantBeResolvedRunThroughCucumberScenariosAlone() throws {
+        // The same feature file in two test targets is a path that names no single test: not a failed test.
+        let copy = try makeCopy()
+        try FileManager.default.createDirectory(at: copy.appendingPathComponent("A/Features"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: copy.appendingPathComponent("B/Features"), withIntermediateDirectories: true)
+        for folder in ["A", "B"] {
+            try "Feature: Voting\n\n  Scenario: An adult can vote\n    Given a person aged 30\n"
+                .write(to: copy.appendingPathComponent("\(folder)/Features/Voting.feature"), atomically: true, encoding: .utf8)
+        }
+        let commands = commands(total: 1)
+        var scoped = target
+        scoped.testTargets = ["A", "B"]
+        let run = XcodebuildRunner(target: scoped, commands: commands).test(
+            in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
+        XCTAssertEqual(run.status, 0, "The run starts instead of returning a failure that counts as a killed mutant")
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_SCENARIOS"], "Features/Voting.feature:3")
+        XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"])
+        XCTAssertEqual(call.arguments.filter { $0 == "-only-testing" }.count, 1, "Only the test target, not a test")
+    }
+
     func testScenariosWithoutTheTestTargetsRunThroughCucumberScenariosAlone() throws {
         let commands = commands(total: 1)
         let run = XcodebuildRunner(target: target, commands: commands).test(

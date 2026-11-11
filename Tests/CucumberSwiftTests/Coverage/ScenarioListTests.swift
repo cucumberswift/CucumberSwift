@@ -48,6 +48,15 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: uri, line: 2, environment: ["CUCUMBER_SCENARIOS": " , ,"]), "Only blank entries: no scenario")
     }
 
+    func testACommaOrPercentInAPathSurvivesTheListTheToolWrites() {
+        // The tool writes `%2C` for a comma and `%25` for a percent sign, and the list is split at the commas that remain.
+        let uri = "file:///x/Tests.xctest/Features/Basket, large 100%.feature"
+        let environment = ["CUCUMBER_SCENARIOS": "Features/Basket%2C large 100%25.feature:2,Features/Other.feature:4"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 4, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Features/Basket", line: 2, environment: environment), "Not split at the comma")
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }

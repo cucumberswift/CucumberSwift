@@ -95,7 +95,8 @@ class ReadReportTests(Folder):
 
 class CheckTests(Folder):
     def good_report(self):
-        return report(mutant(11, "RelationalOperator", "<", "Killed"), mutant(11, "RelationalOperator", ">", "Survived"))
+        return report(dict(mutant(11, "RelationalOperator", "<", "Killed"), id="1"),
+                      dict(mutant(11, "RelationalOperator", ">", "Survived"), id="2"))
 
     def test_passes_when_every_mutant_is_as_listed(self):
         self.write_expected()
@@ -178,6 +179,28 @@ class CheckTests(Folder):
         errors = self.scenario_errors(COUNT.format(1, "Killed", 2, 2), COUNT.format(2, "Survived", 2, 2))
         self.assertEqual(len(errors), 1)
         self.assertIn("every mutant ran every scenario", errors[0])
+
+    def test_the_log_must_count_the_mutants_that_the_report_says_were_tested(self):
+        self.write_expected()
+        tested = {1: "Killed", 2: "Survived"}
+        expected = m.read_expected(os.path.join(self.fixture, "expected-mutants"))
+        lines = (COUNT.format(1, "Killed", 1, 2), COUNT.format(2, "Survived", 2, 2))
+        self.assertEqual(m.check_scenarios("Fixture", expected, "\n".join(lines), self.reports, tested), [])
+        # A count for an unrelated number in place of mutant 2's has the right size and the wrong mutants.
+        swapped = (COUNT.format(1, "Killed", 1, 2), COUNT.format(99, "Survived", 2, 2))
+        errors = m.check_scenarios("Fixture", expected, "\n".join(swapped), self.reports, tested)
+        self.assertEqual(len(errors), 2, errors)
+        self.assertTrue(any("no count for mutant 2" in e for e in errors) and any("count for mutant 99" in e for e in errors))
+        wrong = (COUNT.format(1, "Survived", 1, 2), COUNT.format(2, "Survived", 2, 2))
+        self.assertIn("mutant 1 is Survived, and the report says Killed", m.check_scenarios("Fixture", expected, "\n".join(wrong), self.reports, tested)[0])
+
+    def test_reads_the_numbers_of_the_tested_mutants_from_the_report(self):
+        one = mutant(11, "RelationalOperator", "<", "Killed")
+        two = dict(mutant(11, "RelationalOperator", ">", "Survived"), id="2")
+        three = dict(mutant(12, "RelationalOperator", ">", "CompileError"), id="3")
+        self.write_report(report(dict(one, id="1"), two, three))
+        self.assertEqual(m.read_tested_ids(os.path.join(self.reports, "mutation-report.json")), {1: "Killed", 2: "Survived"})
+        self.assertIsNone(m.read_tested_ids(os.path.join(self.reports, "none.json")))
 
     def test_a_mutant_must_run_at_least_one_scenario(self):
         errors = self.scenario_errors(COUNT.format(1, "Killed", 0, 2), COUNT.format(2, "Survived", 1, 2))
