@@ -134,6 +134,10 @@ struct RunRecord: Equatable {
 }
 
 final class ReportFile: @unchecked Sendable {
+    /// How long a report can go unwritten before a worker takes it for an earlier run's: 10 minutes, so that
+    /// a slow test target of the same run, such as a UI target that waits for a Simulator to boot, never
+    /// empties what the targets before it wrote.
+    static let staleAfter: TimeInterval = 600
     private static let filesLock = NSLock()
     private static var files = [String: ReportFile]()
     private static var warned = Set<String>()
@@ -150,10 +154,6 @@ final class ReportFile: @unchecked Sendable {
     /// A test's way to know that a joining worker found the run held and is about to wait for it.
     var onJoiningHeldRun: (() -> Void)?
     private let writeLock = NSLock()
-    /// How long a report can go unwritten before a worker takes it for an earlier run's: 10 minutes, so that
-    /// a slow test target of the same run, such as a UI target that waits for a Simulator to boot, never
-    /// empties what the targets before it wrote.
-    static let staleAfter: TimeInterval = 600
 
     /// How many times this process merged into the report, for the reporter's tests.
     private(set) var merges = 0
