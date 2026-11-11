@@ -147,6 +147,8 @@ final class ReportFile: @unchecked Sendable {
     private var runLockPath: String { url.path + ".run" }
     private var runDescriptor: Int32 = -1
     private let joinLock = NSLock()
+    /// A test's way to know that a joining worker found the run held and is about to wait for it.
+    var onJoiningHeldRun: (() -> Void)?
     private let writeLock = NSLock()
     /// How long a report can go unwritten before a worker takes it for an earlier run's: 10 minutes, so that
     /// a slow test target of the same run, such as a UI target that waits for a Simulator to boot, never
@@ -306,6 +308,7 @@ final class ReportFile: @unchecked Sendable {
             // Another worker holds the run. Waiting for the shared lock lets a first worker that is still
             // deciding finish, so that it doesn't discard this worker's key. The bundle is recorded, or
             // running it again alone wouldn't be known as a new run.
+            onJoiningHeldRun?()
             flock(descriptor, LOCK_SH)
             withWriteLock {
                 var record = RunRecord(recorded: recordedRun())

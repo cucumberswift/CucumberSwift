@@ -125,11 +125,16 @@ class ReportRunTests: XCTestCase {
         defer { close(firstWorker) }
         XCTAssertEqual(flock(firstWorker, LOCK_EX), 0)
         let joined = expectation(description: "the second worker joined")
+        let reachedHeldRun = DispatchSemaphore(value: 0)
         let second = ReportFile(url: url)
+        second.onJoiningHeldRun = { reachedHeldRun.signal() }
         DispatchQueue.global().async {
             second.joinRun(runner: "XCTest", bundle: "Second.xctest", run: nil)
             joined.fulfill()
         }
+        // The joiner has found the run held. A joiner that recorded its key now would do so within
+        // milliseconds, so the wait after the signal is long enough however late the thread started.
+        XCTAssertEqual(reachedHeldRun.wait(timeout: .now() + 10), .success)
         Thread.sleep(forTimeInterval: 0.3)
         XCTAssertEqual(try String(contentsOfFile: runPath, encoding: .utf8), "", "the second worker recorded its key during the decision")
         var record = RunRecord()
