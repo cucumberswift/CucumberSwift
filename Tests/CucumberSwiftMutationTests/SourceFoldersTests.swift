@@ -5,6 +5,7 @@
 //  The command-line tool finds the folders to mutate itself, from `swift package describe`.
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -54,3 +55,4 @@ final class SourceFoldersTests: XCTestCase {
         XCTAssertEqual(runner.calls.first?.directory.path, "/tmp/shop")
     }
 }
+#endif

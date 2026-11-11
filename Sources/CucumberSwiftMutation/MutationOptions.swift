@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 public struct MutationOptions: Equatable, Sendable {
@@ -48,7 +49,8 @@ public struct MutationOptions: Equatable, Sendable {
     public var minimumTimeout = 30.0
     /// How many times the unmutated tests run first. Two catches a test that fails by chance.
     public var baselineRuns = 2
-    public var swift = "/usr/bin/swift"
+    /// The `swift` that builds and tests the copy: the first on `PATH`, as a shell would run it, unless `--swift` names one.
+    public var swift = MutationOptions.swift(onPath: ProcessInfo.processInfo.environment["PATH"])
     /// Lists the mutants without testing them.
     public var dryRun = false
     /// Builds swift-syntax from source instead of downloading SwiftPM's prebuilt copy. The command plugin's
@@ -88,7 +90,6 @@ public struct MutationOptions: Equatable, Sendable {
             }
             return arguments[index]
         }
-        func number(_ option: String) throws -> Double { try positive(try value(for: option), for: option) }
         while index < arguments.count {
             let argument = arguments[index]
             switch argument {
@@ -98,11 +99,14 @@ public struct MutationOptions: Equatable, Sendable {
                 case "--sources": sources.append(try value(for: argument))
                 case "--target": options.targets.append(try value(for: argument))
                 case "--tags": options.tags = try value(for: argument)
-                case "--format": options.format = try format(named: try value(for: argument))
-                case "--max-mutants": options.maxMutants = Int(try number(argument))
-                case "--timeout-multiplier": options.timeoutMultiplier = try number(argument)
-                case "--minimum-timeout": options.minimumTimeout = try number(argument)
-                case "--baseline-runs": options.baselineRuns = Int(try number(argument))
+                case "--format":
+                    let name = try value(for: argument)
+                    guard let format = Format(rawValue: name) else { throw UsageError(description: "--format is text or xcode, not \"\(name)\"") }
+                    options.format = format
+                case "--max-mutants": options.maxMutants = try count(value(for: argument), of: argument)
+                case "--timeout-multiplier": options.timeoutMultiplier = try number(value(for: argument), of: argument)
+                case "--minimum-timeout": options.minimumTimeout = try number(value(for: argument), of: argument)
+                case "--baseline-runs": options.baselineRuns = try count(value(for: argument), of: argument)
                 case "--swift": options.swift = try value(for: argument)
                 case "--dry-run": options.dryRun = true
                 case "--disable-prebuilts": options.disablePrebuilts = true
@@ -126,14 +130,16 @@ public struct MutationOptions: Equatable, Sendable {
         return options
     }
 
-    private static func positive(_ text: String, for option: String) throws -> Double {
-        guard let number = Double(text), number > 0 else { throw UsageError(description: "\(option) needs a number above 0, not \"\(text)\"") }
-        return number
+    /// The value `text` of `option` as a whole number above 0.
+    private static func count(_ text: String, of option: String) throws -> Int {
+        guard let whole = Int(text), whole > 0 else { throw UsageError(description: "\(option) needs a whole number above 0, not \"\(text)\"") }
+        return whole
     }
 
-    private static func format(named name: String) throws -> Format {
-        guard let format = Format(rawValue: name) else { throw UsageError(description: "--format is text or xcode, not \"\(name)\"") }
-        return format
+    /// The value `text` of `option` as a number above 0.
+    private static func number(_ text: String, of option: String) throws -> Double {
+        guard let number = Double(text), number > 0 else { throw UsageError(description: "\(option) needs a number above 0, not \"\(text)\"") }
+        return number
     }
 
     /// The Xcode target the options name, `nil` when none of them does.
@@ -151,6 +157,12 @@ public struct MutationOptions: Equatable, Sendable {
             throw UsageError(description: "--project and --workspace need --destination, such as \"platform=macOS\"")
         }
         return XcodebuildRunner.Target(container: container, scheme: scheme, destination: destination, testTargets: testTargets, arguments: arguments)
+    }
+
+    /// The first executable `swift` in the folders of `path`, a `PATH` value, or `/usr/bin/swift` when there is none.
+    static func swift(onPath path: String?) -> String {
+        let folders = (path ?? "").split(separator: ":").map(String.init)
+        return folders.map { "\($0)/swift" }.first { FileManager.default.isExecutableFile(atPath: $0) } ?? "/usr/bin/swift"
     }
 
     public init(root: URL) {
@@ -175,3 +187,4 @@ public struct MutationOptions: Equatable, Sendable {
         findsSources = false
     }
 }
+#endif

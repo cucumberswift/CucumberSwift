@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The code each scenario ran in the unmutated copy, read from the `regions.json` that CucumberSwift writes with
@@ -107,3 +108,4 @@ public struct ScenarioCoverage: Equatable, Sendable {
             .map { ScenarioID(uri: $0.feature, line: $0.line, name: $0.name) }
     }
 }
+#endif

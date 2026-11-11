@@ -149,7 +149,7 @@ Given(#/^I owe 5\$$/#) { _, _ in }
 }
 }
 
-The bare form of the regex literal, `/^I owe 5\$$/`, also needs iOS 16, macOS 13, tvOS 16 or watchOS 9, and a target that allows bare regex literals, as above:
+The bare form of the regex literal, `/^I owe 5\$$/`, also needs iOS 16, macOS 13, tvOS 16 or watchOS 9, and a target that allows bare regex literals, such as one in the Swift 6 language mode or with the `BareSlashRegexLiterals` feature:
 
 @TabNavigator {
 @Tab("Swift Package Manager") {
@@ -351,11 +351,11 @@ The same goes for `extension Cucumber: @retroactive CucumberTestObservable` when
 
 `StepImplementation` and `CucumberTestObserver` are main-actor protocols. So `setupSteps()`, the steps, hooks and DSL steps declared in it, and a custom reporter's methods can all use main-actor code, such as `XCUIApplication`. An async step can also change a variable that it shares with other steps, such as a `var` declared in `setupSteps()`. CucumberSwift calls all of them on the main thread.
 
-In the Swift 5 language mode, nothing changes. The protocols are marked `@preconcurrency`, so code written for earlier versions of CucumberSwift compiles as before.
+In the Swift 5 language mode, nothing changes. The protocols are marked `@preconcurrency`, so code written for earlier versions of CucumberSwift still compiles.
 
 ## Matching with Cucumber expressions
 
-[Cucumber expressions](https://github.com/cucumber/cucumber-expressions#readme) are the patterns that Cucumber recommends, and the ones to try first (see <doc:Matching-Steps#Choose-a-pattern>). A parameter such as `{int}` matches text and converts it to its type. A custom parameter type does the same for a type of your own, with its own regular expression. CucumberSwift reads a string pattern as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes, as described above.
+[Cucumber expressions](https://github.com/cucumber/cucumber-expressions#readme) are the patterns that Cucumber recommends, and the ones to try first (see <doc:Matching-Steps#Choose-a-pattern>). A parameter such as `{int}` matches text and converts it to its type. A custom parameter type matches text with its own regular expression, and converts it to a type of your own. CucumberSwift reads a string pattern as a Cucumber expression unless it starts with `^`, ends with `$` or is written between slashes (see <doc:Matching-Steps#How-a-string-pattern-is-read>).
 
 For example, take this step:
 

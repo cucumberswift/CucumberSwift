@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Finds the mutants in Swift files. The tool supplies it, because it needs swift-syntax.
@@ -154,6 +155,10 @@ public final class MutationRun {
     private func mutate(in copy: URL, started: Date) throws -> Int32 {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: options.output, withIntermediateDirectories: true)
+        // An earlier run's report would look like this run's after a dry run, a run with no mutant or a failed baseline.
+        for name in ["mutation-report.json", "summary.txt"] {
+            try? fileManager.removeItem(at: options.output.appendingPathComponent(name))
+        }
         let mutants = try findMutants(in: copy)
         if options.dryRun {
             mutants.forEach { log("  \($0.id). \($0.summary)") }
@@ -174,6 +179,8 @@ public final class MutationRun {
         var sources = [String: String]()
         var results = [MutantResult]()
         for mutant in mutants {
+            // A cancelled command exits non-zero, which would count the mutants left as killed.
+            if isCancelled { throw CancellationError() }
             var result = try test(mutant, in: copy, runs: runs, timeout: timeout, coverage: coverage, sources: &sources)
             if let coverage { result.coveredBy = coverage.scenarios(running: mutant) }
             results.append(result)
@@ -279,7 +286,9 @@ public final class MutationRun {
         let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? contents(of: result.log).write(to: logFile, atomically: true, encoding: .utf8)
-        if !result.timedOut, result.testsRun == 0 {
+        // Tests that passed without running a test prove nothing. Tests that crashed exit non-zero before they print a
+        // count, and the mutant counts as killed.
+        if !result.timedOut, result.status == 0, result.testsRun == 0 {
             throw RunError.noTestsRan(mutant: mutant.summary, log: logFile.path)
         }
         var verdict: Verdict
@@ -304,15 +313,15 @@ public final class MutationRun {
         }
         return MutantResult(mutant: mutant, verdict: verdict, duration: outcome.duration, killedBy: killedBy)
     }
-
-    /// What the runner wrote to `log`, or nothing when it wrote no log.
-    private func contents(of log: URL?) -> String {
-        log.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
-    }
 }
 
 // Reading the copy's files and the tools' output.
 extension MutationRun {
+    /// What the runner wrote to `log`, or nothing when it wrote no log.
+    private func contents(of log: URL?) -> String {
+        log.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
+    }
+
     /// The Swift files under the source folders, in the copy, not in build folders.
     private func swiftFiles(in copy: URL) -> [URL] {
         var files = [URL]()
@@ -332,3 +341,4 @@ extension MutationRun {
         output.split(separator: "\n", omittingEmptySubsequences: false).suffix(lines).joined(separator: "\n")
     }
 }
+#endif

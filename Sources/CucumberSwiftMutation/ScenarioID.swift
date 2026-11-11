@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// A scenario, by its feature file's path inside the test bundle and its line, so that the scenario of a run in the
@@ -49,3 +50,4 @@ extension ScenarioID: CustomStringConvertible {
     /// `Two items pay shipping (line 5)`
     public var description: String { "\(name) (line \(line))" }
 }
+#endif

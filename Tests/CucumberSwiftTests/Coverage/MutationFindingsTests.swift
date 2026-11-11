@@ -39,8 +39,8 @@ final class MutationFindingsTests: XCTestCase {
     private func report(_ statuses: [String] = ["Killed", "Survived", "Killed"]) throws -> MutationReport {
         let path = try writeReport(statuses)
         defer { try? FileManager.default.removeItem(atPath: path) }
-        guard case .success(let report) = MutationReport.read(path: path) else { throw XCTSkip("unreadable report") }
-        return report
+        // A report this test wrote that can't be read is a failure, not a reason to skip.
+        return try MutationReport.read(path: path).get()
     }
 
     private func scenario(_ name: String, line: Int, regions: Set<Int>) -> CoverageScores.Scenario {
@@ -78,6 +78,19 @@ final class MutationFindingsTests: XCTestCase {
         try "[1, 2]".write(toFile: path, atomically: true, encoding: .utf8)
         guard case .failure(let foreign) = MutationReport.read(path: path) else { return XCTFail("read a foreign file") }
         XCTAssertTrue(foreign.message.contains("Stryker"), foreign.message)
+    }
+
+    func testAMutantWithoutAStatusOrAPlaceIsAnError() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("partial-\(UUID().uuidString).json").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let location = ["start": ["line": 1, "column": 11], "end": ["line": 1, "column": 12]]
+        for mutant in [["id": "1", "replacement": ">=", "location": location], ["id": "1", "replacement": ">=", "status": "Survived"]] {
+            let file: [String: Any] = ["language": "swift", "source": "let a = b > c\n", "mutants": [mutant]]
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": "2", "files": ["Sources/Voting/Voting.swift": file]])
+                .write(to: URL(fileURLWithPath: path))
+            guard case .failure(let error) = MutationReport.read(path: path) else { return XCTFail("read a mutant without \(mutant)") }
+            XCTAssertEqual(error.message, "\(path) has a mutant in Sources/Voting/Voting.swift without a status or a start location")
+        }
     }
 
     func testTheScoreCountsOnlyTheMutantsInTheCodeTheFeaturesScenariosRun() throws {
@@ -205,7 +218,7 @@ final class MutationFindingsTests: XCTestCase {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent("ran-\(UUID().uuidString).json").path
         try JSONSerialization.data(withJSONObject: json).write(to: URL(fileURLWithPath: path))
         defer { try? FileManager.default.removeItem(atPath: path) }
-        guard case .success(let report) = MutationReport.read(path: path) else { throw XCTSkip("unreadable report") }
+        let report = try MutationReport.read(path: path).get()
         let code = MutationFindings.CodeLookup(regions: { _, _, _ in [7] }, currentSource: { report.sources[$0] })
         return MutationFindings.make(report: report, scenarios: scenarios, code: code, file: featureFile, featureLine: 1, feature: feature)
     }

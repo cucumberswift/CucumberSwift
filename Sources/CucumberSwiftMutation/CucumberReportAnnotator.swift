@@ -3,13 +3,14 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Adds what the run found to a Cucumber JSON report that the tests wrote, as an `embeddings` entry on a step.
 public enum CucumberReportAnnotator {
     public struct Annotated {
         public let data: Data
-        /// The failed steps, as `Scenario :: Given step`.
+        /// The failed steps and hooks, as `Scenario :: Given step` and `Scenario :: Before hook`.
         public let failedSteps: [String]
         /// The scenarios with a failed step or hook, in the order of the report.
         public let failedScenarios: [ScenarioID]
@@ -17,8 +18,8 @@ public enum CucumberReportAnnotator {
 
     /// The annotated report, or `nil` when `data` is not a Cucumber JSON report.
     ///
-    /// A killed mutant is noted on each failed step. A survivor is noted on the last step of each scenario, because
-    /// those are the scenarios that ran against it and did not notice.
+    /// A killed mutant is noted on each failed step and each failed `before` or `after` hook. A survivor is noted on the
+    /// last step of each scenario, because those are the scenarios that ran against it and did not notice.
     public static func annotate(_ data: Data, result: MutantResult) -> Annotated? {
         guard var features = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else { return nil }
         let note = [
@@ -54,11 +55,27 @@ public enum CucumberReportAnnotator {
                     steps[stepIndex]["embeddings"] = (steps[stepIndex]["embeddings"] as? [[String: Any]] ?? []) + [embedding]
                 }
                 elements[elementIndex]["steps"] = steps
+                failed += noteFailedHooks(of: &elements[elementIndex], scenario: scenario, embedding: embedding)
             }
             features[featureIndex]["elements"] = elements
         }
         guard let output = try? JSONSerialization.data(withJSONObject: features, options: [.prettyPrinted, .sortedKeys]) else { return nil }
         return Annotated(data: output, failedSteps: failed, failedScenarios: failedScenarios)
+    }
+
+    /// Adds `embedding` to each failed `before` and `after` hook of a scenario, and returns them as
+    /// `Scenario :: Before hook`.
+    private static func noteFailedHooks(of element: inout [String: Any], scenario: String, embedding: [String: Any]) -> [String] {
+        var failed = [String]()
+        for (key, name) in [("before", "Before hook"), ("after", "After hook")] {
+            guard var hooks = element[key] as? [[String: Any]] else { continue }
+            for index in hooks.indices where (hooks[index]["result"] as? [String: Any])?["status"] as? String == "failed" {
+                failed.append("\(scenario) :: \(name)")
+                hooks[index]["embeddings"] = (hooks[index]["embeddings"] as? [[String: Any]] ?? []) + [embedding]
+            }
+            element[key] = hooks
+        }
+        return failed
     }
 
     /// Every scenario in a Cucumber JSON report, or `nil` when `data` is not one.
@@ -79,3 +96,4 @@ public enum CucumberReportAnnotator {
         }
     }
 }
+#endif

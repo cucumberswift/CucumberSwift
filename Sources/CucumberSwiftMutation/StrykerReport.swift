@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The report in the Stryker mutation testing report format, version 2, which viewers such as Mutation
@@ -112,3 +113,4 @@ public struct StrykerReport: Encodable {
         return try encoder.encode(self)
     }
 }
+#endif

@@ -189,8 +189,8 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
-      # the Cucumber report it reads, its plugin, its fixtures, scripts and action, the package manifests or this
-      # workflow.
+      # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), its plugin, its
+      # fixtures, scripts and action, the package manifests or this workflow.
       # Not the documentation, which lives in Sources too. Always on any other event.
       - name: Decide whether the mutation testing fixture runs
         id: mutation
@@ -199,7 +199,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -477,14 +477,16 @@ jobs:
   # still install the framework. It needs no Tuist: consumers never do.
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
-  # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with, after
-  # installing its iOS platform, which the image doesn't have.
+  # Pull requests run the newest Xcode, the macos-26 image's own, which a new release
+  # most likely breaks. The merge queue and main also run Xcode 16.0, the oldest Xcode
+  # CI builds with, on macos-15, after installing its iOS platform, which the image
+  # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
+  # or later (#553).
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -492,13 +494,14 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)","ios_platform":true}]') }}
+          && '[{"os":"macos-26","variant":""}]'
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","xcode":"16.0","variant":" (Xcode 16)","ios_platform":true,"tuist_developer_dir":"/Applications/Xcode_26.2.app/Contents/Developer"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
         run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
@@ -535,7 +538,7 @@ jobs:
           CARTHAGE_LOG: carthage-build.log
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           # The pinned Tuist can't generate the fixture's project with Xcode 16.0.
-          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+          TUIST_DEVELOPER_DIR: ${{ matrix.tuist_developer_dir }}
         run: mise run test-carthage
       - name: Show what Carthage produced
         if: always()
@@ -544,7 +547,7 @@ jobs:
       # matrix entry, so each run has one artifact. The wildcard keeps the
       # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
       - name: Upload the xcframework
-        if: matrix.xcode == '26.2'
+        if: matrix.variant == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: CucumberSwift.xcframework
@@ -555,7 +558,7 @@ jobs:
       # Nightly and manual runs only, with the newest Xcode: pull requests build for tvOS in
       # Catalyst tests. After the upload, as it replaces the iOS xcframework.
       - name: Build the tvOS framework with Carthage
-        if: matrix.xcode == '26.2' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: matrix.variant == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
           carthage build --no-skip-current --use-xcframeworks --platform tvOS --log-path carthage-build.log
           xcf=Carthage/Build/CucumberSwift.xcframework
