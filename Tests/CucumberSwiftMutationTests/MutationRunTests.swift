@@ -323,6 +323,19 @@ extension MutationRunTests {
         XCTAssertTrue(summary.contains("Mutation score: 100.0%"), summary)
     }
 
+    func testTestsThatCantStartForAMutantStopTheRun() {
+        var tests = 0
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            guard tests > 2 else { return .finished(0, output: "Executed 5 tests, with 0 failures") }
+            return CommandResult(status: 127, output: "Couldn't run swift", timedOut: false, duration: 0, started: false)
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.failed, "A launch failure isn't a kill")
+        XCTAssertTrue(log.joined().contains("the tests didn't start"), log.joined())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+    }
+
     func testARunThatWritesNoReportRemovesTheLastOne() throws {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         for name in ["mutation-report.json", "summary.txt"] {

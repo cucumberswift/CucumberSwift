@@ -131,10 +131,10 @@ public struct ProcessRunner: CommandRunning {
                 return process.processIdentifier
             }
             guard started else {
-                return CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0)
+                return CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0, started: false)
             }
         } catch {
-            return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0)
+            return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0, started: false)
         }
         defer { Self.registry.remove(process.processIdentifier) }
         // Read while the command runs, so a long output can't fill the pipe and stop it.

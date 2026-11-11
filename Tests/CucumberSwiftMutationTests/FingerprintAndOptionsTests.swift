@@ -133,6 +133,14 @@ final class MutationOptionsTests: XCTestCase {
         }
     }
 
+    func testTimeoutsAreFinite() {
+        for option in ["--minimum-timeout", "--timeout-multiplier"] {
+            XCTAssertThrowsError(try MutationOptions.parse(["--root", "/p", option, "inf"])) {
+                XCTAssertEqual("\($0)", "\(option) needs a number above 0, not \"inf\"")
+            }
+        }
+    }
+
     func testTheDefaultSwiftIsTheFirstOnThePath() throws {
         let folder = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("swift-path-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }

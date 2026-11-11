@@ -28,17 +28,6 @@ public final class MutationRun {
     }
 
     /// A mutant's run that proves nothing, so the whole run stops instead of counting it.
-    enum RunError: Error, CustomStringConvertible {
-        case noTestsRan(mutant: String, log: String)
-
-        var description: String {
-            switch self {
-                case .noTestsRan(let mutant, let log):
-                    return "the tests ran no test for \(mutant), although they did without the change. The output is in \(log)"
-            }
-        }
-    }
-
     private let options: MutationOptions
     private let discoverer: MutantDiscovering
     private let runner: CommandRunning
@@ -270,6 +259,11 @@ public final class MutationRun {
         ]
         let result = runTests(in: copy, environment: environment, timeout: timeout)
         try? result.output.write(to: runs.appendingPathComponent("mutant-\(mutant.id).log"), atomically: true, encoding: .utf8)
+        // Tests that never started tested nothing: a non-zero status would count the mutant as killed.
+        guard result.started else {
+            if isCancelled { throw CancellationError() }
+            throw RunError.testsDidNotStart(mutant: mutant.summary, output: result.output)
+        }
         // Tests that passed without running a test prove nothing. Tests that crashed exit non-zero before they print a
         // count, and the mutant counts as killed.
         if !result.timedOut, result.status == 0, result.testsRun == 0 {
@@ -305,6 +299,23 @@ public final class MutationRun {
 
     private func runTests(in copy: URL, environment: [String: String], timeout: TimeInterval?) -> CommandResult {
         runner.run(options.swift, ["test", "--skip-build"] + options.swiftArguments, in: copy, environment: environment, timeout: timeout)
+    }
+}
+
+// Why a run stops before its report.
+extension MutationRun {
+    enum RunError: Error, CustomStringConvertible {
+        case noTestsRan(mutant: String, log: String)
+        case testsDidNotStart(mutant: String, output: String)
+
+        var description: String {
+            switch self {
+                case .noTestsRan(let mutant, let log):
+                    return "the tests ran no test for \(mutant), although they did without the change. The output is in \(log)"
+                case .testsDidNotStart(let mutant, let output):
+                    return "the tests didn't start for \(mutant): \(output)"
+            }
+        }
     }
 }
 
