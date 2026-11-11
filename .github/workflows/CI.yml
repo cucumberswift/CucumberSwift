@@ -1104,10 +1104,12 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: mise run test-fixtures
-      # The mutation testing steps run the tool that this action builds once, with a cache that every job running
-      # the tool shares. See .github/actions/mutation-tool/action.yml.
+      # On a pull request, the mutation testing steps run the tool that this action builds once, with a cache that
+      # every job running the tool shares. See .github/actions/mutation-tool/action.yml. The merge queue and every
+      # nightly and manual run leave MUTATION_TOOL unset, so the steps build and run the tool with `swift run`, as a
+      # user's package does.
       - name: Build the mutation testing tool
-        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.mutation_code == 'true' }}
         uses: ./.github/actions/mutation-tool
       # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
       # as a script runs it, here the tool built above. The run must kill and keep the
