@@ -258,12 +258,6 @@ enum CucumberSettings {
         return trimmed?.isEmpty == false ? trimmed : nil
     }
 
-    /// How long the report can go unwritten before it is taken for an earlier run's: the static variable,
-    /// then `CUCUMBER_REPORT_STALE_AFTER`, then 10 minutes, as CucumberSwift reads it.
-    static func reportStaleAfter(environment: [String: String] = ProcessInfo.processInfo.environment) -> TimeInterval {
-        FeatureFlagValue.reportStaleAfter(setting: staticReportStaleAfter, environment: environment[reportStaleAfterEnvironmentKey])
-    }
-
     /// `scenario` or `feature`, in any case, with spaces and tabs around it ignored, as CucumberSwift reads
     /// it. Any other value is not a setting.
     static func parallelTestingUnit(_ value: String?) -> ParallelTestingUnit? {
@@ -464,5 +458,13 @@ extension Cucumber {
     nonisolated public static var coveragePath: String? {
         get { CucumberSettings.staticCoveragePath }
         set { CucumberSettings.staticCoveragePath = newValue }
+    }
+}
+
+extension CucumberSettings {
+    /// How long the report can go unwritten before it is taken for an earlier run's: the static variable,
+    /// then `CUCUMBER_REPORT_STALE_AFTER`, then 10 minutes, as CucumberSwift reads it.
+    static func reportStaleAfter(environment: [String: String] = ProcessInfo.processInfo.environment) -> TimeInterval {
+        FeatureFlagValue.reportStaleAfter(setting: staticReportStaleAfter, environment: environment[reportStaleAfterEnvironmentKey])
     }
 }

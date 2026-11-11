@@ -33,9 +33,8 @@ public final class CucumberJSONReporter: CucumberTestObserver {
             if let path = CucumberSettings.reportPath { return URL(fileURLWithPath: path) }
             return defaultURL
         }
-        return CucumberJSONRecorder(reportURL: reportURL,
-                                    runner: "Swift Testing",
-                                    staleAfter: { CucumberSettings.reportStaleAfter() })
+        let staleAfter = { CucumberSettings.reportStaleAfter() }
+        return CucumberJSONRecorder(reportURL: reportURL, runner: "Swift Testing", staleAfter: staleAfter)
     }
 
     private static func entry(for feature: Feature) -> CucumberJSONReport.Feature {
