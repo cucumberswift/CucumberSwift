@@ -34,6 +34,18 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
         }
     }
 
+    func testARunThatStoppedBeforeItsManifestIsReportedNotLeftOut() throws {
+        try write(manifest(scenarios, order: functions), in: "run-a")
+        let stopped = folder.appendingPathComponent("run-b")
+        try FileManager.default.createDirectory(at: stopped, withIntermediateDirectories: true)
+        try Data("profile".utf8).write(to: stopped.appendingPathComponent("scenario.profraw"))
+        let found = try XCTUnwrap(CoverageMerge.incompleteRunFolders(in: [folder]).first)
+        XCTAssertEqual(found.lastPathComponent, "run-b")
+        XCTAssertThrowsError(try CoverageMerge.read([folder])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .incomplete(found.path))
+        }
+    }
+
     func testAManifestOfAnotherVersionIsRefused() throws {
         var newer = manifest(scenarios, order: functions)
         newer.version = 2
@@ -95,14 +107,16 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
             .unreadable("/a", "it ends early"),
             .notMeasured("/a", "no binary"),
             .differentBuilds("Calc.add()"),
-            .differentSettings("/a", "/b")
+            .differentSettings("/a", "/b"),
+            .incomplete("/a/run-1")
         ]
         XCTAssertEqual(errors.map(\.description), [
             "no run folder, run-<id> with a manifest.json, in /a, /b",
             "can't read the manifest of /a: it ends early",
             "/a has no code coverage to score: no binary",
-            "the runs measured different builds: Calc.add() has a different number of regions in each. Merge only the runs of one build.",
-            "/b checks the scores against other levels than /a. Set the same levels for every run."
+            "the runs measured different builds: Calc.add() has other regions in each. Merge only the runs of one build.",
+            "/b checks the scores against other levels, or measures other sources, than /a. Set the same for every run.",
+            "/a/run-1 has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out."
         ])
     }
 }

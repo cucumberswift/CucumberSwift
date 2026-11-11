@@ -55,8 +55,9 @@ class CoverageMergeTestCase: XCTestCase {
 
     /// The manifest functions of `order`, which numbers their regions in that order.
     func measured(_ order: [Function], spans: Bool = true) -> [CoverageManifest.MeasuredFunction] {
-        order.enumerated().map { index, function in
-            let first = 10 * (index + 1)
+        order.map { function in
+            // Where a function is doesn't depend on the order a run lists it in.
+            let first = 10 * ((functions.firstIndex { $0.name == function.name } ?? 0) + 1)
             return CoverageManifest.MeasuredFunction(binary: "MyTests",
                                                      name: "$s5Calc\(function.name)",
                                                      readableName: "Calc.\(function.name)()",

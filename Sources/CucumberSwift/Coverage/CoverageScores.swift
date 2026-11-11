@@ -55,17 +55,22 @@ struct MeasuredCode: Equatable {
         return !URL(fileURLWithPath: binary).pathComponents.contains { $0.hasSuffix(".xctest") }
     }
 
-    /// The function that region `region` belongs to.
-    func function(of region: Int) -> Function? {
+    /// The index in ``functions`` of the function that region `region` belongs to.
+    func functionIndex(of region: Int) -> Int? {
         var low = 0
         var high = functions.count - 1
         while low <= high {
             let middle = (low + high) / 2
             let function = functions[middle]
-            if function.regions.contains(region) { return function }
+            if function.regions.contains(region) { return middle }
             if region < function.regions.lowerBound { high = middle - 1 } else { low = middle + 1 }
         }
         return nil
+    }
+
+    /// The function that region `region` belongs to.
+    func function(of region: Int) -> Function? {
+        functionIndex(of: region).map { functions[$0] }
     }
 }
 

@@ -76,8 +76,8 @@ struct CoverageManifest: Codable, Equatable {
         var spans: [[Int]]?
     }
 
-    /// The levels a run checks its scores against, from ``CoverageSettings``. A level is a percentage, or nil
-    /// for off.
+    /// The levels a run checks its scores against, and the code it measures, from ``CoverageSettings``. A level is
+    /// a percentage, or nil for off.
     struct Settings: Codable, Equatable {
         var warningLevel: Int?
         var errorLevel: Int?
@@ -85,6 +85,9 @@ struct CoverageManifest: Codable, Equatable {
         var redundancyWarningLevel: Int?
         var redundancyErrorLevel: Int?
         var redundantStepWarningLevel: Int?
+        /// The sources filter that picks the code the scores measure, sorted. Nil in a manifest from before it was
+        /// recorded, and empty when the run measures all the code.
+        var sources: [String]?
     }
 
     /// The scores of a feature that finished: of its scenarios that aren't in a Rule, or of one of its
@@ -144,6 +147,7 @@ extension CoverageManifest.Settings {
                   redundancy: settings.isRedundancy,
                   redundancyWarningLevel: percent(settings.redundancyWarningLevel),
                   redundancyErrorLevel: percent(settings.redundancyErrorLevel),
-                  redundantStepWarningLevel: percent(settings.redundantStepWarningLevel))
+                  redundantStepWarningLevel: percent(settings.redundantStepWarningLevel),
+                  sources: settings.sources.sorted())
     }
 }

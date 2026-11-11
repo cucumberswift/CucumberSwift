@@ -101,9 +101,8 @@ public struct MergedCoverage {
 
     /// The region that the merged number `number` is, in the code `code` measures.
     private static func region(numbered number: Int, in code: MeasuredCode) -> Region? {
-        guard let function = code.function(of: number),
-              let index = code.functions.firstIndex(of: function) else { return nil }
-        return Region(function: index, index: number - function.regions.lowerBound)
+        guard let index = code.functionIndex(of: number) else { return nil }
+        return Region(function: index, index: number - code.functions[index].regions.lowerBound)
     }
 
     /// Merges the runs in `folders`: run folders, `run-<id>`, or coverage folders that hold them. Throws when

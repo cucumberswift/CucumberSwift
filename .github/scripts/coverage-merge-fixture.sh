@@ -25,12 +25,16 @@ rm -rf "$coverage" "$logs"
 mkdir -p "$coverage" "$logs"
 keep="$root/.github/scripts/keep-package-resolved.sh"
 
+# Resolving the tool's package rewrites Package.resolved without the Macros trait. Whatever the script's end,
+# the file is the one the caller had, with any edits of theirs.
+cp "$root/Package.resolved" "$work/Package.resolved.saved"
+trap 'cp "$work/Package.resolved.saved" "$root/Package.resolved"' EXIT
+
 echo "Building cucumberswift coverage merge"
 swift build --package-path "$root" --scratch-path "$work/tool" --product cucumberswift > "$logs/tool.log" 2>&1 \
   || { cat "$logs/tool.log"; exit 1; }
 merge="$work/tool/debug/cucumberswift"
-# Puts back the lockfile that resolving the tool's package rewrites without the Macros trait.
-git -C "$root" checkout -q -- Package.resolved
+cp "$work/Package.resolved.saved" "$root/Package.resolved"
 
 cd "$fixture"
 xcodebuild_tests() {
@@ -95,6 +99,22 @@ for way in xctest-serial xctest-parallel xctest-shards swift-serial swift-shards
     status=1
   fi
   tail -n +2 "$logs/$way.merged" | normalized /dev/stdin > "$logs/$way.scores"
+done
+# Each shard must have run some of the scenarios, not all: merging runs that each ran all 10 would remove the
+# repeats and still score the same. So each shard's run is merged alone, and the counts add up to the 10.
+for way in xctest-shards swift-shards; do
+  total=0
+  for manifest in "$coverage/$way"/*/manifest.json; do
+    count=$("$merge" coverage merge "$(dirname "$manifest")" | head -1 | sed -E 's/^CucumberSwift coverage: ([0-9]+) scenarios? from.*/\1/')
+    echo "$way: $(basename "$(dirname "$manifest")") ran $count scenarios"
+    if [[ ! "$count" =~ ^[0-9]+$ ]] || [[ "$count" -eq 0 || "$count" -ge 10 ]]; then
+      echo "error: $way: a shard ran $count of the 10 scenarios, not some of them" >&2
+      status=1
+    else
+      total=$((total + count))
+    fi
+  done
+  [[ "$total" -eq 10 ]] || { echo "error: $way: the shards ran $total scenarios together, not the 10 without repeats" >&2; status=1; }
 done
 # One swift test must have written a run folder for each runner, and merging them must score each runner's
 # features as the runner's serial run did: the lines of both serial runs, together.

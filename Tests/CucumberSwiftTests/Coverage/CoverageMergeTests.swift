@@ -82,7 +82,7 @@ final class CoverageMergeTests: CoverageMergeTestCase {
             run(manifest(Array(scenarios[2...]), order: functions, uri: other))
         ])
         XCTAssertEqual(merged.features.map(\.part), serialParts(scenarios))
-        XCTAssertEqual(CoverageMerge.featureKey(feature), "Features/Arithmetic.feature")
+        XCTAssertEqual(CoverageMerge.featureKey(feature), "MyTests.xctest/Features/Arithmetic.feature")
         XCTAssertEqual(CoverageMerge.featureKey(issueFile), issueFile)
     }
 
@@ -93,6 +93,30 @@ final class CoverageMergeTests: CoverageMergeTestCase {
             run(manifest(scenarios, order: changed))
         ])) {
             XCTAssertEqual($0 as? CoverageMerge.MergeError, .differentBuilds("Calc.add()"))
+        }
+    }
+
+    func testRunsOfFunctionsWithTheSameRegionCountAtOtherPlacesAreNotMerged() {
+        var base = manifest(scenarios, order: functions)
+        base.measured?[0].spans = [[1, 1, 1, 9], [2, 1, 2, 9]]
+        var other = base
+        other.measured?[0].spans = [[1, 1, 1, 9], [5, 1, 5, 9]]
+        XCTAssertThrowsError(try CoverageMerge(runs: [
+            run(base),
+            run(other)
+        ])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .differentBuilds("Calc.add()"))
+        }
+    }
+
+    func testRunsThatMeasureOtherSourcesAreNotMerged() {
+        var settings = CoverageSettings()
+        settings.sources = ["Sources/B"]
+        XCTAssertThrowsError(try CoverageMerge(runs: [
+            run(manifest(scenarios, order: functions), at: "/a"),
+            run(manifest(scenarios, order: functions, settings: settings), at: "/b")
+        ])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .differentSettings("/a", "/b"))
         }
     }
 

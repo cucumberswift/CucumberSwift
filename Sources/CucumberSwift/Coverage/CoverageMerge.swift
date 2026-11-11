@@ -18,6 +18,7 @@ struct CoverageMerge {
         case notMeasured(String, String)
         case differentBuilds(String)
         case differentSettings(String, String)
+        case incomplete(String)
 
         var description: String {
             switch self {
@@ -28,9 +29,11 @@ struct CoverageMerge {
                 case .notMeasured(let folder, let reason):
                     "\(folder) has no code coverage to score: \(reason)"
                 case .differentBuilds(let function):
-                    "the runs measured different builds: \(function) has a different number of regions in each. Merge only the runs of one build."
+                    "the runs measured different builds: \(function) has other regions in each. Merge only the runs of one build."
                 case .differentSettings(let first, let other):
-                    "\(other) checks the scores against other levels than \(first). Set the same levels for every run."
+                    "\(other) checks the scores against other levels, or measures other sources, than \(first). Set the same for every run."
+                case .incomplete(let folder):
+                    "\(folder) has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out."
             }
         }
     }
@@ -110,6 +113,7 @@ struct CoverageMerge {
 
     /// The runs in `folders`, as ``runFolders(in:)`` finds them.
     static func read(_ folders: [URL]) throws -> [Run] {
+        if let incomplete = incompleteRunFolders(in: folders).first { throw MergeError.incomplete(incomplete.path) }
         let runFolders = runFolders(in: folders)
         guard !runFolders.isEmpty else { throw MergeError.noRuns(folders.map(\.path)) }
         let decoder = JSONDecoder()
@@ -130,10 +134,28 @@ struct CoverageMerge {
     }
 
     /// The part of a feature file's URI that names the same file in every run: its path inside the test
-    /// bundle, when it is in one, which is somewhere else in each Simulator. Otherwise the whole URI.
+    /// bundle, from the bundle's name, when it is in one, which is somewhere else in each Simulator. Otherwise
+    /// the whole URI. The bundle's name keeps apart two bundles' files at the same path.
     static func featureKey(_ uri: String) -> String {
         guard let range = uri.range(of: ".xctest/", options: .backwards) else { return uri }
-        return String(uri[range.upperBound...])
+        let before = uri[..<range.lowerBound]
+        let start = before.lastIndex(of: "/").map { before.index(after: $0) } ?? before.startIndex
+        return String(uri[start...])
+    }
+
+    /// The `run-<id>` folders in `folders` that have files but no `manifest.json`: runs that stopped before
+    /// they finished. A folder with nothing in it isn't one.
+    static func incompleteRunFolders(in folders: [URL]) -> [URL] {
+        let fileManager = FileManager.default
+        return folders.flatMap { folder -> [URL] in
+            let contents = (try? fileManager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            return contents.filter {
+                $0.lastPathComponent.hasPrefix("run-")
+                    && !fileManager.fileExists(atPath: $0.appendingPathComponent("manifest.json").path)
+                    && !((try? fileManager.contentsOfDirectory(atPath: $0.path)) ?? []).isEmpty
+            }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        }
     }
 
     /// The levels that every run in `runs` checked its scores against. Throws when a run has no code coverage to
@@ -191,11 +213,11 @@ struct CoverageMerge {
     /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
     /// regions, so a function is the same one in two runs when its binary, name, file and place among the
     /// functions with those three are. Throws ``MergeError/differentBuilds(_:)`` when the same function has a
-    /// different number of regions in two runs.
+    /// different number of regions, or other regions at other places, in two runs.
     static func renumber(_ runs: [[CoverageManifest.MeasuredFunction]]) throws -> Renumbering {
         var functions = [MeasuredCode.Function]()
         var spans = [[[Int]]?]()
-        var numbers = [FunctionKey: Range<Int>]()
+        var numbers = [FunctionKey: (regions: Range<Int>, line: Int, spans: [[Int]]?)]()
         var maps = [[Int]]()
         for run in runs {
             var occurrences = [String: Int]()
@@ -206,12 +228,17 @@ struct CoverageMerge {
                 occurrences[id, default: 0] += 1
                 let regions: Range<Int>
                 if let known = numbers[key] {
-                    guard known.count == function.regions else { throw MergeError.differentBuilds(function.readableName) }
-                    regions = known
+                    // The same build has the same regions at the same places, which a changed function can keep the
+                    // count of.
+                    let sameSpans = known.spans == nil || function.spans == nil || known.spans == function.spans
+                    guard known.regions.count == function.regions, known.line == function.line, sameSpans else {
+                        throw MergeError.differentBuilds(function.readableName)
+                    }
+                    regions = known.regions
                 } else {
                     let start = functions.last?.regions.upperBound ?? 0
                     regions = start..<start + function.regions
-                    numbers[key] = regions
+                    numbers[key] = (regions, function.line, function.spans)
                     functions.append(MeasuredCode.Function(name: function.readableName, file: function.file, line: function.line, regions: regions))
                     spans.append(function.spans)
                 }

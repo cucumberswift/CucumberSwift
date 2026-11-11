@@ -198,7 +198,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
+          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwift/Runner/CoverageScoreTests\.swift$|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
