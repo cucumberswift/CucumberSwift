@@ -221,7 +221,8 @@ done
 description = "Build the framework with Carthage and test a project that uses it"
 # Builds Carthage/Build/CucumberSwift.xcframework as `carthage update` does for a consumer, then
 # runs Fixtures/CarthageXCFramework, an iOS test target that links and embeds it, on a simulator.
-# The fixture must run as many tests as its expected-tests lists, and CucumberSwift must score its feature.
+# The fixture must run as many tests as its expected-tests lists, and with Xcode 26 or later
+# CucumberSwift must score its feature.
 # See "Fixtures" in CONTRIBUTING.md.
 run = '''
 set -eu
@@ -266,7 +267,12 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
 fi
 python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
 # The fixture's framework is built with code coverage, so CucumberSwift must score the feature.
-if ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xcframework: 100% of the code its scenarios ran (4 of 4 regions in 1 function).*redundancy 33%" "$log"; then
+# CucumberSwift reads only Xcode 26's coverage formats, so the check runs only with Xcode 26 or
+# later until #552 adds Xcode 16 support.
+xcode_major=$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')
+if [ "$xcode_major" -lt 26 ]; then
+  echo "Skipping the scoring check: CucumberSwift's coverage needs Xcode 26 or later (#552)"
+elif ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xcframework: 100% of the code its scenarios ran (4 of 4 regions in 1 function).*redundancy 33%" "$log"; then
   echo "CucumberSwift did not score the fixture's feature"
   exit 1
 fi
