@@ -21,7 +21,7 @@ let package = Package(
     targets: [
         // The code that mutation testing changes.
         .target(name: "Voting"),
-        // Runs the Voting and Driving features with XCTest.
+        // Runs the Voting feature with XCTest.
         .testTarget(
             name: "VotingTests",
             dependencies: ["Voting", .product(name: "CucumberSwift", package: "CucumberSwift")],

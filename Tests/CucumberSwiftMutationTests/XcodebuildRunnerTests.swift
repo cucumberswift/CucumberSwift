@@ -80,6 +80,7 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         let run = runner.test(in: copy, request: TestRequest(settings: ["CUCUMBERSWIFT_MUTANT": "3", "CUCUMBER_COVERAGE": "NO"], writesReport: true))
         let call = try XCTUnwrap(commands.calls.first)
         XCTAssertEqual(call.arguments.first, "test-without-building")
+        XCTAssertEqual(value(after: "-collect-test-diagnostics", in: call.arguments), "never", "A failing test run collects diagnostics otherwise")
         XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBERSWIFT_MUTANT"], "3")
         XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_COVERAGE"], "NO")
         XCTAssertTrue(call.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"]?.contains("/runner/reports/") == true)

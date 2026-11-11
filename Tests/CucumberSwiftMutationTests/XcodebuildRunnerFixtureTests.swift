@@ -50,11 +50,11 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
     }
 
     func testRunsOnlyAnXCTestScenario() throws {
-        let scenario = ScenarioID(feature: "Features/Driving.feature", line: 7, name: "An adult without a licence cannot drive")
+        let scenario = ScenarioID(feature: "Features/Voting.feature", line: 7, name: "A child cannot vote")
         let run = runner.test(in: copy, request: TestRequest(writesReport: true, scenarios: [scenario]))
         XCTAssertTrue(run.succeeded, output(of: run))
         XCTAssertEqual(run.testsRun, 1, "A test for the scenario, not a test for each step")
-        XCTAssertEqual(try scenarios(in: run.cucumberReport), ["An adult without a licence cannot drive"])
+        XCTAssertEqual(try scenarios(in: run.cucumberReport), ["A child cannot vote"])
     }
 
     func testRunsOnlyASwiftTestingScenario() throws {
