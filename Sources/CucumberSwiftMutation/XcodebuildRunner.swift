@@ -179,17 +179,23 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
             guard let bundle = bundles[name] else { return true }
-            let files = featureFiles(in: bundle)
-            return scenarios.contains { scenario in files.contains { $0 == scenario.feature || $0.hasSuffix("/" + scenario.feature) } }
+            return Self.holds(featureFiles(in: bundle), oneOf: scenarios)
         }
         return holding.isEmpty ? target.testTargets : holding
+    }
+
+    /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
+    private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
+        let features = scenarios.map(\.feature)
+        return files.contains { file in features.contains { file == $0 || file.hasSuffix("/" + $0) } }
     }
 
     /// The paths of the feature files anywhere inside `bundle`, relative to it.
     private func featureFiles(in bundle: URL) -> [String] {
         guard let enumerator = FileManager.default.enumerator(at: bundle, includingPropertiesForKeys: nil) else { return [] }
         let base = bundle.resolvingSymlinksInPath().path.count + 1
-        return enumerator.compactMap { ($0 as? URL).flatMap { $0.pathExtension == "feature" ? String($0.resolvingSymlinksInPath().path.dropFirst(base)) : nil } }
+        let urls = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "feature" }
+        return urls.map { String($0.resolvingSymlinksInPath().path.dropFirst(base)) }
     }
 
     /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,
