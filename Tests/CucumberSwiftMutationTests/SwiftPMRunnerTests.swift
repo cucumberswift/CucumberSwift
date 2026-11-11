@@ -71,8 +71,8 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
             ScenarioID(feature: "Features/Basket, large 100%.feature", line: 3, name: "One"),
             ScenarioID(feature: " Other.feature", line: 9, name: "Two")
         ]))
-        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"],
-                       "Features/Basket%2C large 100%25.feature:3,%20Other.feature:9", "A leading space is escaped: the reader trims")
+        let expected = "Features/Basket%2C large 100%25.feature:3,%20Other.feature:9"
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], expected, "A leading space is escaped: the reader trims")
     }
 
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {
