@@ -183,9 +183,10 @@ struct CoverageSettings: Equatable {
             ?? FeatureFlagValue.bool(environment[recordsIssuesInSuitesVariable]) ?? false
         settings.writesRegions = FeatureFlagValue.bool(environment[regionsVariable]) ?? false
         settings.isMutationTesting = storage.mutationTesting ?? FeatureFlagValue.bool(environment[mutationTestingVariable]) ?? false
-        settings.mutationReport = [storage.mutationReport, environment[mutationReportVariable]]
-            .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty }
+        // The static variable wins even when it is blank, as for the sources: it can turn off a path the environment sets.
+        settings.mutationReport = (storage.mutationReport ?? environment[mutationReportVariable])
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .flatMap { $0.isEmpty ? nil : $0 }
         settings.sources = (storage.sources ?? environment[sourcesVariable].map { $0.components(separatedBy: ",") } ?? [])
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }

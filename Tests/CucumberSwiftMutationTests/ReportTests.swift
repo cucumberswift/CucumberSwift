@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -73,6 +74,25 @@ final class ReportTests: XCTestCase {
         XCTAssertEqual(annotated.failedSteps, ["An adult can vote :: Then the person can vote"])
         let noted = try steps(of: annotated).map { ($0["embeddings"] as? [[String: String]])?.count ?? 0 }
         XCTAssertEqual(noted, [0, 1, 0, 0])
+    }
+
+    func testAKilledMutantIsNotedOnAFailedHookWhenNoStepFailed() throws {
+        let passed: [String: Any] = ["result": ["status": "passed"]]
+        let step: [String: Any] = ["keyword": "Then ", "name": "the person can vote", "result": ["status": "passed"]]
+        let scenario: [String: Any] = [
+            "name": "An adult can vote", "line": 3, "before": [["result": ["status": "failed"]]], "steps": [step], "after": [passed]
+        ]
+        let report: [[String: Any]] = [["uri": "/tmp/VotingTests.xctest/Features/Voting.feature", "elements": [scenario]]]
+        let result = MutantResult(mutant: Mutant.fixture(id: 1, replacement: "<"), verdict: .killed(by: []), duration: 1)
+        let annotated = try XCTUnwrap(CucumberReportAnnotator.annotate(JSONSerialization.data(withJSONObject: report), result: result))
+        XCTAssertEqual(annotated.failedSteps, ["An adult can vote :: Before hook"])
+        XCTAssertEqual(annotated.failedScenarios.map(\.id), ["Features/Voting.feature:3"])
+        let features = try XCTUnwrap(JSONSerialization.jsonObject(with: annotated.data) as? [[String: Any]])
+        let annotatedScenario = try XCTUnwrap((features[0]["elements"] as? [[String: Any]])?.first)
+        let noted = { (key: String) in (annotatedScenario[key] as? [[String: Any]] ?? []).map { ($0["embeddings"] as? [[String: String]])?.count ?? 0 } }
+        XCTAssertEqual(noted("before"), [1], "The failed hook has the note")
+        XCTAssertEqual(noted("steps"), [0])
+        XCTAssertEqual(noted("after"), [0])
     }
 
     func testTheNoteIsJSONThatNamesTheMutantItsPlaceAndItsStatus() throws {
@@ -155,3 +175,4 @@ final class ReportTests: XCTestCase {
         XCTAssertTrue(text.contains("Sources/Voting/Voting.swift:1:45 RelationalOperator >= → >"), text)
     }
 }
+#endif

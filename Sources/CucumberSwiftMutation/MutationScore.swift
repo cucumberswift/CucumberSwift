@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The mutation score: the share of the mutants that a test or a timeout detected, as Stryker counts it.
@@ -34,3 +35,4 @@ public struct MutationScore: Equatable, Sendable {
         noCoverage = count { $0 == .noCoverage }
     }
 }
+#endif

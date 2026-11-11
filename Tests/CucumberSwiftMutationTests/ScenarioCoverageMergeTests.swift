@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -37,3 +38,4 @@ final class ScenarioCoverageMergeTests: TemporaryFolderTestCase {
         XCTAssertEqual(ScenarioCoverage.read(inRunsUnder: folder)?.scenarios.count, 1)
     }
 }
+#endif

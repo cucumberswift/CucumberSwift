@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -126,12 +127,14 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testTheTimeoutIsAMultipleOfTheBaselineWithAFloor() {
-        let fake = runner { _ in .finished(0, duration: 20) }
+        let fake = runner { _ in .finished(0, duration: 25) }
         var settings = options()
         settings.minimumTimeout = 30
         _ = run(fake, options: settings)
-        let timeouts = fake.calls.compactMap { $0.timeout }
-        XCTAssertEqual(Set(timeouts), [60], "3 times the 20 s baseline; only the mutants' runs have a timeout")
+        // Only `swift test`: the package's git commands have a timeout of their own.
+        let tests = fake.calls.filter { $0.arguments.first == "test" }
+        XCTAssertEqual(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] == nil }.map(\.timeout), [nil, nil], "The baseline runs have none")
+        XCTAssertEqual(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }.map(\.timeout), [75, 75], "3 times the 25 s baseline")
     }
 
     func testMaxMutantsLimitsTheRun() {
@@ -304,3 +307,32 @@ extension MutationRunTests {
         XCTAssertEqual(tests?.compactMap { $0["id"] as? String }, ["Features/Voting.feature:3", "Features/Voting.feature:7"])
     }
 }
+
+// What a run does after a crash and without a report of its own.
+extension MutationRunTests {
+    func testTestsThatCrashForAMutantKillIt() throws {
+        var tests = 0
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            // A crash, such as an index out of range, ends the tests before they print a count.
+            return tests <= 2 ? .finished(0, output: "Executed 5 tests, with 0 failures") : .finished(1, output: "error: Exited with unexpected signal code 4")
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.completed, log.joined())
+        let summary = try String(contentsOf: output.appendingPathComponent("summary.txt"), encoding: .utf8)
+        XCTAssertTrue(summary.contains("Mutation score: 100.0%"), summary)
+    }
+
+    func testARunThatWritesNoReportRemovesTheLastOne() throws {
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        for name in ["mutation-report.json", "summary.txt"] {
+            try "an earlier run's".write(to: output.appendingPathComponent(name), atomically: true, encoding: .utf8)
+        }
+        var settings = options()
+        settings.dryRun = true
+        XCTAssertEqual(run(runner { _ in .finished(0) }, options: settings), MutationRun.Status.completed)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("summary.txt").path))
+    }
+}
+#endif

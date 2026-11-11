@@ -148,6 +148,9 @@ let package = Package(
             path: "Plugins/ConvertToGherkinMacrosPlugin"),
         // What the mutation testing tool does without swift-syntax: the work folder and its lock, running the
         // tests, the verdicts and the reports. Not a product. Its tests link it, which they can't do with the tool.
+        // It runs commands with Process, which iOS, tvOS and watchOS don't have, so its files, its tests' and the
+        // tool's are inside `#if os(macOS) || os(Linux)`: they build as empty modules when the package's tests run
+        // on a Simulator.
         .target(
             name: "CucumberSwiftMutation",
             path: "Sources/CucumberSwiftMutation"),

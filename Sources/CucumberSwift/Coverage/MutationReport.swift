@@ -69,7 +69,11 @@ struct MutationReport: Equatable {
             let source = contents["source"] as? String ?? ""
             sources[file] = source
             for entry in contents["mutants"] as? [[String: Any]] ?? [] {
-                if let mutant = mutant(from: entry, file: file, source: source) { mutants.append(mutant) }
+                // Leaving out a mutant the test can't read could leave no mutant, and pass the Mutation test.
+                guard let mutant = mutant(from: entry, file: file, source: source) else {
+                    return .failure(ReadError(message: "\(path) has a mutant in \(file) without a status or a start location"))
+                }
+                mutants.append(mutant)
             }
         }
         let date = (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date

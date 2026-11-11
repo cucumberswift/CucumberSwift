@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -61,3 +62,4 @@ final class ScenarioCoverageTests: TemporaryFolderTestCase {
         XCTAssertNil(ScenarioCoverage.read(inRunsUnder: folder.appendingPathComponent("missing")))
     }
 }
+#endif

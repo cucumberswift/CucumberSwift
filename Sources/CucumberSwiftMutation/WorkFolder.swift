@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The temporary copy of the project that a run mutates, and the lock file that lets the next run clean up
@@ -50,9 +51,6 @@ public struct WorkFolder {
     public let copy: URL
     private let lockFile: URL
 
-    /// The folder for the copy, in the order: the one the user gave, the package's `.build` folder (writable, ignored by
-    /// git, on the same volume so that files can be cloned), then the system temporary folder. Throws when none is
-    /// writable. It never falls back to the project itself.
     /// The folder for the temporary copy: `explicit` when given, then the temporary folder, then the user's caches. Never
     /// a folder in the package at `root`, nor one in a `.build` folder: code coverage leaves out the code under `.build`,
     /// where dependencies are, so no scenario would seem to run a mutant.
@@ -157,3 +155,4 @@ public struct WorkFolder {
         try? FileManager.default.removeItem(at: lockFile)
     }
 }
+#endif

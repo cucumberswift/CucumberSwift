@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 private final class Registry: @unchecked Sendable {
@@ -16,10 +17,13 @@ private final class Registry: @unchecked Sendable {
         return cancelled
     }
 
-    func add(_ pid: Int32) {
+    /// Adds a command that started, and returns false when the registry is already cancelled: `cancel()` ran after
+    /// the command's check and before it started, so it didn't stop this one. Checked and added under one lock.
+    func add(_ pid: Int32) -> Bool {
         lock.lock()
+        defer { lock.unlock() }
         pids.insert(pid)
-        lock.unlock()
+        return !cancelled
     }
 
     func remove(_ pid: Int32) {
@@ -132,7 +136,9 @@ public struct ProcessRunner: CommandRunning {
         } catch {
             return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0)
         }
-        Self.registry.add(process.processIdentifier)
+        if !Self.registry.add(process.processIdentifier), !ignoresCancellation {
+            Self.terminateTree(of: process.processIdentifier)
+        }
         defer { Self.registry.remove(process.processIdentifier) }
         // Read while the command runs, so a long output can't fill the pipe and stop it.
         let collected = Collected()
@@ -169,3 +175,4 @@ public struct ProcessRunner: CommandRunning {
         return true
     }
 }
+#endif
