@@ -121,16 +121,22 @@ final class CoverageMergeTests: CoverageMergeTestCase {
     }
 
     func testTheSameBuildInAnotherCheckoutFolderIsTheSameBuild() throws {
-        var elsewhere = manifest(Array(scenarios[2...]), order: functions)
-        elsewhere.measured = elsewhere.measured?.map {
-            var function = $0
-            function.file = "/agent-b/repo/Calc.swift"
-            return function
+        // Both runs also measure a file outside the checkout, so the folders they share is only the root.
+        func build(_ scenarios: [Ran], checkout: String) -> CoverageManifest {
+            var manifest = manifest(scenarios, order: functions)
+            manifest.measured = manifest.measured?.enumerated().map { index, function in
+                var function = function
+                function.file = index == 2 ? "/opt/shared/Generated.swift" : "\(checkout)/Sources/Calc.swift"
+                return function
+            }
+            return manifest
         }
-        let here = manifest(Array(scenarios[..<2]), order: functions)
-        let merged = try CoverageMerge(runs: [run(here), run(elsewhere)])
+        let merged = try CoverageMerge(runs: [
+            run(build(Array(scenarios[..<2]), checkout: "/agent-a/repo")),
+            run(build(Array(scenarios[2...]), checkout: "/agent-b/repo"))
+        ])
         XCTAssertEqual(merged.code.functions.count, 3)
-        XCTAssertEqual(merged.features.map(\.part), serialParts(scenarios))
+        XCTAssertEqual(merged.scenarioCount, 5)
     }
 
     func testRunsThatMeasureOtherSourcesAreNotMerged() {

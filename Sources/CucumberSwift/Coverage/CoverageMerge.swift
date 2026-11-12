@@ -118,6 +118,11 @@ struct CoverageMerge {
             guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isFolder), isFolder.boolValue else {
                 throw MergeError.unreadable(folder.path, "it isn't a folder that exists")
             }
+            do {
+                _ = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+            } catch {
+                throw MergeError.unreadable(folder.path, "its contents can't be listed: \(error.localizedDescription)")
+            }
         }
         if let incomplete = incompleteRunFolders(in: folders).first { throw MergeError.incomplete(incomplete.path) }
         let runFolders = runFolders(in: folders)
@@ -154,9 +159,10 @@ struct CoverageMerge {
     static func incompleteRunFolders(in folders: [URL]) -> [URL] {
         let fileManager = FileManager.default
         func isIncomplete(_ folder: URL) -> Bool {
-            folder.lastPathComponent.hasPrefix("run-")
-                && !fileManager.fileExists(atPath: folder.appendingPathComponent("manifest.json").path)
-                && !((try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? []).isEmpty
+            guard folder.lastPathComponent.hasPrefix("run-"),
+                  !fileManager.fileExists(atPath: folder.appendingPathComponent("manifest.json").path) else { return false }
+            // A run folder that can't be listed isn't known to be empty.
+            return !((try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? ["?"]).isEmpty
         }
         return folders.flatMap { folder -> [URL] in
             if isIncomplete(folder) { return [folder] }
@@ -217,20 +223,8 @@ struct CoverageMerge {
         return (scenarios, repeated)
     }
 
-    /// The directory that holds every file in `files`: the longest folder path they share.
-    private static func commonDirectory(of files: [String]) -> [Substring] {
-        var common: [Substring]?
-        for file in files {
-            let folders = Array(file.split(separator: "/", omittingEmptySubsequences: false).dropLast())
-            common = common.map { known in
-                Array(zip(known, folders).prefix { $0 == $1 }.map(\.0))
-            } ?? folders
-        }
-        return common ?? []
-    }
-
     /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
-    /// regions, so a function is the same one in two runs when its binary, name, file and place among the
+    /// regions, so a function is the same one in two runs when its binary, name, file name and place among the
     /// functions with those three are. Throws ``MergeError/differentBuilds(_:)`` when the same function has a
     /// different number of regions, or other regions at other places, in two runs.
     static func renumber(_ runs: [[CoverageManifest.MeasuredFunction]]) throws -> Renumbering {
@@ -239,17 +233,12 @@ struct CoverageMerge {
         var numbers = [FunctionKey: (regions: Range<Int>, line: Int, spans: [[Int]]?)]()
         var maps = [[Int]]()
         for run in runs {
-            // Each run's files are named from the folder it was built in, which differs between machines. Every
-            // run of one build measures the same files, so a file is the same one by its place below the folder
-            // that holds them all.
-            let root = commonDirectory(of: run.map(\.file)).count
-            func relative(_ file: String) -> String {
-                file.split(separator: "/", omittingEmptySubsequences: false).dropFirst(root).joined(separator: "/")
-            }
             var occurrences = [String: Int]()
             var map = [Int]()
             for function in run {
-                let file = relative(function.file)
+                // The file is named by its own name only: its folder is the one it was built in, which differs
+                // between machines, and the binary, name and occurrence already tell functions apart.
+                let file = URL(fileURLWithPath: function.file).lastPathComponent
                 let id = "\(function.binary)\u{0}\(function.name)\u{0}\(file)"
                 let key = FunctionKey(binary: function.binary, name: function.name, file: file, occurrence: occurrences[id, default: 0])
                 occurrences[id, default: 0] += 1
