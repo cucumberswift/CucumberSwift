@@ -169,27 +169,33 @@ final class CoverageMergeTests: CoverageMergeTestCase {
     }
 
     func testFunctionsOfTheSameNameInFilesOfTheSameNameStayApartWhateverOrderARunListsThem() throws {
-        func build(_ scenarios: [Ran], reversed: Bool) -> CoverageManifest {
-            var manifest = manifest(scenarios, order: functions)
-            // The first two functions now share a mangled name and a file name, in two folders, and are told
-            // apart by their lines.
-            manifest.measured = manifest.measured?.enumerated().map { index, function in
+        func build(_ scenarios: [Ran], order: [Function]) -> CoverageManifest {
+            // The run numbers its regions in the order of `order`, as the scenarios' regions are.
+            var manifest = manifest(scenarios, order: order)
+            // Two functions now share a mangled name and a file name, in two folders, and are told apart by
+            // their lines.
+            manifest.measured = manifest.measured?.map { function in
                 var function = function
-                if index < 2 {
+                if let folder = ["Calc.add()": "a", "Calc.classify()": "b"][function.readableName] {
                     function.name = "$s5Calc4same"
-                    function.file = "/src/\(index)/Calc.swift"
+                    function.file = "/src/\(folder)/Calc.swift"
                 }
                 return function
             }
-            if reversed { manifest.measured?.swapAt(0, 1) }
             return manifest
         }
+        let reversed = [functions[1], functions[0], functions[2]]
         let merged = try CoverageMerge(runs: [
-            run(build(Array(scenarios[..<2]), reversed: false)),
-            run(build(Array(scenarios[2...]), reversed: true))
+            run(build(Array(scenarios[..<2]), order: functions)),
+            run(build(Array(scenarios[2...]), order: reversed))
         ])
         XCTAssertEqual(merged.code.functions.count, 3)
         XCTAssertEqual(merged.code.functions.map(\.line), [10, 20, 30])
+        // Each scenario ran the regions of the same functions as in a run of all of them in one order.
+        let serial = serialParts(scenarios)
+        XCTAssertEqual(merged.features.map(\.part.scores.coveredRegions), serial.map(\.scores.coveredRegions))
+        XCTAssertEqual(merged.features.map { $0.part.scores.scenarios.map(\.ownRegions) },
+                       serial.map { $0.scores.scenarios.map(\.ownRegions) })
     }
 
     func testRunsThatMeasureOtherSourcesAreNotMerged() {
