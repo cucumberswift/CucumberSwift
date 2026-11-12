@@ -347,5 +347,47 @@ extension MutationRunTests {
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("summary.txt").path))
     }
+
+    func testABuildThatCantStartForAMutantStopsTheRun() {
+        var testsRan = false
+        let fake = FakeRunner { call in
+            if call.arguments.first == "test" {
+                testsRan = true
+                return .finished(0, output: "Executed 5 tests, with 0 failures")
+            }
+            // The baseline's build starts; a mutant's, after the baseline's tests, doesn't.
+            guard call.arguments.first == "build", testsRan else { return .finished(0) }
+            return CommandResult(status: 127, output: "Couldn't run swift", timedOut: false, duration: 0, started: false)
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.failed, "A launch failure isn't a mutant that doesn't build")
+        XCTAssertTrue(log.joined().contains("the build didn't start"), log.joined())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+    }
+
+    func testACancelDuringTheLastMutantsTestsWritesNoReport() {
+        var tests = 0
+        var cancelled = 0
+        var mutationRun: MutationRun?
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            // 2 baseline runs, then 1 for each of the 2 mutants. The cancel stops the last one, which then fails.
+            guard tests == 4 else { return .finished(0, output: "Executed 5 tests, with 0 failures") }
+            mutationRun?.cancel()
+            return .finished(1, output: "Executed 5 tests, with 1 failure")
+        }
+        let run = MutationRun(
+            options: options(),
+            discoverer: FakeDiscoverer(),
+            runner: fake,
+            log: { [weak self] in self?.log.append($0) },
+            cancelCommands: { cancelled += 1 }
+        )
+        mutationRun = run
+        XCTAssertEqual(run.run(), MutationRun.Status.cancelled)
+        XCTAssertEqual(cancelled, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("summary.txt").path))
+    }
 }
 #endif

@@ -10,6 +10,15 @@ import XCTest
 final class WorkFolderTests: TemporaryFolderTestCase {
     private func lockFolder() -> URL { folder.appendingPathComponent("reports") }
 
+    func testACopyThatFailsLeavesNeitherThePartialCopyNorTheLock() throws {
+        let location = folder.appendingPathComponent("work")
+        let missing = folder.appendingPathComponent("no-such-package")
+        XCTAssertThrowsError(try WorkFolder(copying: missing, into: location, lockFolder: lockFolder()))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: lockFolder().appendingPathComponent("mutation.lock").path))
+        let left = (try? FileManager.default.contentsOfDirectory(atPath: location.path)) ?? []
+        XCTAssertEqual(left.filter { $0.hasPrefix(WorkFolder.folderPrefix) }, [])
+    }
+
     func testCopiesTheSourcesButNotTheGitOrBuildFolders() throws {
         let root = try makePackage()
         let location = try WorkFolder.chooseLocation(explicit: folder.appendingPathComponent("work"), root: root)

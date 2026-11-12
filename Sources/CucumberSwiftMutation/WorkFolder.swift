@@ -126,6 +126,22 @@ public struct WorkFolder {
         try? FileManager.default.removeItem(at: folder)
     }
 
+    /// Copies the package at `root` to `copy`, without the folders a build or a checkout makes.
+    private static func copyProject(_ root: URL, to copy: URL, runner: CommandRunning) throws {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: copy, withIntermediateDirectories: true)
+        let top = try fileManager.contentsOfDirectory(atPath: root.path)
+        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") {
+            try clone(root.appendingPathComponent(name), to: copy.appendingPathComponent(name), runner: runner)
+        }
+        // The dependencies SwiftPM already checked out, so that the copy builds without the network.
+        let build = root.appendingPathComponent(".build")
+        for name in ["checkouts", "repositories", "workspace-state.json"] where fileManager.fileExists(atPath: build.appendingPathComponent(name).path) {
+            try fileManager.createDirectory(at: copy.appendingPathComponent(".build"), withIntermediateDirectories: true)
+            try clone(build.appendingPathComponent(name), to: copy.appendingPathComponent(".build/\(name)"), runner: runner)
+        }
+    }
+
     /// Writes the lock file, then copies the project into a new folder inside `location`.
     public init(copying root: URL, into location: URL, lockFolder: URL, runner: CommandRunning = ProcessRunner()) throws {
         let fileManager = FileManager.default
@@ -136,16 +152,13 @@ public struct WorkFolder {
         lockFile = lockFolder.appendingPathComponent("mutation.lock")
         // The lock first: a run killed during the copy still leaves the next run something to clean up.
         try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile)
-        try fileManager.createDirectory(at: copy, withIntermediateDirectories: true)
-        let top = try fileManager.contentsOfDirectory(atPath: root.path)
-        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") {
-            try Self.clone(root.appendingPathComponent(name), to: copy.appendingPathComponent(name), runner: runner)
-        }
-        // The dependencies SwiftPM already checked out, so that the copy builds without the network.
-        let build = root.appendingPathComponent(".build")
-        for name in ["checkouts", "repositories", "workspace-state.json"] where fileManager.fileExists(atPath: build.appendingPathComponent(name).path) {
-            try fileManager.createDirectory(at: copy.appendingPathComponent(".build"), withIntermediateDirectories: true)
-            try Self.clone(build.appendingPathComponent(name), to: copy.appendingPathComponent(".build/\(name)"), runner: runner)
+        do {
+            try Self.copyProject(root, to: copy, runner: runner)
+        } catch {
+            // No caller gets a WorkFolder to remove, so the partial copy and the lock go now.
+            Self.remove(folder)
+            try? fileManager.removeItem(at: lockFile)
+            throw error
         }
     }
 

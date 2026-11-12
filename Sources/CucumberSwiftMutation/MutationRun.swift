@@ -27,11 +27,12 @@ public final class MutationRun {
         public static let cancelled: Int32 = 130
     }
 
-    /// A mutant's run that proves nothing, so the whole run stops instead of counting it.
     private let options: MutationOptions
     private let discoverer: MutantDiscovering
     private let runner: CommandRunning
     private let output: (String) -> Void
+    /// Stops the commands that are running. Tests replace it, so that they don't cancel the shared registry.
+    private let cancelCommands: () -> Void
     private let lock = NSLock()
     private var workFolder: WorkFolder?
     private var before: ProjectFingerprint?
@@ -46,16 +47,27 @@ public final class MutationRun {
         return cancelled
     }
 
-    public init(
+    public convenience init(
         options: MutationOptions,
         discoverer: MutantDiscovering,
         runner: CommandRunning = ProcessRunner(),
         log: @escaping (String) -> Void = { print($0) }
     ) {
+        self.init(options: options, discoverer: discoverer, runner: runner, log: log, cancelCommands: ProcessRunner.cancelAll)
+    }
+
+    init(
+        options: MutationOptions,
+        discoverer: MutantDiscovering,
+        runner: CommandRunning,
+        log: @escaping (String) -> Void,
+        cancelCommands: @escaping () -> Void
+    ) {
         self.options = options
         self.discoverer = discoverer
         self.runner = runner
         output = log
+        self.cancelCommands = cancelCommands
     }
 
     /// Stops the running commands, then deletes the copy. A signal handler calls it: a command left running would keep
@@ -64,7 +76,7 @@ public final class MutationRun {
         lock.lock()
         cancelled = true
         lock.unlock()
-        ProcessRunner.cancelAll()
+        cancelCommands()
         cleanUp()
         lock.lock()
         let expected = before
@@ -245,6 +257,7 @@ public final class MutationRun {
         defer { try? original.write(to: path, atomically: true, encoding: .utf8) }
         let started = Date()
         let build = build(copy)
+        try requireStarted(build, else: .buildDidNotStart(mutant: mutant.summary, output: build.output))
         guard build.succeeded else {
             return MutantResult(mutant: mutant, verdict: .unviable, duration: Date().timeIntervalSince(started))
         }
@@ -256,11 +269,7 @@ public final class MutationRun {
         ]
         let result = runTests(in: copy, environment: environment, timeout: timeout)
         try? result.output.write(to: runs.appendingPathComponent("mutant-\(mutant.id).log"), atomically: true, encoding: .utf8)
-        // Tests that never started tested nothing: a non-zero status would count the mutant as killed.
-        guard result.started else {
-            if isCancelled { throw CancellationError() }
-            throw RunError.testsDidNotStart(mutant: mutant.summary, output: result.output)
-        }
+        try requireStarted(result, else: .testsDidNotStart(mutant: mutant.summary, output: result.output))
         // Tests that passed without running a test prove nothing. Tests that crashed exit non-zero before they print a
         // count, and the mutant counts as killed.
         if !result.timedOut, result.status == 0, result.testsRun == 0 {
@@ -304,6 +313,7 @@ extension MutationRun {
     enum RunError: Error, CustomStringConvertible {
         case noTestsRan(mutant: String, log: String)
         case testsDidNotStart(mutant: String, output: String)
+        case buildDidNotStart(mutant: String, output: String)
 
         var description: String {
             switch self {
@@ -311,8 +321,21 @@ extension MutationRun {
                     return "the tests ran no test for \(mutant), although they did without the change. The output is in \(log)"
                 case .testsDidNotStart(let mutant, let output):
                     return "the tests didn't start for \(mutant): \(output)"
+                case .buildDidNotStart(let mutant, let output):
+                    return "the build didn't start for \(mutant): \(output)"
             }
         }
+    }
+}
+
+// A command whose result says nothing about a mutant.
+extension MutationRun {
+    /// Throws when the run was cancelled or the command never started. A cancel stops the command, and a command that
+    /// never started did nothing, so its non-zero status says nothing about the mutant: as a build's, it would count
+    /// the mutant as one that doesn't build, and as the tests', as killed.
+    private func requireStarted(_ result: CommandResult, else notStarted: RunError) throws {
+        if isCancelled { throw CancellationError() }
+        guard result.started else { throw notStarted }
     }
 }
 
