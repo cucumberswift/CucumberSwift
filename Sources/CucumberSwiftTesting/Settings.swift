@@ -22,6 +22,7 @@ enum CucumberSettings {
     private final class Storage: @unchecked Sendable {
         private let lock = NSLock()
         private var storedReportPath: String?
+        private var storedReportStaleAfter: TimeInterval?
         private var storedVerboseOutput = false
         private var storedParallelTesting: Bool?
         private var storedParallelTestingUnit: ParallelTestingUnit?
@@ -54,6 +55,19 @@ enum CucumberSettings {
                 lock.lock()
                 defer { lock.unlock() }
                 storedReportPath = newValue
+            }
+        }
+
+        var reportStaleAfter: TimeInterval? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedReportStaleAfter
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedReportStaleAfter = newValue
             }
         }
 
@@ -138,6 +152,7 @@ enum CucumberSettings {
     private static let storage = Storage()
 
     static let reportPathEnvironmentKey = "CUCUMBER_REPORT_PATH"
+    static let reportStaleAfterEnvironmentKey = "CUCUMBER_REPORT_STALE_AFTER"
     static let parallelTestingEnvironmentKey = "CUCUMBER_PARALLEL_TESTING"
     static let parallelTestingUnitEnvironmentKey = "CUCUMBER_PARALLEL_TESTING_UNIT"
 
@@ -145,6 +160,12 @@ enum CucumberSettings {
     static var staticReportPath: String? {
         get { storage.reportPath }
         set { storage.reportPath = newValue }
+    }
+
+    /// ``Cucumber/reportStaleAfter``.
+    static var staticReportStaleAfter: TimeInterval? {
+        get { storage.reportStaleAfter }
+        set { storage.reportStaleAfter = newValue }
     }
 
     static var staticVerboseOutput: Bool {
@@ -324,6 +345,20 @@ extension Cucumber {
         set { CucumberSettings.staticReportPath = newValue }
     }
 
+    /// How long the Cucumber JSON report can go unwritten before the runner takes it for an earlier run's, in
+    /// seconds: 600, which is 10 minutes, by default. A test process that starts when no other process of
+    /// its run is running, and that none of the other rules in
+    /// <doc:Generating-Reports#One-report-for-each-test-run> decides, empties a report older than this. Set
+    /// this, or the environment variable `CUCUMBER_REPORT_STALE_AFTER`, to a number above 0 that is longer
+    /// than the time between one test target ending and the next starting, such as 1800 for a slow build
+    /// between targets, or shorter than the time between two runs that you start by hand, so that a rerun in
+    /// Xcode replaces the report. A value that isn't a number above 0 is ignored. This variable, when set,
+    /// wins over the environment variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    nonisolated public static var reportStaleAfter: TimeInterval? {
+        get { CucumberSettings.staticReportStaleAfter }
+        set { CucumberSettings.staticReportStaleAfter = newValue }
+    }
+
     /// Whether scenarios run at the same time. Off by default: one scenario at a time, in the order of the
     /// feature files. Set this to `true` in your `StepImplementation`'s `setupSteps()`, or set the
     /// environment variable `CUCUMBER_PARALLEL_TESTING` to `YES` (`TRUE` or `1` work too, in any case), or
@@ -423,5 +458,13 @@ extension Cucumber {
     nonisolated public static var coveragePath: String? {
         get { CucumberSettings.staticCoveragePath }
         set { CucumberSettings.staticCoveragePath = newValue }
+    }
+}
+
+extension CucumberSettings {
+    /// How long the report can go unwritten before it is taken for an earlier run's: the static variable,
+    /// then `CUCUMBER_REPORT_STALE_AFTER`, then 10 minutes, as CucumberSwift reads it.
+    static func reportStaleAfter(environment: [String: String] = ProcessInfo.processInfo.environment) -> TimeInterval {
+        FeatureFlagValue.reportStaleAfter(setting: staticReportStaleAfter, environment: environment[reportStaleAfterEnvironmentKey])
     }
 }
