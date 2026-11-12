@@ -81,6 +81,18 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
         }
     }
 
+    func testARunFolderThatCantBeListedInsideTheCoverageFolderIsReportedNotLeftOut() throws {
+        try write(manifest(scenarios, order: functions), in: "run-a")
+        let locked = folder.appendingPathComponent("run-b")
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+        XCTAssertThrowsError(try CoverageMerge.read([folder])) {
+            XCTAssertEqual(($0 as? CoverageMerge.MergeError).map { "\($0)" }?.contains("run-b"), true)
+            guard case .incomplete? = $0 as? CoverageMerge.MergeError else { return XCTFail("\($0)") }
+        }
+    }
+
     func testAManifestOfAnotherVersionIsRefused() throws {
         var newer = manifest(scenarios, order: functions)
         newer.version = 2

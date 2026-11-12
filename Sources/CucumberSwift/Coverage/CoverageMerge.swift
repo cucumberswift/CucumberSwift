@@ -79,7 +79,11 @@ struct CoverageMerge {
         let binary: String
         let name: String
         let file: String
-        /// Which of the functions with this binary, name and file it is, in the run's order.
+        /// The function's line, for functions that share a binary, name and file name, which only a line tells apart
+        /// whatever order a run lists them in. Nil for the others, so that a function that moved is still one
+        /// function, and is refused as another build.
+        let line: Int?
+        /// Which of the functions with this binary, name, file name and line it is, in the run's order.
         let occurrence: Int
     }
 
@@ -223,6 +227,12 @@ struct CoverageMerge {
         return (scenarios, repeated)
     }
 
+    /// What names a function in every run of one build: its binary, name and file name. A file's folder is where
+    /// it was built, which differs between machines.
+    private static func identity(of function: CoverageManifest.MeasuredFunction) -> String {
+        "\(function.binary)\u{0}\(function.name)\u{0}\(URL(fileURLWithPath: function.file).lastPathComponent)"
+    }
+
     /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
     /// regions, so a function is the same one in two runs when its binary, name, file name and place among the
     /// functions with those three are. Throws ``MergeError/differentBuilds(_:)`` when the same function has a
@@ -233,15 +243,19 @@ struct CoverageMerge {
         var numbers = [FunctionKey: (regions: Range<Int>, line: Int, spans: [[Int]]?)]()
         var maps = [[Int]]()
         for run in runs {
+            let sharing = Dictionary(run.map { (Self.identity(of: $0), 1) }, uniquingKeysWith: +)
             var occurrences = [String: Int]()
             var map = [Int]()
             for function in run {
-                // The file is named by its own name only: its folder is the one it was built in, which differs
-                // between machines, and the binary, name and occurrence already tell functions apart.
-                let file = URL(fileURLWithPath: function.file).lastPathComponent
-                let id = "\(function.binary)\u{0}\(function.name)\u{0}\(file)"
-                let key = FunctionKey(binary: function.binary, name: function.name, file: file, occurrence: occurrences[id, default: 0])
-                occurrences[id, default: 0] += 1
+                let id = Self.identity(of: function)
+                let line = sharing[id, default: 0] > 1 ? function.line : nil
+                let slot = "\(id)\u{0}\(line.map(String.init) ?? "")"
+                let key = FunctionKey(binary: function.binary,
+                                      name: function.name,
+                                      file: URL(fileURLWithPath: function.file).lastPathComponent,
+                                      line: line,
+                                      occurrence: occurrences[slot, default: 0])
+                occurrences[slot, default: 0] += 1
                 let regions: Range<Int>
                 if let known = numbers[key] {
                     // The same build has the same regions at the same places, which a changed function can keep the
