@@ -1,0 +1,494 @@
+[
+  {
+    "approved": "Ian, 2026-11-09, pending #562",
+    "behaviour": "With the XCTest runner, a failed #expect or Issue.record doesn't fail its step: the step passes and the scenario's next step runs. Every failed assertion fails its step with both runners.",
+    "changes": [
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "A recorded issue fails a step (line 13)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "15 When an issue is recorded: passed",
+              "16 Then this step never runs: failed"
+            ],
+            "tags": [
+              "assertion-text"
+            ]
+          }
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "An expectation fails a step (line 8)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "10 When an expectation fails: passed",
+              "11 Then this step never runs: failed"
+            ],
+            "tags": [
+              "assertion-text"
+            ]
+          }
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      562
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #563",
+    "behaviour": "With the XCTest runner, the report gives a thrown error as 'XCTAssertNoThrow failed: threw error ...'. Both runners report a thrown error by its own description, and a failed try #require by its expectation.",
+    "changes": [
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "A requirement stops a step (line 18)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "19 When a requirement fails: failed (XCTAssertNoThrow failed: threw error \"ExpectationFailedError(expectation: Testing.Expectation(evaluatedExpression: Testing.__Expression.Kind.binaryOperation(lhs: Testing.__Expression.Kind.generic(\"1\"), operator: \"==\", rhs: Testing.__Expression.Kind.generic(\"2\")), mismatchedErrorDescription: nil, differenceDescription: nil, mismatchedExitConditionDescription: nil, isPassing: false, isRequired: true, sourceLocation: <step definition>))\")"
+            ],
+            "tags": []
+          }
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "A thrown error fails a step (line 22)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "23 When a step throws an error: failed (XCTAssertNoThrow failed: threw error \"The step threw an error on purpose\")"
+            ],
+            "tags": []
+          }
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      563
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #566",
+    "behaviour": "With the XCTest runner, Scenario.state(_:) called from a feature hook doesn't fail, and the report marks the step passed. Both runners fail it.",
+    "changes": [
+      {
+        "path": [
+          "features",
+          "Scenario state in a feature hook",
+          "scenarios",
+          "Scenario state outside a scenario fails (line 3)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Then a feature hook asked for scenario state: passed"
+            ],
+            "tags": []
+          }
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      566
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #562 and #566",
+    "behaviour": "With the XCTest runner, the scenarios of #562 and #566 are not reported as failed.",
+    "changes": [
+      {
+        "path": [
+          "failed"
+        ],
+        "value": [
+          "A recorded issue fails a step",
+          "A requirement stops a step",
+          "A step with no step definition fails",
+          "A thrown error fails a step",
+          "An XCTest assertion fails a step",
+          "An expectation fails a step"
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      562,
+      566
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #562 and #565",
+    "behaviour": "With the XCTest runner, those scenarios run the next step and its hooks, and run hooks around steps that don't run.",
+    "changes": [
+      {
+        "path": [
+          "trace",
+          "Failures › A recorded issue fails a step (line 13)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep an issue is recorded",
+            "step: issue recorded",
+            "AfterStep an issue is recorded",
+            "BeforeStep this step never runs",
+            "step: never runs",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › An expectation fails a step (line 8)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep an expectation fails",
+            "step: expectation fails",
+            "AfterStep an expectation fails",
+            "BeforeStep this step never runs",
+            "step: never runs",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      562,
+      565
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #565",
+    "behaviour": "With the XCTest runner, BeforeStep and AfterStep run around steps that don't run: the steps after a failure or a skip, and a step with no step definition. Both runners run them only around steps that run.",
+    "changes": [
+      {
+        "path": [
+          "trace",
+          "Failures › A requirement stops a step (line 18)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep a requirement fails",
+            "step: requirement fails",
+            "AfterStep a requirement fails",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › A skipped step skips the rest of the scenario (line 30)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep a step skips the scenario",
+            "step: skips",
+            "AfterStep a step skips the scenario",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › A step with no step definition fails (line 26)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep a step that nothing matches",
+            "AfterStep a step that nothing matches",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › A thrown error fails a step (line 22)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep a step throws an error",
+            "step: throws",
+            "AfterStep a step throws an error",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › An XCTest assertion fails a step (line 3)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep an XCTest assertion fails",
+            "step: XCTest assertion fails",
+            "AfterStep an XCTest assertion fails",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      565
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #531 and #520",
+    "behaviour": "With the XCTest runner, the command line has none of the coverage and redundancy warnings on feature lines, and the Scenario state feature's redundancy is 50%, not 67%.",
+    "changes": [
+      {
+        "path": [
+          "messages"
+        ],
+        "value": [
+          "CucumberSwift coverage: 30 scenarios in run-<id>",
+          "CucumberSwift coverage: Coverage: 57% of the code its scenarios ran (4 of 7 regions in 1 function), 31% of all measured code, redundancy 33%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Failures: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Hooks: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Matching steps: 92% of the code its scenarios ran (12 of 13 regions in 7 functions), 92% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Rules and Backgrounds › A rule adds its own Background: 77% of the code its scenarios ran (10 of 13 regions in 7 functions), 77% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Rules and Backgrounds › Another rule has only the feature's Background: 100% of the code its scenarios ran (3 of 3 regions in 3 functions), 23% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Scenario Outlines: 85% of the code its scenarios ran (11 of 13 regions in 7 functions), 85% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Scenario state in a feature hook: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Scenario state: 100% of the code its scenarios ran (4 of 4 regions in 4 functions), 31% of all measured code, redundancy 50%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Tags › A rule's tags reach its scenarios: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios",
+          "CucumberSwift coverage: Tags: 0% of the code its scenarios ran (0 of 0 regions in 0 functions), 0% of all measured code, redundancy 0%, about <n> s of <n> s in redundant scenarios"
+        ]
+      }
+    ],
+    "combination": [
+      "xcode/xctest/*",
+      "swiftpm/xctest/serial/*"
+    ],
+    "issues": [
+      531,
+      520
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #562",
+    "behaviour": "With the Swift Testing runner, a failed XCTAssert doesn't fail its step: the step passes and the scenario's next step runs. Every failed assertion fails its step with both runners.",
+    "changes": [
+      {
+        "path": [
+          "failed"
+        ],
+        "value": [
+          "A recorded issue fails a step",
+          "A requirement stops a step",
+          "A step with no step definition fails",
+          "A thrown error fails a step",
+          "An expectation fails a step",
+          "Scenario state outside a scenario fails"
+        ]
+      },
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "An XCTest assertion fails a step (line 3)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "5 When an XCTest assertion fails: passed",
+              "6 Then this step never runs: passed"
+            ],
+            "tags": [
+              "assertion-text"
+            ]
+          }
+        ]
+      },
+      {
+        "path": [
+          "trace",
+          "Failures › An XCTest assertion fails a step (line 3)"
+        ],
+        "value": [
+          [
+            "BeforeScenario",
+            "BeforeStep an XCTest assertion fails",
+            "step: XCTest assertion fails",
+            "AfterStep an XCTest assertion fails",
+            "BeforeStep this step never runs",
+            "step: never runs",
+            "AfterStep this step never runs",
+            "AfterScenario"
+          ]
+        ]
+      }
+    ],
+    "combination": "*/swift-testing/*",
+    "issues": [
+      562
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #563 and #564",
+    "behaviour": "With the Swift Testing runner, a failed try #require is reported twice, the second time as an API misuse, and the report gives the expectation's description. Both runners report it once, by its expectation.",
+    "changes": [
+      {
+        "path": [
+          "features",
+          "Failures",
+          "scenarios",
+          "A requirement stops a step (line 18)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "19 When a requirement fails: failed (ExpectationFailedError(expectation: Testing.Expectation(evaluatedExpression: Testing.__Expression.Kind.binaryOperation(lhs: Testing.__Expression.Kind.generic(\"1\"), operator: \"==\", rhs: Testing.__Expression.Kind.generic(\"2\")), mismatchedErrorDescription: nil, differenceDescription: nil, mismatchedExitConditionDescription: nil, isPassing: false, isRequired: true, sourceLocation: <step definition>)))"
+            ],
+            "tags": []
+          }
+        ]
+      }
+    ],
+    "combination": "*/swift-testing/*",
+    "issues": [
+      563,
+      564
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #566",
+    "behaviour": "With the Swift Testing runner, Scenario.state(_:) called from a feature hook fails the test, but the report marks the step passed. Both runners mark it failed.",
+    "changes": [
+      {
+        "path": [
+          "features",
+          "Scenario state in a feature hook",
+          "scenarios",
+          "Scenario state outside a scenario fails (line 3)"
+        ],
+        "value": [
+          {
+            "keyword": "Scenario",
+            "steps": [
+              "4 Then a feature hook asked for scenario state: passed"
+            ],
+            "tags": []
+          }
+        ]
+      }
+    ],
+    "combination": "*/swift-testing/*",
+    "issues": [
+      566
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "pending #515 (PR #551), approved by Ian 2026-11-09",
+    "behaviour": "With the XCTest runner, a parallel run prints no 'coverage: off, because parallel testing is on' line, as the Swift Testing runner does. Xcode's workers' output isn't in the log, so the suite can't see the line either way.",
+    "changes": [
+      {
+        "path": [
+          "messages"
+        ],
+        "value": []
+      }
+    ],
+    "combination": "xcode/xctest/parallel/*",
+    "issues": [
+      515
+    ],
+    "kind": "pending"
+  },
+  {
+    "approved": "Ian, 2026-11-09, pending #567",
+    "behaviour": "With the XCTest runner, swift test --parallel runs each step of a scenario in its own process, so the steps lose their state and a different set of scenarios fails in each run. The suite compares only the exit status.",
+    "combination": "swiftpm/xctest/parallel/*",
+    "ignore": [
+      "features",
+      "hooks",
+      "trace",
+      "failed",
+      "messages",
+      "tests"
+    ],
+    "issues": [
+      567
+    ],
+    "kind": "pending"
+  }
+]

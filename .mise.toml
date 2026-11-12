@@ -97,6 +97,9 @@ if [ "${FIXTURES+x}" ]; then
     if [ "$name" = CarthageXCFramework ]; then
       echo "error: FIXTURES names CarthageXCFramework, which mise run test-carthage runs"
       exit 1
+    elif [ "$name" = Parity ]; then
+      echo "error: FIXTURES names Parity, which mise run test-parity runs"
+      exit 1
     elif [ ! -d "Fixtures/$name" ]; then
       echo "error: FIXTURES names $name, which is not a folder in Fixtures/"
       exit 1
@@ -110,6 +113,8 @@ for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
+  # The parity suite has its own task: mise run test-parity.
+  if [ "$name" = Parity ]; then continue; fi
   case ",$(echo "${FIXTURES:-$name}" | tr -d ' ')," in
     *",$name,"*) ;;
     *) continue ;;
@@ -341,6 +346,27 @@ elif ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xc
   echo "CucumberSwift did not score the fixture's feature"
   exit 1
 fi
+'''
+
+[tasks.test-parity]
+description = "Run the parity suite in Fixtures/Parity and compare each result with the golden one"
+# One set of feature files and one step-definition file, run with each build tool, runner and run mode, and
+# compared with Fixtures/Parity/golden.json (#561). See "The parity suite" in CONTRIBUTING.md.
+# PARITY_COMBINATIONS, a space-separated list of tool/runner/mode or tool/runner/mode/platform, runs only those, such as
+# PARITY_COMBINATIONS="swiftpm/xctest/serial" mise run test-parity. Every combination runs even when one
+# differs, so one run reports every difference. PARITY_OUTPUT is the folder for each run's output, a
+# temporary folder by default. PARITY_GOLDEN=YES writes each combination's result as the golden one instead of
+# comparing it, and PARITY_GOLDEN=TESTS only its runner's test count: for a deliberate change to the suite.
+run = '''
+set -u
+combinations=${PARITY_COMBINATIONS:-"swiftpm/xctest/serial swiftpm/xctest/parallel swiftpm/swift-testing/serial swiftpm/swift-testing/parallel xcode/xctest/serial xcode/xctest/parallel xcode/swift-testing/serial xcode/swift-testing/parallel"}
+export PARITY_OUTPUT=${PARITY_OUTPUT:-$(mktemp -d)}
+status=0
+for combination in $combinations; do
+  IFS=/ read -r tool runner mode platform <<< "$combination"
+  .github/scripts/parity-fixture.sh "$tool" "$runner" "$mode" ${platform:+"$platform"} || status=1
+done
+exit $status
 '''
 
 [tasks.test-docs-examples]

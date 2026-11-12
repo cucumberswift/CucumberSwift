@@ -258,6 +258,39 @@ The fixtures check these things:
 - **`BrokenFeaturesPackage` is broken on purpose.** Its feature files have a misspelt keyword, an undefined step, an uneven table and an unsupported language, run by both runners. Its tests must fail, with every failure in its `expected-failures` and every warning in its `expected-warnings`. When CucumberSwift's messages change, update the expectations, not the feature files.
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.
 
+### The parity suite
+
+The parity suite in `Fixtures/Parity` checks that each feature gives one golden result, whichever runner, build tool and run mode runs it. It runs one set of feature files and their step definitions with the XCTest runner and the Swift Testing runner, serial and in parallel, from a Swift package and from an Xcode project. Each run writes one normalized result, and every result must equal `Fixtures/Parity/golden.json`, apart from the differences in `Fixtures/Parity/known-differences.json`. Run it with this task, or name some combinations as `tool/runner/mode`. It runs on macOS unless you add a fourth part, `Catalyst`, `iOS`, `tvOS` or `watchOS`, such as `swiftpm/xctest/serial/iOS`:
+
+```bash
+mise run test-parity
+PARITY_COMBINATIONS="swiftpm/xctest/serial" mise run test-parity
+```
+
+Our CI runs the task in the `Parity tests` job. When a run differs, the job prints a diff of the normalized result against the golden one.
+
+#### Add a scenario
+
+A change that adds a public declaration or a setting needs a scenario that uses it. Our CI's `Script tests` job runs `.github/scripts/parity_coverage.py`, which fails a change that adds one without it. To add the scenario:
+
+1. Write the scenario in a feature file in `Fixtures/Parity/Shared/Features`.
+2. Write its step definitions in a Swift file in `Fixtures/Parity/Shared`. The core's step definitions are in `ParitySteps.swift`, and a feature family puts its own in a file of its own. Every Swift file in `Shared` is compiled into both runners' test targets, so no file has code for one runner, apart from the import. If an API exists in only one runner and the file cannot use it, that is a parity gap. Tell a maintainer instead of adding an `#if`.
+3. Run the task. The golden result is the behaviour that every runner should have. Where the result should change, write the golden result from a run that has it right: `PARITY_GOLDEN=YES` writes a combination's whole result, and `PARITY_GOLDEN=TESTS` writes only the runner's test count. Check the diff of `golden.json` before you commit it.
+4. List each declaration and setting the scenario covers under `covered` in `Fixtures/Parity/api.json`, with the feature file and the scenario's title.
+
+#### Approve a known difference
+
+A known difference is an entry in `Fixtures/Parity/known-differences.json`. It describes a combination that behaves differently from the golden result. Each entry has these fields:
+
+- `kind`: `pending` lasts until the open issues it cites fix the difference, and `accepted` is a limit that a maintainer approved.
+- `combination`: the combinations it applies to.
+- `changes`: the changes it makes to the golden result.
+- `behaviour`: what a user sees.
+- `issues`: the issues that track it.
+- `approved`: the maintainer's approval, with the maintainer and the date.
+
+A maintainer approves every entry. `python3 .github/scripts/parity.py known --result <result.json>` prints the changes that turn the golden result into a run's result. Do not add an entry to make a run pass: report the difference, with the diff, in the pull request. The run fails when an entry's combination already matches the golden result, so a fix must remove its entry. Our CI's `Parity tests` job also fails a pending entry that cites a closed issue, and the Release workflow, in a dry run too, fails while a pending entry cites an issue that is open in the milestone it releases. There is no way to skip these checks: fix the issue, or ask a maintainer to approve the entry as accepted.
+
 ### The documentation's examples
 
 Every Swift example in the DocC catalog compiles against the code in the same commit: each ` ```swift ` block in an article, and each Swift file under its `Resources` folder that a tutorial shows. Compile them with Swift 6.1 or later:

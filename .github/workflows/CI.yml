@@ -13,6 +13,9 @@ name: CI
 # on pull requests and main (the full matrix on main), and run the full matrix on
 # every nightly and manual run (see parallel_tests). A manual run's inputs can
 # narrow the parallel tests to some combinations, and skip every other job.
+# The parity suite runs its core in Parity tests on every pull request, and its other platforms in Parity tests
+# (Catalyst, iOS, tvOS and watchOS) in the merge queue and on main when the code or the suite changes, and in
+# every nightly and manual run (parity_code in the changes job).
 # The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
 # the nightly and manual runs (tvOS and watchOS tests, Older runtime tests); pull
 # requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
@@ -140,6 +143,7 @@ jobs:
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
+      parity_code: ${{ steps.parity.outputs.parity_code }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
     steps:
@@ -187,6 +191,30 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # Never on a pull request, whose Parity tests job runs the core. In the merge queue and on a push, only
+      # when the code, the plugins, the parity suite, the manifests, the tool versions or this workflow
+      # change, not the documentation. Always on a nightly or manual run.
+      - name: Decide whether the parity tests on the other platforms run
+        id: parity
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.merge_group.base_sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/|Plugins/|Fixtures/Parity/|Package(@swift-[0-9.]+)?\.swift$|\.mise\.toml$|\.github/workflows/CI\.yml$|\.github/scripts/(parity-fixture|keep-package-resolved|simulator-destination)\.sh$|\.github/scripts/parity(_known)?\.py$)'
+          if [ "$EVENT" = pull_request ]; then
+            run=false
+          elif [ "$EVENT" != merge_group ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Parity tests on the other platforms run: $run"
+          echo "parity_code=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -352,11 +380,15 @@ jobs:
             .github/scripts
             .github/workflows
             Fixtures
-            Sources/CucumberSwift/CucumberSwift.docc
+            Sources
             Tests/DocumentationExamples
             Tools/Xcode
       - name: Run the script tests
         run: python3 -m unittest discover -s .github/scripts -v
+      # Every public declaration and setting has a scenario in the parity suite (#561), or is one that was
+      # public before this check. A pull request that adds one without a scenario fails here.
+      - name: Check that every public API and setting has a parity scenario
+        run: python3 .github/scripts/parity_coverage.py
       # The Swift Package Index lists what `swift package dump-package` reads, run in the official
       # Swift image on Linux with SPI_PROCESSING set. Swift 6.4 must read Package.swift, which has the
       # macros and Swift Testing (#492). The sparse checkout has the manifests: it keeps the root's files.
@@ -1088,6 +1120,136 @@ jobs:
       # cancelled, which hides whether it passed (#480).
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # The parity suite (#561): one set of feature files and one step-definition file, run with the XCTest runner and the
+  # Swift Testing runner, serial and in parallel, from a Swift package and from an Xcode project that uses
+  # CucumberSwift as a package, on macOS. Each run's normalized result must equal Fixtures/Parity/golden.json,
+  # apart from the differences in Fixtures/Parity/known-differences.json. `mise run test-parity` runs the 8
+  # combinations and reports every difference. Bazel, Carthage and the other platforms join in the merge queue and
+  # the nightly run. See "The parity suite" in CONTRIBUTING.md.
+  parity_tests:
+    name: Parity tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      # To read the state of the issues that the known differences cite.
+      issues: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A fix removes its own known difference. This fails while a pending entry cites a closed issue, and
+      # when it can't read an issue's state. The Release workflow fails while one cites an issue that is open
+      # in the milestone it releases (.github/scripts/parity_known.py).
+      - name: Check that no known difference cites a closed issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/parity_known.py stale
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Run the parity suite
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          PARITY_OUTPUT: ${{ runner.temp }}/parity
+        run: mise run test-parity
+      # Each combination's output, report, trace and normalized result. Only on a failure.
+      - name: Upload the parity runs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: parity-runs
+          path: |
+            ${{ runner.temp }}/parity/**/result.json
+            ${{ runner.temp }}/parity/**/output.log
+            ${{ runner.temp }}/parity/**/report.json
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # The parity suite on the other platforms (#561): Mac Catalyst, and the iOS, tvOS and watchOS Simulators, with the
+  # same step definitions, feature files and golden result as Parity tests. Each platform is one job. The
+  # simulators run each runner serially, from the Swift package and from the Xcode project, which has no watchOS;
+  # Mac Catalyst also runs in parallel. Parallel testing on the simulators belongs to the parallel testing tests.
+  # Never on a pull request: it runs in the merge queue and on main when parity_code says the code or the suite
+  # changed, and in every nightly and manual run. Not a required check.
+  parity_platforms:
+    name: Parity tests (${{ matrix.platform }})
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.parity_code == 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Catalyst
+            combinations: >-
+              swiftpm/xctest/serial/Catalyst swiftpm/swift-testing/serial/Catalyst
+              xcode/xctest/serial/Catalyst xcode/swift-testing/serial/Catalyst
+              swiftpm/xctest/parallel/Catalyst swiftpm/swift-testing/parallel/Catalyst
+              xcode/xctest/parallel/Catalyst xcode/swift-testing/parallel/Catalyst
+          - platform: iOS
+            combinations: >-
+              swiftpm/xctest/serial/iOS swiftpm/swift-testing/serial/iOS
+              xcode/xctest/serial/iOS xcode/swift-testing/serial/iOS
+          - platform: tvOS
+            combinations: >-
+              swiftpm/xctest/serial/tvOS swiftpm/swift-testing/serial/tvOS
+              xcode/xctest/serial/tvOS xcode/swift-testing/serial/tvOS
+          - platform: watchOS
+            combinations: swiftpm/xctest/serial/watchOS swiftpm/swift-testing/serial/watchOS
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          xcrun simctl list runtimes | grep -i -E 'ios|tvos|watchos' || true
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Run the parity suite on ${{ matrix.platform }}
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          PARITY_COMBINATIONS: ${{ matrix.combinations }}
+          PARITY_OUTPUT: ${{ runner.temp }}/parity
+        run: mise run test-parity
+      - name: Upload the parity runs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: parity-runs-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/parity/**/result.json
+            ${{ runner.temp }}/parity/**/output.log
+            ${{ runner.temp }}/parity/**/report.json
+          if-no-files-found: ignore
+          retention-days: 3
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:
