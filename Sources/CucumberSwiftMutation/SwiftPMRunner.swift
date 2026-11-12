@@ -66,7 +66,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             coverage = folder
         }
         let result = commands.run(swift, ["test", "--skip-build"] + arguments, in: copy, environment: environment, timeout: request.timeout)
-        return TestRun(
+        var run = TestRun(
             status: result.status,
             timedOut: result.timedOut,
             duration: result.duration,
@@ -75,6 +75,8 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
+        run.started = result.started
+        return run
     }
 
     private func nextRun() -> Int {

@@ -105,8 +105,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public func test(in copy: URL, request: TestRequest) -> TestRun {
         let folder = runnerFolder(for: copy)
         let number = nextRun()
-        var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
-        settings.merge(request.settings) { _, new in new }
+        var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }.merging(request.settings) { _, new in new }
         let coverage = request.measuresCoverage ? folder.appendingPathComponent("coverage-\(number)") : nil
         if let coverage {
             settings["CUCUMBER_COVERAGE"] = "YES"
@@ -148,7 +147,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             runs.append((result, report, testsRun(inBundle: bundle, in: copy)))
         }
         let reports = runs.compactMap(\.report).filter { FileManager.default.fileExists(atPath: $0.path) }
-        return TestRun(
+        var run = TestRun(
             status: runs.map(\.result.status).first { $0 != 0 } ?? 0,
             timedOut: runs.contains { $0.result.timedOut },
             duration: runs.map(\.result.duration).reduce(0, +),
@@ -157,6 +156,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             cucumberReport: reports.count > 1 ? mergedReport(reports, named: "report-\(number).json", in: folder) : reports.first,
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
+        run.started = runs.allSatisfy(\.result.started)
+        return run
     }
 
     /// What the runs printed: one run's output as it is, and several runs' each under the name of its test target.
