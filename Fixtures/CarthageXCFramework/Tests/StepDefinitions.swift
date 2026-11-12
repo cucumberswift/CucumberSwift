@@ -8,6 +8,7 @@
 //
 
 import CucumberSwift
+import Cukes
 import XCTest
 
 final class Basket {
@@ -25,7 +26,7 @@ extension Cucumber: StepImplementation {
         }
 
         When("I eat {int} cukes") { match, _ in
-            Basket.shared.cukes -= try match.first(\.int)
+            Basket.shared.cukes = Cukes.remaining(after: try match.first(\.int), from: Basket.shared.cukes)
         }
 
         Then("the basket holds {int} cuke(s)") { (match: CucumberSwiftExpressions.Match, _) in
