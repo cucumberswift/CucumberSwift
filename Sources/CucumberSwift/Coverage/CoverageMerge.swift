@@ -113,6 +113,12 @@ struct CoverageMerge {
 
     /// The runs in `folders`, as ``runFolders(in:)`` finds them.
     static func read(_ folders: [URL]) throws -> [Run] {
+        for folder in folders {
+            var isFolder: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isFolder), isFolder.boolValue else {
+                throw MergeError.unreadable(folder.path, "it isn't a folder that exists")
+            }
+        }
         if let incomplete = incompleteRunFolders(in: folders).first { throw MergeError.incomplete(incomplete.path) }
         let runFolders = runFolders(in: folders)
         guard !runFolders.isEmpty else { throw MergeError.noRuns(folders.map(\.path)) }
@@ -211,6 +217,18 @@ struct CoverageMerge {
         return (scenarios, repeated)
     }
 
+    /// The directory that holds every file in `files`: the longest folder path they share.
+    private static func commonDirectory(of files: [String]) -> [Substring] {
+        var common: [Substring]?
+        for file in files {
+            let folders = Array(file.split(separator: "/", omittingEmptySubsequences: false).dropLast())
+            common = common.map { known in
+                Array(zip(known, folders).prefix { $0 == $1 }.map(\.0))
+            } ?? folders
+        }
+        return common ?? []
+    }
+
     /// Numbers the regions of the functions that `runs` measured again, as one build. Every run numbers its own
     /// regions, so a function is the same one in two runs when its binary, name, file and place among the
     /// functions with those three are. Throws ``MergeError/differentBuilds(_:)`` when the same function has a
@@ -221,11 +239,19 @@ struct CoverageMerge {
         var numbers = [FunctionKey: (regions: Range<Int>, line: Int, spans: [[Int]]?)]()
         var maps = [[Int]]()
         for run in runs {
+            // Each run's files are named from the folder it was built in, which differs between machines. Every
+            // run of one build measures the same files, so a file is the same one by its place below the folder
+            // that holds them all.
+            let root = commonDirectory(of: run.map(\.file)).count
+            func relative(_ file: String) -> String {
+                file.split(separator: "/", omittingEmptySubsequences: false).dropFirst(root).joined(separator: "/")
+            }
             var occurrences = [String: Int]()
             var map = [Int]()
             for function in run {
-                let id = "\(function.binary)\u{0}\(function.name)\u{0}\(function.file)"
-                let key = FunctionKey(binary: function.binary, name: function.name, file: function.file, occurrence: occurrences[id, default: 0])
+                let file = relative(function.file)
+                let id = "\(function.binary)\u{0}\(function.name)\u{0}\(file)"
+                let key = FunctionKey(binary: function.binary, name: function.name, file: file, occurrence: occurrences[id, default: 0])
                 occurrences[id, default: 0] += 1
                 let regions: Range<Int>
                 if let known = numbers[key] {

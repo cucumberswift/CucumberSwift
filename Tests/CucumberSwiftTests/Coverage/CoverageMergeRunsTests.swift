@@ -61,6 +61,14 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
         }
     }
 
+    func testAFolderThatDoesntExistIsRefusedBesideAFolderThatDoes() throws {
+        try write(manifest(scenarios, order: functions), in: "run-a")
+        let missing = folder.appendingPathComponent("shard-that-never-arrived")
+        XCTAssertThrowsError(try CoverageMerge.read([folder, missing])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .unreadable(missing.path, "it isn't a folder that exists"))
+        }
+    }
+
     func testAManifestOfAnotherVersionIsRefused() throws {
         var newer = manifest(scenarios, order: functions)
         newer.version = 2

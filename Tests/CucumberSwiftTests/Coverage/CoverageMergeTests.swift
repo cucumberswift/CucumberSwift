@@ -120,6 +120,19 @@ final class CoverageMergeTests: CoverageMergeTestCase {
         }
     }
 
+    func testTheSameBuildInAnotherCheckoutFolderIsTheSameBuild() throws {
+        var elsewhere = manifest(Array(scenarios[2...]), order: functions)
+        elsewhere.measured = elsewhere.measured?.map {
+            var function = $0
+            function.file = "/agent-b/repo/Calc.swift"
+            return function
+        }
+        let here = manifest(Array(scenarios[..<2]), order: functions)
+        let merged = try CoverageMerge(runs: [run(here), run(elsewhere)])
+        XCTAssertEqual(merged.code.functions.count, 3)
+        XCTAssertEqual(merged.features.map(\.part), serialParts(scenarios))
+    }
+
     func testRunsThatMeasureOtherSourcesAreNotMerged() {
         var settings = CoverageSettings()
         settings.sources = ["Sources/B"]
