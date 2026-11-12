@@ -1,0 +1,1 @@
+../CucumberSwift/Coverage/CoverageScores.swift

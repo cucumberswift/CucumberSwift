@@ -55,17 +55,22 @@ struct MeasuredCode: Equatable {
         return !URL(fileURLWithPath: binary).pathComponents.contains { $0.hasSuffix(".xctest") }
     }
 
-    /// The function that region `region` belongs to.
-    func function(of region: Int) -> Function? {
+    /// The index in ``functions`` of the function that region `region` belongs to.
+    func functionIndex(of region: Int) -> Int? {
         var low = 0
         var high = functions.count - 1
         while low <= high {
             let middle = (low + high) / 2
             let function = functions[middle]
-            if function.regions.contains(region) { return function }
+            if function.regions.contains(region) { return middle }
             if region < function.regions.lowerBound { high = middle - 1 } else { low = middle + 1 }
         }
         return nil
+    }
+
+    /// The function that region `region` belongs to.
+    func function(of region: Int) -> Function? {
+        functionIndex(of: region).map { functions[$0] }
     }
 }
 
@@ -351,6 +356,28 @@ struct CoverageScores: Codable, Equatable {
                        enteredBy: Array(Set(enteredBy)).sorted())
         }
         .sorted { ($0.regionsNotRun, $1.file, $1.line) > ($1.regionsNotRun, $0.file, $0.line) }
+    }
+
+    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
+    /// nil, or the scenarios of one of its Rules.
+    struct Part: Equatable {
+        let rule: ScenarioRule?
+        let scores: CoverageScores
+    }
+
+    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
+    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
+    /// the feature file, whatever order they ran in.
+    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)], code: MeasuredCode, isRedundancy: Bool) -> [Part] {
+        let inOrder = scenarios.enumerated()
+            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
+            .map(\.element)
+        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
+        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
+        return parts.map { rule in
+            Part(rule: rule,
+                 scores: CoverageScores(scenarios: inOrder.filter { $0.rule == rule }.map(\.scenario), code: code, isRedundancy: isRedundancy))
+        }
     }
 
     private func percent(_ part: Int, of whole: Int) -> Double {

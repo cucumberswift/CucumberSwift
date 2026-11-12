@@ -1,0 +1,4 @@
+# The fewest tests each framework must run. See "Fixtures" in CONTRIBUTING.md. mise run test-coverage-merge
+# runs this fixture, not mise run test-fixtures, and checks its own counts.
+XCTest: 30
+Swift Testing: 8
