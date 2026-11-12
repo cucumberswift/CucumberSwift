@@ -137,6 +137,18 @@ final class CoverageMergeTests: CoverageMergeTestCase {
         }
     }
 
+    func testAFunctionSharingItsNameInOneRunOnlyIsStillRefusedWhenItsRegionsDiffer() {
+        func function(_ line: Int, regions: Int, file: String) -> CoverageManifest.MeasuredFunction {
+            .init(binary: "MyTests", name: "$s5Calc1f", readableName: "Calc.f()", file: file, line: line, regions: regions, spans: nil)
+        }
+        XCTAssertThrowsError(try CoverageMerge.renumber([
+            [function(10, regions: 2, file: "/a/F.swift")],
+            [function(10, regions: 3, file: "/a/F.swift"), function(20, regions: 1, file: "/b/F.swift")]
+        ])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .differentBuilds("Calc.f()"))
+        }
+    }
+
     func testTheSameBuildInAnotherCheckoutFolderIsTheSameBuild() throws {
         // Both runs also measure a file outside the checkout, so the folders they share is only the root.
         func build(_ scenarios: [Ran], checkout: String) -> CoverageManifest {

@@ -216,8 +216,12 @@ struct CoverageMerge {
         var spans = [[[Int]]?]()
         var numbers = [FunctionKey: (regions: Range<Int>, line: Int, spans: [[Int]]?)]()
         var maps = [[Int]]()
+        // How many functions of one run share an identity, at most, in any run, so that every run tells a function
+        // apart by line, or none does.
+        let sharing = runs.reduce(into: [String: Int]()) { most, run in
+            most.merge(Dictionary(run.map { (identity(of: $0), 1) }, uniquingKeysWith: +), uniquingKeysWith: max)
+        }
         for run in runs {
-            let sharing = Dictionary(run.map { (Self.identity(of: $0), 1) }, uniquingKeysWith: +)
             var occurrences = [String: Int]()
             var map = [Int]()
             for function in run {
