@@ -137,15 +137,10 @@ final class CucumberJSONRecorder {
     /// Identifies what an event is about, as the runner's own object does: the feature, scenario or step.
     typealias Key = ObjectIdentifier
 
-    /// Whether `CUCUMBERSWIFT_MERGE_REPORT` asks every process of the run to merge into the report. Internal: the
-    /// mutation testing tool sets it for its runs.
-    private static var mergesOnRequest: Bool {
-        ProcessInfo.processInfo.environment["CUCUMBERSWIFT_MERGE_REPORT"] == "YES"
-    }
-
     private let reportURL: () -> URL
+    private let runner: String
     private let isParallel: () -> Bool
-    private let ordersByFile: Bool
+    private let staleAfter: () -> TimeInterval
 
     private(set) var features: [CucumberJSONReport.Feature] = []
     private var currentFeature: CucumberJSONReport.Feature?
@@ -166,34 +161,31 @@ final class CucumberJSONRecorder {
     /// - Parameters:
     ///   - reportURL: Asked each time the report is written, because the setting that decides it can
     ///     change after the recorder exists.
-    ///   - isParallel: Whether this process is one of several workers that write the report. Then a write
-    ///     merges into the report under a lock instead of replacing it.
-    ///   - ordersByFile: Whether a serial write puts the features and scenarios in the order of their files,
-    ///     whichever ran first. A runner that doesn't promise an order of its tests turns it on.
-    init(reportURL: @escaping () -> URL, isParallel: @escaping () -> Bool = { false }, ordersByFile: Bool = false) {
+    ///   - runner: The runner that writes the report: `XCTest` or `Swift Testing`.
+    ///   - isParallel: Whether this process is one of several parallel workers, which keep their features
+    ///     when the suite starts again.
+    ///   - staleAfter: Asked when the suite starts: how long a report can go unwritten before this process
+    ///     takes it for an earlier run's, when no other rule decides.
+    init(reportURL: @escaping () -> URL,
+         runner: String,
+         isParallel: @escaping () -> Bool = { false },
+         staleAfter: @escaping () -> TimeInterval = { ReportFile.staleAfter }) {
         self.reportURL = reportURL
-        // A process asked to merge writes the report as a parallel worker does: it joins the report's run and
-        // merges into it, so that several runners' processes in one run, such as the XCTest and the Swift Testing
-        // targets of one `swift test`, all keep their features in it. The mutation testing tool asks for it.
-        self.isParallel = { isParallel() || Self.mergesOnRequest }
-        self.ordersByFile = ordersByFile
+        self.runner = runner
+        self.isParallel = isParallel
+        self.staleAfter = staleAfter
     }
 
     // MARK: Events
 
+    /// Joins the run that writes the report, which empties the report an earlier run left (#546).
     func suiteStarted() {
-        if isParallel() {
-            // XCTest asks for CucumberTest's suite again while a worker runs scenarios. Clearing the
-            // features then would leave the scenario in progress with a feature that is no longer in the
-            // report, and lose the rest of the worker's scenarios. The report is where the run starts over.
-            // The tool deletes the report before each run it asks to merge, so a report already there is this
-            // run's, from a runner that finished more than a minute ago.
-            ReportFile.at(reportURL()).joinRun(staleAfter: Self.mergesOnRequest ? .infinity : 60)
-            save(atBoundary: true)
-            return
-        }
-        // Clears a stale report before the run, whichever kind of run it is.
-        defer { save(atBoundary: true) }
+        ReportFile.at(reportURL()).joinRun(runner: runner, isParallel: isParallel(), staleAfter: staleAfter())
+        defer { save() }
+        // XCTest asks for CucumberTest's suite again while a parallel worker runs scenarios. Clearing the
+        // features then would leave the scenario in progress with a feature that is no longer in the
+        // report, and lose the rest of the worker's scenarios.
+        guard !isParallel() else { return }
         features.removeAll()
         currentFeature = nil
         currentScenario = nil
@@ -204,27 +196,26 @@ final class CucumberJSONRecorder {
     }
 
     func suiteFinished() {
-        save(atBoundary: true)
+        save()
     }
 
     func featureStarted(_ key: Key, make: () -> CucumberJSONReport.Feature) {
-        defer { save() }
         currentFeature = entry(forFeature: key, make: make)
     }
 
     func scenarioStarted(_ key: Key,
                          feature: (key: Key, make: () -> CucumberJSONReport.Feature)?,
                          make: () -> CucumberJSONReport.Scenario) {
-        defer { save() }
         let owner = feature.map { entry(forFeature: $0.key, make: $0.make) } ?? currentFeature
         let scenario = make()
         owner?.elements.append(scenario)
         scenarioEntries[key] = scenario
         currentScenario = scenario
+        // A scenario that crashes the process is in the report, with the steps of an earlier write.
+        save()
     }
 
     func stepStarted(_ key: Key, scenario: Key?, make: () -> CucumberJSONReport.Step) {
-        defer { save() }
         let owner = scenario.flatMap { scenarioEntries[$0] } ?? currentScenario
         let step = make()
         owner?.steps.append(step)
@@ -233,15 +224,14 @@ final class CucumberJSONRecorder {
     }
 
     func featureFinished() {
-        save(atBoundary: true)
+        save()
     }
 
     func scenarioFinished() {
-        save(atBoundary: true)
+        save()
     }
 
     func stepFinished(_ key: Key, result: Reporter.Result, duration: Measurement<UnitDuration>) {
-        defer { save() }
         let entry = stepEntries[key] ?? currentStep
         entry?.result = result
         entry?.duration = duration
@@ -260,31 +250,17 @@ final class CucumberJSONRecorder {
 
     // MARK: Writing
 
-    /// Writes the report. With parallel testing on, every worker writes to the same file, so this merges
-    /// the worker's features into it under a lock; otherwise it is the run's only writer and replaces it.
+    /// Writes the report. Every process of a test run writes to the same file: each parallel worker, and each
+    /// test target's process, whichever runner it uses. So this merges the process's features into the report
+    /// under a lock, which puts the features and scenarios in the order of their files, whichever ran first.
     ///
-    /// A parallel run merges only where a scenario or a feature finishes, and where the worker's suite
-    /// starts and finishes: a merge reads, parses and rewrites the whole report, and a merge for every step
-    /// of every worker would grow with the report. A run that orders the report by file does the same, for the
-    /// same reason: it sorts and rewrites the whole report each time. A scenario that never finishes, because
-    /// its worker was killed, isn't in the report; every scenario that finished is.
-    private func save(atBoundary: Bool = false) {
-        let isParallel = isParallel()
-        if (isParallel || ordersByFile) && !atBoundary { return }
+    /// It merges only where a scenario starts or finishes, where a feature finishes, and where the suite starts
+    /// and finishes: a merge reads, parses, sorts and rewrites the whole report, and a merge for every step
+    /// would grow with the report. A scenario whose process was killed is in the report without the steps
+    /// that it ran; every scenario that finished is there whole.
+    private func save() {
         guard let data = try? encoder.encode(features),
               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
-        let url = reportURL()
-        if isParallel {
-            ReportFile.at(url).merge(json)
-        } else {
-            // Written by the same code as a parallel run's report, so the two are the same bytes.
-            do {
-                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                let report = ordersByFile ? ReportFile.merge(json, into: []) : json
-                try ReportFile.serialize(report)?.write(to: url, options: .atomic)
-            } catch {
-                ReportFile.warn(url, error.localizedDescription)
-            }
-        }
+        ReportFile.at(reportURL()).merge(json)
     }
 }

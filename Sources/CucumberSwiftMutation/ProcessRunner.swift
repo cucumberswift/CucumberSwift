@@ -58,15 +58,17 @@ private final class Collected: @unchecked Sendable {
 public struct ProcessRunner: CommandRunning {
     /// The commands that are running, so that a signal can stop them: a command that outlives the tool keeps
     /// writing into the copy that the tool is deleting.
-    private static let registry = CommandRegistry()
+    private static let shared = CommandRegistry()
 
     /// A runner for the commands that must run even when the run is cancelled, such as `git status` to check
     /// that the package is unchanged.
     private let ignoresCancellation: Bool
+    /// The registry that starts this runner's commands: the shared one, which `cancelAll()` cancels, or a test's own.
+    let registry: CommandRegistry
 
     /// Stops every running command and its children, and refuses to start another. Called when the run is cancelled.
     public static func cancelAll() {
-        for pid in registry.cancel() { terminateTree(of: pid) }
+        for pid in shared.cancel() { terminateTree(of: pid) }
     }
 
     /// Stops a process and everything it started: `swift test` runs the tests in a child process, which a
@@ -106,7 +108,12 @@ public struct ProcessRunner: CommandRunning {
     }
 
     public init(ignoresCancellation: Bool = false) {
+        self.init(ignoresCancellation: ignoresCancellation, registry: Self.shared)
+    }
+
+    init(ignoresCancellation: Bool, registry: CommandRegistry) {
         self.ignoresCancellation = ignoresCancellation
+        self.registry = registry
     }
 
     public func run(
@@ -126,7 +133,7 @@ public struct ProcessRunner: CommandRunning {
         process.standardError = pipe
         let start = Date()
         do {
-            let started = try Self.registry.launch(ignoresCancellation: ignoresCancellation) {
+            let started = try registry.launch(ignoresCancellation: ignoresCancellation) {
                 try process.run()
                 return process.processIdentifier
             }
@@ -136,7 +143,7 @@ public struct ProcessRunner: CommandRunning {
         } catch {
             return CommandResult(status: 127, output: "Couldn't run \(executable): \(error)", timedOut: false, duration: 0, started: false)
         }
-        defer { Self.registry.remove(process.processIdentifier) }
+        defer { registry.remove(process.processIdentifier) }
         // Read while the command runs, so a long output can't fill the pipe and stop it.
         let collected = Collected()
         let reading = DispatchGroup()

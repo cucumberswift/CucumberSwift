@@ -17,4 +17,21 @@ enum FeatureFlagValue {
             default: return nil
         }
     }
+
+    /// A number of seconds above 0, with spaces and tabs around it ignored. Any other value is not a setting.
+    static func seconds(_ value: String?) -> TimeInterval? {
+        guard let text = value?.trimmingCharacters(in: .whitespaces),
+              let seconds = TimeInterval(text),
+              seconds.isFinite,
+              seconds > 0 else { return nil }
+        return seconds
+    }
+
+    /// How long a report can go unwritten before a worker takes it for an earlier run's: the static variable
+    /// when it is a number of seconds above 0, then the environment variable, then
+    /// ``ReportFile/staleAfter``. Both runners read the setting through it.
+    static func reportStaleAfter(setting: TimeInterval?, environment: String?) -> TimeInterval {
+        if let setting, setting.isFinite, setting > 0 { return setting }
+        return seconds(environment) ?? ReportFile.staleAfter
+    }
 }
