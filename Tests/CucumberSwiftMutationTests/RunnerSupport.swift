@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -80,3 +81,4 @@ final class SpyRunner: TestRunner, @unchecked Sendable {
         cleaned.increment()
     }
 }
+#endif

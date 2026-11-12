@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds an Xcode project or workspace with `xcodebuild build-for-testing`, with code coverage on, and tests it
@@ -99,7 +100,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
         let arguments = ["build-for-testing"] + common(in: copy) + ["-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
         let result = commands.run(xcodebuild, arguments, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
@@ -208,3 +209,4 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif
