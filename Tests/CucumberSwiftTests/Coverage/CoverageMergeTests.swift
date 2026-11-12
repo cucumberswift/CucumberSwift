@@ -120,6 +120,23 @@ final class CoverageMergeTests: CoverageMergeTestCase {
         }
     }
 
+    func testFunctionsNothingTellsApartAreRefusedNotMatchedByOrder() {
+        var manifest = manifest(scenarios, order: functions)
+        // Two functions with one mangled name, file name and line, in two folders.
+        manifest.measured = manifest.measured?.enumerated().map { index, function in
+            var function = function
+            if index < 2 {
+                function.name = "$s5Calc4same"
+                function.line = 10
+                function.file = "/src/\(index)/Calc.swift"
+            }
+            return function
+        }
+        XCTAssertThrowsError(try CoverageMerge(runs: [run(manifest)])) {
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .ambiguous("Calc.add()"))
+        }
+    }
+
     func testTheSameBuildInAnotherCheckoutFolderIsTheSameBuild() throws {
         // Both runs also measure a file outside the checkout, so the folders they share is only the root.
         func build(_ scenarios: [Ran], checkout: String) -> CoverageManifest {

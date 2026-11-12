@@ -12,32 +12,6 @@ import Foundation
 /// shards of a suite that ran on several machines. Each feature and each Rule gets the scores, the summary and
 /// the issues that a run of all their scenarios, one at a time, gives them.
 struct CoverageMerge {
-    enum MergeError: Error, Equatable, CustomStringConvertible {
-        case noRuns([String])
-        case unreadable(String, String)
-        case notMeasured(String, String)
-        case differentBuilds(String)
-        case differentSettings(String, String)
-        case incomplete(String)
-
-        var description: String {
-            switch self {
-                case .noRuns(let folders):
-                    "no run folder, run-<id> with a manifest.json, in \(folders.joined(separator: ", "))"
-                case .unreadable(let folder, let reason):
-                    "can't read the manifest of \(folder): \(reason)"
-                case .notMeasured(let folder, let reason):
-                    "\(folder) has no code coverage to score: \(reason)"
-                case .differentBuilds(let function):
-                    "the runs measured different builds: \(function) has other regions in each. Merge only the runs of one build."
-                case .differentSettings(let first, let other):
-                    "\(other) checks the scores against other levels, or measures other sources, than \(first). Set the same for every run."
-                case .incomplete(let folder):
-                    "\(folder) has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out."
-            }
-        }
-    }
-
     /// A run's folder and its manifest.
     struct Run {
         let folder: URL
@@ -255,6 +229,8 @@ struct CoverageMerge {
                                       file: URL(fileURLWithPath: function.file).lastPathComponent,
                                       line: line,
                                       occurrence: occurrences[slot, default: 0])
+                // Two functions that nothing tells apart can swap places between runs.
+                if line != nil, occurrences[slot, default: 0] > 0 { throw MergeError.ambiguous(function.readableName) }
                 occurrences[slot, default: 0] += 1
                 let regions: Range<Int>
                 if let known = numbers[key] {
@@ -319,5 +295,36 @@ struct CoverageMerge {
             }
         }
         return hasError
+    }
+}
+
+extension CoverageMerge {
+    enum MergeError: Error, Equatable, CustomStringConvertible {
+        case noRuns([String])
+        case unreadable(String, String)
+        case notMeasured(String, String)
+        case differentBuilds(String)
+        case differentSettings(String, String)
+        case incomplete(String)
+        case ambiguous(String)
+
+        var description: String {
+            switch self {
+                case .noRuns(let folders):
+                    "no run folder, run-<id> with a manifest.json, in \(folders.joined(separator: ", "))"
+                case .unreadable(let folder, let reason):
+                    "can't read the manifest of \(folder): \(reason)"
+                case .notMeasured(let folder, let reason):
+                    "\(folder) has no code coverage to score: \(reason)"
+                case .differentBuilds(let function):
+                    "the runs measured different builds: \(function) has other regions in each. Merge only the runs of one build."
+                case .differentSettings(let first, let other):
+                    "\(other) checks the scores against other levels, or measures other sources, than \(first). Set the same for every run."
+                case .ambiguous(let function):
+                    "\(function) can't be told from another function with the same name, file name and line, so the runs can't be matched. Merge only the runs of one build."
+                case .incomplete(let folder):
+                    "\(folder) has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out."
+            }
+        }
     }
 }

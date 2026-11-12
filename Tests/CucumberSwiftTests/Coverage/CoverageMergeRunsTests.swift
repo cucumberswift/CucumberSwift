@@ -155,7 +155,8 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
             .notMeasured("/a", "no binary"),
             .differentBuilds("Calc.add()"),
             .differentSettings("/a", "/b"),
-            .incomplete("/a/run-1")
+            .incomplete("/a/run-1"),
+            .ambiguous("Calc.add()")
         ]
         XCTAssertEqual(errors.map(\.description), [
             "no run folder, run-<id> with a manifest.json, in /a, /b",
@@ -163,7 +164,8 @@ final class CoverageMergeRunsTests: CoverageMergeTestCase {
             "/a has no code coverage to score: no binary",
             "the runs measured different builds: Calc.add() has other regions in each. Merge only the runs of one build.",
             "/b checks the scores against other levels, or measures other sources, than /a. Set the same for every run.",
-            "/a/run-1 has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out."
+            "/a/run-1 has files but no manifest.json, so its run stopped before it finished. Run it again, or leave it out.",
+            "Calc.add() can't be told from another function with the same name, file name and line, so the runs can't be matched. Merge only the runs of one build."
         ])
     }
 }
