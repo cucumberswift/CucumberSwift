@@ -148,6 +148,24 @@ class ScenarioRunTests: XCTestCase {
         XCTAssertEqual(events, ["before a cart", "Given", "after a cart", "before I pay", "after I pay"])
     }
 
+    func testAStepThatThrowsXCTSkipStillGetsItsAfterStepHooksButTheStepsAfterItGetNone() throws {
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Checkout
+           Scenario: Pay
+             Given the card terminal is offline
+             Then I get a receipt
+        """)
+        var events = [String]()
+        BeforeStep { step in events.append("before \(step.match)") }
+        AfterStep { step in events.append("after \(step.match)") }
+        Given("the card terminal is offline") { _, _ in throw XCTSkip("Offline") }
+        Then("I get a receipt") { _, _ in events.append("Then") }
+
+        _ = try runFirstScenario()
+
+        XCTAssertEqual(events, ["before the card terminal is offline", "after the card terminal is offline"])
+    }
+
     // A step that records a failure and then throws XCTSkip leaves the scenario failed, not skipped.
     func testAFailureThenXCTSkipLeavesTheScenarioFailed() throws {
         Cucumber.shared.parseIntoFeatures("""

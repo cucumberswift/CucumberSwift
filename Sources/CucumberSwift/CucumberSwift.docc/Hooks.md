@@ -96,6 +96,19 @@ extension Cucumber: StepImplementation {
 
 You can register hooks in more than 1 place. CucumberSwift still calls each hook once.
 
+### Hook lifecycle
+
+![A sequence diagram. The runner calls BeforeScenario. For each step that runs, it calls BeforeStep, runs the step and calls AfterStep. Step 2 fails, step 3 doesn't run and gets no step hooks, and the runner calls AfterScenario.](HookLifecycle)
+
+`BeforeStep` and `AfterStep` hooks run only around a step that runs. The XCTest runner and the Swift Testing runner run neither hook for these steps:
+
+* A step that is skipped.
+* A step after a failed step.
+* A step that more than one step definition matches.
+* A step that no step definition matches.
+
+`BeforeScenario` and `AfterScenario` hooks still run for a scenario that contains such steps.
+
 ### Hook macros
 
 The hook macros, `#BeforeFeature`, `#AfterFeature`, `#BeforeScenario`, `#AfterScenario`, `#BeforeStep` and `#AfterStep`, are the preferred way to write hooks. The compiler checks each closure where you write it. The closure takes the hook's `Feature`, `Scenario` or `Step`, or no argument. Anything else is an error that says what the hook passes, and offers a fix. The macros also keep a step definitions file in 1 style, next to `#Given` and the other step definition macros. A macro expands to the hook function of the same name, with the same `priority:` and closure, so it runs exactly as the function does.
