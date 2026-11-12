@@ -339,7 +339,7 @@ swift run cucumberswift coverage merge "$HOME/coverage"
 
 The tool takes coverage folders, which hold the `run-<id>` folders, or run folders. It exits with status 1 when a score reaches an error level, so a script or our GitHub Actions CI workflow can fail on it. It exits with status 2 when it can't merge the runs, such as runs of two different builds or with different levels. Set the same levels for every run.
 
-Collect the folders of all the shards on one machine before you merge them. A scenario that appears in two runs counts once. The same feature file in two test bundles, such as one in each Simulator, counts as one feature.
+Collect the folders of all the shards on one machine before you merge them. A scenario that appears in two runs counts once. The same feature file in two test bundles, such as one in each Simulator, counts as one feature. Shards of a Swift Testing feature that you write in Swift, as <doc:Running-Feature-Files-With-Swift-Testing#Write-features-in-Swift> shows, merge only when they run from the same checkout folder.
 
 Run the tool with your build tool:
 
