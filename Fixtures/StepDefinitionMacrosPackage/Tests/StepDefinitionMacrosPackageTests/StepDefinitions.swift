@@ -66,7 +66,15 @@ extension Basket {
 }
 
 extension Cucumber: @retroactive StepImplementation {
-    public var bundle: Bundle { Bundle.module }
+    public var bundle: Bundle {
+        // SwiftPM copies the Features folder into a resource bundle of its own; Bazel (Tests/BUILD.bazel)
+        // puts it in the test bundle, as Xcode does.
+        #if SWIFT_PACKAGE
+        return Bundle.module
+        #else
+        return Bundle(for: SuggestedStepDefinitionTests.self)
+        #endif
+    }
 
     public func setupSteps() {
         BeforeScenario { _ in

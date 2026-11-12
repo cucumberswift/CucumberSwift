@@ -7,13 +7,21 @@ load("@rules_apple//apple:tvos.bzl", "tvos_unit_test")
 load("@rules_apple//apple:watchos.bzl", "watchos_unit_test")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 
-def consumer_tests(name, copts = []):
+# The lowest OS versions CucumberSwift supports, so the library is compiled for them too.
+_MINIMUM_OS_VERSIONS = {"ios": "13.0", "macos": "10.15", "tvos": "13.0", "watchos": "7.4"}
+
+def consumer_tests(name, copts = [], deps = ["@cucumberswift//:CucumberSwift"], minimum_os_versions = {}):
     """Defines `name` (macOS), `name_iOS`, `name_tvOS` and `name_watchOS` for the suite in the folder `name`.
 
     Args:
         name: the suite's folder, which is also its module name.
         copts: Swift compiler options for the suite.
+        deps: the cucumberswift targets the suite uses.
+        minimum_os_versions: the suite's minimum OS versions, by platform ("ios", "macos", "tvos",
+            "watchos"), where they're higher than CucumberSwift's.
     """
+    os_versions = dict(_MINIMUM_OS_VERSIONS)
+    os_versions.update(minimum_os_versions)
 
     # CucumberSwift looks for a Features folder at the root of the test bundle.
     apple_resource_group(
@@ -29,23 +37,22 @@ def consumer_tests(name, copts = []):
         copts = copts,
         data = [":" + name + "Features"],
         module_name = name,
-        deps = ["@cucumberswift//:CucumberSwift"],
+        deps = deps,
     )
 
-    # The lowest OS versions CucumberSwift supports, so the library is compiled for them too.
     # macOS runs the bundle with `xcrun xctest`, and watchOS with a watchOS simulator's xctest,
     # with the runner the cucumberswift module publishes (see bazel/xctest_runner.bzl). iOS keeps
     # rules_apple's runner, which runs the tests on a simulator.
     macos_unit_test(
         name = name,
-        minimum_os_version = "10.15",
+        minimum_os_version = os_versions["macos"],
         runner = Label("//:macos_xctest_runner"),
         deps = [":" + name + "Lib"],
     )
 
     ios_unit_test(
         name = name + "_iOS",
-        minimum_os_version = "13.0",
+        minimum_os_version = os_versions["ios"],
         deps = [":" + name + "Lib"],
     )
 
@@ -54,7 +61,7 @@ def consumer_tests(name, copts = []):
     # no run tests it (--test_tag_filters=-tvos). The tvOS tests run through Xcode and SwiftPM.
     tvos_unit_test(
         name = name + "_tvOS",
-        minimum_os_version = "13.0",
+        minimum_os_version = os_versions["tvos"],
         tags = ["tvos"],
         deps = [":" + name + "Lib"],
     )
@@ -64,7 +71,7 @@ def consumer_tests(name, copts = []):
     # (both tag filters), and the watchOS tests run through SwiftPM in CI.
     watchos_unit_test(
         name = name + "_watchOS",
-        minimum_os_version = "7.4",
+        minimum_os_version = os_versions["watchos"],
         runner = Label("@cucumberswift//bazel:watchos_xctest_runner"),
         tags = ["watchos"],
         deps = [":" + name + "Lib"],

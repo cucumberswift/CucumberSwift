@@ -1178,7 +1178,7 @@ jobs:
           echo "xcode-select: $(xcode-select -p)"
           grep -h -m1 'Running xctest from' bazel-testlogs/*/test.log || echo "::warning::No macOS test log names its Xcode."
           status=0
-          for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10; do
+          for suite in CucumberSwiftConsumerTests:61 CucumberSwiftDSLConsumerTests:28 CucumberSwiftSwift6ConsumerTests:10 StepDefinitionMacrosPackageTests:61; do
             name=${suite%%:*}; min=${suite##*:}
             for t in "$name" "${name}_iOS"; do
               # A log with no count, or no log, counts as 0 rather than ending the step.
