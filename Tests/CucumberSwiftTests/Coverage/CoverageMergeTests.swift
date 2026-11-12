@@ -133,7 +133,7 @@ final class CoverageMergeTests: CoverageMergeTestCase {
             return function
         }
         XCTAssertThrowsError(try CoverageMerge(runs: [run(manifest)])) {
-            XCTAssertEqual($0 as? CoverageMerge.MergeError, .ambiguous("Calc.add()"))
+            XCTAssertEqual($0 as? CoverageMerge.MergeError, .ambiguous("Calc.classify()"))
         }
     }
 
