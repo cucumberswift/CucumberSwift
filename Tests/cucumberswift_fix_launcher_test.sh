@@ -13,7 +13,9 @@ printf 'Feature: Greeting\n  Scenario: Say hello\n    Giben a greeting\n    Whn 
 
 export RUNFILES_DIR="${TEST_SRCDIR:?}"
 BUILD_WORKSPACE_DIRECTORY="$work" "$launcher" > "$work/out"
-grep -q "^    Given a greeting$" "$work/Features/Greeting.feature" && grep -q "^    When it is said$" "$work/Features/Greeting.feature" || { echo "FAIL: Giben was not fixed: $(cat "$work/out")" >&2; exit 1; }
+for fixed in "    Given a greeting" "    When it is said"; do
+  grep -qxF "$fixed" "$work/Features/Greeting.feature" || { echo "FAIL: '$fixed' was not fixed: $(cat "$work/out")" >&2; exit 1; }
+done
 
 status=0
 env -u BUILD_WORKSPACE_DIRECTORY "$launcher" > /dev/null 2>&1 || status=$?
