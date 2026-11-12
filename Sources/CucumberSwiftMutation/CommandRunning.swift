@@ -15,7 +15,7 @@ public struct CommandResult: Equatable, Sendable {
     public let duration: TimeInterval
     /// Whether the command ran at all: false when it couldn't be launched, or the run was cancelled first. Its
     /// status then says nothing about the tests.
-    public var started = true
+    public internal(set) var started = true
 
     public var succeeded: Bool { status == 0 && !timedOut }
 

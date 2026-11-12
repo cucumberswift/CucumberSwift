@@ -11,7 +11,7 @@ import XCTest
 
 class ReportFileTests: XCTestCase {
     private var folder: URL!
-    var url: URL { folder.appendingPathComponent("report.json") }
+    private var url: URL { folder.appendingPathComponent("report.json") }
 
     override func setUpWithError() throws {
         folder = FileManager.default.temporaryDirectory.appendingPathComponent("ReportFileTests-\(UUID().uuidString)")
@@ -156,40 +156,42 @@ class ReportFileTests: XCTestCase {
         try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: url.path)
 
         let first = ReportFile(url: url)
-        first.joinRun()
+        first.joinRun(runner: "XCTest", bundle: nil, run: nil)
         XCTAssertEqual(first.read().count, 0)
     }
 
     func testAWorkerThatStartsInTheMiddleOfARunKeepsTheReport() {
         let first = ReportFile(url: url)
-        first.joinRun()
+        first.joinRun(runner: "XCTest", bundle: "Tests.xctest", isParallel: true, run: nil)
         first.merge([feature([scenario("A", line: 3)])])
 
         let second = ReportFile(url: url)
-        second.joinRun()
+        second.joinRun(runner: "XCTest", bundle: "Tests.xctest", isParallel: true, run: nil)
         XCTAssertEqual(names(second.read()), [["A"]])
     }
 
     func testAWorkerThatStartsAfterAnotherFinishedKeepsTheFreshReport() {
         let first = ReportFile(url: url)
-        first.joinRun()
+        first.joinRun(runner: "XCTest", bundle: "Tests.xctest", isParallel: true, run: nil)
         first.merge([feature([scenario("A", line: 3)])])
         // The first worker has exited, so nothing holds the run: the report is still recent.
         let second = ReportFile(url: url)
-        second.joinRun()
+        second.joinRun(runner: "XCTest", bundle: "Tests.xctest", isParallel: true, run: nil)
         second.merge([feature([scenario("B", line: 6)])])
         XCTAssertEqual(names(second.read()), [["A", "B"]])
     }
 
     /// Runs one feature through the reporter with a report at `url` that another worker already wrote to,
     /// and returns the names of the features the report holds afterwards.
-    func featureNamesAfterARunBesideAnotherWorker(beforeTheRun prepare: () throws -> Void = {}) throws -> [String] {
+    private func featureNamesAfterARunBesideAnotherWorker() throws -> [String] {
         Cucumber.shared.reset()
         Cucumber.reportPath = url.path
         addTeardownBlock { Cucumber.reportPath = nil }
         let reporter = try XCTUnwrap(Cucumber.shared.reporters.compactMap { $0 as? CucumberJSONReporter }.first)
-        ReportFile(url: url).merge([feature([scenario("Elsewhere", line: 3)], name: "Other", uri: "Other.feature")])
-        try prepare()
+        // Another test target's process of the same run, which has exited.
+        let other = ReportFile(url: url)
+        other.joinRun(runner: "Swift Testing", bundle: "Other.xctest")
+        other.merge([feature([scenario("Elsewhere", line: 3)], name: "Other", uri: "Other.feature")])
         Feature("F1") {
             Scenario("S1") {
                 Given(I: print(""))
@@ -206,8 +208,9 @@ class ReportFileTests: XCTestCase {
         XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker().sorted(), ["F1", "Other"])
     }
 
-    func testTheReporterReplacesTheReportWhenParallelTestingIsOff() throws {
-        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker(), ["F1"])
+    /// A serial run's test targets each run in a process of their own, which write one report (#546).
+    func testTheReporterMergesItsFeaturesIntoTheSharedReportWhenParallelTestingIsOff() throws {
+        XCTAssertEqual(try featureNamesAfterARunBesideAnotherWorker().sorted(), ["F1", "Other"])
     }
 
     func testTheReporterWritesToTheReportPathSetting() throws {
@@ -324,9 +327,9 @@ extension ReportFileTests {
         reporter.testSuiteStarted(at: Date())
         Cucumber.shared.executeFeatures()
 
-        // The suite's start, then the scenario and the feature finishing: not a merge for each of the
-        // steps' four starts and four finishes, nor for the starts of the feature and the scenario.
-        XCTAssertLessThanOrEqual(ReportFile.at(url).merges, 3)
+        // The suite's start, the scenario's start, then the scenario and the feature finishing: not a merge for
+        // each of the steps' four starts and four finishes, nor for the start of the feature.
+        XCTAssertLessThanOrEqual(ReportFile.at(url).merges, 4)
         // Features other tests parsed from strings may be in the report too, ahead of F1.
         let feature = ReportFile(url: url).read().first { $0["name"] as? String == "F1" }
         let scenarios = feature?["elements"] as? [[String: Any]]
