@@ -214,7 +214,6 @@ public final class MutationRun {
         for number in 1...options.baselineRuns {
             // The first run measures the code each scenario runs, into regions.json, and writes the Cucumber report that
             // lists every scenario the run tests, for the report's `testFiles`; the mutants' runs measure nothing.
-            // The XCTest and the Swift Testing runner each run in a process of their own: both merge into the report.
             let settings = tagSettings.merging(["CUCUMBER_COVERAGE_REGIONS": "YES"]) { _, new in new }
             let request = number == 1
                 ? TestRequest(settings: settings, measuresCoverage: true, writesReport: true)
