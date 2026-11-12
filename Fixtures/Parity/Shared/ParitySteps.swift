@@ -9,7 +9,7 @@
 //  that would need a runner-specific line here is a parity gap: report it, don't add an #if. The one
 //  other #if is SwiftPM's own SWIFT_PACKAGE, for the bundle, which differs by build tool as it does
 //  in any project.
-//  See README.md.
+//  See Fixtures/Parity/README.md.
 //
 
 #if PARITY_SWIFT_TESTING

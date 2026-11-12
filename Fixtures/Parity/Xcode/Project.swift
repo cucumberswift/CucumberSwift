@@ -8,17 +8,18 @@ import ProjectDescription
 // The platform to build for, from TUIST_PARITY_PLATFORM: macOS, iOS, tvOS or Catalyst. There is no watchOS: the
 // Xcode project doesn't build for it, as Carthage doesn't deliver it. .github/scripts/parity-fixture.sh sets it.
 let platform = Environment.parityPlatform.getString(default: "macOS")
-let destinations: Destinations = switch platform {
-case "iOS": [.iPhone]
-case "tvOS": [.appleTv]
-case "Catalyst": [.macCatalyst]
-default: [.mac]
-}
-let deploymentTargets: DeploymentTargets = switch platform {
-case "iOS", "Catalyst": .iOS("16.0")
-case "tvOS": .tvOS("16.0")
-default: .macOS("13.0")
-}
+let destinationsByPlatform: [String: Destinations] = [
+    "iOS": [.iPhone],
+    "tvOS": [.appleTv],
+    "Catalyst": [.macCatalyst]
+]
+let deploymentTargetsByPlatform: [String: DeploymentTargets] = [
+    "iOS": .iOS("16.0"),
+    "Catalyst": .iOS("16.0"),
+    "tvOS": .tvOS("16.0")
+]
+let destinations: Destinations = destinationsByPlatform[platform] ?? [.mac]
+let deploymentTargets: DeploymentTargets = deploymentTargetsByPlatform[platform] ?? .macOS("13.0")
 
 let settings: Settings = .settings(base: [
     "SWIFT_VERSION": "6.0",
