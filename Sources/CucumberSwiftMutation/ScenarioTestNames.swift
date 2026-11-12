@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import CucumberSwiftGherkin
 import Foundation
 
@@ -202,3 +203,4 @@ public struct ScenarioTestNames {
         return match
     }
 }
+#endif

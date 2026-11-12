@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -129,3 +130,4 @@ final class MutationRunWithRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(log.joined().contains("no Missing.xcodeproj"), log.joined())
     }
 }
+#endif

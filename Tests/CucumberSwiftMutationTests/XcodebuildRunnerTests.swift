@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -240,3 +241,4 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(XcodebuildRunner.testCount(inSummary: "{}"), 0)
     }
 }
+#endif

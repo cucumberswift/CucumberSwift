@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -29,6 +30,14 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(build.succeeded)
         XCTAssertEqual(commands.calls.first?.arguments, ["build", "--build-tests", "--disable-sandbox", "-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"])
         XCTAssertEqual(try String(contentsOf: XCTUnwrap(build.log), encoding: .utf8), "Build complete!")
+    }
+
+    func testABuildThatNeverStartedSaysSo() throws {
+        let commands = RecordingCommands { _ in CommandResult(status: 127, output: "no swift", timedOut: false, duration: 0, started: false) }
+        let copy = try makeCopy()
+        let build = SwiftPMRunner(commands: commands).build(in: copy, timeout: nil)
+        XCTAssertFalse(build.succeeded)
+        XCTAssertFalse(build.started)
     }
 
     func testSettingsAreTheEnvironmentOfTheTestRunAndTheRunnerPicksTheFolders() throws {
@@ -117,3 +126,4 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertFalse(run.succeeded)
     }
 }
+#endif

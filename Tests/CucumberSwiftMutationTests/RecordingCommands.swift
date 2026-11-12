@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 @testable import CucumberSwiftMutation
 
@@ -41,3 +42,4 @@ final class RecordingCommands: CommandRunning, @unchecked Sendable {
         return handler(call)
     }
 }
+#endif

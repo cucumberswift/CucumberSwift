@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds a Bazel test target with `bazel build` and tests it with `bazel test`, with code coverage on.
@@ -195,3 +196,4 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif
