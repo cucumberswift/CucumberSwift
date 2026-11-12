@@ -154,9 +154,9 @@ public struct MutationOptions: Equatable, Sendable {
         return whole
     }
 
-    /// The value `text` of `option` as a number above 0.
+    /// The value `text` of `option` as a number above 0. Not `inf`, which `Double` reads too: a timeout must end.
     private static func number(_ text: String, of option: String) throws -> Double {
-        guard let number = Double(text), number > 0 else { throw UsageError(description: "\(option) needs a number above 0, not \"\(text)\"") }
+        guard let number = Double(text), number > 0, number.isFinite else { throw UsageError(description: "\(option) needs a number above 0, not \"\(text)\"") }
         return number
     }
 

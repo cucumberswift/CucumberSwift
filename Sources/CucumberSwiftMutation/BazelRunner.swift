@@ -152,7 +152,8 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             testsRun: CommandResult(status: 0, output: output, timedOut: false, duration: 0).testsRun,
             log: write(result.output, named: "test-\(number)", in: copy),
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
-            coverageFolder: request.measuresCoverage ? keepCoverage(from: log.deletingLastPathComponent(), as: number, in: folder) : nil
+            coverageFolder: request.measuresCoverage ? keepCoverage(from: log.deletingLastPathComponent(), as: number, in: folder) : nil,
+            started: result.started
         )
     }
 

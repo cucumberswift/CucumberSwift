@@ -59,6 +59,8 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_VERBOSE` | ^ | ^ | ^ | ^ |
 | `Cucumber.reportPath` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None | <doc:Generating-Reports#Choose-where-the-report-is-written> |
 | `CUCUMBER_REPORT_PATH` | ^ | ^ | ^ | ^ |
+| `Cucumber.reportStaleAfter` | 600 seconds (10 minutes) | XCTest and Swift Testing | None | <doc:Generating-Reports#One-report-for-each-test-run> |
+| `CUCUMBER_REPORT_STALE_AFTER` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverage` | Auto | XCTest and Swift Testing | Code coverage on for the test target. With Swift Testing, scenarios run one at a time. | <doc:Measuring-Code-Coverage> |
 | `CUCUMBER_COVERAGE` | ^ | ^ | ^ | ^ |
 | `Cucumber.coveragePath` | `_cucumberCoverage` in the documents folder | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-where-the-files-go> |

@@ -166,7 +166,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             testsRun: runs.map(\.tests).reduce(0, +),
             log: write(combinedOutput(of: zip(groups, runs.map(\.result)).map { ($0.joined(separator: ", "), $1) }), named: "test-\(number)", in: copy),
             cucumberReport: reports.count > 1 ? mergedReport(reports, named: "report-\(number).json", in: folder) : reports.first,
-            coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+            coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
+            started: runs.allSatisfy(\.result.started)
         )
     }
 
