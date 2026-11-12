@@ -45,7 +45,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
         // build uses the same flags, so a mutant's rebuilds only what it changed.
         let coverage = ["-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"]
         let result = commands.run(swift, ["build", "--build-tests"] + arguments + coverage, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {

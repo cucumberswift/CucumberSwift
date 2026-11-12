@@ -31,6 +31,14 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(try String(contentsOf: XCTUnwrap(build.log), encoding: .utf8), "Build complete!")
     }
 
+    func testABuildThatNeverStartedSaysSo() throws {
+        let commands = RecordingCommands { _ in CommandResult(status: 127, output: "no swift", timedOut: false, duration: 0, started: false) }
+        let copy = try makeCopy()
+        let build = SwiftPMRunner(commands: commands).build(in: copy, timeout: nil)
+        XCTAssertFalse(build.succeeded)
+        XCTAssertFalse(build.started)
+    }
+
     func testSettingsAreTheEnvironmentOfTheTestRunAndTheRunnerPicksTheFolders() throws {
         let commands = RecordingCommands { _ in .finished(0, output: "Executed 4 tests, with 0 failures") }
         let runner = SwiftPMRunner(commands: commands)

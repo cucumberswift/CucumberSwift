@@ -76,11 +76,15 @@ public struct BuildResult: Sendable {
     public var succeeded: Bool
     public var duration: TimeInterval
     public var log: URL?
+    /// The build command started. A command that never started, because the run was cancelled or the tool couldn't be
+    /// launched, built nothing: its failure doesn't mean that a mutant doesn't build.
+    public var started: Bool
 
-    public init(succeeded: Bool, duration: TimeInterval = 0, log: URL? = nil) {
+    public init(succeeded: Bool, duration: TimeInterval = 0, log: URL? = nil, started: Bool = true) {
         self.succeeded = succeeded
         self.duration = duration
         self.log = log
+        self.started = started
     }
 }
 

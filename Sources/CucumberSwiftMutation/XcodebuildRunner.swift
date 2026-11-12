@@ -99,7 +99,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
         let arguments = ["build-for-testing"] + common(in: copy) + ["-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
         let result = commands.run(xcodebuild, arguments, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
