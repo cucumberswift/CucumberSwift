@@ -42,9 +42,27 @@ enum FeatureFlags {
         value(Cucumber.readableTestNames, environmentVariable: "CUCUMBER_READABLE_TEST_NAMES", default: true)
     }
 
-    /// Whether each scenario is one test rather than a test class with a test for each step. Off by default.
+    /// Whether each scenario is one test rather than a test class with a test for each step. Off by default,
+    /// and on under `swift test --parallel` (#567).
     static var isOneTestPerScenario: Bool {
-        value(Cucumber.oneTestPerScenario, environmentVariable: "CUCUMBER_ONE_TEST_PER_SCENARIO", default: false)
+        value(Cucumber.oneTestPerScenario, environmentVariable: "CUCUMBER_ONE_TEST_PER_SCENARIO", default: isParallelSwiftTest)
+    }
+
+    /// How a process is found to be run by `swift test --parallel`. Tests replace it: a unit test run is not one.
+    static let parallelSwiftTestProbe = Locked<() -> Bool> {
+        isRunByParallelSwiftTest(processName: ProcessInfo.processInfo.processName,
+                                 arguments: ProcessInfo.processInfo.arguments,
+                                 parentArguments: parentProcessArguments())
+    }
+
+    /// Whether this process lists tests for `swift test --parallel`, or runs a test it picked by name.
+    /// `swift test --parallel` lists the tests with `swiftpm-xctest-helper`, then runs each in an `xctest`
+    /// process of its own, given `-XCTest Class/method`, so a step per test would lose a scenario's state
+    /// between those processes. Each scenario is then one test, which the list shows and a worker runs whole.
+    /// `--filter` and `--skip` start `xctest` the same way, so what tells the runs apart is `--parallel` in
+    /// the arguments of the parent `swift test` process.
+    static var isParallelSwiftTest: Bool {
+        parallelSwiftTestProbe.snapshot()
     }
 
     /// Whether the step definitions generated for undefined steps use regex literals rather than
@@ -139,7 +157,8 @@ extension Cucumber {
 
     /// Whether each scenario is one test, named after its feature and scenario, whose steps run in order
     /// within it, rather than a test class with a test for each step. Xcode's test navigator can then
-    /// run a single scenario. A test for each step is the default; set this to `true`, or the environment
+    /// run a single scenario. A test for each step is the default, except under
+    /// `swift test --parallel`, where each scenario is a test. Set this to `true`, or the environment
     /// variable `CUCUMBER_ONE_TEST_PER_SCENARIO` to `YES`, for one test per scenario. This variable, when
     /// set, wins over the environment variable. Set it in your `StepImplementation`'s `setupSteps()`,
     /// before CucumberSwift creates the tests.
@@ -236,5 +255,38 @@ extension Cucumber {
     public static var coveragePath: String? {
         get { FeatureFlags.stringStorage["coveragePath"] }
         set { FeatureFlags.stringStorage["coveragePath"] = newValue }
+    }
+}
+
+extension FeatureFlags {
+    static func isRunByParallelSwiftTest(processName: String, arguments: [String], parentArguments: [String]) -> Bool {
+        guard parentArguments.contains("--parallel") else { return false }
+        if processName == "swiftpm-xctest-helper" { return true }
+        guard let index = arguments.firstIndex(of: "-XCTest"), arguments.indices.contains(index + 1) else { return false }
+        return arguments[index + 1].contains("/")
+    }
+
+    /// The arguments of this process's parent, or none when they can't be read.
+    static func parentProcessArguments() -> [String] {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var processMib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&processMib, 4, &info, &size, nil, 0) == 0 else { return [] }
+        let parent = info.kp_eproc.e_ppid
+        var maxSize = 0
+        var maxMib: [Int32] = [CTL_KERN, KERN_ARGMAX]
+        var maxLength = MemoryLayout<Int>.size
+        guard sysctl(&maxMib, 2, &maxSize, &maxLength, nil, 0) == 0, maxSize > 0 else { return [] }
+        var buffer = [UInt8](repeating: 0, count: maxSize)
+        var length = maxSize
+        var argumentsMib: [Int32] = [CTL_KERN, KERN_PROCARGS2, parent]
+        guard sysctl(&argumentsMib, 3, &buffer, &length, nil, 0) == 0, length > MemoryLayout<Int32>.size else { return [] }
+        // The layout is the argument count, the executable's path, padding zeros, then the arguments.
+        let count = buffer.withUnsafeBytes { Int($0.load(as: Int32.self)) }
+        var strings = buffer[MemoryLayout<Int32>.size..<length].split(separator: 0, omittingEmptySubsequences: true)
+            .map { String(decoding: $0, as: UTF8.self) }
+        guard !strings.isEmpty else { return [] }
+        strings.removeFirst()
+        return Array(strings.prefix(count))
     }
 }

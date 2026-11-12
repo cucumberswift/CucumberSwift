@@ -38,7 +38,13 @@ class FeatureFlagsTests: XCTestCase {
 
     override func setUpWithError() throws {
         Self.resetFlags()
-        addTeardownBlock { Self.resetFlags() }
+        // A run of these tests with `swift test --filter` is selected by name, which is not what they test.
+        let probe = FeatureFlags.parallelSwiftTestProbe.snapshot
+        FeatureFlags.parallelSwiftTestProbe.withLock { $0 = { false } }
+        addTeardownBlock {
+            Self.resetFlags()
+            FeatureFlags.parallelSwiftTestProbe.withLock { $0 = probe }
+        }
     }
 
     func testReadableTestNamesAreOnByDefault() {
@@ -47,6 +53,38 @@ class FeatureFlagsTests: XCTestCase {
 
     func testOneTestPerScenarioIsOffByDefault() {
         XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
+    }
+
+    func testOneTestPerScenarioIsOnUnderSwiftTestParallel() {
+        FeatureFlags.parallelSwiftTestProbe.withLock { $0 = { true } }
+        XCTAssertTrue(FeatureFlags.isOneTestPerScenario)
+        Cucumber.oneTestPerScenario = false
+        XCTAssertFalse(FeatureFlags.isOneTestPerScenario)
+    }
+
+    func testSwiftTestParallelListsAndRunsEachScenarioAsATest() {
+        let xctest = "/Applications/Xcode.app/Contents/Developer/usr/bin/xctest"
+        let parallel = ["swift-test", "--parallel"]
+        func isParallel(_ name: String, _ arguments: [String], parent: [String] = parallel) -> Bool {
+            FeatureFlags.isRunByParallelSwiftTest(processName: name, arguments: arguments, parentArguments: parent)
+        }
+        XCTAssertTrue(isParallel("swiftpm-xctest-helper", ["swiftpm-xctest-helper", "A.xctest", "/tmp/x"]))
+        XCTAssertTrue(isParallel("xctest", [xctest, "-XCTest", "Tests.Class/testA", "A.xctest"]))
+        XCTAssertFalse(isParallel("xctest", [xctest, "A.xctest"]))
+        XCTAssertFalse(isParallel("xctest", [xctest, "-XCTest", "All", "A.xctest"]))
+        XCTAssertFalse(isParallel("xctest", [xctest, "-XCTest"]))
+    }
+
+    func testSwiftTestWithoutParallelKeepsATestForEachStep() {
+        let xctest = "/Applications/Xcode.app/Contents/Developer/usr/bin/xctest"
+        for parent in [["swift-test"], ["swift-test", "--filter", "A"], ["swift-test", "--skip", "A"], []] {
+            XCTAssertFalse(FeatureFlags.isRunByParallelSwiftTest(processName: "xctest", arguments: [xctest, "-XCTest", "A.B/c", "A.xctest"], parentArguments: parent))
+            XCTAssertFalse(FeatureFlags.isRunByParallelSwiftTest(processName: "swiftpm-xctest-helper", arguments: ["swiftpm-xctest-helper"], parentArguments: parent))
+        }
+    }
+
+    func testTheParentProcessArgumentsAreRead() {
+        XCTAssertFalse(FeatureFlags.parentProcessArguments().isEmpty)
     }
 
     func testRegexLiteralStepDefinitionsAreOffByDefault() {
