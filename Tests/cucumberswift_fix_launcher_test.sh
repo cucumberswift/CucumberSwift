@@ -9,11 +9,11 @@ work="$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/launcher_test.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 mkdir "$work/Features"
-printf 'Feature: Greeting\n  Scenario: Say hello\n    Giben a greeting\n' > "$work/Features/Greeting.feature"
+printf 'Feature: Greeting\n  Scenario: Say hello\n    Giben a greeting\n    Whn it is said\n' > "$work/Features/Greeting.feature"
 
 export RUNFILES_DIR="${TEST_SRCDIR:?}"
 BUILD_WORKSPACE_DIRECTORY="$work" "$launcher" > "$work/out"
-grep -q "^    Given a greeting$" "$work/Features/Greeting.feature" || { echo "FAIL: Giben was not fixed: $(cat "$work/out")" >&2; exit 1; }
+grep -q "^    Given a greeting$" "$work/Features/Greeting.feature" && grep -q "^    When it is said$" "$work/Features/Greeting.feature" || { echo "FAIL: Giben was not fixed: $(cat "$work/out")" >&2; exit 1; }
 
 status=0
 env -u BUILD_WORKSPACE_DIRECTORY "$launcher" > /dev/null 2>&1 || status=$?

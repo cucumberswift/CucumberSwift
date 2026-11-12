@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-cli="$1"
+cli="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 work="$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/commands_test.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 cd "$work"
