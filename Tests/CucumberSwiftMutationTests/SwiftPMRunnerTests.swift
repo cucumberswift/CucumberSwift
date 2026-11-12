@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -101,3 +102,4 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertFalse(run.succeeded)
     }
 }
+#endif

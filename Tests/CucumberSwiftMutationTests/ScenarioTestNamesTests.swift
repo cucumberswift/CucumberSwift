@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import CucumberSwiftGherkin
 import XCTest
 @testable import CucumberSwiftMutation
@@ -189,3 +190,4 @@ final class ScenarioTestNamesTests: TemporaryFolderTestCase {
         }
     }
 }
+#endif

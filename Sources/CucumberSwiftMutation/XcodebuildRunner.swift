@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds an Xcode project or workspace with `xcodebuild build-for-testing`, with code coverage on, and tests it
@@ -208,3 +209,4 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif

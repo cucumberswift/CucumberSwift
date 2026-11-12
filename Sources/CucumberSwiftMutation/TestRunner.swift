@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// What one test run is asked to do.
@@ -124,3 +125,4 @@ func makeFolder(_ folder: URL) throws -> URL {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
 }
+#endif
