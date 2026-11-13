@@ -15,11 +15,15 @@ public struct ScenarioCoverage: Equatable, Sendable {
     public enum ReadError: Error, Equatable, CustomStringConvertible {
         /// The run measured functions, but recorded no places for their regions: a CucumberSwift older than the tool.
         case noRegionPlaces(file: String)
+        /// A test process of the run left a run folder without its manifest, so the code its scenarios ran is unknown.
+        case incompleteRun(folder: String)
 
         public var description: String {
             switch self {
                 case .noRegionPlaces(let file):
                     return "the coverage has no places for the code regions of \(file). The package's CucumberSwift may be older than the tool."
+                case .incompleteRun(let folder):
+                    return "\(folder) has no manifest.json, so the coverage of its scenarios is missing."
             }
         }
     }
@@ -70,16 +74,19 @@ public struct ScenarioCoverage: Equatable, Sendable {
     public let scenarios: [Scenario]
 
     /// The coverage of the runs under `folder`, merged as `cucumberswift coverage merge` merges them, or nil when
-    /// no run there finished, or the runs measured no code. A test run that has several test bundles, as an Xcode scheme can,
+    /// there is no run there, or the runs measured no code. A test run that has several test bundles, as an Xcode scheme can,
     /// or several test processes, as `swift test` does for XCTest and Swift Testing, writes a run folder for each. The
-    /// merge numbers each function's regions once, whichever runs measured it. Throws when the runs can't be merged,
-    /// or they don't record where their regions are.
+    /// merge numbers each function's regions once, whichever runs measured it. Throws when a run folder has no
+    /// manifest, the runs can't be merged, or they don't record where their regions are.
     public static func read(inRunsUnder folder: URL) throws -> ScenarioCoverage? {
         let runs = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-        let finished = runs.filter {
-            $0.lastPathComponent.hasPrefix("run-") && FileManager.default.fileExists(atPath: $0.appendingPathComponent("manifest.json").path)
+        let runFolders = runs.filter { $0.lastPathComponent.hasPrefix("run-") }.sorted { $0.path < $1.path }
+        guard !runFolders.isEmpty else { return nil }
+        // Each folder is a test process of this run, so one without a manifest lost the coverage of its scenarios. The
+        // other runs alone would make a mutant that only its scenarios ran look like code that no scenario runs.
+        if let incomplete = runFolders.first(where: { !FileManager.default.fileExists(atPath: $0.appendingPathComponent("manifest.json").path) }) {
+            throw ReadError.incompleteRun(folder: incomplete.path)
         }
-        guard !finished.isEmpty else { return nil }
         let merged = try MergedCoverage(folders: [folder])
         guard !merged.functions.isEmpty else { return nil }
         var regions = [Region]()

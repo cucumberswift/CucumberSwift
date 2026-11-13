@@ -84,6 +84,38 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: lockFolder().appendingPathComponent("mutation.lock").path))
     }
 
+    func testTwoRunsThatFindTheSameDeadLockNeverRemoveTheLockThatOneOfThemWrote() throws {
+        try FileManager.default.createDirectory(at: lockFolder(), withIntermediateDirectories: true)
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        let dead: Int32 = 99_999_998
+        try JSONEncoder().encode(WorkFolder.Lock(pid: dead, folder: "/nowhere/mutation-copy-dead")).write(to: lock)
+        // Run A's lock, which it writes once it has removed the dead one.
+        let first = try JSONEncoder().encode(WorkFolder.Lock(pid: 77_777, folder: "/nowhere/mutation-copy-first"))
+        let secondReadTheDeadLock = DispatchSemaphore(value: 0)
+        let firstWroteItsLock = DispatchSemaphore(value: 0)
+        let secondDone = DispatchSemaphore(value: 0)
+        let folder = lockFolder()
+        // Run A judges the dead lock, and run B starts its own cleanup meanwhile. B judges the lock it read only once
+        // A has written its own lock.
+        _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in
+            DispatchQueue.global().async {
+                _ = try? WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { pid in
+                    guard pid == dead else { return true }
+                    secondReadTheDeadLock.signal()
+                    firstWroteItsLock.wait()
+                    return false
+                }
+                secondDone.signal()
+            }
+            _ = secondReadTheDeadLock.wait(timeout: .now() + 1)
+            return false
+        }
+        try first.write(to: lock, options: .withoutOverwriting)
+        firstWroteItsLock.signal()
+        XCTAssertEqual(secondDone.wait(timeout: .now() + 10), .success)
+        XCTAssertEqual(try Data(contentsOf: lock), first, "Run A's lock is still there")
+    }
+
     func testALockThatNamesAFolderThisToolDidNotMakeDeletesNothing() throws {
         // A stale or planted lock can name any folder, even one whose name starts like a copy's.
         let notes = folder.appendingPathComponent("mutation-copy-notes")

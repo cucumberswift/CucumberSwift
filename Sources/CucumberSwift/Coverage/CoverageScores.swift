@@ -369,11 +369,8 @@ struct CoverageScores: Codable, Equatable {
         let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
         let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
         return parts.map { rule in
-            Part(rule: rule,
-                 scores: CoverageScores(scenarios: inOrder.filter { $0.rule == rule }.map(\.scenario),
-                                        code: code,
-                                        isRedundancy: isRedundancy,
-                                        detections: detections))
+            let ran = inOrder.filter { $0.rule == rule }.map(\.scenario)
+            return Part(rule: rule, scores: CoverageScores(scenarios: ran, code: code, isRedundancy: isRedundancy, detections: detections))
         }
     }
 

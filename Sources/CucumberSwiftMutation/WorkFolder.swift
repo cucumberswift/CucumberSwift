@@ -93,6 +93,13 @@ public struct WorkFolder {
     /// gone. Returns the folder it removed. Throws when the process is still running.
     @discardableResult
     public static func cleanUpAfterDeadRun(lockFolder: URL, isAlive: (Int32) -> Bool = processIsAlive) throws -> URL? {
+        // One run at a time reads and removes a dead run's lock. Otherwise two runs could both read it, and the second
+        // would remove the lock that the first wrote after it.
+        try FileManager.default.createDirectory(at: lockFolder, withIntermediateDirectories: true)
+        let guardFile = open(lockFolder.appendingPathComponent("mutation.lock.guard").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
+        guard guardFile >= 0 else { throw Failure.copyFailed("can't open the lock folder \(lockFolder.path)") }
+        defer { close(guardFile) }
+        flock(guardFile, LOCK_EX)
         let lockFile = lockFolder.appendingPathComponent("mutation.lock")
         guard let data = try? Data(contentsOf: lockFile), let lock = try? JSONDecoder().decode(Lock.self, from: data) else {
             return nil
