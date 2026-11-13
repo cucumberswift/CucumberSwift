@@ -13,7 +13,7 @@ private enum MutationError: Error, CustomStringConvertible {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .noTargets: return "The package has no target with code to mutate"
-            case .failed(let status): return "CucumberSwiftMutationTestingTool exited with status \(status)"
+            case .failed(let status): return "cucumberswift mutation-test exited with status \(status)"
             case .notSetUp: return "Mutation testing needs CucumberSwift's Macros package trait, which brings in swift-syntax. Turn it on and run the command again."
             case .missingValue(let option): return "\(option) needs a value"
             case .unknownOption(let option): return "Unknown option \(option)"
@@ -88,7 +88,7 @@ struct MutationTestingPlugin: CommandPlugin {
         let root = context.package.directoryURL.resolvingSymlinksInPath()
         let sources = try Self.sourceFolders(of: context.package, named: names, root: root)
         // Built step by step: one long concatenation is too slow for some compilers to type-check.
-        var toolArguments: [String] = ["--root", root.path]
+        var toolArguments: [String] = ["mutation-test", "--root", root.path]
         for source in sources { toolArguments += ["--sources", source] }
         // The reports go to .build/mutation-testing in the package, as from the command-line tool, so a test run reads
         // the last report whichever way the command ran. Xcode would put the plugin's own folder in DerivedData. The
@@ -102,7 +102,7 @@ struct MutationTestingPlugin: CommandPlugin {
         // The Swift of the toolchain that runs the command, so that the copy builds with it too.
         if let swift = try? context.tool(named: "swift") { toolArguments += ["--swift", swift.url.path] }
         let process = Process()
-        process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
+        process.executableURL = try context.tool(named: "CucumberSwiftCommand").url
         process.arguments = toolArguments
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()

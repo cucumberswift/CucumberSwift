@@ -190,8 +190,9 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
-      # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), its plugin, its
-      # fixtures, scripts and action, the package manifests or this workflow.
+      # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), the coverage
+      # merge that reads the coverage, the cucumberswift tool, its plugin, its fixtures, scripts and action, the
+      # package manifests or this workflow.
       # Not the documentation, which lives in Sources too. Always on any other event.
       - name: Decide whether the mutation testing fixture runs
         id: mutation
@@ -200,7 +201,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then

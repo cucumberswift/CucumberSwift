@@ -151,8 +151,14 @@ public struct WorkFolder {
         // Not the package's own folder name: it may have a space in it.
         copy = folder.appendingPathComponent("package")
         lockFile = lockFolder.appendingPathComponent("mutation.lock")
-        // The lock first: a run killed during the copy still leaves the next run something to clean up.
-        try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile)
+        // The lock first: a run killed during the copy still leaves the next run something to clean up. It is never
+        // written over: a run that started after this one checked the lock folder holds it, and this run stops.
+        do {
+            try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile, options: .withoutOverwriting)
+        } catch where fileManager.fileExists(atPath: lockFile.path) {
+            let holder = (try? Data(contentsOf: lockFile)).flatMap { try? JSONDecoder().decode(Lock.self, from: $0) }
+            throw Failure.anotherRunIsActive(pid: holder?.pid ?? 0)
+        }
         do {
             try Self.copyProject(root, to: copy, excluding: excluding, runner: runner)
         } catch {
