@@ -44,6 +44,9 @@ public struct WorkFolder {
 
     /// The prefix of every folder this tool creates, which it checks before it removes one.
     static let folderPrefix = "mutation-copy-"
+    /// The file that this tool writes in every folder it creates, before the copy. The next run removes a folder that a
+    /// lock names only when the folder has it, so a lock that names some other folder never deletes it.
+    static let ownerMarker = ".cucumberswift-mutation-copy"
 
     /// The folder that holds the copy.
     public let folder: URL
@@ -97,9 +100,11 @@ public struct WorkFolder {
         if lock.pid != getpid(), isAlive(lock.pid) { throw Failure.anotherRunIsActive(pid: lock.pid) }
         let folder = URL(fileURLWithPath: lock.folder)
         // The lock file is data. Remove only a folder that this tool made, never whatever a lock names.
-        if folder.lastPathComponent.hasPrefix(folderPrefix) { remove(folder) }
+        let isOwn = folder.lastPathComponent.hasPrefix(folderPrefix)
+            && FileManager.default.fileExists(atPath: folder.appendingPathComponent(ownerMarker).path)
+        if isOwn { remove(folder) }
         try? FileManager.default.removeItem(at: lockFile)
-        return folder.lastPathComponent.hasPrefix(folderPrefix) ? folder : nil
+        return isOwn ? folder : nil
     }
 
     public static func processIsAlive(_ pid: Int32) -> Bool {
@@ -160,6 +165,8 @@ public struct WorkFolder {
             throw Failure.anotherRunIsActive(pid: holder?.pid ?? 0)
         }
         do {
+            try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+            try Data("\(getpid())\n".utf8).write(to: folder.appendingPathComponent(Self.ownerMarker))
             try Self.copyProject(root, to: copy, excluding: excluding, runner: runner)
         } catch {
             // No caller gets a WorkFolder to remove, so the partial copy and the lock go now.
