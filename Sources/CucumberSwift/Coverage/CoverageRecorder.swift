@@ -55,8 +55,6 @@ final class CoverageRecorder {
     /// The regions each of the running scenario's steps after its Background ran.
     private var stepRuns = [CoverageScores.StepRun]()
     private var scenarios = [ScenarioRecord]()
-    /// The code each scenario ran, when the settings ask for `regions.json`.
-    private var scenarioRegions = [ScenarioRegions]()
     private var features = [FeatureRecord]()
     private var problem: String?
     private let settings: CoverageSettings
@@ -265,12 +263,6 @@ final class CoverageRecorder {
         }
         if let scenario {
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
-            if settings.writesRegions {
-                scenarioRegions.append(ScenarioRegions(feature: finished.feature,
-                                                       line: finished.line,
-                                                       name: finished.name,
-                                                       ran: scenario.regions.sorted()))
-            }
         }
     }
 
@@ -311,9 +303,6 @@ final class CoverageRecorder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
-        if settings.writesRegions, let regions = try? encoder.encode(RegionsFile(regions: codeRegions(), scenarios: scenarioRegions)) {
-            try? regions.write(to: folder.appendingPathComponent("regions.json"))
-        }
         return url
     }
 }

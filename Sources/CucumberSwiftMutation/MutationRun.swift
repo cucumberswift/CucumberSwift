@@ -156,12 +156,7 @@ public final class MutationRun {
         }
         guard !mutants.isEmpty else { return Status.completed }
         guard let timeout = runBaseline(in: copy) else { return Status.baselineFailed }
-        let coverage = ScenarioCoverage.read(inRunsUnder: options.output.appendingPathComponent("coverage"))
-        if let coverage {
-            log("Coverage: \(coverage.scenarios.count) scenarios ran. A mutant in code that no scenario runs isn't tested.")
-        } else {
-            log("No coverage of the scenarios: the package doesn't measure it with CucumberSwift, so every mutant is tested.")
-        }
+        let coverage = readCoverage()
 
         let runs = options.output.appendingPathComponent("runs")
         try? fileManager.removeItem(at: runs)
@@ -207,7 +202,7 @@ public final class MutationRun {
             return nil
         }
         var baseline = 0.0
-        // The first run measures the code each scenario runs, into regions.json; the mutants' runs measure nothing.
+        // The first run measures the code each scenario runs, into the coverage folder; the mutants' runs measure nothing.
         let coverageFolder = options.output.appendingPathComponent("coverage")
         try? FileManager.default.removeItem(at: coverageFolder)
         try? FileManager.default.removeItem(at: baselineReport)
@@ -215,7 +210,6 @@ public final class MutationRun {
         let measuring = [
             "CUCUMBER_COVERAGE": "YES",
             "CUCUMBER_COVERAGE_PATH": coverageFolder.path,
-            "CUCUMBER_COVERAGE_REGIONS": "YES",
             "CUCUMBER_REPORT_PATH": baselineReport.path
         ]
         for number in 1...options.baselineRuns {
@@ -325,6 +319,24 @@ extension MutationRun {
                     return "the build didn't start for \(mutant): \(output)"
             }
         }
+    }
+}
+
+// The coverage of the first baseline run.
+extension MutationRun {
+    /// The code each scenario ran in the first baseline run, or nil when it can't tell: then every mutant is tested,
+    /// which is slower but gives the same verdicts.
+    private func readCoverage() -> ScenarioCoverage? {
+        do {
+            if let coverage = try ScenarioCoverage.read(inRunsUnder: options.output.appendingPathComponent("coverage")) {
+                log("Coverage: \(coverage.scenarios.count) scenarios ran. A mutant in code that no scenario runs isn't tested.")
+                return coverage
+            }
+            log("No coverage of the scenarios: the package doesn't measure it with CucumberSwift, so every mutant is tested.")
+        } catch {
+            log("warning: can't read the coverage of the scenarios, so every mutant is tested: \(error)")
+        }
+        return nil
     }
 }
 

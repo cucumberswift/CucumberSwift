@@ -8,34 +8,36 @@ import XCTest
 @testable import CucumberSwiftMutation
 
 final class ScenarioCoverageMergeTests: TemporaryFolderTestCase {
-    private func writeRun(_ name: String, regions: String, scenarios: String) throws {
-        let run = folder.appendingPathComponent("run-\(name)")
-        try FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-        try #"{"version": 1, "regions": [\#(regions)], "scenarios": [\#(scenarios)]}"#.write(to: run.appendingPathComponent("regions.json"), atomically: true, encoding: .utf8)
+    private func function(_ name: String, lines: [Int]) -> CoverageRunFixture.Function {
+        CoverageRunFixture.Function(name: name, file: "/x/Sources/Voting/Voting.swift", spans: lines.map { [$0, 1, $0, 9] })
     }
 
-    private func region(_ line: Int) -> String {
-        #"{"file": "/x/Voting.swift", "lineStart": \#(line), "columnStart": 1, "lineEnd": \#(line), "columnEnd": 9}"#
+    private func scenario(_ name: String, line: Int, ran: [Int]) -> CoverageRunFixture.Scenario {
+        CoverageRunFixture.Scenario(feature: "file:///t/VotingTests.xctest/Features/\(name).feature", line: line, name: name, ran: ran)
     }
 
-    func testMergesTheRunsOfSeveralTestBundles() throws {
-        // The first bundle's process numbered the regions of lines 10 and 14. The second's numbered 14 and 18.
-        let first = #"{"feature": "A.feature", "line": 3, "name": "a", "ran": [0]}"#
-        let second = #"{"feature": "B.feature", "line": 3, "name": "b", "ran": [1]}"#
-        try writeRun("A", regions: "\(region(10)), \(region(14))", scenarios: first)
-        try writeRun("B", regions: "\(region(14)), \(region(18))", scenarios: second)
+    func testTheRunsOfOneTestBinaryShareItsRegions() throws {
+        // `swift test` runs XCTest and Swift Testing in two processes of one binary, and each writes a run folder.
+        let functions = [function("canVote", lines: [10, 14]), function("canRetire", lines: [18])]
+        try CoverageRunFixture(functions: functions, scenarios: [scenario("a", line: 3, ran: [0])]).write(named: "xctest", in: folder)
+        try CoverageRunFixture(functions: functions, scenarios: [scenario("b", line: 3, ran: [2])]).write(named: "swift-testing", in: folder)
         let coverage = try XCTUnwrap(ScenarioCoverage.read(inRunsUnder: folder))
-        XCTAssertEqual(coverage.regions.map(\.lineStart), [10, 14, 18], "The region of line 14 is kept once")
-        XCTAssertEqual(coverage.scenarios.map(\.name), ["a", "b"])
-        XCTAssertEqual(coverage.scenarios.map(\.ran), [[0], [2]], "The second run's region 1 is the merged region 2, line 18")
+        XCTAssertEqual(coverage.regions.map(\.lineStart), [10, 14, 18], "Each region of the binary is kept once")
+        XCTAssertEqual(coverage.scenarios.map(\.name).sorted(), ["a", "b"])
+        XCTAssertEqual(coverage.scenarios(running: Mutant.fixture(line: 18, column: 5)).map(\.name), ["b"])
+        XCTAssertEqual(coverage.scenarios(running: Mutant.fixture(line: 10, column: 5)).map(\.name), ["a"])
     }
 
-    func testIgnoresAFolderWithoutRegionsAndReturnsNilWhenNoRunHasAny() throws {
-        XCTAssertNil(ScenarioCoverage.read(inRunsUnder: folder))
-        try FileManager.default.createDirectory(at: folder.appendingPathComponent("run-empty"), withIntermediateDirectories: true)
-        XCTAssertNil(ScenarioCoverage.read(inRunsUnder: folder))
-        try writeRun("A", regions: region(10), scenarios: #"{"feature": "A.feature", "line": 3, "name": "a", "ran": [0]}"#)
-        XCTAssertEqual(ScenarioCoverage.read(inRunsUnder: folder)?.scenarios.count, 1)
+    func testCodeThatTwoTestBundlesMeasureCountsTheScenariosOfBoth() throws {
+        // An Xcode scheme can run two test bundles that both link the code: each binary measures its own copy.
+        var first = CoverageRunFixture(functions: [function("canVote", lines: [14])], scenarios: [scenario("a", line: 3, ran: [0])])
+        first.binary = "FirstTests"
+        var second = CoverageRunFixture(functions: [function("canVote", lines: [14])], scenarios: [scenario("b", line: 3, ran: [0])])
+        second.binary = "SecondTests"
+        try first.write(named: "A", in: folder)
+        try second.write(named: "B", in: folder)
+        let coverage = try XCTUnwrap(ScenarioCoverage.read(inRunsUnder: folder))
+        XCTAssertEqual(coverage.scenarios(running: Mutant.fixture(line: 14, column: 5)).map(\.name).sorted(), ["a", "b"])
     }
 }
 #endif
