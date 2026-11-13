@@ -78,8 +78,8 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testTheCopyAndTheLockFileAreGoneAtTheEnd() throws {
-        _ = run(runner { _ in .finished(0) })
-        let work = (try? FileManager.default.contentsOfDirectory(atPath: folder.appendingPathComponent("work").path)) ?? []
+        XCTAssertEqual(run(runner { _ in .finished(0) }), MutationRun.Status.completed)
+        let work = try FileManager.default.contentsOfDirectory(atPath: folder.appendingPathComponent("work").path)
         XCTAssertEqual(work, [])
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation.lock").path))
     }
