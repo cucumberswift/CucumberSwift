@@ -52,11 +52,22 @@ final class ScenarioCoverageTests: TemporaryFolderTestCase {
         XCTAssertEqual(read.scenarios(running: mutant(line: 1, column: 45)), [ScenarioID(feature: "Features/Voting.feature", line: 4, name: "An adult can vote")])
     }
 
-    func testNoFinishedRunMeansNoCoverage() throws {
+    func testNoRunMeansNoCoverage() throws {
         XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder))
         XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder.appendingPathComponent("missing")))
-        try FileManager.default.createDirectory(at: folder.appendingPathComponent("run-empty"), withIntermediateDirectories: true)
-        XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder), "A run folder without a manifest didn't finish")
+    }
+
+    func testARunThatLostItsCoverageBesideOneThatHasItIsAnError() throws {
+        // Using the other run alone would leave a mutant that only the lost run's scenarios ran with no scenario.
+        let canVote = CoverageRunFixture.Function(name: "canVote", file: "/copy/Sources/Voting/Voting.swift", spans: [[1, 40, 1, 52]])
+        let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [0])
+        try CoverageRunFixture(functions: [canVote], scenarios: [adult]).write(named: "xctest", in: folder)
+        let lost = folder.appendingPathComponent("run-swift-testing")
+        try FileManager.default.createDirectory(at: lost, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try ScenarioCoverage.read(inRunsUnder: folder)) { error in
+            guard case .incompleteRun(let named)? = error as? ScenarioCoverage.ReadError else { return XCTFail("\(error)") }
+            XCTAssertEqual(URL(fileURLWithPath: named).lastPathComponent, lost.lastPathComponent)
+        }
     }
 
     func testARunThatMeasuredNoCodeMeansNoCoverage() throws {
