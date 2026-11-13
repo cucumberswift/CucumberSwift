@@ -186,30 +186,23 @@ final class MutationReporterTests: XCTestCase {
         XCTAssertFalse(run.output.contains { $0.hasPrefix("CucumberSwift mutation") })
     }
 
-    func testTheRunWritesTheRegionsEachScenarioRanWhenAsked() throws {
+    func testTheManifestRecordsWhereEachRegionAScenarioRanIs() throws {
+        // Mutation testing reads this to tell which scenarios ran a mutant's code: `ScenarioCoverage` in the tool.
         try skipWithoutCoverage()
-        var settings = settings(report: nil)
-        settings.writesRegions = true
-        let recorder = CoverageRecorder(coverageFolder: folder, settings: settings, runID: "regions")
+        let recorder = CoverageRecorder(coverageFolder: folder, settings: settings(report: nil), runID: "spans")
         recorder.scenarioStarted()
         XCTAssertTrue(isAdult(30))
         recorder.scenarioFinished(.init(feature: "Voting.feature", featureName: "Voting", line: 4, name: "An adult can vote", tags: []))
-        recorder.writeManifest()
-        let data = try Data(contentsOf: recorder.folder.appendingPathComponent("regions.json"))
-        let file = try JSONDecoder().decode(CoverageRecorder.RegionsFile.self, from: data)
-        XCTAssertEqual(file.version, 1)
-        XCTAssertEqual(file.scenarios.map(\.line), [4])
-        let ran = file.scenarios[0].ran.map { file.regions[$0] }
-        XCTAssertTrue(ran.contains { $0.file.hasSuffix("MutationReporterTests.swift") && $0.lineStart == adultLine + 1 }, "\(ran)")
-    }
-
-    func testTheRunWritesNoRegionsFileUnlessAsked() throws {
-        try skipWithoutCoverage()
-        let recorder = CoverageRecorder(coverageFolder: folder, settings: settings(report: nil), runID: "noRegions")
-        recorder.scenarioStarted()
-        recorder.scenarioFinished(.init(feature: "Voting.feature", featureName: "Voting", line: 4, name: "An adult can vote", tags: []))
-        recorder.writeManifest()
-        XCTAssertFalse(FileManager.default.fileExists(atPath: recorder.folder.appendingPathComponent("regions.json").path))
+        let url = try XCTUnwrap(recorder.writeManifest())
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let manifest = try decoder.decode(CoverageManifest.self, from: Data(contentsOf: url))
+        let measured = try XCTUnwrap(manifest.measured)
+        // The run numbers the regions from 0 across the measured functions, in their order.
+        let places = measured.flatMap { function in (function.spans ?? []).map { (file: function.file, span: $0) } }
+        XCTAssertEqual(places.count, measured.reduce(0) { $0 + $1.regions }, "Every region has a place")
+        let ran = try XCTUnwrap(manifest.scenarios.first?.coverage?.regions).map { places[$0] }
+        XCTAssertTrue(ran.contains { $0.file.hasSuffix("MutationReporterTests.swift") && $0.span.first == adultLine + 1 }, "\(ran)")
     }
 
     func testAScenariosCoverageIncludesItsBeforeScenarioHooks() throws {

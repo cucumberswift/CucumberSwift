@@ -10,6 +10,22 @@ import XCTest
 final class WorkFolderTests: TemporaryFolderTestCase {
     private func lockFolder() -> URL { folder.appendingPathComponent("reports") }
 
+    func testARunThatFindsTheLockTakenStopsWithoutReplacingIt() throws {
+        // Another run wrote the lock after this one checked for a dead run's lock.
+        let root = try makePackage()
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        try FileManager.default.createDirectory(at: lockFolder(), withIntermediateDirectories: true)
+        let holder = try JSONEncoder().encode(WorkFolder.Lock(pid: 4_242, folder: "/elsewhere/mutation-copy-4242"))
+        try holder.write(to: lock)
+        let location = folder.appendingPathComponent("work")
+        XCTAssertThrowsError(try WorkFolder(copying: root, into: location, lockFolder: lockFolder())) {
+            XCTAssertEqual($0 as? WorkFolder.Failure, .anotherRunIsActive(pid: 4_242))
+        }
+        XCTAssertEqual(try Data(contentsOf: lock), holder, "The other run's lock stays as it was")
+        let left = (try? FileManager.default.contentsOfDirectory(atPath: location.path)) ?? []
+        XCTAssertEqual(left.filter { $0.hasPrefix(WorkFolder.folderPrefix) }, [], "Nothing was copied")
+    }
+
     func testACopyThatFailsLeavesNeitherThePartialCopyNorTheLock() throws {
         let location = folder.appendingPathComponent("work")
         let missing = folder.appendingPathComponent("no-such-package")

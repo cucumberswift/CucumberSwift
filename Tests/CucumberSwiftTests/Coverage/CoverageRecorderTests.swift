@@ -86,12 +86,66 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(recorder.manifest.problem, "The profile format of this test process is version 11, and CucumberSwift writes version 10, the one of Xcode 26.")
     }
 
-    func testWithScoresOffTheRecorderMeasuresNoCodeAndSaysWhy() {
+    func testWithScoresOffTheRecorderSaysWhy() {
         var settings = CoverageSettings()
         settings.scoresOffReason = "parallel testing"
         let recorder = CoverageRecorder(coverageFolder: folder, counters: ProfileCounters(binaries: []), settings: settings, runID: "run")
-        XCTAssertNil(recorder.code)
         XCTAssertEqual(recorder.scoresProblem, "parallel testing")
+    }
+
+    // A parallel run's worker scores nothing, and records each scenario's code for cucumberswift coverage merge
+    // (#515).
+    func testWithScoresOffTheRecorderScoresNothingAndRecordsTheCodeForTheMerge() throws {
+        let counters = ProfileCounters.loaded()
+        try XCTSkipIf(counters.binaries.isEmpty, "This bundle wasn't built with code coverage.")
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageRecorderTests.swift"]
+        settings.scoresOffReason = "parallel testing"
+        settings.errorLevel = 40
+        let recorder = CoverageRecorder(coverageFolder: folder, counters: counters, settings: settings, runID: "run")
+        let rule = ScenarioRule(title: "Small numbers", line: 6)
+        recorder.scenarioStarted()
+        recorder.backgroundFinished()
+        recorder.stepStarted()
+        _ = Self.coveredHalf(of: 3)
+        recorder.stepFinished(line: 9, isBackground: false)
+        recorder.scenarioFinished(.init(feature: featureURI,
+                                        featureName: "A",
+                                        line: 8,
+                                        name: "Small",
+                                        tags: ["fast"],
+                                        duration: 0.5,
+                                        group: "9",
+                                        rule: rule,
+                                        featureLine: 2,
+                                        issueFile: URL(fileURLWithPath: "/src/a.feature")))
+        XCTAssertEqual(recorder.featureFinished(feature: featureURI, featureName: "A", line: 2), [])
+
+        let manifest = recorder.manifest
+        XCTAssertEqual(manifest.features, [])
+        XCTAssertEqual(manifest.scoresProblem, "parallel testing")
+        XCTAssertEqual(manifest.settings?.errorLevel, 40)
+        let measured = try XCTUnwrap(manifest.measured)
+        let function = try XCTUnwrap(measured.firstIndex { $0.readableName.contains("coveredHalf") }, "\(measured.map(\.readableName))")
+        let first = measured[..<function].reduce(0) { $0 + $1.regions }
+        let scenario = try XCTUnwrap(manifest.scenarios.first)
+        XCTAssertEqual(scenario.featureLine, 2)
+        XCTAssertEqual(scenario.issueFile, "file:///src/a.feature")
+        let coverage = try XCTUnwrap(scenario.coverage)
+        XCTAssertEqual(coverage.rule, "Small numbers")
+        XCTAssertEqual(coverage.ruleLine, 6)
+        XCTAssertEqual(coverage.group, "9")
+        XCTAssertEqual(coverage.backgroundRegions, [])
+        XCTAssertEqual(coverage.steps.map(\.line), [9])
+        // The scenario ran one of the function's two branches, so all but one of its regions.
+        let ran = coverage.regions.filter { (first..<first + measured[function].regions).contains($0) }
+        XCTAssertEqual(ran.count, measured[function].regions - 1)
+        XCTAssertEqual(coverage.steps.first?.regions, coverage.regions)
+        // Each region has a span, in the file this test is in, where the function's two branches are on later lines
+        // than its first.
+        let spans = try XCTUnwrap(measured[function].spans)
+        XCTAssertEqual(spans.count, measured[function].regions)
+        XCTAssertTrue(spans.allSatisfy { $0.count == 4 && $0[0] > 0 && $0[1] > 0 && $0[2] >= $0[0] }, "\(spans)")
     }
 
     func testAFolderThatCantBeMadeIsTheManifestsProblem() throws {

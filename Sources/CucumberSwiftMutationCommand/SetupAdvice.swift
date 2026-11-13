@@ -1,6 +1,6 @@
 //
 //  SetupAdvice.swift
-//  CucumberSwiftMutationTestingTool
+//  CucumberSwiftMutationCommand
 //
 
 /// What the command prints when CucumberSwift's Macros trait is off, so the tool can't read Swift code.

@@ -77,7 +77,7 @@ struct MutationFindings: Equatable {
         var summary = [CoverageIssue]()
         if !stale.isEmpty {
             let message = "The mutation report is out of date: \(stale.sorted().joined(separator: ", ")) changed after it was written"
-                + "\(dated(report.date)). Run `cucumberswift-mutation-test` again."
+                + "\(dated(report.date)). Run `swift run cucumberswift mutation-test` again."
             summary.append(CoverageIssue(severity: .error, message: message, file: file, line: featureLine, kind: .mutation))
         }
         guard counted > 0 || !stale.isEmpty else { return nil }
@@ -110,7 +110,7 @@ struct MutationFindings: Equatable {
         let lines = missing.map { String($0.line) }.joined(separator: ", ")
         let message = "The mutation report is from a run of other scenarios: the "
             + (missing.count == 1 ? "scenario at line \(lines) wasn't" : "scenarios at lines \(lines) weren't")
-            + " in it\(dated(report.date)). Run `cucumberswift-mutation-test` with the same CUCUMBER_TAGS as these tests."
+            + " in it\(dated(report.date)). Run `swift run cucumberswift mutation-test` with the same CUCUMBER_TAGS as these tests."
         return CoverageIssue(severity: .error, message: message, file: file, line: featureLine, kind: .mutation)
     }
 
