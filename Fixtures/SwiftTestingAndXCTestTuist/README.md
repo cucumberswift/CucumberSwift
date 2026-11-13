@@ -13,5 +13,9 @@ stay on XCTest:
 Each test target links one runner and has its own feature files and step definitions. One scheme tests
 both. If either runner stops working beside the other, this fixture fails.
 
+Both targets write one Cucumber JSON report. `mise run test-fixtures` checks that it has the features of both
+targets, and then runs only `BasketUnitTests` again. That is a new run on the Simulator, where nothing
+starts every test process of a run, so the report must have only that target's features.
+
 Runs on the iOS simulator in `xcodebuild-destination`. Needs the Tuist version pinned in `.mise.toml`.
 Run every fixture with `mise run test-fixtures`.

@@ -1,0 +1,1 @@
+../CucumberSwift/Coverage/CoverageSettings.swift
