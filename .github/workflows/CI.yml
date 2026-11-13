@@ -139,6 +139,7 @@ jobs:
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      coverage_merge: ${{ steps.merge.outputs.coverage_merge }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
@@ -189,12 +190,13 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # The folders in Fixtures/, as a JSON list, for Fixture tests' matrix: one job each.
-      # CarthageXCFramework is left out, as `mise run test-fixtures` leaves it out: Carthage
-      # tests runs it. Read from the commit's tree, which the sparse checkout has.
+      # CarthageXCFramework and CoverageMergePackage are left out, as `mise run test-fixtures` leaves
+      # them out: Carthage tests and Coverage merge fixture run them. Read from the commit's tree,
+      # which the sparse checkout has.
       - name: List the fixtures
         id: fixtures
         run: |
-          fixtures=$(git ls-tree -d --name-only HEAD Fixtures/ | sed 's|^Fixtures/||' | grep -vx CarthageXCFramework \
+          fixtures=$(git ls-tree -d --name-only HEAD Fixtures/ | sed 's|^Fixtures/||' | grep -vxE 'CarthageXCFramework|CoverageMergePackage' \
             | python3 -c 'import json, sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
           echo "Fixtures: $fixtures"
           if [ "$fixtures" = "[]" ]; then
@@ -202,6 +204,28 @@ jobs:
             exit 1
           fi
           echo "fixtures=$fixtures" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes the coverage merge: the code that writes the coverage files and
+      # scores them, the cucumberswift tool, its fixture and script, the package manifests or this workflow. Not
+      # the documentation, which lives in Sources too. Always on any other event, such as the merge queue.
+      - name: Decide whether the coverage merge fixture runs
+        id: merge
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwift/Runner/CoverageScoreTests\.swift$|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Coverage merge fixture runs: $run"
+          echo "coverage_merge=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -1126,12 +1150,45 @@ jobs:
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
 
-  # A required check: passes only when every fixture's job and Swift 6.3 tests passed. A job
+  # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
+  # their coverage folders, and fails unless every way gives the same scores (#515). It takes minutes, so a pull
+  # request runs it only when it changes the coverage merge (coverage_merge, from the changes job). Fixture
+  # tests, below, requires it when it runs.
+  coverage_merge_fixture:
+    name: Coverage merge fixture
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.coverage_merge == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Merge the coverage of parallel and sharded runs
+        run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
+
+  # A required check: passes only when every fixture's job, Swift 6.3 tests and, when it runs, the coverage merge fixture passed. A job
   # without a matrix, so that it reports under this name when the jobs it needs are skipped. It
   # skips when they skip, on a run with no code, which counts as passing.
   fixture_tests:
     name: Fixture tests
-    needs: [changes, fixture_test, swift_6_3_tests]
+    needs: [changes, fixture_test, swift_6_3_tests, coverage_merge_fixture]
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1141,11 +1198,14 @@ jobs:
         env:
           FIXTURES: ${{ needs.fixture_test.result }}
           SWIFT_6_3: ${{ needs.swift_6_3_tests.result }}
+          COVERAGE_MERGE: ${{ needs.coverage_merge_fixture.result }}
         run: |
           echo "Fixture jobs: $FIXTURES"
           echo "Swift 6.3 tests: $SWIFT_6_3"
-          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ]; then
-            echo "::error::A fixture's job or Swift 6.3 tests didn't pass: see the jobs above."
+          echo "Coverage merge fixture: $COVERAGE_MERGE"
+          # The coverage merge fixture skips on a pull request that doesn't change it.
+          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ] || { [ "$COVERAGE_MERGE" != success ] && [ "$COVERAGE_MERGE" != skipped ]; }; then
+            echo "::error::A fixture's job, Swift 6.3 tests or the coverage merge fixture didn't pass: see the jobs above."
             exit 1
           fi
 

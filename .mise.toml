@@ -96,6 +96,9 @@ for name in $selected; do
   if [ "$name" = CarthageXCFramework ]; then
     echo "error: CarthageXCFramework is a fixture that mise run test-carthage runs"
     exit 1
+  elif [ "$name" = CoverageMergePackage ]; then
+    echo "error: CoverageMergePackage is a fixture that mise run test-coverage-merge runs"
+    exit 1
   elif [ ! -d "Fixtures/$name" ] || [ "${name#*/}" != "$name" ]; then
     echo "error: $name is not a folder in Fixtures/"
     exit 1
@@ -108,6 +111,8 @@ for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
+  # Runs in several ways with code coverage: `mise run test-coverage-merge` runs it.
+  if [ "$name" = CoverageMergePackage ]; then continue; fi
   case " ${selected:-$name} " in
     *" $name "*) ;;
     *) continue ;;
@@ -340,6 +345,13 @@ elif ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xc
   exit 1
 fi
 '''
+
+[tasks.test-coverage-merge]
+description = "Check that cucumberswift coverage merge scores parallel and sharded runs as one run"
+# Runs Fixtures/CoverageMergePackage with code coverage one scenario at a time, with Xcode's parallel
+# testing and in 2 shards, with each runner, and fails unless the merged scores are the same every way.
+# See "Fixtures" in CONTRIBUTING.md.
+run = ".github/scripts/coverage-merge-fixture.sh"
 
 [tasks.test-docs-examples]
 description = "Compile every Swift example in the DocC catalog"
