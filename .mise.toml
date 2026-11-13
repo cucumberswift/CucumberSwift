@@ -69,6 +69,8 @@ description = "Build and test every project in Fixtures/"
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either, and run as many tests as expected-tests lists. Its Swift files are put back as they were afterwards.
+# A fixture with a proof file saves the lines of its output that contain a line of that file as proof,
+# which CI's Proof check shows when PROOF_DIR is set (.github/scripts/proof.py).
 # FIXTURES, a comma-separated list of folder names in Fixtures/, runs only those fixtures, such as
 # FIXTURES=SwiftTestingPackage mise run test-fixtures. A name that isn't a fixture is an error, so
 # that a typo fails instead of passing with nothing run.
@@ -226,6 +228,12 @@ for fixture in Fixtures/*/; do
   if [ -f "$fixture/expected-output" ]; then
     expect_all "$fixture/expected-output" "$log"
     echo "$name: the output has every line in expected-output."
+  fi
+  # A fixture with a proof file saves the output lines it contains as proof, for CI's Proof check
+  # (.github/scripts/proof.py). Nothing is saved unless PROOF_DIR is set.
+  if [ -f "$fixture/proof" ]; then
+    python3 .github/scripts/proof.py log --title "$name's output" --source "$name (mise run test-fixtures)" \
+      --patterns "$fixture/proof" "$log"
   fi
   if grep -qs CucumberSwiftLint "$fixture/Package.swift" "$fixture/Project.swift"; then
     if [ -z "$(find "$build" -name '*.lint-stamp' 2>/dev/null)" ]; then

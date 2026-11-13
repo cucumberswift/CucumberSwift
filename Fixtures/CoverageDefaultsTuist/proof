@@ -1,0 +1,4 @@
+# Lines of this fixture's output that CI's Proof check shows: what each runner printed for the Grading
+# feature's coverage (#531, #604). See "Proof" in CONTRIBUTING.md.
+CucumberSwift coverage: Grading:
+Grading.feature:1: warning: Feature coverage

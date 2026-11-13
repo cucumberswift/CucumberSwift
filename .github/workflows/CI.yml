@@ -1105,7 +1105,16 @@ jobs:
       - name: Build and test the fixtures
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          # Fixtures with a proof file save the output lines it names here, for the Proof check (#604).
+          PROOF_DIR: ${{ runner.temp }}/proof
         run: mise run test-fixtures
+      - name: Upload the proof
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proof-fixture-tests
+          path: ${{ runner.temp }}/proof
+          if-no-files-found: ignore
       # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
       # their coverage folders, and fails unless every way gives the same scores (#515). It takes minutes, so a pull
       # request runs it only when it changes the coverage merge (coverage_merge, from the changes job).
@@ -1117,6 +1126,64 @@ jobs:
       # cancelled, which hides whether it passed (#480).
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # Publishes the Proof check on a pull request's head commit: what the tests saw, for the author to
+  # confirm under `## Proof` in the description (#604). A job that saves proof uploads a proof-<job> artifact
+  # of items (.github/scripts/proof.py says the format); this job gathers them and creates the check run with
+  # the Checks API. With no proof the check is neutral, "No proof saved". Not a required check. Only this job
+  # has checks: write. A pull request from a fork gets a read-only token whatever this says, so the page goes
+  # to the job's summary instead, and the check isn't created.
+  proof:
+    name: Proof
+    needs: [changes, fixture_tests]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Gather the proof the jobs uploaded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/proof"
+          # No artifact matches when no job saved proof, which is not an error.
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'proof-*' --dir "$RUNNER_TEMP/proof" || true
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --paginate \
+            --jq ".artifacts[] | select(.name | startswith(\"proof-\")) | {(.name): \"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/\(.id)\"}" \
+            | jq -s 'add // {}' > "$RUNNER_TEMP/artifacts.json"
+          python3 .github/scripts/proof.py report --artifacts "$RUNNER_TEMP/artifacts.json" --out "$RUNNER_TEMP/check.json" "$RUNNER_TEMP/proof"
+      - name: Publish the Proof check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          CHECK_JSON: ${{ runner.temp }}/check.json
+        with:
+          script: |
+            const fs = require('fs');
+            const check = JSON.parse(fs.readFileSync(process.env.CHECK_JSON, 'utf8'));
+            const pull = context.payload.pull_request;
+            if (pull.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) {
+              // A fork's token can't write a check.
+              await core.summary.addHeading(check.title).addRaw(check.summary).write();
+              core.notice('The pull request is from a fork, so the proof is in this job\'s summary, not a check.');
+              return;
+            }
+            await github.rest.checks.create({
+              ...context.repo,
+              name: 'Proof',
+              head_sha: pull.head.sha,
+              status: 'completed',
+              conclusion: check.conclusion,
+              details_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              output: { title: check.title, summary: check.summary },
+            });
+            core.info(`Proof check: ${check.conclusion}, ${check.title}`);
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:
