@@ -122,22 +122,25 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         let folder = lockFolder()
         // Run B starts while run A judges the dead lock. If B reads the dead lock too, it calls it dead only after A
         // has written its own lock: the order in which an unguarded B removes A's lock.
-        _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in
-            DispatchQueue.global().async {
-                do {
-                    _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { pid in
-                        guard pid == dead else { return true }
-                        secondReadTheDeadLock.signal()
-                        firstTriedToWrite.wait()
-                        return false
-                    }
-                    try secondLock.write(to: lock, options: .withoutOverwriting)
-                    second.wroteItsLock = true
-                } catch {
-                    second.cleanupError = error
-                }
-                secondDone.signal()
+        // B's judgement of a lock: one that isn't the dead run's is a live run's.
+        let secondJudges = { (pid: Int32) -> Bool in
+            guard pid == dead else { return true }
+            secondReadTheDeadLock.signal()
+            firstTriedToWrite.wait()
+            return false
+        }
+        let secondRun = {
+            do {
+                _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder, isAlive: secondJudges)
+                try secondLock.write(to: lock, options: .withoutOverwriting)
+                second.wroteItsLock = true
+            } catch {
+                second.cleanupError = error
             }
+            secondDone.signal()
+        }
+        _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in
+            DispatchQueue.global().async(execute: secondRun)
             _ = secondReadTheDeadLock.wait(timeout: .now() + 1)
             return false
         }
