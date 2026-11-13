@@ -41,7 +41,7 @@ struct CoverageMap {
         let counter: Counter
         let lineStart: Int
         let lineEnd: Int
-        /// The region's first and last columns, 1-based and counted in UTF-8 bytes. 0 when not known.
+        /// The columns the region starts and ends at, counted in UTF-8 bytes from 1. 0 when not known.
         var columnStart = 0
         var columnEnd = 0
 
