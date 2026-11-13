@@ -198,11 +198,6 @@ final class CoverageRecorder {
         return ran
     }
 
-    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
-    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
-        featureScenarios[feature]?.map(\.scenario) ?? []
-    }
-
     func scenarioStarted() {
         snapshot = problem == nil ? counters.snapshot() : nil
         backgroundCounts = nil
@@ -308,5 +303,13 @@ final class CoverageRecorder {
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
         return url
+    }
+}
+
+// What the Mutation test reads while a feature runs.
+extension CoverageRecorder {
+    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
+    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
+        featureScenarios[feature]?.map(\.scenario) ?? []
     }
 }

@@ -40,7 +40,9 @@ public enum MutationTestCommand {
         let status = run.run()
         // A cancelled run is still being cleaned up by the signal handler, which exits when it is done.
         if status == MutationRun.Status.cancelled { dispatchMain() }
-        withExtendedLifetime(handlers) {}
+        withExtendedLifetime(handlers) {
+            // Keeps the signal handlers until the run is over: a released source no longer handles its signal.
+        }
         // Only a completed run wrote this run's report.
         if options.format == .xcode, status == MutationRun.Status.completed {
             for warning in SurvivorWarning.read(report: options.output.appendingPathComponent("mutation-report.json"), root: options.root) {

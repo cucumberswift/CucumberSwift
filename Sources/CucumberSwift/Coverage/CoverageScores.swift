@@ -227,8 +227,6 @@ struct CoverageScores: Codable, Equatable {
     let gaps: [Gap]
     /// The redundant steps, by line. Empty with the redundancy score off.
     let redundantSteps: [RedundantStep]
-    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
-    let isMutationAware: Bool
 
     /// The feature's coverage, from 0 to 100: the regions its scenarios ran, of the regions in the
     /// functions they entered.
@@ -289,6 +287,41 @@ struct CoverageScores: Codable, Equatable {
         return found.values.sorted { $0.line < $1.line }
     }
 
+    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
+    /// nil, or the scenarios of one of its Rules.
+    struct Part: Equatable {
+        let rule: ScenarioRule?
+        let scores: CoverageScores
+    }
+
+    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
+    let isMutationAware: Bool
+
+    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
+    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
+    /// the feature file, whatever order they ran in.
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)],
+                      code: MeasuredCode,
+                      isRedundancy: Bool,
+                      detections: Detections? = nil) -> [Part] {
+        let inOrder = scenarios.enumerated()
+            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
+            .map(\.element)
+        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
+        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
+        return parts.map { rule in
+            let ran = inOrder.filter { $0.rule == rule }.map(\.scenario)
+            return Part(rule: rule, scores: CoverageScores(scenarios: ran, code: code, isRedundancy: isRedundancy, detections: detections))
+        }
+    }
+
+    private func percent(_ part: Int, of whole: Int) -> Double {
+        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
+    }
+}
+
+extension CoverageScores {
     /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
     init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool, detections: Detections? = nil) {
         var runs = [Int: Int]()
@@ -348,41 +381,6 @@ struct CoverageScores: Codable, Equatable {
         .sorted { ($0.regionsNotRun, $1.file, $1.line) > ($1.regionsNotRun, $0.file, $0.line) }
     }
 
-    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
-    /// nil, or the scenarios of one of its Rules.
-    struct Part: Equatable {
-        let rule: ScenarioRule?
-        let scores: CoverageScores
-    }
-
-    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
-    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
-    /// the feature file, whatever order they ran in.
-    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
-    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)],
-                      code: MeasuredCode,
-                      isRedundancy: Bool,
-                      detections: Detections? = nil) -> [Part] {
-        let inOrder = scenarios.enumerated()
-            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
-            .map(\.element)
-        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
-        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
-        return parts.map { rule in
-            Part(rule: rule,
-                 scores: CoverageScores(scenarios: inOrder.filter { $0.rule == rule }.map(\.scenario),
-                                        code: code,
-                                        isRedundancy: isRedundancy,
-                                        detections: detections))
-        }
-    }
-
-    private func percent(_ part: Int, of whole: Int) -> Double {
-        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
-    }
-}
-
-extension CoverageScores {
     /// Reads the scores from a manifest. A manifest that CucumberSwift 6.8 wrote has no `isMutationAware`, which is
     /// then false: the field is new, so the manifest's form, and its version, stay the same.
     init(from decoder: Decoder) throws {
