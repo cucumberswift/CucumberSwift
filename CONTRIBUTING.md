@@ -351,6 +351,19 @@ Each of these problems has a simple fix:
 - Think about the edge cases: empty or whitespace-only input, accented characters and other Unicode, `And` and `But` steps, tags, comments, data tables and doc strings.
 - A failing step must never be reported as passing. Anything that could hide a failure is a serious bug.
 
+**Proof.** Our GitHub Actions CI workflow publishes a `Proof` check on your pull request's last commit. The check shows what the tests saw while they ran your change, so a reviewer can read the result without checking out your branch. Your tests save the proof, and you confirm it.
+
+- **A fixture saves lines of its output.** Add a `proof` file to the fixture that covers your change. Each line of the file is text that an output line must contain to be saved, and lines that start with `#` are comments. `mise run test-fixtures` then saves every output line that contains one of them, for example `Fixtures/CoverageDefaultsTuist/proof`:
+
+  ```text
+  CucumberSwift coverage: Grading:
+  Grading.feature:1: warning: Feature coverage
+  ```
+- **Any other step saves a file in `$PROOF_DIR`.** Our CI sets it in the jobs that upload proof. `.github/scripts/proof.py save --title T --source S` saves its standard input as an item, `title` names what the item shows, and `source` names the test that saved it. A job that saves proof uploads the folder as an artifact named `proof-<job>`. `proof.py` documents the file format.
+- **A screenshot is linked, not shown.** `proof.py attachments --source S <result bundle>` saves the screenshots in an `.xcresult` with `xcrun xcresulttool export attachments`, which needs Xcode 16 or later. The check links to the artifact that holds the images.
+
+A pull request that saves no proof gets a neutral `Proof` check that says "No proof saved". Open the check on your pull request's last commit, then write a `## Proof` section in the description. For each item, say what it shows and why that proves your change. The check makes the proof, and your section says that the proof is right.
+
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
 - Swift regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.
