@@ -6,6 +6,30 @@
 #if os(macOS) || os(Linux)
 import Foundation
 
+/// The lock files that the runs in this process hold.
+private final class HeldLocks: @unchecked Sendable {
+    private let lock = NSLock()
+    private var paths = Set<String>()
+
+    func contains(_ file: URL) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return paths.contains(file.standardizedFileURL.path)
+    }
+
+    func insert(_ file: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        paths.insert(file.standardizedFileURL.path)
+    }
+
+    func remove(_ file: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        paths.remove(file.standardizedFileURL.path)
+    }
+}
+
 /// The temporary copy of the project that a run mutates, and the lock file that lets the next run clean up
 /// after a run that was killed. The user's own files are never mutated, so nothing needs reverting.
 public struct WorkFolder {
@@ -41,6 +65,9 @@ public struct WorkFolder {
         /// The folder that holds the copy, which the next run removes if this process is gone.
         var folder: String
     }
+
+    /// The lock files that runs in this process hold, by their standardized paths.
+    private static let held = HeldLocks()
 
     /// The prefix of every folder this tool creates, which it checks before it removes one.
     static let folderPrefix = "mutation-copy-"
@@ -107,7 +134,10 @@ public struct WorkFolder {
         guard let data = try? Data(contentsOf: lockFile), let lock = try? JSONDecoder().decode(Lock.self, from: data) else {
             return nil
         }
-        if lock.pid != getpid(), isAlive(lock.pid) { throw Failure.anotherRunIsActive(pid: lock.pid) }
+        // A lock with this process's ID is a dead run's whose ID the system gave to this process, unless this process
+        // holds it: then another run in this process is still active.
+        let isActive = lock.pid == getpid() ? held.contains(lockFile) : isAlive(lock.pid)
+        if isActive { throw Failure.anotherRunIsActive(pid: lock.pid) }
         let folder = URL(fileURLWithPath: lock.folder)
         // The lock file is data. Remove only a folder that this tool made, never whatever a lock names.
         let isOwn = folder.lastPathComponent.hasPrefix(folderPrefix)
@@ -183,12 +213,14 @@ public struct WorkFolder {
             try? fileManager.removeItem(at: lockFile)
             throw error
         }
+        Self.held.insert(lockFile)
     }
 
     /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue.
     public func remove() {
         Self.remove(folder)
         try? FileManager.default.removeItem(at: lockFile)
+        Self.held.remove(lockFile)
     }
 }
 #endif
