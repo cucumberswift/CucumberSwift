@@ -63,6 +63,9 @@ def write_item(folder, title, source, body, name=None, image=None):
     while path.exists():
         path = folder / f"{base}-{number}.md"
         number += 1
+    # The name is a slug, so it can't leave the folder; this keeps that true if slug changes.
+    if path.resolve().parent != folder.resolve():
+        raise ValueError(f"{path} is not directly in {folder}")
     lines = ["---", f"title: {one_line(title)}", f"source: {one_line(source)}"]
     if image:
         lines.append(f"image: {image}")
@@ -99,10 +102,9 @@ def matching_lines(patterns, log):
 def command_save(args):
     folder = proof_dir()
     if folder is None:
-        return 0
+        return
     path = write_item(folder, args.title, args.source, sys.stdin.read(), name=args.name)
     print(f"Saved proof: {path}")
-    return 0
 
 
 def command_log(args):
@@ -144,14 +146,13 @@ def save_attachments(folder, source, exported):
 def command_attachments(args):
     folder = proof_dir()
     if folder is None:
-        return 0
+        return
     with tempfile.TemporaryDirectory() as temp:
         exported = Path(temp)
         subprocess.run(["xcrun", "xcresulttool", "export", "attachments", "--path", args.result_bundle,
                         "--output-path", str(exported)], check=True)
         saved = save_attachments(folder, args.source, exported)
     print(f"Saved {saved} screenshots as proof from {args.result_bundle}")
-    return 0
 
 
 def collect(root):
@@ -170,31 +171,34 @@ def fence_for(text):
     return "`" * max(3, longest + 1)
 
 
+def render_item(index, item, budget, artifact_urls):
+    """One item's markdown. A text item is cut to its budget of characters."""
+    artifact, fields, body = item
+    parts = [f"### {fields.get('title') or 'Untitled proof'}\n"]
+    if fields.get("source"):
+        parts.append(f"Saved by: {fields['source']}\n")
+    link = artifact_urls.get(artifact)
+    where = f"the [{artifact}]({link}) artifact" if link else f"the {artifact or 'proof'} artifact"
+    if "image" in fields:
+        parts.append(f"Screenshot `{fields['image']}` in {where}.\n")
+        if body:
+            parts.append(f"{body}\n")
+        return "\n".join(parts)
+    text = body
+    if budget[index] < len(body):
+        text = body[:budget[index]].rstrip() + "\n…"
+        parts.append(f"Cut to fit this page. The whole text is in {where}.\n")
+    fence = fence_for(text)
+    parts.append(f"{fence}text\n{text}\n{fence}\n")
+    return "\n".join(parts)
+
+
 def render(items, artifact_urls, limit=SUMMARY_LIMIT):
     """The check's markdown. Text bodies are cut, longest first, until the page fits under limit."""
     budget = {index: len(body) for index, (_, fields, body) in enumerate(items) if "image" not in fields}
 
     def page():
-        parts = []
-        for index, (artifact, fields, body) in enumerate(items):
-            title = fields.get("title") or "Untitled proof"
-            parts.append(f"### {title}\n")
-            if fields.get("source"):
-                parts.append(f"Saved by: {fields['source']}\n")
-            link = artifact_urls.get(artifact)
-            where = f"the [{artifact}]({link}) artifact" if link else f"the {artifact or 'proof'} artifact"
-            if "image" in fields:
-                parts.append(f"Screenshot `{fields['image']}` in {where}.\n")
-                if body:
-                    parts.append(f"{body}\n")
-                continue
-            text = body
-            if budget[index] < len(body):
-                text = body[:budget[index]].rstrip() + "\n…"
-                parts.append(f"Cut to fit this page. The whole text is in {where}.\n")
-            fence = fence_for(text)
-            parts.append(f"{fence}text\n{text}\n{fence}\n")
-        return "\n".join(parts)
+        return "\n".join(render_item(index, item, budget, artifact_urls) for index, item in enumerate(items))
 
     text = page()
     while len(text) > limit and budget:
@@ -228,7 +232,6 @@ def command_report(args):
     result = report(Path(args.dir), urls)
     Path(args.out).write_text(json.dumps(result), encoding="utf-8")
     print(f"{result['conclusion']}: {result['title']}")
-    return 0
 
 
 def main(argv=None):
@@ -261,7 +264,7 @@ def main(argv=None):
     build.set_defaults(run=command_report)
 
     args = parser.parse_args(argv)
-    return args.run(args)
+    return args.run(args) or 0
 
 
 if __name__ == "__main__":
