@@ -179,18 +179,18 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         let commands = RecordingCommands { call in
             if call.arguments.first == "test" {
                 let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
-                for result in ["run_1_of_2/shard_1_of_2", "run_1_of_2/shard_2_of_2", "run_2_of_2"] {
+                for (result, count) in [("run_1_of_2/shard_1_of_2", 2), ("run_1_of_2/shard_2_of_2", 3), ("run_2_of_2", 5)] {
                     let folder = target.appendingPathComponent(result)
                     let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
                     try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                    try? "Executed 2 tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    try? "Executed \(count) tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
                     try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
                 }
             }
             return .finished(0, output: "bazel output")
         }
         let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
-        XCTAssertEqual(run.testsRun, 2, "The tests' own logs are in the folders of the runs and shards, not the target's")
+        XCTAssertEqual(run.testsRun, 10, "Each run's and shard's own log counts its tests, and the counts add up: 2 + 3 + 5")
         let coverage = try XCTUnwrap(run.coverageFolder)
         let kept = try FileManager.default.contentsOfDirectory(atPath: coverage.path).sorted()
         XCTAssertEqual(kept.count, 3, "Every run and shard keeps its run folder: \(kept)")
