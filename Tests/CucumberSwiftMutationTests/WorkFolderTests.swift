@@ -84,6 +84,19 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: lockFolder().appendingPathComponent("mutation.lock").path))
     }
 
+    func testALockThatNamesAFolderThisToolDidNotMakeDeletesNothing() throws {
+        // A stale or planted lock can name any folder, even one whose name starts like a copy's.
+        let notes = folder.appendingPathComponent("mutation-copy-notes")
+        try FileManager.default.createDirectory(at: notes, withIntermediateDirectories: true)
+        try "keep".write(to: notes.appendingPathComponent("notes.txt"), atomically: true, encoding: .utf8)
+        try FileManager.default.createDirectory(at: lockFolder(), withIntermediateDirectories: true)
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        try JSONEncoder().encode(WorkFolder.Lock(pid: 99_999_999, folder: notes.path)).write(to: lock)
+        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false })
+        XCTAssertTrue(FileManager.default.fileExists(atPath: notes.appendingPathComponent("notes.txt").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: lock.path), "The dead run's lock is gone")
+    }
+
     func testARunThatIsStillActiveIsNotTouched() throws {
         let root = try makePackage()
         let work = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
