@@ -7,6 +7,12 @@
 import XCTest
 @testable import CucumberSwiftMutation
 
+/// What a run on another thread did, for a test of two runs at once.
+private final class RunOutcome: @unchecked Sendable {
+    var cleanupError: Error?
+    var wroteItsLock = false
+}
+
 final class WorkFolderTests: TemporaryFolderTestCase {
     private func lockFolder() -> URL { folder.appendingPathComponent("reports") }
 
@@ -84,36 +90,48 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: lockFolder().appendingPathComponent("mutation.lock").path))
     }
 
-    func testTwoRunsThatFindTheSameDeadLockNeverRemoveTheLockThatOneOfThemWrote() throws {
+    func testTwoRunsThatFindTheSameDeadLockLeaveExactlyOneOfThemHoldingTheLock() throws {
         try FileManager.default.createDirectory(at: lockFolder(), withIntermediateDirectories: true)
         let lock = lockFolder().appendingPathComponent("mutation.lock")
         let dead: Int32 = 99_999_998
         try JSONEncoder().encode(WorkFolder.Lock(pid: dead, folder: "/nowhere/mutation-copy-dead")).write(to: lock)
-        // Run A's lock, which it writes once it has removed the dead one.
-        let first = try JSONEncoder().encode(WorkFolder.Lock(pid: 77_777, folder: "/nowhere/mutation-copy-first"))
+        // Each run removes the dead lock, then writes its own, as WorkFolder.init does: never over another's.
+        let firstLock = try JSONEncoder().encode(WorkFolder.Lock(pid: 77_777, folder: "/nowhere/mutation-copy-first"))
+        let secondLock = try JSONEncoder().encode(WorkFolder.Lock(pid: 88_888, folder: "/nowhere/mutation-copy-second"))
         let secondReadTheDeadLock = DispatchSemaphore(value: 0)
-        let firstWroteItsLock = DispatchSemaphore(value: 0)
+        let firstTriedToWrite = DispatchSemaphore(value: 0)
         let secondDone = DispatchSemaphore(value: 0)
+        let second = RunOutcome()
         let folder = lockFolder()
-        // Run A judges the dead lock, and run B starts its own cleanup meanwhile. B judges the lock it read only once
-        // A has written its own lock.
+        // Run B starts while run A judges the dead lock. If B reads the dead lock too, it calls it dead only after A
+        // has written its own lock: the order in which an unguarded B removes A's lock.
         _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in
             DispatchQueue.global().async {
-                _ = try? WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { pid in
-                    guard pid == dead else { return true }
-                    secondReadTheDeadLock.signal()
-                    firstWroteItsLock.wait()
-                    return false
+                do {
+                    _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { pid in
+                        guard pid == dead else { return true }
+                        secondReadTheDeadLock.signal()
+                        firstTriedToWrite.wait()
+                        return false
+                    }
+                    try secondLock.write(to: lock, options: .withoutOverwriting)
+                    second.wroteItsLock = true
+                } catch {
+                    second.cleanupError = error
                 }
                 secondDone.signal()
             }
             _ = secondReadTheDeadLock.wait(timeout: .now() + 1)
             return false
         }
-        try first.write(to: lock, options: .withoutOverwriting)
-        firstWroteItsLock.signal()
+        let firstWroteItsLock = (try? firstLock.write(to: lock, options: .withoutOverwriting)) != nil
+        firstTriedToWrite.signal()
         XCTAssertEqual(secondDone.wait(timeout: .now() + 10), .success)
-        XCTAssertEqual(try Data(contentsOf: lock), first, "Run A's lock is still there")
+        XCTAssertNotEqual(firstWroteItsLock, second.wroteItsLock, "Exactly one run holds the lock")
+        XCTAssertEqual(try Data(contentsOf: lock), firstWroteItsLock ? firstLock : secondLock, "The lock is the holder's")
+        if let error = second.cleanupError as? WorkFolder.Failure {
+            XCTAssertEqual(error, .anotherRunIsActive(pid: 77_777), "Run B found run A's lock")
+        }
     }
 
     func testALockThatNamesAFolderThisToolDidNotMakeDeletesNothing() throws {

@@ -99,7 +99,10 @@ public struct WorkFolder {
         let guardFile = open(lockFolder.appendingPathComponent("mutation.lock.guard").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
         guard guardFile >= 0 else { throw Failure.copyFailed("can't open the lock folder \(lockFolder.path)") }
         defer { close(guardFile) }
-        flock(guardFile, LOCK_EX)
+        // A signal can interrupt the wait. Any other failure would leave the lock unguarded, so the run stops.
+        while flock(guardFile, LOCK_EX) != 0 {
+            guard errno == EINTR else { throw Failure.copyFailed("can't lock \(lockFolder.path): \(String(cString: strerror(errno)))") }
+        }
         let lockFile = lockFolder.appendingPathComponent("mutation.lock")
         guard let data = try? Data(contentsOf: lockFile), let lock = try? JSONDecoder().decode(Lock.self, from: data) else {
             return nil
