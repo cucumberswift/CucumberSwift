@@ -4,13 +4,13 @@
 #
 #     .github/scripts/mutation-package-fixture.sh [<folder for the reports and the log>]
 #
-# `swift run cucumberswift-mutation-test --format xcode` tests the package's XCTest and Swift Testing targets
+# `swift run cucumberswift mutation-test --format xcode` tests the package's XCTest and Swift Testing targets
 # against each mutant. .github/scripts/mutation_fixture.py then fails unless every mutant has the status that
 # expected-mutants lists, and the output has a warning for each survivor. The tool copies the package to a
 # temporary folder, so CUCUMBER_SWIFT_PATH gives the fixture's Package.swift the checkout's absolute path.
 #
 # Our CI builds the tool once with .github/scripts/build-mutation-tool.sh, which it caches, and sets
-# MUTATION_TOOL to its path. The script then runs that tool in this folder instead of `swift run`, which would
+# MUTATION_TOOL to the path of `cucumberswift`. The script then runs that tool in this folder instead of `swift run`, which would
 # build it again in the fixture's own build folder.
 set -euo pipefail
 
@@ -24,13 +24,13 @@ rm -rf "$reports"
 export CUCUMBER_SWIFT_PATH="$repo"
 status=0
 if [[ -n "${MUTATION_TOOL:-}" ]]; then
-  tool=("$MUTATION_TOOL")
+  tool=("$MUTATION_TOOL" mutation-test)
 else
-  tool=(swift run cucumberswift-mutation-test)
+  tool=(swift run cucumberswift mutation-test)
 fi
 (cd "$fixture" && "${tool[@]}" --format xcode --baseline-runs 1 --output "$reports") 2>&1 | tee "$log" || status=$?
 if [[ "$status" -ne 0 ]]; then
-  echo "::error::MutationTestingPackage: cucumberswift-mutation-test exited with $status"
+  echo "::error::MutationTestingPackage: cucumberswift mutation-test exited with $status"
   exit 1
 fi
 cd "$repo"
