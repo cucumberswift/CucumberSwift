@@ -77,7 +77,6 @@
 		62C155CF9512C77E8676D2A6 /* TestingExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30F41536F7999395E0E2F7EC /* TestingExtensions.swift */; };
 		64B9C1211D231BEA471125E9 /* GeneratedStepDefinitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB31CA8D0415641318CC4C20 /* GeneratedStepDefinitionTests.swift */; };
 		64F2BF5C21CAE2F753F7104A /* CucumberSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8143BEABD12EB2F83CF388 /* CucumberSwiftTests.swift */; };
-		675A71A4E2A00D8CF49FB35B /* ThrowawayProcessProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAFCE73766DCB0E63920C747 /* ThrowawayProcessProbe.swift */; };
 		67D89FBD1C5A830517CBA32C /* NameHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83CA2CC6CA8D6D70A051F167 /* NameHash.swift */; };
 		685500DDBBFC085E5BBAE26D /* FeatureDSL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A61873CC13CDA29724B585F /* FeatureDSL.swift */; };
 		68FCBCEDED212050FCCF77E9 /* FeatureHook.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE716D4307D80176A0335D18 /* FeatureHook.swift */; };
@@ -404,7 +403,6 @@
 		A888E4CDEBB411990843A3F3 /* SequenceExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SequenceExtensions.swift; sourceTree = "<group>"; };
 		A999381D8399BAF2CF7399AC /* ScenarioOutlineScenarios.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioOutlineScenarios.swift; sourceTree = "<group>"; };
 		A9FE7CBBE8189F3A40697BF6 /* CoverageScoresTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageScoresTests.swift; sourceTree = "<group>"; };
-		AAFCE73766DCB0E63920C747 /* ThrowawayProcessProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThrowawayProcessProbe.swift; sourceTree = "<group>"; };
 		AB3D20EBD92B249FB1015BAC /* TestNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestNames.swift; sourceTree = "<group>"; };
 		ABCE3D222F5CEE7F09C95BCB /* ASTToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASTToken.swift; sourceTree = "<group>"; };
 		ADBA8700E96CEB715E4B9570 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
@@ -622,7 +620,6 @@
 				7E6A4ED0E3F31B73FC4A0EEF /* CucumberSwift.docc */,
 				9829016F161840A41E6B2099 /* Info.plist */,
 				30F41536F7999395E0E2F7EC /* TestingExtensions.swift */,
-				AAFCE73766DCB0E63920C747 /* ThrowawayProcessProbe.swift */,
 			);
 			path = CucumberSwift;
 			sourceTree = "<group>";
@@ -1396,7 +1393,6 @@
 				4A9CEDF1C16443FECD6DE693 /* StubGenerator+Features.swift in Sources */,
 				F3197F205CB9FBE1C79AD824 /* ClassNameString.swift in Sources */,
 				62C155CF9512C77E8676D2A6 /* TestingExtensions.swift in Sources */,
-				675A71A4E2A00D8CF49FB35B /* ThrowawayProcessProbe.swift in Sources */,
 				7DC7A14420D12A4C297CCDDF /* WaitFailures.swift in Sources */,
 				72D3B1246BD126EB9FD7E7A5 /* TestCaseGenerator.swift in Sources */,
 				3B1A19EE7BEDFA7C9B8FD8AC /* TestCaseMethod.swift in Sources */,
