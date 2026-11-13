@@ -187,13 +187,13 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     /// Copies the coverage the test left in its outputs to a folder of its own, because the next test run replaces the
-    /// outputs. The run folders of every result folder go into it, named for the result folder they came from when
+    /// outputs, or nothing when a result folder has none. The run folders of every result folder go into it, named for the result folder they came from when
     /// there is more than one.
     private func keepCoverage(from results: [URL], as number: Int, in folder: URL) -> URL? {
         let destination = folder.appendingPathComponent("coverage-\(number)")
         let sources = results.map { ($0, $0.appendingPathComponent("test.outputs/_cucumberCoverage")) }
-            .filter { FileManager.default.fileExists(atPath: $0.1.path) }
-        guard !sources.isEmpty else { return nil }
+        // Coverage that misses a result folder would name some scenarios' code as code no scenario runs: keep all or none.
+        guard !sources.isEmpty, sources.allSatisfy({ FileManager.default.fileExists(atPath: $0.1.path) }) else { return nil }
         try? FileManager.default.removeItem(at: destination)
         guard (try? FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)) != nil else { return nil }
         for (result, source) in sources {

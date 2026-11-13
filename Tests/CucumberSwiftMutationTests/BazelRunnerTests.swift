@@ -200,6 +200,28 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         }
     }
 
+    func testCoverageThatMissesAShardIsNotKept() throws {
+        let copy = try makeCopy()
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "test" {
+                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
+                for (shard, measured) in [("shard_1_of_2", true), ("shard_2_of_2", false)] {
+                    let folder = target.appendingPathComponent(shard)
+                    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    try? "Executed 2 tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    if measured {
+                        let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
+                        try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+                        try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
+                    }
+                }
+            }
+            return .finished(0, output: "bazel output")
+        }
+        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        XCTAssertNil(run.coverageFolder, "A shard without coverage would make its scenarios' code look untested")
+    }
+
     func testTheTestsOutputsAreNotZipped() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)
