@@ -4,10 +4,10 @@ Find the scenarios that still pass when the code they test is wrong.
 
 ## Overview
 
-The `cucumberswift-mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed. Run it from a Swift package that has CucumberSwift tests:
+The `cucumberswift mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed. Run it from a Swift package that has CucumberSwift tests:
 
 ```bash
-swift run cucumberswift-mutation-test
+swift run cucumberswift mutation-test
 ```
 
 > Note: What is mutation testing? Mutation testing is a technique for making small changes in code to see if tests still pass. If they do, we say a "mutant" survived. The goal of mutation testing is to "kill mutants" by finding tests that pass when they should fail and improving them. Don't worry, no bugs will be introduced into your code on purpose! The command changes only a throwaway copy of your code in a temporary folder, and never touches your repository. See <doc:#Know-that-your-files-are-safe>.
@@ -75,7 +75,7 @@ Feature: Basket
 The command changes `Basket.swift` in 17 ways, one at a time. Run it on these scenarios, tagged `@before`:
 
 ```bash
-swift run cucumberswift-mutation-test --tags before
+swift run cucumberswift mutation-test --tags before
 ```
 
 Each line names a mutant, its place, its rule, the change and the result:
@@ -145,14 +145,14 @@ Mutation testing reads your Swift code with swift-syntax, so it needs CucumberSw
 // swift-tools-version:6.1
 import PackageDescription
 
-// The same code and scenarios as Project.swift, as a Swift package, for `swift run cucumberswift-mutation-test`.
+// The same code and scenarios as Project.swift, as a Swift package, for `swift run cucumberswift mutation-test`.
 // Mutation testing runs on Swift packages: it copies this package to a temporary folder, changes
 // Sources/Shop there, and runs `swift test` against each change. It never changes this folder.
 //
 // Mutation testing reads Swift code with swift-syntax, so CucumberSwift's Macros trait is on. To use a
 // local CucumberSwift checkout, set CUCUMBER_SWIFT_PATH, as for Project.swift:
 //
-//     CUCUMBER_SWIFT_PATH=~/src/CucumberSwift swift run cucumberswift-mutation-test
+//     CUCUMBER_SWIFT_PATH=~/src/CucumberSwift swift run cucumberswift mutation-test
 let cucumberSwift: Package.Dependency = {
     if let path = Context.environment["CUCUMBER_SWIFT_PATH"], !path.isEmpty {
         return .package(name: "CucumberSwift", path: path, traits: ["Macros"])
@@ -190,14 +190,14 @@ Without the trait, the command prints what to turn on and changes nothing. It ne
 
 ## Find those mutants!
 
-Run the `cucumberswift-mutation-test` command to find the mutants that your scenarios miss. Run it from the command line or from Xcode. Either way, it works on a throwaway copy of your package and writes its reports to `.build/mutation-testing` in the package, where your tests read the last run's report.
+Run the `cucumberswift mutation-test` command to find the mutants that your scenarios miss. Run it from the command line or from Xcode. Either way, it works on a throwaway copy of your package and writes its reports to `.build/mutation-testing` in the package, where your tests read the last run's report.
 
 ### From the command line
 
 Run the command in the folder with your `Package.swift`. The sample's `--tags before` chooses its `@before` scenarios, as `CUCUMBER_TAGS` does:
 
 ```bash
-swift run cucumberswift-mutation-test --tags before
+swift run cucumberswift mutation-test --tags before
 ```
 
 The command prints a line for each mutant as it tests it:
@@ -329,7 +329,7 @@ The Swift Testing runner prints the same errors with the feature file and line, 
 
 The test run doesn't change any code. It matches each mutant in the report to the scenarios that ran its code, through the coverage it measures, so mutation testing needs coverage: with coverage off, there is no Mutation test. A feature whose scenarios run no mutant's code passes. Three more cases fail the Mutation test, so that turning it on never passes silently:
 
-- **No report, or one that can't be read.** Run `cucumberswift-mutation-test` first.
+- **No report, or one that can't be read.** Run `cucumberswift mutation-test` first.
 - **A report about other code.** The report contains each file's text as it was. A file that changed since then makes the report out of date, so the Mutation test fails until you run the command again.
 - **A report about other scenarios.** The report lists every scenario that its run tested. The Mutation test fails when one of the feature's scenarios isn't in that list, as when the command ran with other `CUCUMBER_TAGS` than the tests.
 
@@ -344,7 +344,7 @@ The Mutation test also changes how the redundancy compares your scenarios. A sce
 Without options, the command mutates every library and executable target of the package in the current folder. These options narrow or tune a run:
 
 ```bash
-swift run cucumberswift-mutation-test --target Shop --max-mutants 20
+swift run cucumberswift mutation-test --target Shop --max-mutants 20
 ```
 
 | Option | Effect |
