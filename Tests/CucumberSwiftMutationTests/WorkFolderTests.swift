@@ -13,6 +13,20 @@ private final class RunOutcome: @unchecked Sendable {
     var wroteItsLock = false
 }
 
+/// A runner that does `during` instead of each command, and fails it, so that a copy goes on with FileManager.
+private final class PausingRunner: CommandRunning, @unchecked Sendable {
+    private let during: () -> Void
+
+    init(during: @escaping () -> Void) {
+        self.during = during
+    }
+
+    func run(_: String, _: [String], in _: URL, environment _: [String: String], timeout _: TimeInterval?) -> CommandResult {
+        during()
+        return .finished(1)
+    }
+}
+
 final class WorkFolderTests: TemporaryFolderTestCase {
     private func lockFolder() -> URL { folder.appendingPathComponent("reports") }
 
@@ -149,6 +163,25 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.path), "The first run's copy stays")
         first.remove()
         XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }, "Once it's done, nothing is left")
+    }
+
+    func testACleanupInTheSameProcessDuringTheCopyLeavesTheLockAndTheCopy() throws {
+        let root = try makePackage()
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        let folder = lockFolder()
+        var cleanupError: Error?
+        var lockDuringCopy = false
+        // The copy runs `cp` through the runner, and a second run's cleanup runs then.
+        let runner = PausingRunner {
+            guard cleanupError == nil else { return }
+            do { _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in false } } catch { cleanupError = error }
+            lockDuringCopy = FileManager.default.fileExists(atPath: lock.path)
+        }
+        let first = try WorkFolder(copying: root, into: self.folder.appendingPathComponent("work"), lockFolder: folder, runner: runner)
+        XCTAssertEqual(cleanupError as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid()))
+        XCTAssertTrue(lockDuringCopy, "The first run's lock stayed during its copy")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.appendingPathComponent("Package.swift").path))
+        first.remove()
     }
 
     func testALockWithThisProcesssIDThatNoRunHereHoldsIsADeadRuns() throws {

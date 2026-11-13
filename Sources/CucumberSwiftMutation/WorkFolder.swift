@@ -6,27 +6,29 @@
 #if os(macOS) || os(Linux)
 import Foundation
 
-/// The lock files that the runs in this process hold.
+/// The lock files that the runs in this process hold, counted, so that a run that fails to take a lock never drops
+/// another run's.
 private final class HeldLocks: @unchecked Sendable {
     private let lock = NSLock()
-    private var paths = Set<String>()
+    private var counts = [String: Int]()
 
     func contains(_ file: URL) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return paths.contains(file.standardizedFileURL.path)
+        return counts[file.standardizedFileURL.path, default: 0] > 0
     }
 
     func insert(_ file: URL) {
         lock.lock()
         defer { lock.unlock() }
-        paths.insert(file.standardizedFileURL.path)
+        counts[file.standardizedFileURL.path, default: 0] += 1
     }
 
     func remove(_ file: URL) {
         lock.lock()
         defer { lock.unlock() }
-        paths.remove(file.standardizedFileURL.path)
+        let path = file.standardizedFileURL.path
+        counts[path] = counts[path, default: 0] > 1 ? counts[path, default: 0] - 1 : nil
     }
 }
 
@@ -196,10 +198,14 @@ public struct WorkFolder {
         copy = folder.appendingPathComponent("package")
         lockFile = lockFolder.appendingPathComponent("mutation.lock")
         // The lock first: a run killed during the copy still leaves the next run something to clean up. It is never
-        // written over: a run that started after this one checked the lock folder holds it, and this run stops.
+        // written over: a run that started after this one checked the lock folder holds it, and this run stops. The
+        // lock counts as held before it exists, so a cleanup in this process never takes it for a dead run's.
+        Self.held.insert(lockFile)
         do {
             try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile, options: .withoutOverwriting)
-        } catch where fileManager.fileExists(atPath: lockFile.path) {
+        } catch {
+            Self.held.remove(lockFile)
+            guard fileManager.fileExists(atPath: lockFile.path) else { throw error }
             let holder = (try? Data(contentsOf: lockFile)).flatMap { try? JSONDecoder().decode(Lock.self, from: $0) }
             throw Failure.anotherRunIsActive(pid: holder?.pid ?? 0)
         }
@@ -211,14 +217,15 @@ public struct WorkFolder {
             // No caller gets a WorkFolder to remove, so the partial copy and the lock go now.
             Self.remove(folder)
             try? fileManager.removeItem(at: lockFile)
+            Self.held.remove(lockFile)
             throw error
         }
-        Self.held.insert(lockFile)
     }
 
     /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue.
     public func remove() {
         Self.remove(folder)
+        // The lock file goes before the record of it, so a cleanup never finds this run's lock unheld.
         try? FileManager.default.removeItem(at: lockFile)
         Self.held.remove(lockFile)
     }
