@@ -229,17 +229,13 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testAMutantInCodeThatNoScenarioRanIsNotTested() throws {
-        // The first baseline run writes regions.json where the run asks: no scenario ran line 1, where both mutants are.
+        // The first baseline run measures the scenarios where the run asks: no scenario ran line 1, where both mutants are.
         let fake = FakeRunner { call in
             if call.arguments.first == "build" { return .finished(0) }
-            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE_REGIONS"] == "YES" {
-                let run = URL(fileURLWithPath: folder).appendingPathComponent("run-1")
-                try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                let json = """
-                {"version": 1, "regions": [{"file": "/x/Sources/Voting/Voting.swift", "lineStart": 1, "columnStart": 1, "lineEnd": 1, "columnEnd": 99}],
-                 "scenarios": [{"feature": "Voting.feature", "line": 4, "name": "An adult can vote", "ran": []}]}
-                """
-                try? json.write(to: run.appendingPathComponent("regions.json"), atomically: true, encoding: .utf8)
+            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE"] == "YES" {
+                let canVote = CoverageRunFixture.Function(name: "canVote", file: "/x/Sources/Voting/Voting.swift", spans: [[1, 1, 1, 99]])
+                let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [])
+                try? CoverageRunFixture(functions: [canVote], scenarios: [adult]).write(named: "1", in: URL(fileURLWithPath: folder))
             }
             return .finished(0, output: "Executed 2 tests")
         }
@@ -254,7 +250,6 @@ final class MutationRunTests: TemporaryFolderTestCase {
         let fake = runner { _ in .finished(0) }
         _ = run(fake)
         let tests = fake.calls.filter { $0.arguments.first == "test" }
-        XCTAssertEqual(tests.first?.environment["CUCUMBER_COVERAGE_REGIONS"], "YES")
         XCTAssertEqual(tests.first?.environment["CUCUMBER_COVERAGE"], "YES")
         XCTAssertNil(tests.dropFirst().first?.environment["CUCUMBER_COVERAGE"], "The second baseline run is a plain run")
         XCTAssertTrue(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }.allSatisfy { $0.environment["CUCUMBER_COVERAGE"] == "NO" })

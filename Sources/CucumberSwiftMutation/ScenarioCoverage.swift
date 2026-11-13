@@ -4,12 +4,26 @@
 //
 
 #if os(macOS) || os(Linux)
+import CucumberSwiftCoverageMerge
 import Foundation
 
-/// The code each scenario ran in the unmutated copy, read from the `regions.json` that CucumberSwift writes with
-/// `CUCUMBER_COVERAGE_REGIONS` on. A mutant whose code no scenario ran can't be detected by any scenario, so the
-/// run doesn't test it.
+/// The code each scenario ran in the unmutated copy, read from the coverage folders that CucumberSwift writes with
+/// `CUCUMBER_COVERAGE` on, as `cucumberswift coverage merge` reads them. A mutant whose code no scenario ran can't be
+/// detected by any scenario, so the run doesn't test it.
 public struct ScenarioCoverage: Equatable, Sendable {
+    /// Why the coverage can't tell which scenarios ran a mutant's code.
+    public enum ReadError: Error, Equatable, CustomStringConvertible {
+        /// The run measured functions, but recorded no places for their regions: a CucumberSwift older than the tool.
+        case noRegionPlaces(file: String)
+
+        public var description: String {
+            switch self {
+                case .noRegionPlaces(let file):
+                    return "the coverage has no places for the code regions of \(file). The package's CucumberSwift may be older than the tool."
+            }
+        }
+    }
+
     public struct Region: Codable, Hashable, Sendable {
         public let file: String
         public let lineStart: Int
@@ -52,41 +66,38 @@ public struct ScenarioCoverage: Equatable, Sendable {
         }
     }
 
-    private struct File: Codable {
-        let version: Int
-        let regions: [Region]
-        let scenarios: [Scenario]
-    }
-
     public let regions: [Region]
     public let scenarios: [Scenario]
 
-    /// The coverage in the `regions.json` of every run folder under `folder`, merged, or nil when there is none. A test
-    /// run that has several test bundles, as an Xcode scheme can, writes a run folder for each bundle's process. Each
-    /// run numbers its own regions, so the merge numbers a region again by its place, and keeps one of the regions that
-    /// two runs share, which both numbered.
-    public static func read(inRunsUnder folder: URL) -> ScenarioCoverage? {
+    /// The coverage of the runs under `folder`, merged as `cucumberswift coverage merge` merges them, or nil when
+    /// no run there finished, or the runs measured no code. A test run that has several test bundles, as an Xcode scheme can,
+    /// or several test processes, as `swift test` does for XCTest and Swift Testing, writes a run folder for each. The
+    /// merge numbers each function's regions once, whichever runs measured it. Throws when the runs can't be merged,
+    /// or they don't record where their regions are.
+    public static func read(inRunsUnder folder: URL) throws -> ScenarioCoverage? {
         let runs = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        let finished = runs.filter {
+            $0.lastPathComponent.hasPrefix("run-") && FileManager.default.fileExists(atPath: $0.appendingPathComponent("manifest.json").path)
+        }
+        guard !finished.isEmpty else { return nil }
+        let merged = try MergedCoverage(folders: [folder])
+        guard !merged.functions.isEmpty else { return nil }
         var regions = [Region]()
-        var numbers = [Region: Int]()
-        var scenarios = [Scenario]()
-        var found = false
-        for run in runs.sorted(by: { $0.path < $1.path }) where run.lastPathComponent.hasPrefix("run-") {
-            guard let data = try? Data(contentsOf: run.appendingPathComponent("regions.json")),
-                  let file = try? JSONDecoder().decode(File.self, from: data), file.version == 1 else { continue }
-            found = true
-            let renumbered = file.regions.map { region -> Int in
-                if let number = numbers[region] { return number }
-                regions.append(region)
-                numbers[region] = regions.count - 1
-                return regions.count - 1
-            }
-            scenarios += file.scenarios.map { scenario in
-                let ran = scenario.ran.compactMap { renumbered.indices.contains($0) ? renumbered[$0] : nil }
-                return Scenario(feature: scenario.feature, line: scenario.line, name: scenario.name, ran: ran)
+        var firstRegion = [Int]()
+        for function in merged.functions {
+            guard function.spans.count == function.regionCount else { throw ReadError.noRegionPlaces(file: function.file) }
+            firstRegion.append(regions.count)
+            regions += function.spans.map {
+                Region(file: function.file, lineStart: $0.lineStart, columnStart: $0.columnStart, lineEnd: $0.lineEnd, columnEnd: $0.columnEnd)
             }
         }
-        return found ? ScenarioCoverage(regions: regions, scenarios: scenarios) : nil
+        let scenarios = merged.scenarios.map { scenario in
+            Scenario(feature: scenario.feature,
+                     line: scenario.line,
+                     name: scenario.name,
+                     ran: scenario.ran.map { firstRegion[$0.function] + $0.index }.sorted())
+        }
+        return ScenarioCoverage(regions: regions, scenarios: scenarios)
     }
 
     public init(regions: [Region], scenarios: [Scenario]) {
