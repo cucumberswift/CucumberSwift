@@ -186,6 +186,41 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(bazel.test(in: copy, request: TestRequest()).coverageFolder, "A run that doesn't measure has no coverage folder")
     }
 
+    func testRepeatedRunsAndShardsAreReadFromTheirOwnFolders() throws {
+        let copy = try makeCopy()
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "test" {
+                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
+                for result in ["run_1_of_2/shard_1_of_2", "run_1_of_2/shard_2_of_2", "run_2_of_2"] {
+                    let folder = target.appendingPathComponent(result)
+                    let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
+                    try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+                    try? "Executed 2 tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
+                }
+            }
+            return .finished(0, output: "bazel output")
+        }
+        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        XCTAssertEqual(run.testsRun, 2, "The tests' own logs are in the folders of the runs and shards, not the target's")
+        let coverage = try XCTUnwrap(run.coverageFolder)
+        let kept = try FileManager.default.contentsOfDirectory(atPath: coverage.path).sorted()
+        XCTAssertEqual(kept.count, 3, "Every run and shard keeps its run folder: \(kept)")
+        XCTAssertTrue(kept.allSatisfy { $0.hasPrefix("run-") })
+        for folder in kept {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: coverage.appendingPathComponent(folder).appendingPathComponent("manifest.json").path))
+        }
+    }
+
+    func testTheTestsOutputsAreNotZipped() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        _ = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        let arguments = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertTrue(arguments.contains("--nozip_undeclared_test_outputs"), "A zipped outputs folder has no coverage folder to keep")
+        XCTAssertGreaterThan(try XCTUnwrap(arguments.firstIndex(of: "--nozip_undeclared_test_outputs")), try XCTUnwrap(arguments.firstIndex(of: "--nocache_test_results")))
+    }
+
     func testCleanUpDeletesTheOutputBaseAndFallsBackToShuttingTheServerDown() throws {
         let copy = try makeCopy()
         let expunged = RecordingCommands()
