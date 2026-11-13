@@ -32,9 +32,9 @@ final class MutationRunScenarioTests: TemporaryFolderTestCase {
             if call.arguments.first == "build" { return .finished(0) }
             if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE"] == "YES" {
                 let voting = CoverageRunFixture.Function(name: "canVote", file: "/x/Sources/Voting/Voting.swift", spans: [[1, 1, 1, 99]])
-                let scenarios = [CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [0]),
-                                 CoverageRunFixture.Scenario(feature: "Voting.feature", line: 8, name: "A child cannot", ran: [])]
-                try? CoverageRunFixture(functions: [voting], scenarios: scenarios).write(named: "1", in: URL(fileURLWithPath: folder))
+                let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [0])
+                let child = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 8, name: "A child cannot", ran: [])
+                try? CoverageRunFixture(functions: [voting], scenarios: [adult, child]).write(named: "1", in: URL(fileURLWithPath: folder))
             }
             return .finished(0, output: "Executed 2 tests")
         }
