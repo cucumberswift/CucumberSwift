@@ -1134,7 +1134,7 @@ jobs:
   # has checks: write. A pull request from a fork gets a read-only token whatever this says, so the page goes
   # to the job's summary instead, and the check isn't created.
   proof:
-    name: Proof
+    name: Gather proof
     needs: [changes, fixture_tests]
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
