@@ -58,6 +58,8 @@ def write_item(folder, title, source, body, name=None, image=None):
     """Writes an item as `<name>.md`, adding a number when that name is taken, and returns its path."""
     folder.mkdir(parents=True, exist_ok=True)
     base = slug(name or title)
+    if not re.fullmatch(r"[a-z0-9-]+", base):
+        raise ValueError(f"{base!r} is not a file name made of letters, digits and dashes")
     path = folder / f"{base}.md"
     number = 2
     while path.exists():
