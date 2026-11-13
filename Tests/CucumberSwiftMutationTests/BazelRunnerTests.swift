@@ -141,6 +141,27 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(none.testsRun, 0, "A run with no test log ran no test")
     }
 
+    func testACommandThatNeverStartedOrAnInfrastructureStatusIsNotATestResult() throws {
+        let copy = try makeCopy()
+        let missing = BazelRunner(target: target, bazel: "no-such-bazel", cleanUpCommands: RecordingCommands(), environment: ["PATH": folder.path])
+        XCTAssertFalse(missing.build(in: copy, timeout: nil).started)
+        XCTAssertFalse(missing.test(in: copy, request: TestRequest()).started)
+        let notLaunched = RecordingCommands { _ in
+            var result = CommandResult.finished(127)
+            result.started = false
+            return result
+        }
+        XCTAssertFalse(runner(commands: notLaunched).build(in: copy, timeout: nil).started)
+        XCTAssertFalse(runner(commands: notLaunched).test(in: copy, request: TestRequest()).started)
+        // 36 is Bazel's status for a problem with the machine: no test failed.
+        let infrastructure = runner(commands: commands(in: copy, output: "Executed 5 tests, with 0 failures", status: 36)).test(in: copy, request: TestRequest())
+        XCTAssertFalse(infrastructure.started)
+        for status: Int32 in [0, 3] {
+            XCTAssertTrue(runner(commands: commands(in: copy, status: status)).test(in: copy, request: TestRequest()).started)
+        }
+        XCTAssertTrue(runner(commands: commands(in: copy, status: 1)).build(in: copy, timeout: nil).started)
+    }
+
     func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)

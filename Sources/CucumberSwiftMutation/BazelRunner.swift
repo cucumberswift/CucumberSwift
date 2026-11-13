@@ -53,6 +53,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// The files whose presence says a folder is a Bazel workspace.
     static let workspaceFiles = ["MODULE.bazel", "WORKSPACE.bazel", "WORKSPACE"]
 
+    /// What `bazel test` exits with after it ran the tests: 0 when they passed, 3 when one failed or timed out.
+    static let testExitStatuses: Set<Int32> = [0, 3]
+
     /// The disk cache every run shares, in the user's caches folder.
     public static var defaultDiskCache: URL? {
         try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -118,13 +121,17 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
-        guard let executable else { return BuildResult(succeeded: false) }
+        guard let executable else { return BuildResult(succeeded: false, started: false) }
         let result = commands.run(executable, ["build", target.label] + common, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
-        guard let executable else { return TestRun(status: 127) }
+        guard let executable else {
+            var run = TestRun(status: 127)
+            run.started = false
+            return run
+        }
         let folder = runnerFolder(for: copy)
         let number = nextRun()
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
@@ -146,7 +153,7 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
         let log = testLog(in: copy)
         let output = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-        return TestRun(
+        var run = TestRun(
             status: result.status,
             timedOut: result.timedOut,
             duration: result.duration,
@@ -155,6 +162,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
             coverageFolder: request.measuresCoverage ? keepCoverage(from: log.deletingLastPathComponent(), as: number, in: folder) : nil
         )
+        // Bazel exits with 0 when the tests pass and 3 when one fails or times out. Any other status, such as 36 for a problem
+        // with the machine, says nothing about the tests: a run that stopped there tested nothing, and isn't a killed mutant.
+        run.started = result.started && (result.timedOut || Self.testExitStatuses.contains(result.status))
+        return run
     }
 
     /// The test's log in `bazel-testlogs`, which Bazel writes to the copy's convenience link.
