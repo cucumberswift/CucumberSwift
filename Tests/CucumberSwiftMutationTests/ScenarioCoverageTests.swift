@@ -43,23 +43,34 @@ final class ScenarioCoverageTests: TemporaryFolderTestCase {
         XCTAssertEqual(coverage.scenarios(running: elsewhere), [])
     }
 
-    func testReadsTheRegionsFileOfARun() throws {
-        let run = folder.appendingPathComponent("run-ABC")
-        try FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-        let json = """
-        {"version": 1,
-         "regions": [{"file": "/copy/Sources/Voting/Voting.swift", "lineStart": 1, "columnStart": 40, "lineEnd": 1, "columnEnd": 52}],
-         "scenarios": [{"feature": "Voting.feature", "line": 4, "name": "An adult can vote", "ran": [0]}]}
-        """
-        try json.write(to: run.appendingPathComponent("regions.json"), atomically: true, encoding: .utf8)
+    func testReadsTheManifestOfARun() throws {
+        let canVote = CoverageRunFixture.Function(name: "canVote", file: "/copy/Sources/Voting/Voting.swift", spans: [[1, 40, 1, 52]])
+        let adult = CoverageRunFixture.Scenario(feature: "file:///t/VotingTests.xctest/Features/Voting.feature", line: 4, name: "An adult can vote", ran: [0])
+        try CoverageRunFixture(functions: [canVote], scenarios: [adult]).write(named: "ABC", in: folder)
         let read = try XCTUnwrap(ScenarioCoverage.read(inRunsUnder: folder))
         XCTAssertEqual(read.scenarios.map(\.name), ["An adult can vote"])
-        XCTAssertEqual(read.scenarios(running: mutant(line: 1, column: 45)).map(\.line), [4])
+        XCTAssertEqual(read.scenarios(running: mutant(line: 1, column: 45)), [ScenarioID(feature: "Features/Voting.feature", line: 4, name: "An adult can vote")])
     }
 
-    func testNoRegionsFileMeansNoCoverage() {
-        XCTAssertNil(ScenarioCoverage.read(inRunsUnder: folder))
-        XCTAssertNil(ScenarioCoverage.read(inRunsUnder: folder.appendingPathComponent("missing")))
+    func testNoFinishedRunMeansNoCoverage() throws {
+        XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder))
+        XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder.appendingPathComponent("missing")))
+        try FileManager.default.createDirectory(at: folder.appendingPathComponent("run-empty"), withIntermediateDirectories: true)
+        XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder), "A run folder without a manifest didn't finish")
+    }
+
+    func testARunThatMeasuredNoCodeMeansNoCoverage() throws {
+        let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [])
+        try CoverageRunFixture(functions: [], scenarios: [adult]).write(named: "ABC", in: folder)
+        XCTAssertNil(try ScenarioCoverage.read(inRunsUnder: folder), "Without measured code, every mutant is tested")
+    }
+
+    func testARunWithoutThePlacesOfItsRegionsIsAnError() throws {
+        let canVote = CoverageRunFixture.Function(name: "canVote", file: "/copy/Sources/Voting/Voting.swift", spans: nil, regionCount: 2)
+        try CoverageRunFixture(functions: [canVote], scenarios: []).write(named: "ABC", in: folder)
+        XCTAssertThrowsError(try ScenarioCoverage.read(inRunsUnder: folder)) { error in
+            XCTAssertEqual(error as? ScenarioCoverage.ReadError, .noRegionPlaces(file: "/copy/Sources/Voting/Voting.swift"))
+        }
     }
 }
 #endif

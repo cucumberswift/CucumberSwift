@@ -113,6 +113,20 @@ struct CoverageReport {
         return shown.dropLast().joined(separator: ", ") + " or " + last
     }
 
+    /// A part of a feature's summary, and its issues: on the line of its `Rule:`, or of its `Feature:` for
+    /// the scenarios outside a Rule.
+    static func report(_ part: CoverageScores.Part,
+                       featureName: String,
+                       featureLine: Int,
+                       file: URL?,
+                       settings: CoverageSettings) -> (summary: String, issues: [CoverageIssue]) {
+        let report = CoverageReport(scores: part.scores, settings: settings)
+        guard let rule = part.rule else {
+            return (report.summary(name: featureName), report.issues(file: file, line: featureLine, subject: "Feature"))
+        }
+        return (report.summary(name: "\(featureName) › \(rule.title)"), report.issues(file: file, line: rule.line, subject: "Rule"))
+    }
+
     func summary(name: String) -> String {
         var header = "CucumberSwift coverage: \(name): \(Self.percent(scores.coverage)) of the code its scenarios ran"
             + " (\(scores.coveredRegions) of \(scores.regionsInFunctionsRun) regions in \(Self.count(scores.functionsRun, "function"))),"

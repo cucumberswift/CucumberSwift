@@ -82,9 +82,9 @@ let project = Project(
                     script: """
                     set -e
                     if [ -n "${MUTATION_TOOL:-}" ]; then
-                        set -- "$MUTATION_TOOL"
+                        set -- "$MUTATION_TOOL" mutation-test
                     else
-                        set -- /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift-mutation-test
+                        set -- /usr/bin/swift run --package-path "$CUCUMBERSWIFT_CHECKOUT" --traits Macros cucumberswift mutation-test
                     fi
                     env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin "$@" \\
                         --root "$SRCROOT" --project MutationTestingTuist.xcodeproj --scheme MutationTestingTuist \\
