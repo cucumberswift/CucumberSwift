@@ -40,7 +40,7 @@ The XCTest runner records a feature's issues in tests of its own, which run afte
 - `Coverage`, for the coverage warning or error.
 - `Redundancy`, for the redundancy warning or error, and the warnings on the scenarios that add no coverage of their own.
 
-With the XCTest runner, an error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, the XCTest runner writes the coverage files but scores nothing, because a feature can end after its worker's last test, where an error couldn't fail a test. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test, unless you set `Cucumber.coverageRecordsIssuesInSuites`, as <doc:#Fail-a-test-on-low-coverage> shows.
+With the XCTest runner, an error fails its test, and the scenarios pass or fail on their own steps. With parallel testing, a feature can end after its worker's last test, where an error couldn't fail a test, so the runner scores nothing while it runs. <doc:#Merge-parallel-and-sharded-runs> scores the workers' runs together after the tests. The Swift Testing runner prints each issue with its feature file and line instead, because Xcode stops the test process when a suite records an issue. Its errors don't fail a test, unless you set `Cucumber.coverageRecordsIssuesInSuites`, as <doc:#Fail-a-test-on-low-coverage> shows.
 
 ### Set it in code
 
@@ -328,9 +328,32 @@ xcrun llvm-profdata merge S0001-L12-MyAppTests.profraw -o scenario.profdata
 xcrun llvm-cov report /path/to/MyAppTests.xctest/Contents/MacOS/MyAppTests -instr-profile=scenario.profdata
 ```
 
+## Merge parallel and sharded runs
+
+Run `cucumberswift coverage merge` after the tests to score the scenarios of several runs as one run. It reads each run's folder, such as the workers of a parallel run or the shards of a suite split across machines, and scores every feature and every Rule. It prints the same summaries and warnings as a run of all the scenarios one at a time:
+
+```bash
+CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$HOME/coverage" swift test --enable-code-coverage
+swift run cucumberswift coverage merge "$HOME/coverage"
+```
+
+The tool takes coverage folders, which hold the `run-<id>` folders, or run folders. It exits with status 1 when a score reaches an error level, so a script or our GitHub Actions CI workflow can fail on it. It exits with status 2 when it can't merge the runs, such as runs of two different builds or with different levels. Set the same levels for every run.
+
+Collect the folders of all the shards on one machine before you merge them. A scenario that appears in two runs counts once. The same feature file in two test bundles, such as one in each Simulator, counts as one feature. Shards of a Swift Testing feature that you write in Swift, as <doc:Running-Feature-Files-With-Swift-Testing#Write-features-in-Swift> shows, merge only when they run from the same checkout folder.
+
+Run the tool with your build tool:
+
+| Build tool | Command |
+|:--|:--|
+| Swift Package Manager | `swift run cucumberswift coverage merge <folder>` |
+| Xcode and Carthage | `swift run --package-path <CucumberSwift checkout> cucumberswift coverage merge <folder>` |
+| Bazel | `bazel run @cucumberswift//cli:cucumberswift -- coverage merge <folder>` |
+
+The Swift Testing runner can't score scenarios that run at the same time in one process, because coverage counters are per process. To score a Swift Testing suite, run it one scenario at a time with `CUCUMBER_COVERAGE=YES`, or split it into shards, run them as separate processes, and merge them.
+
 ## Limits
 
-The Swift Testing runner runs scenarios one at a time while coverage is on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. Scenarios that run at the same time add to the same coverage counters, so coverage and parallel testing are mutually exclusive. With `auto`, coverage stays off when you turn on parallel testing, and CucumberSwift prints one line that says why. An explicit `true` runs the scenarios one at a time. The XCTest runner is not affected.
+The Swift Testing runner runs scenarios one at a time while coverage is on, as <doc:Running-Feature-Files-With-Swift-Testing#Run-scenarios-in-parallel> describes. With `auto`, coverage stays off when you turn on parallel testing, and CucumberSwift prints one line that says why. An explicit `true` runs the scenarios one at a time. The XCTest runner is not affected.
 
 A feature whose scenarios run no measured code, such as a UI test whose app runs in another process, gets no coverage or redundancy issue.
 

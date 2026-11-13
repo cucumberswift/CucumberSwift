@@ -63,3 +63,17 @@ swift_library(
     visibility = ["//visibility:public"],
     deps = ["@cucumberswift_expressions//:CucumberSwiftExpressions"],
 )
+
+# Merges the coverage of several runs and scores it. Its sources are symlinks to the coverage scores' files
+# in Sources/CucumberSwift/Coverage, compiled without XCTest.
+swift_library(
+    name = "CucumberSwiftCoverageMerge",
+    srcs = glob(["Sources/CucumberSwiftCoverageMerge/*.swift"]),
+    module_name = "CucumberSwiftCoverageMerge",
+    visibility = ["//visibility:public"],
+)
+
+# The sources of the cucumberswift tool, which cli/BUILD.bazel builds in a package of its own: Bazel's output
+# folders are not case-sensitive on macOS, so a binary named cucumberswift can't sit next to the CucumberSwift
+# library.
+exports_files(glob(["Sources/CucumberSwiftCommand/*.swift"]))
