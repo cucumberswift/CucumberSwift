@@ -32,6 +32,20 @@ private final class HeldLocks: @unchecked Sendable {
     }
 }
 
+/// Whether a work folder was removed, so that only the first ``WorkFolder/remove()`` removes anything.
+private final class Removal: @unchecked Sendable {
+    private let lock = NSLock()
+    private var removed = false
+
+    /// True the first time, and false after.
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        defer { removed = true }
+        return !removed
+    }
+}
+
 /// The temporary copy of the project that a run mutates, and the lock file that lets the next run clean up
 /// after a run that was killed. The user's own files are never mutated, so nothing needs reverting.
 public struct WorkFolder {
@@ -82,6 +96,8 @@ public struct WorkFolder {
     /// The copy of the project.
     public let copy: URL
     private let lockFile: URL
+    /// Whether ``remove()`` has run, shared by every copy of this value.
+    private let removal = Removal()
 
     /// The folder for the temporary copy: `explicit` when given, then the temporary folder, then the user's caches. Never
     /// a folder in the package at `root`, nor one in a `.build` folder: code coverage leaves out the code under `.build`,
@@ -222,11 +238,15 @@ public struct WorkFolder {
         }
     }
 
-    /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue.
+    /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue: only the
+    /// first call removes anything, so a later one never touches the lock of a run that started since.
     public func remove() {
+        guard removal.claim() else { return }
         Self.remove(folder)
-        // The lock file goes before the record of it, so a cleanup never finds this run's lock unheld.
-        try? FileManager.default.removeItem(at: lockFile)
+        // The lock file goes before the record of it, so a cleanup never finds this run's lock unheld. Only this run's
+        // lock: the one that names this run's folder.
+        let lock = (try? Data(contentsOf: lockFile)).flatMap { try? JSONDecoder().decode(Lock.self, from: $0) }
+        if lock?.folder == folder.path { try? FileManager.default.removeItem(at: lockFile) }
         Self.held.remove(lockFile)
     }
 }

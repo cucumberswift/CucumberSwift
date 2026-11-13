@@ -154,51 +154,6 @@ final class WorkFolderTests: TemporaryFolderTestCase {
         }
     }
 
-    func testASecondRunInTheSameProcessLeavesTheFirstOnesLockAndCopy() throws {
-        let root = try makePackage()
-        let first = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
-        let lock = lockFolder().appendingPathComponent("mutation.lock")
-        let held = try Data(contentsOf: lock)
-        XCTAssertThrowsError(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }) {
-            XCTAssertEqual($0 as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid()))
-        }
-        XCTAssertEqual(try Data(contentsOf: lock), held, "The first run's lock stays")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.path), "The first run's copy stays")
-        first.remove()
-        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }, "Once it's done, nothing is left")
-    }
-
-    func testACleanupInTheSameProcessDuringTheCopyLeavesTheLockAndTheCopy() throws {
-        let root = try makePackage()
-        let lock = lockFolder().appendingPathComponent("mutation.lock")
-        let folder = lockFolder()
-        var cleanupError: Error?
-        var lockDuringCopy = false
-        // The copy runs `cp` through the runner, and a second run's cleanup runs then.
-        let runner = PausingRunner {
-            guard cleanupError == nil else { return }
-            do { _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in false } } catch { cleanupError = error }
-            lockDuringCopy = FileManager.default.fileExists(atPath: lock.path)
-        }
-        let first = try WorkFolder(copying: root, into: self.folder.appendingPathComponent("work"), lockFolder: folder, runner: runner)
-        XCTAssertEqual(cleanupError as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid()))
-        XCTAssertTrue(lockDuringCopy, "The first run's lock stayed during its copy")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.appendingPathComponent("Package.swift").path))
-        first.remove()
-    }
-
-    func testALockWithThisProcesssIDThatNoRunHereHoldsIsADeadRuns() throws {
-        // The system can give a dead run's process ID to a later process.
-        let root = try makePackage()
-        let dead = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
-        let lock = try Data(contentsOf: lockFolder().appendingPathComponent("mutation.lock"))
-        dead.remove()
-        try FileManager.default.createDirectory(at: dead.folder, withIntermediateDirectories: true)
-        try Data().write(to: dead.folder.appendingPathComponent(WorkFolder.ownerMarker))
-        try lock.write(to: lockFolder().appendingPathComponent("mutation.lock"))
-        XCTAssertEqual(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in true }?.lastPathComponent, dead.folder.lastPathComponent)
-    }
-
     func testALockThatNamesAFolderThisToolDidNotMakeDeletesNothing() throws {
         // A stale or planted lock can name any folder, even one whose name starts like a copy's.
         let notes = folder.appendingPathComponent("mutation-copy-notes")
@@ -309,6 +264,68 @@ final class WorkFolderTests: TemporaryFolderTestCase {
             guard case .noWritableFolder(let tried)? = $0 as? WorkFolder.Failure else { return XCTFail("Wrong error: \($0)") }
             XCTAssertEqual(tried.count, 3)
         }
+    }
+}
+
+// Two runs in one process.
+extension WorkFolderTests {
+    func testACleanupInTheSameProcessDuringTheCopyLeavesTheLockAndTheCopy() throws {
+        let root = try makePackage()
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        let folder = lockFolder()
+        var cleanupError: Error?
+        var lockDuringCopy = false
+        // The copy runs `cp` through the runner, and a second run's cleanup runs then.
+        let runner = PausingRunner {
+            guard cleanupError == nil else { return }
+            do { _ = try WorkFolder.cleanUpAfterDeadRun(lockFolder: folder) { _ in false } } catch { cleanupError = error }
+            lockDuringCopy = FileManager.default.fileExists(atPath: lock.path)
+        }
+        let first = try WorkFolder(copying: root, into: self.folder.appendingPathComponent("work"), lockFolder: folder, runner: runner)
+        XCTAssertEqual(cleanupError as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid()))
+        XCTAssertTrue(lockDuringCopy, "The first run's lock stayed during its copy")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.appendingPathComponent("Package.swift").path))
+        first.remove()
+    }
+
+    func testRemovingAWorkFolderAgainLeavesTheLockOfARunThatStartedSince() throws {
+        let root = try makePackage()
+        let first = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
+        first.remove()
+        let second = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        let held = try Data(contentsOf: lock)
+        first.remove()
+        XCTAssertEqual(try Data(contentsOf: lock), held, "The second run's lock stays")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.copy.path))
+        XCTAssertThrowsError(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }, "The second run still holds it")
+        second.remove()
+    }
+
+    func testALockWithThisProcesssIDThatNoRunHereHoldsIsADeadRuns() throws {
+        // The system can give a dead run's process ID to a later process.
+        let root = try makePackage()
+        let dead = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
+        let lock = try Data(contentsOf: lockFolder().appendingPathComponent("mutation.lock"))
+        dead.remove()
+        try FileManager.default.createDirectory(at: dead.folder, withIntermediateDirectories: true)
+        try Data().write(to: dead.folder.appendingPathComponent(WorkFolder.ownerMarker))
+        try lock.write(to: lockFolder().appendingPathComponent("mutation.lock"))
+        XCTAssertEqual(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in true }?.lastPathComponent, dead.folder.lastPathComponent)
+    }
+
+    func testASecondRunInTheSameProcessLeavesTheFirstOnesLockAndCopy() throws {
+        let root = try makePackage()
+        let first = try WorkFolder(copying: root, into: folder.appendingPathComponent("work"), lockFolder: lockFolder())
+        let lock = lockFolder().appendingPathComponent("mutation.lock")
+        let held = try Data(contentsOf: lock)
+        XCTAssertThrowsError(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }) {
+            XCTAssertEqual($0 as? WorkFolder.Failure, .anotherRunIsActive(pid: getpid()))
+        }
+        XCTAssertEqual(try Data(contentsOf: lock), held, "The first run's lock stays")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: first.copy.path), "The first run's copy stays")
+        first.remove()
+        XCTAssertNil(try WorkFolder.cleanUpAfterDeadRun(lockFolder: lockFolder()) { _ in false }, "Once it's done, nothing is left")
     }
 }
 #endif
