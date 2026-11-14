@@ -152,12 +152,14 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         for (key, value) in settings.sorted(by: { $0.key < $1.key }) { arguments.append("--test_env=\(key)=\(value)") }
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
         let results = resultFolders(in: copy)
-        let output = results.compactMap { try? String(contentsOf: $0.appendingPathComponent("test.log"), encoding: .utf8) }.joined(separator: "\n")
+        // Each result folder's log counts its own tests: the shards of a run share its tests, so the run's count is the sum.
+        let logs = results.compactMap { try? String(contentsOf: $0.appendingPathComponent("test.log"), encoding: .utf8) }
+        let testsRun = logs.reduce(0) { $0 + CommandResult(status: 0, output: $1, timedOut: false, duration: 0).testsRun }
         var run = TestRun(
             status: result.status,
             timedOut: result.timedOut,
             duration: result.duration,
-            testsRun: CommandResult(status: 0, output: output, timedOut: false, duration: 0).testsRun,
+            testsRun: testsRun,
             log: write(result.output, named: "test-\(number)", in: copy),
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
             coverageFolder: request.measuresCoverage ? keepCoverage(from: results, as: number, in: folder) : nil
@@ -188,13 +190,13 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     /// Copies the coverage the test left in its outputs to a folder of its own, because the next test run replaces the
-    /// outputs. The run folders of every result folder go into it, named for the result folder they came from when
-    /// there is more than one.
+    /// outputs, or nothing when a result folder has none. The run folders of every result folder go into it, named for
+    /// the result folder they came from when there is more than one.
     private func keepCoverage(from results: [URL], as number: Int, in folder: URL) -> URL? {
         let destination = folder.appendingPathComponent("coverage-\(number)")
         let sources = results.map { ($0, $0.appendingPathComponent("test.outputs/_cucumberCoverage")) }
-            .filter { FileManager.default.fileExists(atPath: $0.1.path) }
-        guard !sources.isEmpty else { return nil }
+        // Coverage that misses a result folder would name some scenarios' code as code no scenario runs: keep all or none.
+        guard !sources.isEmpty, sources.allSatisfy({ FileManager.default.fileExists(atPath: $0.1.path) }) else { return nil }
         try? FileManager.default.removeItem(at: destination)
         guard (try? FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)) != nil else { return nil }
         for (result, source) in sources {
