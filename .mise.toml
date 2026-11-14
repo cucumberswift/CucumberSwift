@@ -99,7 +99,7 @@ for name in $selected; do
   elif [ "$name" = CoverageMergePackage ]; then
     echo "error: CoverageMergePackage is a fixture that mise run test-coverage-merge runs"
     exit 1
-  elif [ ! -d "Fixtures/$name" ] || [ "${name#*/}" != "$name" ]; then
+  elif [ ! -d "Fixtures/$name" ] || [ "${name#*/}" != "$name" ] || [ "${name#.}" != "$name" ]; then
     echo "error: $name is not a folder in Fixtures/"
     exit 1
   fi
