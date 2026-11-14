@@ -202,7 +202,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter)/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -1208,8 +1208,8 @@ jobs:
       - name: Merge the coverage of parallel and sharded runs
         run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
 
-  # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
-  # as a script runs it. The run must kill and keep the mutants that the fixture's expected-mutants file lists,
+  # Mutation testing on a Swift package and on an Xcode project, each with an XCTest and a Swift Testing target,
+  # with the command-line tool as a script runs it. The run must kill and keep the mutants that the fixture's expected-mutants file lists,
   # and print a warning for each survivor (#519). It takes minutes, so a pull request runs it only when it changes
   # mutation testing (mutation_code, from the changes job). The merge queue and every nightly and manual run
   # always run it. Fixture tests, below, requires it when it runs.
@@ -1218,7 +1218,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -1247,6 +1247,45 @@ jobs:
           path: |
             ${{ runner.temp }}/mutation-MutationTestingPackage
             ${{ runner.temp }}/mutation-MutationTestingPackage.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Install mise
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      # Mutation testing on an Xcode project, run from a Run Script build phase with xcodebuild, a scheme and a
+      # destination, for the XCTest and the Swift Testing runner. The run must kill and keep the mutants that the
+      # fixture's expected-mutants file lists, and the build log must warn at each survivor (#521). It runs on a copy
+      # of the fixture that depends on CucumberSwift by URL, as a project does.
+      # It runs on the same events as the Swift package fixture's step, because it takes minutes.
+      - name: Run mutation testing on the Xcode project fixture
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
+      # The runner selects one scenario of each test runner with xcodebuild, on the project the step above made. It
+      # builds the package's tests, so only the nightly and manual runs do it.
+      - name: Select scenarios of each test runner on the Xcode project fixture
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP" selection
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the Xcode mutation testing reports and log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-xcode-fixture
+          path: |
+            ${{ runner.temp }}/mutation-MutationTestingTuist
+            ${{ runner.temp }}/mutation-MutationTestingTuist-build.log
+            ${{ runner.temp }}/mutation-MutationTestingTuist-selection.log
           if-no-files-found: ignore
           retention-days: 3
 

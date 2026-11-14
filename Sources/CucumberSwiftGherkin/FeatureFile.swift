@@ -256,10 +256,31 @@ extension Step.Keyword {
 // MARK: - Names and suggestions, as CucumberSwift makes them
 
 extension FeatureFile {
+    /// Names the generated Swift Testing code can't use for a suite or a test: they would hide what it refers to. This and
+    /// the two functions below are `public` because two other targets use them: the Swift Testing generator, which names
+    /// the tests, and the mutation module, which names a test to select it. CucumberSwiftGherkin is not a product.
+    public static let swiftTestingReservedNames: Set<String> = [
+        "CucumberFeatures", "CucumberSwiftTesting", "Testing", "Test", "Suite", "Self", "Type", "Protocol", "Any", "Sendable"
+    ]
+
     /// `title` as a Swift type name, as CucumberSwift names the classes of the tests it generates:
     /// `Pay with a gift card` is `PayWithAGiftCard`. Empty when `title` has no letters.
     public static func typeName(for title: String) -> String {
         title.toClassString()
+    }
+
+    /// `name`, or `fallback` when it is empty or reserved, with a number added if it is already used: the name of a
+    /// Swift Testing suite or test, as the generated code has it. `used` has the names taken so far.
+    public static func uniqueSwiftTestingName(_ name: String, fallback: String, in used: inout Set<String>) -> String {
+        let base = name.isEmpty || swiftTestingReservedNames.contains(name) ? fallback : name
+        var candidate = base
+        var count = 2
+        while used.contains(candidate) {
+            candidate = "\(base)_\(count)"
+            count += 1
+        }
+        used.insert(candidate)
+        return candidate
     }
 }
 

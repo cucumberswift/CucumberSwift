@@ -4,7 +4,7 @@ Find the scenarios that still pass when the code they test is wrong.
 
 ## Overview
 
-The `cucumberswift mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed. Run it from a Swift package that has CucumberSwift tests:
+The `cucumberswift mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed. Run it from a Swift package that has CucumberSwift tests, or on an Xcode project as <doc:#Xcode-projects> shows:
 
 ```bash
 swift run cucumberswift mutation-test
@@ -51,7 +51,7 @@ public final class Basket {
 }
 ```
 
-Its `Basket.feature` checks 3 cases:
+Its `Basket.feature` checks three cases:
 
 ```gherkin
 @before
@@ -135,7 +135,7 @@ Killed 14, timed out 0, survived 0, did not build 0, ignored 2, in code no scena
 
 ## Turn it on
 
-Turn mutation testing on in the package or project that holds your scenarios, as the section for its build system describes.
+Turn mutation testing on in the package or Xcode project that contains your scenarios. <doc:Mutation-Testing#Swift-packages> describes a Swift package, and <doc:Mutation-Testing#Xcode-projects> describes an Xcode project.
 
 ### Swift packages
 
@@ -188,6 +188,30 @@ let package = Package(
 
 Without the trait, the command prints what to turn on and changes nothing. It needs Swift 6.1 or later, and it works with the XCTest runner and the Swift Testing runner alike.
 
+### Xcode projects
+
+The command builds and tests an Xcode project with `xcodebuild`, so the project needs no change. An Xcode project has no `Package.swift` to run the command from. Clone CucumberSwift at the version your project uses, and run its command from your project's folder with `--package-path`. The command reads your Swift code with swift-syntax, so it needs the `Macros` package trait:
+
+```bash
+swift run --package-path ~/src/CucumberSwift --traits Macros cucumberswift mutation-test \
+  --project Shop.xcodeproj --scheme Shop --destination 'platform=macOS'
+```
+
+Name the project with `--project`, or a workspace with `--workspace`. Give the scheme and the destination that `xcodebuild` runs the tests with. The command passes the destination to `xcodebuild` as it is, and our GitHub Actions CI workflow tests it with `platform=macOS`. The scheme's test action must run unit test bundles that use CucumberSwift, with the XCTest runner or the Swift Testing runner. UI test bundles aren't supported, because the changed code runs in the app.
+
+The command mutates the Swift files in the `Sources` folder of your project's folder. Pass `--sources` once for each other folder with code. An Xcode project has no package to read its targets from, so `--target` isn't available. These options apply to Xcode projects:
+
+| Option | Effect |
+|---|---|
+| `--project <name>` or `--workspace <name>` | The `.xcodeproj` or `.xcworkspace` in the project's folder. Pass one of them. |
+| `--scheme <name>` | The scheme that builds and tests the project. |
+| `--destination <destination>` | The `-destination` that `xcodebuild` builds for and runs the tests on. |
+| `--test-target <name>` | A test target of the scheme. Pass it once for each test target that contains scenarios when the scheme has several. The run then tests only the targets you name, and tests every target of the scheme when you name none. |
+| `--sources <folder>` | A folder with code to mutate, relative to the project's folder. The default is `Sources`. |
+| `--xcodebuild-arg <argument>` | Adds one argument to every `xcodebuild` command, such as `-quiet`. Repeat it for more arguments. |
+
+The command runs `xcodebuild` with `-skipMacroValidation` and `-skipPackagePluginValidation`, so Xcode doesn't ask to trust the macros and plugins of your project's packages, and with `CODE_SIGNING_ALLOWED=NO`.
+
 ## Find those mutants!
 
 Run the `cucumberswift mutation-test` command to find the mutants that your scenarios miss. Run it from the command line or from Xcode. Either way, it works on a throwaway copy of your package and writes its reports to `.build/mutation-testing` in the package, where your tests read the last run's report.
@@ -230,6 +254,24 @@ Open your package in Xcode. In the Project navigator, Control-click the package 
 Xcode shows the run's output in the Report navigator, as an entry named after the command. The output ends with the score and a warning for each surviving mutant:
 
 ![The Report navigator in Xcode with the output of the Mutation Testing command. It lists the 17 mutants and their results, then "Mutation score: 85.7% (12 of 14 mutants detected)", the mutants that no test noticed with the scenarios that run their code, the folder of the reports, .build/mutation-testing in the package, and 2 warnings: no test failed after changing false to true at Basket.swift:4, and no test failed after changing > to >= at Basket.swift:22.](MutationTesting-Xcode.png)
+
+### On an Xcode project
+
+The command tests an Xcode project by running `xcodebuild` on a copy of it. This section describes what it runs, how it counts the tests, and how to see the surviving mutants in Xcode. Run the command from your project's folder, as <doc:#Xcode-projects> shows. The command copies the folder to a temporary folder, as <doc:#Know-that-your-files-are-safe> describes for a package. It builds the copy once with `xcodebuild build-for-testing` and code coverage on, then runs `xcodebuild test-without-building` on the copy without a change. For each mutant, it builds the copy with the change and runs `test-without-building` again. Every build uses one DerivedData folder in the temporary folder, so each build reuses the products of the first.
+
+The command counts the tests that ran from the result bundle of each `xcodebuild` run, not from the exit status, because `xcodebuild` exits with success when it runs no test. The command stops when a run of the tests runs no test: the run of the unchanged project, or the run for a mutant.
+
+The command passes the `CUCUMBER_` variables of its environment on to the tests, so `--tags` and `CUCUMBER_TAGS` choose the scenarios, as <doc:#Choose-what-to-test> describes. The command writes its reports to `.build/mutation-testing` in your project's folder, so add `.build` to your `.gitignore`.
+
+To see the surviving mutants as warnings in Xcode, add `--format xcode` and run the command from a Run Script build phase. Put the phase in a target of its own, because the command runs your whole test suite for each mutant. Set the target's `ENABLE_USER_SCRIPT_SANDBOXING` build setting to `NO`, because Xcode's script sandbox blocks `swift` and `xcodebuild`. The phase starts the command with `env -i`, so the build's variables don't reach the command's own `xcodebuild`:
+
+```bash
+env -i HOME="$HOME" DEVELOPER_DIR="$DEVELOPER_DIR" TMPDIR="$TMPDIR" PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+    /usr/bin/swift run --package-path ~/src/CucumberSwift --traits Macros cucumberswift mutation-test \
+    --root "$SRCROOT" --project Shop.xcodeproj --scheme Shop --destination 'platform=macOS' --format xcode
+```
+
+Xcode then shows each warning at its line when you build that target.
 
 ## Read the results
 
@@ -294,7 +336,7 @@ public func add(contentsOf more: [Int]) {
 }
 ```
 
-A comment on a line of its own marks the next line of code, and a comment at the end of a line marks that line. The command neither tests nor counts the mutants on a marked line. The report lists them as Ignored, with the comment's text as the reason. The sample's run lists 2 mutants as ignored: the removed call and the changed `+` on the same line.
+A comment on a line of its own marks the next line of code, and a comment at the end of a line marks that line. The command neither tests nor counts the mutants on a marked line. The report lists them as Ignored, with the comment's text as the reason. The sample's run lists two mutants as ignored: the removed call and the changed `+` on the same line.
 
 ## Fail your tests on a surviving mutant
 
@@ -310,7 +352,7 @@ if FileManager.default.fileExists(atPath: report.path) {
 }
 ```
 
-The environment variables `CUCUMBER_MUTATION_TESTING` and `CUCUMBER_MUTATION_REPORT` do the same. With the XCTest runner, each feature's `Coverage scores` suite then has a third test, `Mutation`, after `Coverage` and `Redundancy`. It fails when any mutant in the code that the feature's scenarios run survived, with an error on the feature and on each scenario that runs that code. These are the sample's errors after the run above:
+The environment variables `CUCUMBER_MUTATION_TESTING` and `CUCUMBER_MUTATION_REPORT` set `Cucumber.mutationTesting` and `Cucumber.mutationReport` from outside the code. With the XCTest runner, each feature's `Coverage scores` suite then has a third test, `Mutation`, after `Coverage` and `Redundancy`. It fails when any mutant in the code that the feature's scenarios run survived, with an error on the feature and on each scenario that runs that code. These are the sample's errors after the run above:
 
 ```
 Basket.feature:1   Mutation testing: the scenarios still pass after 2 of the 14 changes to the code they run, in the mutation report of Nov 5, 2026 at 10:11 AM. …
