@@ -689,13 +689,14 @@ jobs:
   # Then the same on a watchOS Simulator (#269), where the Xcode project doesn't build: the
   # package's own tests through its CucumberSwift-Package scheme, and the consumer test packages.
   # The newest Xcode, on macos-26, with the runtimes it comes with. Nightly and manual runs
-  # only: pull requests build for tvOS and watchOS in Catalyst tests.
+  # only: pull requests build for tvOS and watchOS in Catalyst tests. The coverage steps at the end
+  # take about 25 minutes, so the job takes about 45, and the timeout only bounds a hung job.
   tvos_watchos_tests:
     name: tvOS and watchOS tests
     needs: changes
     if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -788,6 +789,22 @@ jobs:
             fi
           done
           exit $status
+      - name: Install the pinned Tuist
+        if: ${{ !cancelled() }}
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          command -v mise || brew install mise
+          mise install
+      # The same with an Xcode project (#538): CoverageDefaultsTuist, which Fixture tests runs on macOS. Each runner
+      # must give its Grading feature the scores it gets on macOS.
+      - name: Measure coverage with an Xcode project on iOS, tvOS and watchOS Simulators and Mac Catalyst
+        if: ${{ !cancelled() }}
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: mise exec -- .github/scripts/xcode-project-coverage.sh "$RUNNER_TEMP/xcode-project-coverage"
 
   # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job
   # uses, so that something checks the back-deployed Swift concurrency runtime and other
