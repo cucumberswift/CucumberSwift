@@ -172,6 +172,8 @@ import XCTest
         if let scenario = step.scenario,
            !hookedScenarios.contains(where: { $0 === scenario }) {
             hookedScenarios.append(scenario)
+            // The coverage of a scenario includes its BeforeScenario hooks, as with the Swift Testing runner.
+            reporters.compactMap { $0 as? CoverageReporter }.forEach { $0.willRunBeforeScenarioHooks(for: scenario) }
             beforeScenarioHooks.forEach { $0.hook(scenario) }
             scenario.startDate = Date()
             reporters.forEach { $0.didStart(scenario: scenario, at: scenario.startDate) }

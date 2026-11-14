@@ -173,12 +173,29 @@ struct CoverageScores: Codable, Equatable {
         let wastedTime: TimeInterval?
         /// The scenario's ``Scenario/group``.
         let group: String
+        /// How the scenario differs from the one it overlaps, when the two run much the same code but each checks
+        /// something the other doesn't. Only set with mutation testing on.
+        var overlap: Overlap?
     }
 
-    /// What the redundancy score measured: the score, and the redundant groups.
-    private struct Redundancy {
-        let score: Double
-        let redundantGroups: Set<String>
+    /// The mutants each scenario detected, by the scenario's line, with what each mutant changes, by its ID. With
+    /// these, the redundancy judges the scenarios by the mutants they detect as well as by their code.
+    struct Detections: Equatable {
+        var kills: [Int: Set<String>]
+        var changes: [String: String]
+    }
+
+    /// A scenario that runs only code other scenarios run, but detects a mutant they miss, and the scenario it
+    /// overlaps most: one of the two should take the best of both.
+    struct Overlap: Codable, Equatable {
+        /// The line of the scenario this one overlaps.
+        let line: Int
+        /// The regions this scenario runs that the other doesn't, and the other way around.
+        let regionsHere: Int
+        let regionsThere: Int
+        /// What the mutants change that only this scenario detects, and the other way around.
+        let detectsHere: [String]
+        let detectsThere: [String]
     }
 
     /// A function the feature entered, with regions none of its scenarios ran.
@@ -220,41 +237,6 @@ struct CoverageScores: Codable, Equatable {
 
     /// The seconds all the scenarios took.
     var duration: TimeInterval { scenarios.reduce(0) { $0 + $1.duration } }
-
-    /// The redundant groups of `scenarios`, and their share of the groups, from 0 to 100. A group is a
-    /// scenario, or a Scenario Outline's examples together, and its code is what its scenarios ran after their
-    /// Background steps.
-    ///
-    /// A group is redundant when the groups kept run all of its code. Every group whose code the other
-    /// groups don't all run is kept. Of the rest, which the other groups cover, each is kept in the order of
-    /// the feature file unless the groups kept so far run its code: so order only decides between groups that
-    /// cover each other, such as two that run the same code, and the later one is redundant.
-    private static func redundancy(of scenarios: [Scenario]) -> Redundancy {
-        var order = [String]()
-        var groups = [String: Set<Int>]()
-        for scenario in scenarios where !scenario.isTaggedRedundant {
-            if groups[scenario.group] == nil { order.append(scenario.group) }
-            groups[scenario.group, default: []].formUnion(scenario.countedRegions)
-        }
-        // A group with no code of its own beyond its Background has nothing to judge.
-        let judged = order.filter { groups[$0]?.isEmpty == false }
-        func others(than group: String) -> Set<Int> {
-            judged.filter { $0 != group }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
-        }
-        let covered = Set(judged.filter { (groups[$0] ?? []).isSubset(of: others(than: $0)) })
-        var kept = judged.filter { !covered.contains($0) }.reduce(into: Set<Int>()) { $0.formUnion(groups[$1] ?? []) }
-        var redundant = Set<String>()
-        for group in judged where covered.contains(group) {
-            let regions = groups[group] ?? []
-            if regions.isSubset(of: kept) {
-                redundant.insert(group)
-            } else {
-                kept.formUnion(regions)
-            }
-        }
-        let score = judged.isEmpty ? 0 : 100 * Double(redundant.count) / Double(judged.count)
-        return Redundancy(score: score, redundantGroups: redundant)
-    }
 
     /// The steps outside the Background that run, in the same way as other scenarios do, functions that
     /// belong in the Background: the redundant steps.
@@ -305,7 +287,43 @@ struct CoverageScores: Codable, Equatable {
         return found.values.sorted { $0.line < $1.line }
     }
 
-    init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool) {
+    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
+    /// nil, or the scenarios of one of its Rules.
+    struct Part: Equatable {
+        let rule: ScenarioRule?
+        let scores: CoverageScores
+    }
+
+    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
+    let isMutationAware: Bool
+
+    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
+    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
+    /// the feature file, whatever order they ran in.
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)],
+                      code: MeasuredCode,
+                      isRedundancy: Bool,
+                      detections: Detections? = nil) -> [Part] {
+        let inOrder = scenarios.enumerated()
+            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
+            .map(\.element)
+        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
+        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
+        return parts.map { rule in
+            let ran = inOrder.filter { $0.rule == rule }.map(\.scenario)
+            return Part(rule: rule, scores: CoverageScores(scenarios: ran, code: code, isRedundancy: isRedundancy, detections: detections))
+        }
+    }
+
+    private func percent(_ part: Int, of whole: Int) -> Double {
+        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
+    }
+}
+
+extension CoverageScores {
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool, detections: Detections? = nil) {
         var runs = [Int: Int]()
         for scenario in scenarios {
             for region in scenario.regions { runs[region, default: 0] += 1 }
@@ -318,8 +336,9 @@ struct CoverageScores: Codable, Equatable {
         self.functionsRun = functionsRun.count
 
         // Redundancy is measured only with its score on.
-        let measured = isRedundancy ? Self.redundancy(of: scenarios) : nil
+        let measured = isRedundancy ? Self.redundancy(of: scenarios, detections: detections) : nil
         redundancy = measured?.score
+        isMutationAware = isRedundancy && detections != nil
         // A redundant scenario's whole time is wasted: removing it would test no less code.
         let wasted = scenarios.map { scenario in
             measured.map { $0.redundantGroups.contains(scenario.group) && !scenario.isTaggedRedundant ? scenario.duration : 0 }
@@ -333,15 +352,19 @@ struct CoverageScores: Codable, Equatable {
             let own = scenario.regions.filter { runs[$0] == 1 }.count
             let share = scenario.regions.reduce(0.0) { $0 + 1 / Double(runs[$1] ?? 1) }
             let addsNothing = !scenario.isTaggedRedundant && measured?.redundantGroups.contains(scenario.group) == true
-            return ScenarioScore(name: scenario.name,
-                                 line: scenario.line,
-                                 duration: scenario.duration,
-                                 regions: scenario.regions.count,
-                                 ownRegions: own,
-                                 share: total == 0 ? 0 : 100 * share / Double(total),
-                                 addsNothing: addsNothing,
-                                 wastedTime: wastedTime,
-                                 group: scenario.group)
+            var score = ScenarioScore(name: scenario.name,
+                                      line: scenario.line,
+                                      duration: scenario.duration,
+                                      regions: scenario.regions.count,
+                                      ownRegions: own,
+                                      share: total == 0 ? 0 : 100 * share / Double(total),
+                                      addsNothing: addsNothing,
+                                      wastedTime: wastedTime,
+                                      group: scenario.group)
+            if !scenario.isTaggedRedundant, let partner = measured?.overlaps[scenario.group] {
+                score.overlap = Self.overlap(of: scenario.group, with: partner, in: scenarios, detections: detections)
+            }
+            return score
         }
 
         let entered = code.functions.filter { functionsRun.contains($0.regions) }
@@ -358,29 +381,19 @@ struct CoverageScores: Codable, Equatable {
         .sorted { ($0.regionsNotRun, $1.file, $1.line) > ($1.regionsNotRun, $0.file, $0.line) }
     }
 
-    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
-    /// nil, or the scenarios of one of its Rules.
-    struct Part: Equatable {
-        let rule: ScenarioRule?
-        let scores: CoverageScores
-    }
-
-    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
-    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
-    /// the feature file, whatever order they ran in.
-    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)], code: MeasuredCode, isRedundancy: Bool) -> [Part] {
-        let inOrder = scenarios.enumerated()
-            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
-            .map(\.element)
-        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
-        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
-        return parts.map { rule in
-            Part(rule: rule,
-                 scores: CoverageScores(scenarios: inOrder.filter { $0.rule == rule }.map(\.scenario), code: code, isRedundancy: isRedundancy))
-        }
-    }
-
-    private func percent(_ part: Int, of whole: Int) -> Double {
-        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
+    /// Reads the scores from a manifest. A manifest that CucumberSwift 6.8 wrote has no `isMutationAware`, which is
+    /// then false: the field is new, so the manifest's form, and its version, stay the same.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coveredRegions = try container.decode(Int.self, forKey: .coveredRegions)
+        regionsInFunctionsRun = try container.decode(Int.self, forKey: .regionsInFunctionsRun)
+        measuredRegions = try container.decode(Int.self, forKey: .measuredRegions)
+        functionsRun = try container.decode(Int.self, forKey: .functionsRun)
+        redundancy = try container.decodeIfPresent(Double.self, forKey: .redundancy)
+        wastedTime = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedTime)
+        scenarios = try container.decode([ScenarioScore].self, forKey: .scenarios)
+        gaps = try container.decode([Gap].self, forKey: .gaps)
+        redundantSteps = try container.decode([RedundantStep].self, forKey: .redundantSteps)
+        isMutationAware = try container.decodeIfPresent(Bool.self, forKey: .isMutationAware) ?? false
     }
 }

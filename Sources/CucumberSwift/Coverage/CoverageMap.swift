@@ -41,9 +41,18 @@ struct CoverageMap {
         let counter: Counter
         let lineStart: Int
         let lineEnd: Int
-        /// The columns the region starts and ends at, counted in UTF-8 bytes from 1.
-        let columnStart: Int
-        let columnEnd: Int
+        /// The columns the region starts and ends at, counted in UTF-8 bytes from 1. 0 when not known.
+        var columnStart = 0
+        var columnEnd = 0
+
+        /// Whether the region holds `line` at `column`, or anywhere on `line` without a column.
+        func contains(line: Int, column: Int?) -> Bool {
+            guard lineStart <= line, line <= lineEnd else { return false }
+            guard let column, columnStart > 0 else { return true }
+            if line == lineStart, column < columnStart { return false }
+            if line == lineEnd, columnEnd > 0, column > columnEnd { return false }
+            return true
+        }
     }
 
     /// A function, with the code regions in its own file.

@@ -61,7 +61,8 @@ final class CoverageRecorder {
     /// The code the scores measure, and how to work out which of it a scenario ran. Nil when no binary
     /// has a coverage map, as ``scoresProblem`` says.
     private(set) var code: MeasuredCode?
-    private var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
+    /// The measured functions: the binary each is in, its coverage map entry, and the number of its first region.
+    private(set) var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
     /// The functions the scores measure, as the manifest lists them for `cucumberswift coverage merge`.
     private var measured: [CoverageManifest.MeasuredFunction]?
     private(set) var scoresProblem: String?
@@ -273,10 +274,11 @@ final class CoverageRecorder {
     /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran: one for its
     /// scenarios outside a Rule, first, then one for each Rule, in the order of their lines. Empty when the
     /// run has no scores, or none of the feature's scenarios ran.
-    func featureFinished(feature: String, featureName: String, line: Int) -> [PartScores] {
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    func featureFinished(feature: String, featureName: String, line: Int, detections: CoverageScores.Detections? = nil) -> [PartScores] {
         guard let ran = featureScenarios.removeValue(forKey: feature),
               problem == nil, settings.scoresOffReason == nil, let code else { return [] }
-        let parts = CoverageScores.parts(of: ran, code: code, isRedundancy: settings.isRedundancy)
+        let parts = CoverageScores.parts(of: ran, code: code, isRedundancy: settings.isRedundancy, detections: detections)
         for part in parts {
             features.append(FeatureRecord(feature: feature,
                                           featureName: featureName,
@@ -297,5 +299,13 @@ final class CoverageRecorder {
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
         return url
+    }
+}
+
+// What the Mutation test reads while a feature runs.
+extension CoverageRecorder {
+    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
+    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
+        featureScenarios[feature]?.map(\.scenario) ?? []
     }
 }

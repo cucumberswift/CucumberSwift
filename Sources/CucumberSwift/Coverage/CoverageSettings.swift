@@ -41,6 +41,34 @@ struct CoverageSettings: Equatable {
         private var storedRedundancy: Bool?
         private var storedSources: [String]?
         private var storedRecordsIssuesInSuites: Bool?
+        private var storedMutationReport: String?
+        private var storedMutationTesting: Bool?
+
+        var mutationTesting: Bool? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedMutationTesting
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedMutationTesting = newValue
+            }
+        }
+
+        var mutationReport: String? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedMutationReport
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedMutationReport = newValue
+            }
+        }
 
         var recordsIssuesInSuites: Bool? {
             get {
@@ -102,6 +130,8 @@ struct CoverageSettings: Equatable {
     static let redundantStepWarningLevelVariable = "CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL"
     static let sourcesVariable = "CUCUMBER_COVERAGE_SOURCES"
     static let recordsIssuesInSuitesVariable = "CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES"
+    static let mutationReportVariable = "CUCUMBER_MUTATION_REPORT"
+    static let mutationTestingVariable = "CUCUMBER_MUTATION_TESTING"
 
     static let storage = Storage()
 
@@ -128,6 +158,10 @@ struct CoverageSettings: Equatable {
     /// suite, instead of printing them. Off by default, because Xcode stops the test process when a suite
     /// records an issue (#509). The XCTest runner doesn't read it.
     var recordsIssuesInSuites = false
+    /// Whether each feature gets a Mutation test, with coverage on: off by default.
+    var isMutationTesting = false
+    /// The Stryker report of a `mutation-test` run, whose mutants the Mutation test checks.
+    var mutationReport: String?
 
     /// The settings: each static variable, then its environment variable, then its default.
     static func read(environment: [String: String]) -> CoverageSettings {
@@ -143,6 +177,11 @@ struct CoverageSettings: Equatable {
         settings.redundantStepWarningLevel = level("redundantStepWarning", redundantStepWarningLevelVariable, settings.redundantStepWarningLevel)
         settings.recordsIssuesInSuites = storage.recordsIssuesInSuites
             ?? FeatureFlagValue.bool(environment[recordsIssuesInSuitesVariable]) ?? false
+        settings.isMutationTesting = storage.mutationTesting ?? FeatureFlagValue.bool(environment[mutationTestingVariable]) ?? false
+        // The static variable wins even when it is blank, as for the sources: it can turn off a path the environment sets.
+        settings.mutationReport = (storage.mutationReport ?? environment[mutationReportVariable])
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .flatMap { $0.isEmpty ? nil : $0 }
         settings.sources = (storage.sources ?? environment[sourcesVariable].map { $0.components(separatedBy: ",") } ?? [])
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }

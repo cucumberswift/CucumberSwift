@@ -1,0 +1,257 @@
+//
+//  WorkFolder.swift
+//  CucumberSwiftMutation
+//
+
+#if os(macOS) || os(Linux)
+import Foundation
+
+/// The lock files that the runs in this process hold, counted, so that a run that fails to take a lock never drops
+/// another run's.
+private final class HeldLocks: @unchecked Sendable {
+    private let lock = NSLock()
+    private var counts = [String: Int]()
+
+    func contains(_ file: URL) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return counts[file.standardizedFileURL.path, default: 0] > 0
+    }
+
+    func insert(_ file: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        counts[file.standardizedFileURL.path, default: 0] += 1
+    }
+
+    func remove(_ file: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        let path = file.standardizedFileURL.path
+        counts[path] = counts[path, default: 0] > 1 ? counts[path, default: 0] - 1 : nil
+    }
+}
+
+/// Whether a work folder was removed, so that only the first ``WorkFolder/remove()`` removes anything.
+private final class Removal: @unchecked Sendable {
+    private let lock = NSLock()
+    private var removed = false
+
+    /// True the first time, and false after.
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        defer { removed = true }
+        return !removed
+    }
+}
+
+/// The temporary copy of the project that a run mutates, and the lock file that lets the next run clean up
+/// after a run that was killed. The user's own files are never mutated, so nothing needs reverting.
+///
+/// The lock keeps runs in different processes apart. One process runs one `MutationRun` at a time: the
+/// `cucumberswift mutation-test` command and the Mutation Testing plugin each start one. Several runs at once in
+/// one process aren't supported.
+public struct WorkFolder {
+    public enum Failure: Error, Equatable, CustomStringConvertible {
+        case noWritableFolder(tried: [String])
+        case anotherRunIsActive(pid: Int32)
+        case copyFailed(String)
+        case pathHasSpace(String)
+        case pathInBuildFolder(String)
+
+        public var description: String {
+            switch self {
+                case .noWritableFolder(let tried):
+                    let list = tried.joined(separator: ", ")
+                    return "No folder for the temporary copy is writable. Tried: \(list). Pass --work-dir with a folder you can write to."
+                case .anotherRunIsActive(let pid):
+                    return "Another mutation run (process \(pid)) is still active for this package."
+                case .copyFailed(let message):
+                    return "Couldn't copy the project: \(message)"
+                case .pathInBuildFolder(let path):
+                    return "The folder for the temporary copy is in a .build folder (\(path)), and code coverage leaves out the code "
+                        + "there, so no scenario would run a mutant. Pass --work-dir with a path outside .build."
+                case .pathHasSpace(let path):
+                    return "The folder for the temporary copy has a space in its path (\(path)), and Swift Testing finds no tests "
+                        + "in a package whose path has one. Pass --work-dir with a path that has no space."
+            }
+        }
+    }
+
+    /// What the lock file records.
+    struct Lock: Codable, Equatable {
+        var pid: Int32
+        /// The folder that holds the copy, which the next run removes if this process is gone.
+        var folder: String
+    }
+
+    /// The lock files that runs in this process hold, by their standardized paths.
+    private static let held = HeldLocks()
+
+    /// The prefix of every folder this tool creates, which it checks before it removes one.
+    static let folderPrefix = "mutation-copy-"
+    /// The file that this tool writes in every folder it creates, before the copy. The next run removes a folder that a
+    /// lock names only when the folder has it, so a lock that names some other folder never deletes it.
+    static let ownerMarker = ".cucumberswift-mutation-copy"
+
+    /// The folder that holds the copy.
+    public let folder: URL
+    /// The copy of the project.
+    public let copy: URL
+    private let lockFile: URL
+    /// Whether ``remove()`` has run, shared by every copy of this value.
+    private let removal = Removal()
+
+    /// The folder for the temporary copy: `explicit` when given, then the temporary folder, then the user's caches. Never
+    /// a folder in the package at `root`, nor one in a `.build` folder: code coverage leaves out the code under `.build`,
+    /// where dependencies are, so no scenario would seem to run a mutant.
+    public static func chooseLocation(explicit: URL?,
+                                      root: URL,
+                                      temporary: URL = URL(fileURLWithPath: NSTemporaryDirectory()),
+                                      caches: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first) throws -> URL {
+        if let explicit {
+            if explicit.path.contains(" ") { throw Failure.pathHasSpace(explicit.path) }
+            if explicit.pathComponents.contains(".build") { throw Failure.pathInBuildFolder(explicit.path) }
+        }
+        let candidates = [explicit, temporary.appendingPathComponent("cucumberswift-mutation"), caches?.appendingPathComponent("cucumberswift-mutation")]
+            .compactMap { $0 }
+        let inPackage = root.standardizedFileURL.path + "/"
+        // A folder with a space in its path would make Swift Testing find no tests in the copy, so it is skipped.
+        for candidate in candidates where !candidate.path.contains(" ") && !candidate.pathComponents.contains(".build")
+            && !(candidate.standardizedFileURL.path + "/").hasPrefix(inPackage) && isWritable(candidate) {
+            return candidate
+        }
+        throw Failure.noWritableFolder(tried: candidates.map(\.path))
+    }
+
+    static func isWritable(_ folder: URL) -> Bool {
+        let fileManager = FileManager.default
+        do {
+            try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+            let probe = folder.appendingPathComponent(".probe-\(UUID().uuidString)")
+            try Data().write(to: probe)
+            try fileManager.removeItem(at: probe)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Removes the folder of a run that was killed, when the lock file in `lockFolder` names a process that is
+    /// gone. Returns the folder it removed. Throws when the process is still running.
+    @discardableResult
+    public static func cleanUpAfterDeadRun(lockFolder: URL, isAlive: (Int32) -> Bool = processIsAlive) throws -> URL? {
+        // One run at a time reads and removes a dead run's lock. Otherwise two runs could both read it, and the second
+        // would remove the lock that the first wrote after it.
+        try FileManager.default.createDirectory(at: lockFolder, withIntermediateDirectories: true)
+        let guardFile = open(lockFolder.appendingPathComponent("mutation.lock.guard").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o644)
+        guard guardFile >= 0 else { throw Failure.copyFailed("can't open the lock folder \(lockFolder.path)") }
+        defer { close(guardFile) }
+        // A signal can interrupt the wait. Any other failure would leave the lock unguarded, so the run stops.
+        while flock(guardFile, LOCK_EX) != 0 {
+            guard errno == EINTR else { throw Failure.copyFailed("can't lock \(lockFolder.path): \(String(cString: strerror(errno)))") }
+        }
+        let lockFile = lockFolder.appendingPathComponent("mutation.lock")
+        guard let data = try? Data(contentsOf: lockFile), let lock = try? JSONDecoder().decode(Lock.self, from: data) else {
+            return nil
+        }
+        // A lock with this process's ID is a dead run's whose ID the system gave to this process, unless this process
+        // holds it: then another run in this process is still active.
+        let isActive = lock.pid == getpid() ? held.contains(lockFile) : isAlive(lock.pid)
+        if isActive { throw Failure.anotherRunIsActive(pid: lock.pid) }
+        let folder = URL(fileURLWithPath: lock.folder)
+        // The lock file is data. Remove only a folder that this tool made, never whatever a lock names.
+        let isOwn = folder.lastPathComponent.hasPrefix(folderPrefix)
+            && FileManager.default.fileExists(atPath: folder.appendingPathComponent(ownerMarker).path)
+        if isOwn { remove(folder) }
+        try? FileManager.default.removeItem(at: lockFile)
+        return isOwn ? folder : nil
+    }
+
+    public static func processIsAlive(_ pid: Int32) -> Bool {
+        kill(pid, 0) == 0 || errno == EPERM
+    }
+
+    /// Clones with copy-on-write where the file system can, and copies otherwise.
+    private static func clone(_ source: URL, to destination: URL, runner: CommandRunning) throws {
+        let result = runner.run("/bin/cp", ["-c", "-R", source.path, destination.path], in: source.deletingLastPathComponent(), environment: [:], timeout: nil)
+        if !result.succeeded {
+            do {
+                try? FileManager.default.removeItem(at: destination)
+                try FileManager.default.copyItem(at: source, to: destination)
+            } catch {
+                throw Failure.copyFailed("\(source.path): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Makes the files writable first, because some build and checkout files are read-only.
+    private static func remove(_ folder: URL) {
+        guard FileManager.default.fileExists(atPath: folder.path) else { return }
+        _ = ProcessRunner(ignoresCancellation: true).run("/bin/chmod", ["-R", "u+w", folder.path], in: folder.deletingLastPathComponent(), environment: [:], timeout: 120)
+        try? FileManager.default.removeItem(at: folder)
+    }
+
+    /// Copies the package at `root` to `copy`, without the folders a build or a checkout makes.
+    private static func copyProject(_ root: URL, to copy: URL, runner: CommandRunning) throws {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: copy, withIntermediateDirectories: true)
+        let top = try fileManager.contentsOfDirectory(atPath: root.path)
+        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") {
+            try clone(root.appendingPathComponent(name), to: copy.appendingPathComponent(name), runner: runner)
+        }
+        // The dependencies SwiftPM already checked out, so that the copy builds without the network.
+        let build = root.appendingPathComponent(".build")
+        for name in ["checkouts", "repositories", "workspace-state.json"] where fileManager.fileExists(atPath: build.appendingPathComponent(name).path) {
+            try fileManager.createDirectory(at: copy.appendingPathComponent(".build"), withIntermediateDirectories: true)
+            try clone(build.appendingPathComponent(name), to: copy.appendingPathComponent(".build/\(name)"), runner: runner)
+        }
+    }
+
+    /// Writes the lock file, then copies the project into a new folder inside `location`.
+    public init(copying root: URL, into location: URL, lockFolder: URL, runner: CommandRunning = ProcessRunner()) throws {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: lockFolder, withIntermediateDirectories: true)
+        folder = location.appendingPathComponent("\(Self.folderPrefix)\(getpid())-\(UUID().uuidString.prefix(8))")
+        // Not the package's own folder name: it may have a space in it.
+        copy = folder.appendingPathComponent("package")
+        lockFile = lockFolder.appendingPathComponent("mutation.lock")
+        // The lock first: a run killed during the copy still leaves the next run something to clean up. It is never
+        // written over: a run that started after this one checked the lock folder holds it, and this run stops. The
+        // lock counts as held before it exists, so a cleanup in this process never takes it for a dead run's.
+        Self.held.insert(lockFile)
+        do {
+            try JSONEncoder().encode(Lock(pid: getpid(), folder: folder.path)).write(to: lockFile, options: .withoutOverwriting)
+        } catch {
+            Self.held.remove(lockFile)
+            guard fileManager.fileExists(atPath: lockFile.path) else { throw error }
+            let holder = (try? Data(contentsOf: lockFile)).flatMap { try? JSONDecoder().decode(Lock.self, from: $0) }
+            throw Failure.anotherRunIsActive(pid: holder?.pid ?? 0)
+        }
+        do {
+            try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+            try Data("\(getpid())\n".utf8).write(to: folder.appendingPathComponent(Self.ownerMarker))
+            try Self.copyProject(root, to: copy, runner: runner)
+        } catch {
+            // No caller gets a WorkFolder to remove, so the partial copy and the lock go now.
+            Self.remove(folder)
+            try? fileManager.removeItem(at: lockFile)
+            Self.held.remove(lockFile)
+            throw error
+        }
+    }
+
+    /// Deletes the copy and the lock file. Safe to call more than once, and from a signal handler's queue: only the
+    /// first call removes anything, so a later one never touches the lock of a run that started since.
+    public func remove() {
+        guard removal.claim() else { return }
+        Self.remove(folder)
+        // The lock file goes before the record of it, so a cleanup never finds this run's lock unheld. Only this run's
+        // lock: the one that names this run's folder.
+        let lock = (try? Data(contentsOf: lockFile)).flatMap { try? JSONDecoder().decode(Lock.self, from: $0) }
+        if lock?.folder == folder.path { try? FileManager.default.removeItem(at: lockFile) }
+        Self.held.remove(lockFile)
+    }
+}
+#endif
