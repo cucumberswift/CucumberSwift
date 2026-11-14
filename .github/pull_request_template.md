@@ -11,8 +11,8 @@ Fixes #
 
 ## Proof
 
-<!-- Open the `Proof` check on this PR's last commit. For each item it shows, say what the item shows and
-     why that proves the change. No proof saved? Say why none is needed, or add some: see "Proof" in
+<!-- Open the `Proof` check on this PR's last commit (from a fork: the summary of the `Gather proof` job).
+     For each item it shows, say what the item shows and why that proves the change. No proof saved? Say why none is needed, or add some: see "Proof" in
      CONTRIBUTING.md. -->
 
   -

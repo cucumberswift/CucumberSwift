@@ -362,7 +362,7 @@ Each of these problems has a simple fix:
 - **Any other step saves a file in `$PROOF_DIR`.** Our CI sets it in the jobs that upload proof. `.github/scripts/proof.py save --title T --source S` saves its standard input as an item, `title` names what the item shows, and `source` names the test that saved it. A job that saves proof uploads the folder as an artifact named `proof-<job>`. `proof.py` documents the file format.
 - **A screenshot is linked, not shown.** `proof.py attachments --source S <result bundle>` saves the screenshots in an `.xcresult` with `xcrun xcresulttool export attachments`, which needs Xcode 16 or later. The check links to the artifact that holds the images.
 
-A pull request that saves no proof gets a neutral `Proof` check that says "No proof saved". Open the check on your pull request's last commit, then write a `## Proof` section in the description. For each item, say what it shows and why that proves your change. The check makes the proof, and your section says that the proof is right.
+A pull request that saves no proof gets a neutral `Proof` check that says "No proof saved". Open the check on your pull request's last commit, then write a `## Proof` section in the description. If your pull request comes from a fork, there is no check: open the `Gather proof` job of the `CI` workflow run for your last commit and read its summary. For each item, say what it shows and why that proves your change. The check makes the proof, and your section says that the proof is right.
 
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
