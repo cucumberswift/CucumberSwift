@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant Runner
+    participant Hooks
+    participant Step
+    Runner->>Hooks: BeforeScenario
+    Note over Runner,Step: Step 1 passes
+    Runner->>Hooks: BeforeStep
+    Runner->>Step: Run step 1
+    Step-->>Runner: Passed
+    Runner->>Hooks: AfterStep
+    Note over Runner,Step: Step 2 fails
+    Runner->>Hooks: BeforeStep
+    Runner->>Step: Run step 2
+    Step-->>Runner: Failed
+    Runner->>Hooks: AfterStep
+    Note over Runner,Step: Step 3 doesn't run, so it has no step hooks
+    Runner->>Hooks: AfterScenario

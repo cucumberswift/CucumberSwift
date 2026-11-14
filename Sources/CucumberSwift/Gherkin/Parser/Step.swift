@@ -48,6 +48,9 @@ public class Step: CustomStringConvertible {
     var executeInstance: NSObject?
     var matchesExpression: MatchesExpression?
     var errorMessage: String = ""
+    /// Whether the step's `BeforeStep` hooks ran, so that its `AfterStep` hooks run only if they did. A step that
+    /// doesn't run (skipped, after a failure, ambiguous or with no step definition) has no step hooks.
+    var ranBeforeStepHooks = false
     var startTime: Date?
     var endTime: Date?
     var executionDuration: Measurement<UnitDuration> {
