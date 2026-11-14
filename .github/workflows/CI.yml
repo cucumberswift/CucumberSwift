@@ -1311,3 +1311,31 @@ jobs:
             done
           done
           exit $status
+
+  # On the nightly run only, after every other job, reports the run in an issue with
+  # .github/scripts/nightly_report.py: a run with a failed, timed-out or cancelled job
+  # opens an issue titled "Nightly CI run failed" that names those jobs and links the
+  # run, or comments on that issue if it is still open. A run that passes comments on
+  # the open issue so a maintainer can close it. Nothing closes the issue. It needs
+  # every other job, so it runs last; test_nightly_report.py checks the list. It reads
+  # the run's jobs from the API (actions: read) and is the only job that can write
+  # issues.
+  nightly_report:
+    name: Report the nightly run
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Open or comment on the nightly run's issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/nightly_report.py
