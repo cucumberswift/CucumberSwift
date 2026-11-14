@@ -8,7 +8,7 @@ CucumberSwift measures your scenarios with two commands. The first runs your tes
 
 ```bash
 swift test --enable-code-coverage
-swift run cucumberswift-mutation-test
+swift run cucumberswift mutation-test
 ```
 
 Both build on your scenarios: feature files that describe how your app behaves, and step definitions that drive it. If you haven't written any yet, start with the tutorial in <doc:Tutorial-Table-of-Contents>, and see <doc:Matching-Steps> for how a step finds its step definition. The measures on this page show how good those scenarios are.
@@ -37,7 +37,7 @@ CucumberSwift marks a scenario as redundant when the other scenarios run all the
 
 ## Measure strength with mutation testing
 
-The `cucumberswift-mutation-test` command changes your code in small ways and runs your scenarios against each change, as <doc:Mutation-Testing> describes. A scenario that still passes with the code changed doesn't check that code. With `Cucumber.mutationTesting` on, each feature gets a Mutation test that fails on such a change, and the redundancy compares the scenarios by the changes they detect.
+The `cucumberswift mutation-test` command changes your code in small ways and runs your scenarios against each change, as <doc:Mutation-Testing> describes. A scenario that still passes with the code changed doesn't check that code. With `Cucumber.mutationTesting` on, each feature gets a Mutation test that fails on such a change, and the redundancy compares the scenarios by the changes they detect.
 
 ## Topics
 

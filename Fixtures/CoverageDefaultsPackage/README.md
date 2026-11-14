@@ -12,4 +12,4 @@ watchOS Simulator and on Mac Catalyst, to show that both runners score a feature
 The test targets set `Cucumber.coverageSources`, because CucumberSwift never measures the files in its own
 package folder, and this fixture is inside it. A project that depends on CucumberSwift doesn't need it.
 
-Needs Swift 6.1 or later. Run it with `FIXTURES=CoverageDefaultsPackage mise run test-fixtures`.
+Needs Swift 6.1 or later. Run it with `mise run test-fixtures CoverageDefaultsPackage`.
