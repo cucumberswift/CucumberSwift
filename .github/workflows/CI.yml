@@ -1245,6 +1245,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Bazel's disk cache and repository cache, kept between runs: the C++ tools that rules_swift builds for the
+      # coverage step's Xcode took 18 of its 22 minutes, and a run starts with nothing otherwise. Each run adds what
+      # it built, and the key changes with the module files, the Bazel and the two Xcode versions the steps build with
+      # (the image's, and the 26.2 that the coverage step and the mutation testing step pass).
+      - name: Find the Xcode that the cache is for
+        id: xcode
+        run: echo "default=$(xcodebuild -version | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
+      - name: Restore the Bazel caches
+        id: bazel_cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/bazel-disk-cache
+            ${{ runner.temp }}/bazel-repository-cache
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-${{ hashFiles('MODULE.bazel', 'Tests/MODULE.bazel', '.bazelversion', 'Tests/.bazelversion') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-
+      - name: Say whether the Bazel caches were restored
+        run: |
+          echo "Bazel cache: exact key hit = '${{ steps.bazel_cache.outputs.cache-hit }}', restored from '${{ steps.bazel_cache.outputs.cache-matched-key }}'"
+          du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache" 2>/dev/null || echo "Bazel cache: nothing restored, so a cold run"
       - name: Show the Bazel version
         run: bazel version
       - name: Check MODULE.bazel's CucumberSwiftExpressions is at least Package.swift's
@@ -1311,6 +1332,19 @@ jobs:
             done
           done
           exit $status
+      # `bazel coverage` builds Grades with code coverage and runs the macOS test with COVERAGE=1: the
+      # runner must accept it, and CucumberSwift must write each scenario's coverage into the test's
+      # outputs, with scores (#522). CucumberSwift reads the coverage format of Xcode 26, so this step
+      # builds with Xcode 26.2 rather than the image's default.
+      - name: Check per-scenario coverage under bazel coverage
+        working-directory: Tests
+        run: |
+          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
+          grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
+          grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
+          python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+      - name: Report the Bazel cache sizes
+        run: du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache"
 
   # On the nightly run only, after every other job, reports the run in an issue with
   # .github/scripts/nightly_report.py: a run with a failed, timed-out or cancelled job
@@ -1322,7 +1356,7 @@ jobs:
   # issues.
   nightly_report:
     name: Report the nightly run
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, bazel_tests]
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5

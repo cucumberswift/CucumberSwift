@@ -126,6 +126,46 @@ copts = ["-enable-upcoming-feature", "BareSlashRegexLiterals"],
 
 Then return ``RegexLiteralStyle/bareSlash`` from your `StepImplementation`. See <doc:Running-Tests-With-Swift-Package-Manager> for how to follow the setting automatically.
 
+### Measure code coverage
+
+Run `bazel coverage` on a `macos_unit_test` target, and CucumberSwift scores each feature and writes each scenario's coverage, as <doc:Measuring-Code-Coverage> describes. The target runs with the `macos_xctest_runner` rule that the `cucumberswift` module provides:
+
+```starlark
+load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
+load("@rules_apple//apple:macos.bzl", "macos_unit_test")
+
+macos_xctest_runner(name = "macos_xctest_runner")
+
+macos_unit_test(
+    name = "MyAppFeatureTests",
+    minimum_os_version = "10.15",
+    runner = ":macos_xctest_runner",
+    deps = [":MyAppFeatureTestsLib"],
+)
+```
+
+Bazel builds with gcov's coverage format by default, and the test bundle then fails to link. Add these lines to your `.bazelrc` to build with LLVM's format. The last line names the targets that hold the code you test, because Bazel builds only the targets that `--instrumentation_filter` matches with coverage:
+
+```text
+coverage --features=llvm_coverage_map_format
+coverage --features=-gcc_coverage_map_format
+coverage --instrumentation_filter=//MyApp:MyApp
+```
+
+CucumberSwift reads the coverage format of Xcode 26. If Bazel selects an older Xcode, pass an Xcode 26 version with `--xcode_version`:
+
+```bash
+bazel coverage //MyApp:MyAppFeatureTests --xcode_version=26.2
+```
+
+CucumberSwift prints each feature's scores in the test's log. It writes its files to a folder named `_cucumberCoverage` in the test's outputs folder that Bazel gives the test in `TEST_UNDECLARED_OUTPUTS_DIR`. Bazel keeps that folder next to the test's log:
+
+```text
+bazel-testlogs/MyApp/MyAppFeatureTests/test.outputs/_cucumberCoverage
+```
+
+The folder holds one `run-<id>` folder with the files that <doc:Measuring-Code-Coverage#What-a-run-writes> describes. The runner also writes the lcov report that Bazel collects for the whole run.
+
 ### Run tests on watchOS
 
 Run your features on a watchOS simulator with a `watchos_unit_test` target and the runner the `cucumberswift` module provides. rules_apple's own watchOS runner doesn't run tests, so pass CucumberSwift's as the test's `runner`:

@@ -5,3 +5,11 @@
 # default 300 seconds.
 test --local_test_jobs=1
 test --test_timeout=900
+
+# `bazel coverage` on Apple platforms: build with LLVM's coverage format, which CucumberSwift reads
+# (Bazel's default is gcov's, whose runtime the test bundle doesn't link). Add these lines to your
+# project's .bazelrc too.
+coverage --features=llvm_coverage_map_format
+coverage --features=-gcc_coverage_map_format
+# Count only the code under test, Grades.
+coverage --instrumentation_filter=//:Grades
