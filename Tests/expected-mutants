@@ -1,0 +1,8 @@
+# The mutants a mutation testing run must find in the Grades library of the Bazel test fixture, and what happens to
+# each, one per line:
+#   <file>:<line> <mutator> <replacement> <Killed|Survived|Timeout|CompileError>
+# `>` survives at each comparison because no scenario checks a score of exactly 90 or 80.
+Grades/Grades.swift:12 RelationalOperator < Killed
+Grades/Grades.swift:12 RelationalOperator > Survived
+Grades/Grades.swift:13 RelationalOperator < Killed
+Grades/Grades.swift:13 RelationalOperator > Survived

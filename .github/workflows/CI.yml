@@ -202,7 +202,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|bazel/|BUILD\.bazel$|MODULE\.bazel$|Tests/(BUILD\.bazel|MODULE\.bazel|\.bazelrc|expected-mutants|Grades/|CucumberSwiftCoverageTests/)|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -1333,7 +1333,7 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
     strategy:
@@ -1385,7 +1385,7 @@ jobs:
           echo "EXPRESSIONS_PATH=$RUNNER_TEMP/expressions" >> "$GITHUB_ENV"
       - name: Build every target in the module, as a consumer would
         working-directory: Tests
-        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH"
+        run: bazel build @cucumberswift//... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache"
       # rules_apple can't run tvOS tests, so no run tests the tvOS bundles. Nightly and manual runs
       # build them.
       - name: Run the consumer tests on macOS and on an iOS simulator, and build them for tvOS at night
@@ -1398,7 +1398,7 @@ jobs:
           else
             filters+=("--build_tag_filters=-watchos")
           fi
-          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --test_output=errors "${filters[@]}"
+          bazel test //... --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --test_output=errors "${filters[@]}"
       # A run with no features still passes, so this catches a Features folder
       # Bazel left out. The floors are what `swift test` runs for each suite.
       - name: Check every feature ran
@@ -1421,3 +1421,37 @@ jobs:
             done
           done
           exit $status
+      # `bazel coverage` builds Grades with code coverage and runs the macOS test with COVERAGE=1: the
+      # runner must accept it, and CucumberSwift must write each scenario's coverage into the test's
+      # outputs, with scores (#522). CucumberSwift reads the coverage format of Xcode 26, so this step
+      # builds with Xcode 26.2 rather than the image's default.
+      - name: Check per-scenario coverage under bazel coverage
+        working-directory: Tests
+        run: |
+          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --test_output=errors
+          grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
+          grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
+          python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+      # Mutation testing on the Bazel fixture, run by the command-line tool as a Bazel project's script would: it
+      # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
+      # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
+      # lists, and print a warning for each survivor (#522). It shares the coverage step's disk cache, and runs with
+      # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
+      # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
+      - name: Build the mutation testing tool
+        if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+        uses: ./.github/actions/mutation-tool
+      - name: Run mutation testing on the Bazel fixture
+        if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+        run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the Bazel mutation testing reports and log
+        if: ${{ failure() && matrix.bazel == '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-bazel-fixture
+          path: |
+            ${{ runner.temp }}/mutation-Bazel
+            ${{ runner.temp }}/mutation-Bazel.log
+          if-no-files-found: ignore
+          retention-days: 3
