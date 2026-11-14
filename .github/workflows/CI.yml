@@ -15,7 +15,8 @@ name: CI
 # narrow the parallel tests to some combinations, and skip every other job.
 # The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
 # the nightly and manual runs (tvOS and watchOS tests, Older runtime tests); pull
-# requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
+# requests build for tvOS (#271) and watchOS (#269) in Catalyst tests, and build
+# every library target for both in Build for watchOS and tvOS (#600).
 #
 # A pull request that merges through the merge queue is tested twice on one
 # commit: the merge_group run tests it, and when that passes, main moves to that
@@ -683,6 +684,38 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
         run: mise exec -- .github/scripts/macros-trait-fixture.sh 16.3
+
+  # Builds every library target of the package for the watchOS and tvOS Simulators, with
+  # no tests (#600), on pull requests that change code. A file that uses Process, or another
+  # API those platforms lack, without a guard builds on macOS and Linux and fails only
+  # there. tvOS and watchOS tests runs the tests, in nightly and manual runs. From a copy of
+  # the checkout without the Xcode project, because xcodebuild picks a project over a
+  # package, as in tvOS and watchOS tests. No matrix, so that it can be a required check
+  # that a run with no code skips.
+  build_watchos_tvos:
+    name: Build for watchOS and tvOS
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.no_code != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: xcodebuild -version
+      - name: Build the package for the watchOS and tvOS Simulators
+        run: |
+          package="$RUNNER_TEMP/package"
+          mkdir "$package"
+          rsync -a --exclude .git --exclude CucumberSwift.xcodeproj --exclude CucumberSwift.xcworkspace ./ "$package/"
+          cd "$package"
+          for platform in watchOS tvOS; do
+            xcodebuild build -scheme CucumberSwift-Package -destination "generic/platform=$platform Simulator" \
+              -skipPackagePluginValidation -skipMacroValidation -quiet
+          done
 
   # The tests on a tvOS Simulator (#271): the CucumberSwift scheme's test bundles, as iOS tests
   # runs them, then the consumer test packages, which build CucumberSwift as a Swift package.
