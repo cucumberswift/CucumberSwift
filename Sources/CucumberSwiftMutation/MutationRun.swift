@@ -181,7 +181,7 @@ public final class MutationRun {
             var result = try test(mutant, in: copy, runs: runs, timeout: timeout, coverage: coverage, sources: &sources)
             if let coverage { result.coveredBy = coverage.scenarios(running: mutant) }
             results.append(result)
-            log("\(mutant.id)/\(mutants.count) \(mutant.summary): \(result.verdict.name) (\(String(format: "%.1f", result.duration)) s)")
+            log("\(mutant.id)/\(mutants.count) \(mutant.summary): \(result.verdict.name) (\(String(format: "%.1f", result.duration)) s\(Self.scenarioCount(of: result, coverage: coverage)))")
         }
 
         let ran = (try? Data(contentsOf: baselineReport)).flatMap(CucumberReportAnnotator.scenarios(in:)) ?? []
@@ -264,7 +264,8 @@ public final class MutationRun {
         // A comment in the code marks it as one no test can notice: neither tested nor counted.
         if let reason = mutant.ignoredReason { return MutantResult(mutant: mutant, verdict: .ignored(reason: reason), duration: 0) }
         // No scenario ran this code without the change, so none can notice the change: don't spend a build on it.
-        if let coverage, coverage.scenarios(running: mutant).isEmpty { return MutantResult(mutant: mutant, verdict: .noCoverage, duration: 0) }
+        let covering = coverage?.scenarios(running: mutant)
+        if let covering, covering.isEmpty { return MutantResult(mutant: mutant, verdict: .noCoverage, duration: 0) }
         let mutated = try mutant.applied(to: original)
         try mutated.write(to: path, atomically: true, encoding: .utf8)
         // Put the file back whatever happens next. The copy is deleted anyway; this keeps the next mutant clean.
@@ -279,7 +280,7 @@ public final class MutationRun {
             "CUCUMBERSWIFT_MUTANT": String(mutant.id),
             "CUCUMBER_COVERAGE": "NO"
         ]) { _, new in new }
-        let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, timeout: timeout))
+        let result = testRunner.test(in: copy, request: TestRequest(settings: settings, writesReport: true, scenarios: covering, timeout: timeout))
         let output = contents(of: result.log)
         let logFile = runs.appendingPathComponent("mutant-\(mutant.id).log")
         try? output.write(to: logFile, atomically: true, encoding: .utf8)
@@ -364,6 +365,18 @@ extension MutationRun {
 
 // Reading the copy's files and the tools' output.
 extension MutationRun {
+    /// What a mutant's log line says of the scenarios its run used, such as `, 2 of 14 scenarios`: the ones that run its
+    /// code, out of every scenario the baseline ran. Nothing for a mutant that wasn't tested, or without coverage, which runs every scenario.
+    static func scenarioCount(of result: MutantResult, coverage: ScenarioCoverage?) -> String {
+        guard let coverage else { return "" }
+        switch result.verdict {
+            case .killed, .survived, .timedOut: break
+            case .unviable, .ignored, .noCoverage: return ""
+        }
+        let count = result.coveredBy.count
+        return ", \(count) of \(coverage.scenarios.count) \(coverage.scenarios.count == 1 ? "scenario" : "scenarios")"
+    }
+
     /// What the runner wrote to `log`, or nothing when it wrote no log.
     private func contents(of log: URL?) -> String {
         log.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""

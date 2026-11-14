@@ -14,9 +14,10 @@ import Foundation
 /// doesn't reach the tests: Xcode 26.4 ran them without it. The test count comes from each run's result bundle, so a
 /// run in which Xcode ran no test is a run of 0 tests, whatever Xcode printed.
 ///
-/// A run of some scenarios turns on a test per scenario (`CUCUMBER_ONE_TEST_PER_SCENARIO`) and selects the tests with
-/// `-only-testing`: with a test per step, the default, the test classes exist only while the bundle runs, and
-/// `-only-testing` selects none of them.
+/// A run of some scenarios sets `CUCUMBER_SCENARIOS`, as every runner does, so CucumberSwift runs only those. With the
+/// names of the test targets, it also turns on a test per scenario (`CUCUMBER_ONE_TEST_PER_SCENARIO`) and selects the
+/// tests with `-only-testing`, which keeps Xcode from starting a test bundle that has none of them: with a test per step,
+/// the default, the test classes exist only while the bundle runs, and `-only-testing` selects none of them.
 public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -54,6 +55,12 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let environment: [String: String]
     private let lock = NSLock()
     private var runs = 0
+
+    /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
+    private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
+        let features = scenarios.map(\.feature)
+        return files.contains { file in features.contains { file == $0 || file.hasSuffix("/" + $0) } }
+    }
 
     /// `totalTestCount` of the summary that `xcresulttool get test-results summary` prints.
     static func testCount(inSummary json: String) -> Int {
@@ -112,14 +119,18 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             settings["CUCUMBER_COVERAGE"] = "YES"
             settings["CUCUMBER_COVERAGE_PATH"] = coverage.path
         }
+        settings.merge(request.scenarioSettings) { _, new in new }
         var identifiers: [String]?
-        if let scenarios = request.scenarios {
+        if let scenarios = request.scenarios, !target.testTargets.isEmpty {
             do {
                 let selection = try onlyTesting(scenarios, in: copy)
                 identifiers = selection.identifiers
                 if selection.testPerScenario { settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES" }
             } catch {
-                return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
+                // The names can't be resolved, as when two test targets have the same feature file. That isn't a failed
+                // test, so the run neither fails nor counts a mutant as killed: CUCUMBER_SCENARIOS selects the scenarios
+                // alone, in every test target. Nothing is lost but the saved time of -only-testing.
+                _ = write("note: -only-testing isn't used: \(error)\n", named: "selection-\(number)", in: copy)
             }
         }
         // One run for every test target: each test bundle's process adds its scenarios to the one report of the run.
@@ -131,7 +142,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         // A failing test, which is how a mutant dies, makes xcodebuild collect diagnostics, such as log archives, for about
         // 20 seconds longer than a passing run takes. The run needs the result bundle and the report, not those.
         arguments += ["-collect-test-diagnostics", "never"]
-        arguments += onlyTestingArguments(identifiers: identifiers)
+        arguments += onlyTestingArguments(identifiers: identifiers, targets: testTargets(for: request.scenarios, in: copy))
         // The prefixed variables are how xcodebuild gives the tests a setting.
         var prefixed = [String: String]()
         for (key, value) in settings { prefixed["TEST_RUNNER_\(key)"] = value }
@@ -149,14 +160,57 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return run
     }
 
-    /// The `-only-testing` arguments of a run: each of `identifiers` in each test target, because a scenario doesn't say which
+    /// The test targets that one run starts: all of them for a run of every scenario or a project with one test target,
+    /// else only the ones that can run one of `scenarios`. A target that holds none is left out: its bundle would start
+    /// and run no test, which takes seconds.
+    private func testTargets(for scenarios: [ScenarioID]?, in copy: URL) -> [String] {
+        guard target.testTargets.count > 1, let scenarios else { return target.testTargets }
+        return testTargets(holding: scenarios, in: copy)
+    }
+
+    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file
+    /// anywhere inside it, in the order of the target's test targets. A feature file can be in the bundle itself, in
+    /// `Contents/Resources` of a macOS bundle, or in a resource bundle inside it, as SwiftPM makes for a target's resources.
+    /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
+    /// any, so that a run never skips all of them.
+    private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
+        let bundles = builtBundles(in: copy)
+        let holding = target.testTargets.filter { name in
+            guard let bundle = bundles[name] else { return true }
+            return Self.holds(featureFiles(in: bundle), oneOf: scenarios)
+        }
+        return holding.isEmpty ? target.testTargets : holding
+    }
+
+    /// The paths of the feature files anywhere inside `bundle`, relative to it.
+    private func featureFiles(in bundle: URL) -> [String] {
+        guard let enumerator = FileManager.default.enumerator(at: bundle, includingPropertiesForKeys: nil) else { return [] }
+        let base = bundle.resolvingSymlinksInPath().path.count + 1
+        let urls = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "feature" }
+        return urls.map { String($0.resolvingSymlinksInPath().path.dropFirst(base)) }
+    }
+
+    /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,
+    /// so the whole products folder is searched, without looking inside a bundle.
+    private func builtBundles(in copy: URL) -> [String: URL] {
+        let products = runnerFolder(for: copy).appendingPathComponent("DerivedData/Build/Products")
+        guard let enumerator = FileManager.default.enumerator(at: products, includingPropertiesForKeys: nil) else { return [:] }
+        var bundles = [String: URL]()
+        for case let url as URL in enumerator where url.pathExtension == "xctest" {
+            enumerator.skipDescendants()
+            bundles[url.deletingPathExtension().lastPathComponent] = url
+        }
+        return bundles
+    }
+
+    /// The `-only-testing` arguments of a run of the test `targets`: each of `identifiers` in each target, because a scenario doesn't say which
     /// target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. With no identifiers, a run of named
     /// test targets selects them, so that `--test-target` limits the run to the targets it names, and a run with no test
     /// target named selects nothing.
-    private func onlyTestingArguments(identifiers: [String]?) -> [String] {
-        guard let identifiers else { return target.testTargets.flatMap { ["-only-testing", $0] } }
+    private func onlyTestingArguments(identifiers: [String]?, targets: [String]) -> [String] {
+        guard let identifiers else { return targets.flatMap { ["-only-testing", $0] } }
         var seen = Set<String>()
-        return target.testTargets.flatMap { testTarget in
+        return targets.flatMap { testTarget in
             identifiers.filter { seen.insert("\(testTarget)/\($0)").inserted }.flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
         }
     }
@@ -165,9 +219,6 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// test `CucumberScenarioTest/<feature › scenario>`, with a test per scenario on. A scenario of the Swift Testing runner is
     /// its generated test, `CucumberFeatures/<feature>/<scenario>(_:)`. Also whether a scenario needs the test per scenario.
     private func onlyTesting(_ scenarios: [ScenarioID], in copy: URL) throws -> (identifiers: [String], testPerScenario: Bool) {
-        guard !target.testTargets.isEmpty else {
-            throw Failure(description: "Running only some scenarios needs the names of the test targets: pass --test-target")
-        }
         var names = ScenarioTestNames(root: copy, readable: ScenarioTestNames.readableTestNames(in: environment))
         var identifiers = [String]()
         var testPerScenario = false

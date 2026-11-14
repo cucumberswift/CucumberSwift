@@ -60,6 +60,30 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(run.coverageFolder, "The tests wrote no coverage")
     }
 
+    func testRunsOnlyTheScenariosOfARequestThroughCucumberScenarios() throws {
+        let commands = RecordingCommands()
+        let runner = SwiftPMRunner(commands: commands)
+        let copy = try makeCopy()
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [
+            ScenarioID(feature: "Features/Basket.feature", line: 3, name: "One"),
+            ScenarioID(feature: "Features/Basket.feature", line: 9, name: "Two")
+        ]))
+        _ = runner.test(in: copy, request: TestRequest())
+        XCTAssertEqual(commands.calls.first?.arguments, ["test", "--skip-build"], "No --filter: it can't see the scenarios' tests")
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], "Features/Basket.feature:3,Features/Basket.feature:9")
+        XCTAssertNil(commands.calls.last?.environment["CUCUMBER_SCENARIOS"], "A request of every scenario sets nothing")
+    }
+
+    func testACommaInAScenariosPathIsEscapedSoTheListIsNotSplit() throws {
+        let commands = RecordingCommands()
+        _ = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(scenarios: [
+            ScenarioID(feature: "Features/Basket, large 100%.feature", line: 3, name: "One"),
+            ScenarioID(feature: "\t Other.feature", line: 9, name: "Two")
+        ]))
+        let expected = "Features/Basket%2C large 100%25.feature:3,\t Other.feature:9"
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], expected, "Leading whitespace is written as it is")
+    }
+
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {
         let commands = RecordingCommands { call in
             for key in ["CUCUMBER_REPORT_PATH", "CUCUMBER_COVERAGE_PATH"] {

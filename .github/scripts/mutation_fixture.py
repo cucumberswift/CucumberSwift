@@ -22,6 +22,16 @@ fails when the log has no warning at a surviving mutant's line, such as
 
 and when it has one for a mutant that was killed.
 
+The log also shows how many scenarios each tested mutant ran, as the run prints them:
+
+  3/6 Voting.swift: >= to <: Killed (0.4 s, 2 of 14 scenarios)
+
+The check fails unless every mutant that was tested has such a line, and each runs at least one scenario and at most
+all of them, and at least one runs fewer than all of them, so a run that ran every scenario for every mutant can't pass.
+Where the reports folder has the Cucumber report that the mutant's run wrote (cucumber-mutant-3.json), the report must
+hold no more scenarios than that. It can hold fewer: a package with an XCTest and a Swift Testing target has both
+runners write one report, and the one that finishes last replaces the other's.
+
 Only the standard library is used.
 """
 import json
@@ -135,6 +145,90 @@ def check_log(name, expected, log):
     return errors
 
 
+TESTED = ("Killed", "Survived", "Timeout")
+SCENARIO_COUNT = re.compile(r"^\s*(\d+)/(\d+) .*: (" + "|".join(TESTED) + r") \([\d.]+ s, (\d+) of (\d+) scenarios?\)\s*$")
+
+
+def scenarios_in_report(path):
+    """How many scenarios a Cucumber JSON report holds, or None when there is no report there."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            features = json.load(f)
+        return sum(1 for feature in features for element in feature.get("elements", []) if element.get("type") == "scenario")
+    except OSError:
+        return None
+    except (ValueError, AttributeError, TypeError):
+        raise MutantsError(f"{path} isn't a Cucumber JSON report") from None
+
+
+def read_tested_ids(path):
+    """Return {mutant number: status} for the mutants of a Stryker report that were tested, or None when it has no ids."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            report = json.load(f)
+        return {int(mutant["id"]): mutant["status"] for file in report["files"].values() for mutant in file["mutants"]
+                if mutant["status"] in TESTED}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def read_counts(log):
+    """Return {mutant number: (status, scenarios run, every scenario)} from the lines of a log that show a count."""
+    counts = {}
+    for line in log.splitlines():
+        found = SCENARIO_COUNT.match(line)
+        if found:
+            counts[int(found.group(1))] = (found.group(3), int(found.group(4)), int(found.group(5)))
+    return counts
+
+
+def check_tested_ids(name, counts, tested_ids):
+    """Return the errors for the mutants that the log counts against the ones the report says were tested."""
+    errors = []
+    for number in sorted(set(counts) ^ set(tested_ids)):
+        if number in counts:
+            errors.append(f"error: {name}: the log shows a count for mutant {number}, which the report doesn't list as tested")
+        else:
+            errors.append(f"error: {name}: the log shows no count for mutant {number}, which the report lists as tested")
+    for number in sorted(set(counts) & set(tested_ids)):
+        if counts[number][0] != tested_ids[number]:
+            errors.append(f"error: {name}: the log says mutant {number} is {counts[number][0]}, and the report says {tested_ids[number]}")
+    return errors
+
+
+def check_report_count(name, number, ran, reports):
+    """Return the errors for a mutant's Cucumber report holding more scenarios than the log says its run used."""
+    try:
+        held = scenarios_in_report(os.path.join(reports, f"cucumber-mutant-{number}.json"))
+    except MutantsError as error:
+        return [f"error: {name}: {error}"]
+    # Not `!=`, until the report overwrite is fixed in main (#546): a package with an XCTest and a Swift Testing
+    # target has both runners write one report, and the last replaces the other's, so the report can hold fewer
+    # scenarios than ran. Then it must equal the log's count.
+    if held is not None and held > ran:
+        return [f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}"]
+    return []
+
+
+def check_scenarios(name, expected, log, reports, tested_ids=None):
+    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them.
+
+    With `tested_ids`, the numbers and statuses of the mutants that the report says were tested, the log must show a count
+    for exactly those mutants, each with the status the report gives it."""
+    counts = read_counts(log)
+    tested = sum(1 for status in expected.values() if status in TESTED)
+    if len(counts) != tested:
+        return [f"error: {name}: the log shows the number of scenarios run for {len(counts)} mutants, and {tested} were tested"]
+    errors = [] if tested_ids is None else check_tested_ids(name, counts, tested_ids)
+    for number, (_status, ran, every) in sorted(counts.items()):
+        if not 1 <= ran <= every:
+            errors.append(f"error: {name}: mutant {number} ran {ran} of {every} scenarios, which a run of covering scenarios can't")
+        errors += check_report_count(name, number, ran, reports)
+    if all(ran == every for (_status, ran, every) in counts.values()):
+        errors.append(f"error: {name}: every mutant ran every scenario: the run didn't select the scenarios that cover them")
+    return errors
+
+
 def main(argv):
     if len(argv) not in (3, 4):
         print("usage: mutation_fixture.py <fixture folder> <report folder> [<build log>]", file=sys.stderr)
@@ -151,7 +245,9 @@ def main(argv):
     if len(argv) == 4:
         try:
             with open(safe_path(argv[3]), encoding="utf-8", errors="replace") as f:
-                errors += check_log(name, expected, f.read())
+                log = f.read()
+            errors += check_log(name, expected, log)
+            errors += check_scenarios(name, expected, log, reports, read_tested_ids(os.path.join(reports, "mutation-report.json")))
         except (OSError, MutantsError) as error:
             errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:

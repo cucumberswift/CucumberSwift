@@ -8,9 +8,9 @@ import Foundation
 
 /// Builds a Swift package with `swift build --build-tests` and tests it with `swift test --skip-build`.
 ///
-/// It runs every scenario whatever `TestRequest.scenarios` says. `swift test --filter` knows only the tests that the
+/// A run of some scenarios sets `CUCUMBER_SCENARIOS`, because `swift test --filter` knows only the tests that the
 /// bundle declares, and CucumberSwift generates one for each scenario while the bundle runs, so no filter can select
-/// one: it runs no test, and succeeds. A mutant still gets the verdict of the whole suite, only slower.
+/// one: it runs no test, and succeeds. CucumberSwift itself leaves out the scenarios that the setting doesn't name.
 public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -55,6 +55,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
         var environment = request.settings
         var report: URL?
         var coverage: URL?
+        environment.merge(request.scenarioSettings) { _, new in new }
         if request.writesReport {
             let file = folder.appendingPathComponent("reports/report-\(number).json")
             environment["CUCUMBER_REPORT_PATH"] = file.path

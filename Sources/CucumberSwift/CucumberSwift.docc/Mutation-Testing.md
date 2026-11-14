@@ -231,12 +231,14 @@ Found 17 mutants in 1 file.
 Building the copy and running the tests 2 times without a change.
 The tests take 3.1 s. A mutant times out after 30 s.
 Coverage: 3 scenarios ran. A mutant in code that no scenario runs isn't tested.
-1/17 Sources/Shop/Basket.swift:4:39 BooleanLiteral false → true: Survived (6.5 s)
-2/17 Sources/Shop/Basket.swift:9:9 RemoveCall prices.append(price) → (removed): Killed (6.3 s)
+1/17 Sources/Shop/Basket.swift:4:39 BooleanLiteral false → true: Survived (6.5 s, 3 of 3 scenarios)
+2/17 Sources/Shop/Basket.swift:9:9 RemoveCall prices.append(price) → (removed): Killed (6.3 s, 1 of 3 scenarios)
 …
 Mutation score: 85.7% (12 of 14 mutants detected)
 Killed 12, timed out 0, survived 2, did not build 0, ignored 2, in code no scenario runs 1
 ```
+
+Each line of a tested mutant ends with the number of scenarios that the command ran for it, out of the scenarios that ran without a change. Without coverage, the command runs every scenario for every mutant and prints no number. The section <doc:Mutation-Testing#Run-only-the-scenarios-that-cover-a-mutant> describes how the command picks the scenarios.
 
 Add `--format xcode` to also print each surviving mutant as a warning in the compiler's format, with the file's full path. Xcode shows such a warning at its line when a Run Script build phase prints it:
 
@@ -421,7 +423,19 @@ The command makes these changes, one at a time. It reads your code as swift-synt
 
 ### Keep the run short
 
-The command builds and runs your test suite once for each mutant, after a few seconds of rebuilding the one changed file. The first run without a change measures which scenarios run which code, and the command doesn't test a mutant in code that no scenario runs. Two options cut a run down further: `--target` limits the code, and `--max-mutants` limits the count.
+The command builds and runs your test suite once for each mutant, after a few seconds of rebuilding the one changed file. The first run without a change measures which scenarios run which code. The command doesn't test a mutant in code that no scenario runs, and it runs only the scenarios that run the code of every other mutant. Two options cut a run down further: `--target` limits the code, and `--max-mutants` limits the count.
+
+### Run only the scenarios that cover a mutant
+
+The command runs the scenarios that run a mutant's code by setting `CUCUMBER_SCENARIOS` to their ids, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Running-Tests-With-Bazel>). The XCTest runner and the Swift Testing runner both read the variable. You can set it yourself to run one scenario of the sample, the "Three items get a discount" scenario on line 9 of `Basket.feature`:
+
+```bash
+CUCUMBER_SCENARIOS=Features/Basket.feature:9 swift test
+```
+
+An id is the path of the feature file inside the test bundle, a colon and the line of the scenario. <doc:Settings#Settings-that-work-differently> describes the format of the list.
+
+An Xcode project with several test targets that you name with `--test-target` gets one more saving. The command runs a test target only when its built bundle contains a feature file of the mutant's scenarios. When no bundle contains one, or the command can't find a bundle, it runs every target.
 
 ## Know that your files are safe
 
