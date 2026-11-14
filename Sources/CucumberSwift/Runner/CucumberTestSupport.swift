@@ -34,6 +34,11 @@ final class CucumberTestSupport: NSObject {
         CucumberTest.resolveScenarioTest(named: name)
     }
 
+    @objc(scenarioTestSuite)
+    static func scenarioTestSuite() -> XCTestSuite? {
+        CucumberTest.swiftPMScenarioSuite()
+    }
+
     @objc(locateIssue:)
     static func locateIssue(_ issue: XCTIssue) -> XCTIssue {
         CucumberTest.locateScenarioIssue(issue)
