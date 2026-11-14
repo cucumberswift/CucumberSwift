@@ -222,4 +222,40 @@ extension CucumberTests {
         }
         #expect(observer.log.suffix(2) == ["after feature hook", "feature passed F"])
     }
+
+    #if compiler(>=6.2)
+    /// As in XCTest, the issue fails the feature's first step in the report: that step runs, and the later
+    /// ones don't.
+    @Test(.reportedInFeatureFiles)
+    func askingForScenarioStateInAFeatureHookFailsTheFirstStepAsInXCTest() async throws {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        var fromHooks = [Basket]()
+        var fromStep: Basket?
+        BeforeFeature { _ in fromHooks.append(Scenario.state(Basket.init)) }
+        AfterFeature { _ in fromHooks.append(Scenario.state(Basket.init)) }
+        Given("a step") { [self] _, _ in
+            ran.append("a step")
+            fromStep = Scenario.state(Basket.init)
+        }
+        Then("another step") { [self] _, _ in ran.append("another step") }
+
+        await withKnownIssue {
+            try? await runFeature {
+                await Cucumber.shared.run(self.scenario("A", line: 2, steps: [
+                    self.step(.given, "a step", line: 3), self.step(.then, "another step", line: 4)
+                ]))
+            }
+        } matching: { issue in
+            issue.comments.contains { $0.rawValue.contains("Scenario.state(_:) needs a running scenario") }
+        }
+        #expect(fromHooks.count == 2)
+        #expect(!fromHooks.contains { $0 === fromStep }, "A feature hook should not get the scenario's own value")
+        #expect(ran == ["a step"])
+        let failedStep = observer.log.first { $0.hasPrefix("step failed") }
+        #expect(failedStep?.contains("Scenario.state(_:) needs a running scenario") == true, "\(observer.log)")
+        #expect(observer.log.contains("scenario failed A"))
+        #expect(observer.log.contains("feature failed F"))
+    }
+    #endif
 }

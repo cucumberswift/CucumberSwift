@@ -41,11 +41,19 @@ public final class Cucumber {
         var starting: Task<Void, Never>?
         /// Why a `BeforeFeature` hook threw, until the feature's first scenario reports it on its first step.
         var startFailure: String?
+        /// The issues a `BeforeFeature` hook recorded, such as a failed `#expect`, until the feature's first
+        /// scenario reports them on its first step.
+        var startIssues = [String]()
         init(_ feature: Feature) { self.feature = feature }
 
         func takeStartFailure() -> String? {
             defer { startFailure = nil }
             return startFailure
+        }
+
+        func takeStartIssues() -> [String] {
+            defer { startIssues.removeAll() }
+            return startIssues
         }
     }
 
@@ -57,6 +65,8 @@ public final class Cucumber {
         let startDate = Date()
         let record = IssueRecord()
         var nextStep = 0
+        /// The issues a `BeforeFeature` hook recorded, which fail the scenario's first step.
+        var firstStepIssues = [String]()
         var isFailed = false
         /// Whether a step or a hook failed, or a step skipped the scenario, so that the later steps don't run.
         var isStopped = false
@@ -250,6 +260,7 @@ public final class Cucumber {
         // BeforeFeature and BeforeScenario hooks fail the scenario's first step in XCTest, which is the current
         // step while they run, and the later steps are skipped.
         let featureHookFailure = featureRun.takeStartFailure()
+        progress.firstStepIssues = featureRun.takeStartIssues()
         let scenarioHookFailure = await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record)
         if let beforeFailure = featureHookFailure ?? scenarioHookFailure {
             progress.isFailed = true
@@ -263,7 +274,8 @@ public final class Cucumber {
         let step = progress.scenario.steps[progress.nextStep]
         progress.nextStep += 1
         let dslStep = progress.gherkin.dslID.flatMap { dsl.steps[$0] }?[progress.nextStep - 1]
-        let outcome = await run(step, in: progress.gherkin.file, dslStep: dslStep)
+        let hookIssues = progress.nextStep == 1 ? progress.firstStepIssues : []
+        let outcome = await run(step, in: progress.gherkin.file, dslStep: dslStep, hookIssues: hookIssues)
         // As with CucumberSwift, a scenario and its feature fail when a step or a hook does: XCTest fails the
         // step that is current when the hook fails.
         if outcome.isStepFailed { progress.isFailed = true }
@@ -362,6 +374,7 @@ public final class Cucumber {
             // As with CucumberSwift, the hooks run before the observers hear the feature started.
             let record = IssueRecord()
             run.startFailure = await runHooks(beforeFeatureHooks, with: run.feature, at: run.feature.location, in: run.feature.sourcePath, record: record)
+            run.startIssues = record.messages
             if run.startFailure != nil || !record.messages.isEmpty {
                 run.isFailed = true
             }
@@ -406,7 +419,9 @@ public final class Cucumber {
 
     /// Runs one step, and tells the observers. Returns how it ended, and whether the scenario's later steps
     /// run: not after a step that is undefined, ambiguous, threw or recorded an issue, such as a failed `#expect`.
-    private func run(_ step: Step, in featureFile: String, dslStep: DSLStep?) async -> StepOutcome {
+    /// `hookIssues` are issues a `BeforeFeature` hook recorded: they fail the step, but it still runs, as
+    /// XCTest fails the step that is current when the hook records them.
+    private func run(_ step: Step, in featureFile: String, dslStep: DSLStep?, hookIssues: [String] = []) async -> StepOutcome {
         // A step of the Swift DSL is where it is written, which can be another file than its feature's.
         let file = dslStep?.file ?? featureFile
         let location = Self.sourceLocation(file, step.location)
@@ -438,6 +453,7 @@ public final class Cucumber {
         let ran = "\(step.keywordName) \(step.match)"
         let record = IssueRecord()
         let beforeRecord = IssueRecord()
+        hookIssues.forEach(beforeRecord.add)
         let afterRecord = IssueRecord()
         // As with CucumberSwift, a step's AfterStep hooks run even when a BeforeStep hook failed, which
         // skips the step itself.
