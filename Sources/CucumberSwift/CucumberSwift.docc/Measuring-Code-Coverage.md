@@ -359,6 +359,6 @@ A feature whose scenarios run no measured code, such as a UI test whose app runs
 
 The warnings need Xcode 26 with XCTest. With an earlier version, CucumberSwift prints each warning instead, and still records the errors.
 
-CucumberSwift reads version 7 of LLVM's coverage format, the one Xcode 26 writes, and prints the cause when a binary has another. It measures only the binaries built with code coverage, so it doesn't measure a prebuilt framework, such as a closed-source SDK.
+CucumberSwift measures coverage with Xcode 16.0 and later, including Xcode 26, in both test runners. It reads versions 6 and 7 of LLVM's coverage mapping format, and writes versions 8 and 10 of LLVM's profile format. Xcode 16.0 to 16.2 use versions 6 and 8, and Xcode 16.3 and later use versions 7 and 10. When a binary has another version, CucumberSwift prints the cause. It measures only the binaries built with code coverage, so it doesn't measure a prebuilt framework, such as a closed-source SDK.
 
 CucumberSwift measures the code in the test process only. A UI test runs your app in another process, so the scores and files don't include the app's code. To get the app's coverage, build the app with code coverage, set `LLVM_PROFILE_FILE` in its launch environment, and merge its files with `llvm-profdata`.

@@ -15,8 +15,10 @@ import Compression
 /// CucumberSwift reads it in the test process to work out which code a scenario ran, as `llvm-cov` does
 /// from a profile after the run.
 ///
-/// It reads version 7 of the coverage mapping format, the one Xcode 26 writes. A binary with another
-/// version has no map, and CucumberSwift then writes its files without scores.
+/// It reads versions 6 and 7 of the coverage mapping format: version 6 from Xcode 16.0 to 16.2, and version 7
+/// from Xcode 16.3 on, Xcode 26 included. Version 7 added the regions of MC/DC coverage, which Swift doesn't
+/// write, so both decode the same. A binary with another version has no map, and CucumberSwift then writes
+/// its files without scores.
 struct CoverageMap {
     /// A counter, or an expression over counters, as the map encodes it.
     enum Counter: Equatable {
@@ -91,7 +93,7 @@ struct CoverageMap {
         var description: String {
             switch self {
                 case .unsupportedVersion(let version):
-                    "the binary's coverage map is version \(version), and CucumberSwift reads version 7, the one of Xcode 26"
+                    "the binary's coverage map is version \(version), and CucumberSwift reads versions 6 and 7, the ones of Xcode 16 and Xcode 26"
                 case .truncated:
                     "the binary's coverage map ends early"
                 case .unsupportedRegion(let kind):
@@ -157,13 +159,15 @@ struct CoverageMap {
 
     /// Decodes the map from a binary's sections: `__llvm_covmap`, `__llvm_covfun`, and, to find each
     /// function's counters and name, `__llvm_prf_data`, `__llvm_prf_cnts` and `__llvm_prf_names`.
+    /// `recordSize` is the size of a `__llvm_prf_data` record in the binary's raw profile version.
     init(covmap: UnsafeRawBufferPointer,
          covfun: UnsafeRawBufferPointer,
          data: UnsafeRawBufferPointer,
          counters: UnsafeRawBufferPointer,
-         names: UnsafeRawBufferPointer) throws {
+         names: UnsafeRawBufferPointer,
+         recordSize: Int) throws {
         let files = try Self.decodeFilenames(covmap)
-        let firstCounters = Self.firstCounters(data: data, counters: counters)
+        let firstCounters = Self.firstCounters(data: data, counters: counters, recordSize: recordSize)
         let functionNames = Self.decodeNames(names)
         functions = try Self.decodeFunctions(covfun, files: files) { nameRef, hash in
             (functionNames[nameRef] ?? "", firstCounters[Key(nameRef: nameRef, hash: hash)])
@@ -179,10 +183,9 @@ extension CoverageMap {
     // MARK: - Reading
 
     /// Each function's first counter, by its name reference and hash, from the `__llvm_prf_data` records.
-    /// A record holds its counters' address relative to itself, at byte 16.
-    private static func firstCounters(data: UnsafeRawBufferPointer, counters: UnsafeRawBufferPointer) -> [Key: Int] {
-        guard let dataBase = data.baseAddress, let countersBase = counters.baseAddress else { return [:] }
-        let recordSize = 64
+    /// A record holds its counters' address relative to itself, at byte 16, in every version.
+    private static func firstCounters(data: UnsafeRawBufferPointer, counters: UnsafeRawBufferPointer, recordSize: Int) -> [Key: Int] {
+        guard let dataBase = data.baseAddress, let countersBase = counters.baseAddress, recordSize > 0 else { return [:] }
         var result = [Key: Int]()
         for offset in stride(from: 0, through: data.count - recordSize, by: recordSize) {
             let nameRef = data.loadUnaligned(fromByteOffset: offset, as: UInt64.self)
@@ -250,7 +253,7 @@ extension CoverageMap {
             _ = try reader.u32() // The size of the coverage data, 0 since version 4.
             let version = try reader.u32()
             // The header holds the version minus one.
-            guard version == 6 else { throw DecodeError.unsupportedVersion(version + 1) }
+            guard version == 5 || version == 6 else { throw DecodeError.unsupportedVersion(version + 1) }
             let blob = try reader.take(filenamesSize)
             var names = Reader(bytes: blob)
             let count = try names.int()

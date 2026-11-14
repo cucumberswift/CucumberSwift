@@ -793,7 +793,7 @@ jobs:
   # uses, so that something checks the back-deployed Swift concurrency runtime and other
   # behaviour of older OS versions: Xcode 16.4 on macos-15, with the runtimes it comes with.
   # 16.4, not 16.0: it is the oldest Xcode the image has Simulator runtimes for. Nightly and
-  # manual runs only.
+  # manual runs only. It also measures coverage with Xcode 16 (#552), which no other nightly job does.
   older_runtime_tests:
     name: Older runtime tests (Xcode 16)
     needs: changes
@@ -821,6 +821,25 @@ jobs:
         run: |
           destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
           .github/scripts/xcode-test.sh -destination "$destination"
+      # Coverage and redundancy scores with Xcode 16 (#552): the tests above run without code coverage. This runs
+      # the CoverageDefaultsPackage fixture with it on, and each runner must print the Grading feature's scores.
+      - name: Measure coverage on an iOS Simulator
+        if: ${{ !cancelled() }}
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          log="$RUNNER_TEMP/coverage-iOS.log"
+          status=0
+          (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
+            -destination "$destination" -enableCodeCoverage YES -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO > "$log" 2>&1) || status=1
+          grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+          scores=$(grep -c 'CucumberSwift coverage: Grading: 50% of the code its scenarios ran (4 of 8 regions in 1 function), .*redundancy 33%' "$log" || true)
+          echo "iOS: ${scores:-0} correct coverage summaries (2 expected, one for each runner)"
+          if [ "${scores:-0}" -ne 2 ]; then
+            echo "::error::CucumberSwift gave the Grading feature the expected scores ${scores:-0} times, not 2."
+            status=1
+          fi
+          exit $status
 
   # Experimental parallel testing (#31). Runs the fixtures in Tests/ParallelFixtures with
   # Xcode's parallel testing on: unit tests without a host app, unit tests hosted in an app,

@@ -42,12 +42,15 @@ final class CoverageRecorderTests: XCTestCase {
         XCTAssertEqual(ProfileCounters.difference(counts([1]), minus: counts([4])), counts([0]))
     }
 
-    func testAVersionIsWrittenOnlyWhenItIsTheSupportedOneWhateverItsFlags() {
+    func testAVersionIsWrittenOnlyWhenItIsASupportedOneWhateverItsFlags() {
         var counters = ProfileCounters(binaries: [])
-        XCTAssertTrue(counters.accept(version: ProfileCounters.supportedVersion))
-        XCTAssertTrue(counters.accept(version: ProfileCounters.supportedVersion | (1 << 56)))
+        for format in RawProfileFormat.all {
+            XCTAssertTrue(counters.accept(version: format.version))
+            XCTAssertTrue(counters.accept(version: format.version | (1 << 56)))
+        }
+        XCTAssertFalse(counters.accept(version: 9 | (1 << 56)))
         XCTAssertFalse(counters.accept(version: 11 | (1 << 56)))
-        XCTAssertEqual(counters.unsupportedVersions, [11])
+        XCTAssertEqual(counters.unsupportedVersions, [9, 11])
     }
 
     /// Folders in `folder` named `names`, each created `age` seconds before now.
@@ -83,7 +86,7 @@ final class CoverageRecorderTests: XCTestCase {
             counters: ProfileCounters(binaries: [], unsupportedVersions: [11]),
             runID: "run"
         )
-        XCTAssertEqual(recorder.manifest.problem, "The profile format of this test process is version 11, and CucumberSwift writes version 10, the one of Xcode 26.")
+        XCTAssertEqual(recorder.manifest.problem, "The profile format of this test process is version 11, and CucumberSwift writes versions 8 and 10, the ones of Xcode 16 and Xcode 26.")
     }
 
     func testWithScoresOffTheRecorderSaysWhy() {
@@ -342,6 +345,6 @@ final class CoverageRecorderTests: XCTestCase {
         // The raw profile's header starts with its magic number, `\xFFlprofr\x81`, and its version.
         let words = data.prefix(16).withUnsafeBytes { Array($0.bindMemory(to: UInt64.self)).map { UInt64(littleEndian: $0) } }
         XCTAssertEqual(words[0], 0xFF6C_7072_6F66_7281)
-        XCTAssertEqual(words[1] & 0xFFFF_FFFF, ProfileCounters.supportedVersion)
+        XCTAssertNotNil(RawProfileFormat(version: words[1]))
     }
 }

@@ -2,8 +2,8 @@
 //  CoverageMapTests.swift
 //  CucumberSwiftTests
 //
-//  CucumberSwift decodes the coverage map that the compiler writes, version 7 of LLVM's format, and
-//  computes each code region's count from the counters (#502). These tests build the sections by hand,
+//  CucumberSwift decodes the coverage map that the compiler writes, versions 6 and 7 of LLVM's format, and
+//  computes each code region's count from the counters (#502, #552). These tests build the sections by hand,
 //  with every kind of region and the malformed cases, so they run without a coverage build.
 //
 
@@ -126,10 +126,14 @@ final class CoverageMapTests: XCTestCase {
         return mapping.bytes
     }
 
-    /// Decodes a map from `covfun`, with the one data record and counters of `run`.
-    private func decode(covfun: [UInt8], covmap: [UInt8] = covmap().bytes, names: [UInt8]? = nil) throws -> CoverageMap {
+    /// Decodes a map from `covfun`, with the one data record and counters of `run`, laid out as `format` lays
+    /// out its records.
+    private func decode(covfun: [UInt8],
+                        covmap: [UInt8] = covmap().bytes,
+                        names: [UInt8]? = nil,
+                        format: RawProfileFormat = .version10) throws -> CoverageMap {
         let counters = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.counts.count * 8, alignment: 8)
-        let data = UnsafeMutableRawBufferPointer.allocate(byteCount: 128, alignment: 8)
+        let data = UnsafeMutableRawBufferPointer.allocate(byteCount: 2 * format.recordSize, alignment: 8)
         defer {
             counters.deallocate()
             data.deallocate()
@@ -139,7 +143,7 @@ final class CoverageMapTests: XCTestCase {
         // The first record is `run`'s, and the second's counters are outside the section.
         guard let dataStart = data.baseAddress, let countersStart = counters.baseAddress else { throw CoverageMap.DecodeError.truncated }
         for (index, start) in [countersStart, countersStart + 4_096].enumerated() {
-            let record = index * 64
+            let record = index * format.recordSize
             data.storeBytes(of: Self.run, toByteOffset: record, as: UInt64.self)
             data.storeBytes(of: Self.hash + UInt64(index), toByteOffset: record + 8, as: UInt64.self)
             let relative = Int(bitPattern: start) - Int(bitPattern: dataStart + record)
@@ -153,7 +157,8 @@ final class CoverageMapTests: XCTestCase {
                             covfun: UnsafeRawBufferPointer(rebasing: sections[covmap.count..<covmap.count + covfun.count]),
                             data: UnsafeRawBufferPointer(data),
                             counters: UnsafeRawBufferPointer(counters),
-                            names: UnsafeRawBufferPointer(rebasing: sections[(covmap.count + covfun.count)...]))
+                            names: UnsafeRawBufferPointer(rebasing: sections[(covmap.count + covfun.count)...]),
+                            recordSize: format.recordSize)
         }
     }
 
@@ -219,10 +224,25 @@ final class CoverageMapTests: XCTestCase {
         XCTAssertEqual(map.functions.first?.name, "")
     }
 
+    // Xcode 16.0 to 16.2 write version 6 of the map, whose header holds 5, and version 8 of the raw profile,
+    // whose data records are 48 bytes. The map decodes the same as version 7's.
+    func testXcode16sVersionsAreDecodedAsXcode26s() throws {
+        let covmap = Self.covmap(version: 5)
+        let mapping = Self.mapping([Region(header: 0 << 2 | 1), Region(header: 0 << 2 | 3)])
+        let covfun = Self.record(nameRef: Self.run, hash: Self.hash, filesRef: covmap.filesRef, mapping: mapping)
+        let map = try decode(covfun: covfun, covmap: covmap.bytes, format: .version8)
+        let run = try XCTUnwrap(map.functions.first)
+        XCTAssertEqual(run.name, "$s4Calc3runyyF")
+        XCTAssertEqual(run.firstCounter, 0)
+        XCTAssertEqual(values(of: run), [5, 7])
+    }
+
     func testAnotherVersionOfTheFormatIsRefused() {
-        XCTAssertThrowsError(try decode(covfun: [], covmap: Self.covmap(version: 5).bytes)) { error in
-            XCTAssertEqual(error as? CoverageMap.DecodeError, .unsupportedVersion(6))
-            XCTAssertEqual("\(error)", "the binary's coverage map is version 6, and CucumberSwift reads version 7, the one of Xcode 26")
+        for (header, version) in [(UInt32(4), UInt32(5)), (7, 8)] {
+            XCTAssertThrowsError(try decode(covfun: [], covmap: Self.covmap(version: header).bytes)) { error in
+                XCTAssertEqual(error as? CoverageMap.DecodeError, .unsupportedVersion(version))
+                XCTAssertEqual("\(error)", "the binary's coverage map is version \(version), and CucumberSwift reads versions 6 and 7, the ones of Xcode 16 and Xcode 26")
+            }
         }
     }
 
