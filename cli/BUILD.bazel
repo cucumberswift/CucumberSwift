@@ -2,7 +2,9 @@ load("@rules_swift//swift:swift_binary.bzl", "swift_binary")
 
 # CucumberSwift's command-line tool, which users type as cucumberswift with every build tool:
 # `bazel run @cucumberswift//cli:cucumberswift -- coverage merge <folder>` scores the scenarios of several
-# runs as one run, such as a parallel run's workers or a suite's shards. It is in a package of its own,
+# runs as one run, such as a parallel run's workers or a suite's shards. Its other commands are generate, lint,
+# fix-feature-files and convert-to-gherkin-macros, which the plugins run in Swift packages and Xcode projects;
+# bazel/cucumberswift.bzl runs them in a Bazel project. It is in a package of its own,
 # because Bazel's output folders are not case-sensitive on macOS, and a target named cucumberswift next to
 # the CucumberSwift library would share its folder.
 swift_binary(
@@ -10,5 +12,5 @@ swift_binary(
     srcs = ["//:Sources/CucumberSwiftCommand/main.swift"],
     module_name = "CucumberSwiftCommand",
     visibility = ["//visibility:public"],
-    deps = ["//:CucumberSwiftCoverageMerge"],
+    deps = ["//:CucumberSwiftCommandLine"],
 )

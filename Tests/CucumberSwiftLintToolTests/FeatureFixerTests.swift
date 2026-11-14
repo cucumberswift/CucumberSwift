@@ -395,11 +395,20 @@ final class FeatureFixerTests: LintTestCase {
         XCTAssertEqual(found.map { URL(fileURLWithPath: $0).lastPathComponent }, ["C.feature", "A.feature"])
     }
 
-    func testFixPathsAreReadFromTheCommandLine() {
-        let arguments = Arguments(["--fix", "Features", "A.feature"])
-        XCTAssertTrue(arguments.fix)
-        XCTAssertEqual(arguments.fixPaths, ["Features", "A.feature"])
-        XCTAssertTrue(Arguments(["--fix"]).fix)
-        XCTAssertFalse(Arguments(["--features", "A.feature"]).fix)
+    func testFixFeatureFilesFailsForAPathThatDoesNotExist() {
+        let missing = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+        XCTAssertEqual(LintCommand.fixFeatureFiles(paths: [missing]), 1)
+    }
+
+    func testLintWritesTheStampAndAWarningDoesNotFailIt() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let feature = directory.appendingPathComponent("A.feature")
+        try "Feature: A\n  Scenario: B\n    Giben a thing\n".write(to: feature, atomically: true, encoding: .utf8)
+        let stamp = directory.appendingPathComponent("stamp")
+
+        XCTAssertEqual(LintCommand.lint(arguments: ["--stamp", stamp.path, "--features", feature.path]), 0)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stamp.path))
     }
 }

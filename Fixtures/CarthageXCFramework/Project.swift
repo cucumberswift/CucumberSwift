@@ -36,6 +36,18 @@ let project = Project(
                     files: [.folderReference(path: "../../Carthage/Build/CucumberSwift.xcframework", codeSignOnCopy: true)]
                 )
             ],
+            // Checks the feature files before the build with the lint command, as a Carthage project's Run Script
+            // phase does: the plugins run only in Swift packages and Xcode projects that use SwiftPM.
+            scripts: [
+                .pre(
+                    script: """
+                    export CUCUMBERSWIFT_CHECKOUT="$SRCROOT/../.."
+                    "$SRCROOT/cucumberswift.sh" lint --features "$SRCROOT"/Tests/Features/*.feature --step-definitions "$SRCROOT"/Tests/*.swift
+                    """,
+                    name: "Check feature files with cucumberswift",
+                    basedOnDependencyAnalysis: false
+                )
+            ],
             // Linked.
             dependencies: [
                 .target(name: "Cukes"),

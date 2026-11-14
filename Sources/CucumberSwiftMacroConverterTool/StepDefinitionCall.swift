@@ -64,7 +64,7 @@ struct StepDefinitionCall {
     }
 
     func macro() throws -> MacroExpansionExprSyntax {
-        guard let found = runner.found else { throw Unconvertible(reason: runner.problem ?? "") }
+        guard runner.found != nil else { throw Unconvertible(reason: runner.problem ?? "") }
         let arguments = try arguments()
         let (pattern, closure) = (arguments.pattern, arguments.closure)
         let isRegexLiteral = arguments.isRegexLiteral

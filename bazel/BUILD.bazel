@@ -10,3 +10,5 @@ watchos_xctest_runner(
 
 # For the runner's own test, in the test module in Tests/.
 exports_files(["xctest_runner.template.sh"])
+
+exports_files(["cucumberswift.bzl"])
