@@ -1244,11 +1244,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir "$RUNNER_TEMP/proof"
-          # No artifact matches when no job saved proof, which is not an error.
-          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'proof-*' --dir "$RUNNER_TEMP/proof" || true
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --paginate \
             --jq ".artifacts[] | select(.name | startswith(\"proof-\")) | {(.name): \"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/\(.id)\"}" \
             | jq -s 'add // {}' > "$RUNNER_TEMP/artifacts.json"
+          # No artifact exists when no job saved proof, which is not an error. When one exists, a download
+          # that fails fails this step, so the check never reports a partial collection as the whole.
+          if [ "$(jq length "$RUNNER_TEMP/artifacts.json")" != 0 ]; then
+            gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'proof-*' --dir "$RUNNER_TEMP/proof"
+          fi
           python3 .github/scripts/proof.py report --artifacts "$RUNNER_TEMP/artifacts.json" --out "$RUNNER_TEMP/check.json" "$RUNNER_TEMP/proof"
       - name: Publish the Proof check
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0

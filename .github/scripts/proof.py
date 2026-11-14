@@ -39,7 +39,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# GitHub cuts a check run's summary at 65,535 characters; this leaves room for the closing lines.
+# GitHub cuts a check run's summary at 65,535 bytes; this leaves room for the intro line.
 SUMMARY_LIMIT = 60000
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".heic"}
 
@@ -138,14 +138,23 @@ def save_attachments(folder, source, exported):
             if file.suffix.lower() not in IMAGE_SUFFIXES or not file.exists():
                 continue
             name = attachment.get("suggestedHumanReadableName") or file.stem
-            image = f"{slug(test['testIdentifier'] + '-' + name)}{file.suffix.lower()}"
             folder.mkdir(parents=True, exist_ok=True)
+            image = free_name(folder, slug(test['testIdentifier'] + '-' + name), file.suffix.lower())
             file.replace(folder / image)
             failure = " It is attached to a failure." if attachment.get("isAssociatedWithFailure") else ""
             body = f"Test: {test['testIdentifier']}\nDevice: {attachment.get('deviceName', '')}.{failure}"
             write_item(folder, f"Screenshot: {name}", source, body, name=Path(image).stem, image=image)
             saved += 1
     return saved
+
+
+def free_name(folder, base, suffix):
+    """`<base><suffix>`, or `<base>-N<suffix>` with the first number that no file in folder has taken."""
+    name, number = f"{base}{suffix}", 2
+    while (folder / name).exists():
+        name = f"{base}-{number}{suffix}"
+        number += 1
+    return name
 
 
 def command_attachments(args):
@@ -205,14 +214,38 @@ def render(items, artifact_urls, limit=SUMMARY_LIMIT):
     def page():
         return "\n".join(render_item(index, item, budget, artifact_urls) for index, item in enumerate(items))
 
+    def size(page_text):
+        return len(page_text.encode("utf-8"))
+
     text = page()
-    while len(text) > limit and budget:
+    while size(text) > limit and budget:
         longest = max(budget, key=budget.get)
         if budget[longest] == 0:
             break
-        budget[longest] = max(0, budget[longest] - (len(text) - limit) - 100)
+        budget[longest] = max(0, budget[longest] - (size(text) - limit) - 100)
         text = page()
+    if size(text) > limit:
+        text = omitted_page(items, artifact_urls, limit)
     return text
+
+
+def omitted_page(items, artifact_urls, limit):
+    """What the check shows when the items still don't fit with every text cut to nothing: the title of
+    each item, as many as fit, and a link to each proof artifact that holds the rest."""
+    artifacts = sorted({artifact for artifact, _, _ in items})
+    lines = ["The items don't fit on this page. The whole proof is in these artifacts:\n"]
+    for artifact in artifacts:
+        link = artifact_urls.get(artifact)
+        lines.append(f"- [{artifact}]({link})" if link else f"- {artifact or 'proof'}")
+    lines.append("")
+    kept = "\n".join(lines)
+    for index, (_, fields, _) in enumerate(items):
+        entry = f"- {one_line(fields.get('title') or 'Untitled proof')}\n"
+        if len((kept + entry + f"- {len(items) - index} more\n").encode("utf-8")) > limit:
+            kept += f"- {len(items) - index} more\n"
+            break
+        kept += entry
+    return kept
 
 
 def report(root, artifact_urls):

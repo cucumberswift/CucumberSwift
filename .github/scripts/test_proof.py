@@ -132,6 +132,19 @@ class AttachmentsTests(ProofTestCase):
         self.assertTrue((self.root / "outside.png").exists())
         self.assertFalse(self.folder.exists())
 
+    def test_two_screenshots_with_the_same_name_keep_both_images(self):
+        exported = self.root / "exported"
+        exported.mkdir()
+        (exported / "A1.png").write_bytes(b"first")
+        (exported / "A2.png").write_bytes(b"second")
+        attachment = lambda file: {"exportedFileName": file, "suggestedHumanReadableName": "Basket"}
+        (exported / "manifest.json").write_text(json.dumps([
+            {"testIdentifier": "Basket/testAddCukes()", "attachments": [attachment("A1.png"), attachment("A2.png")]}]))
+        self.assertEqual(proof.save_attachments(self.folder, "UI tests", exported), 2)
+        images = {proof.read_item(p)[0]["image"] for p in self.folder.glob("*.md")}
+        self.assertEqual(len(images), 2)
+        self.assertEqual({(self.folder / image).read_bytes() for image in images}, {b"first", b"second"})
+
 
 class ReportTests(ProofTestCase):
     def test_no_items_is_neutral(self):
@@ -160,6 +173,20 @@ class ReportTests(ProofTestCase):
         self.assertLessEqual(len(page), 1000)
         self.assertIn("short text", page)
         self.assertIn("Cut to fit this page.", page)
+
+    def test_a_page_of_screenshots_is_bounded_in_bytes(self):
+        job = self.folder / "proof-a"
+        for number in range(200):
+            proof.write_item(job, f"Screenshot {number}: é", "S", "Test: x", image=f"s{number}.png")
+        page = proof.render(proof.collect(self.folder), {"proof-a": "https://example.test/a/1"}, limit=2000)
+        self.assertLessEqual(len(page.encode("utf-8")), 2000)
+        self.assertIn("[proof-a](https://example.test/a/1)", page)
+        self.assertIn("more", page)
+
+    def test_multibyte_text_is_cut_by_bytes(self):
+        proof.write_item(self.folder / "proof-a", "Long", "S", "é" * 3000)
+        page = proof.render(proof.collect(self.folder), {}, limit=3000)
+        self.assertLessEqual(len(page.encode("utf-8")), 3000)
 
     def test_backticks_in_the_text_cannot_close_its_fence(self):
         proof.write_item(self.folder / "proof-a", "Code", "S", "```swift\nlet x = 1\n```")
