@@ -91,10 +91,3 @@ class GateStepTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class ThrowawayFailure(unittest.TestCase):
-    """Throwaway (#606): fails Script tests so CI shows the gate failing. Reverted next."""
-
-    def test_fails(self):
-        self.fail("throwaway failure to prove the CI gate fails")
