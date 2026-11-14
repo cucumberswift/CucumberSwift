@@ -2,7 +2,8 @@
 // 6.1 for package traits, the oldest tools version that can turn on CucumberSwift's Macros trait.
 // A project that runs its feature files with Swift Testing, as "Running Feature Files with Swift
 // Testing" describes: the CucumberSwiftTestingPlugin build tool plugin, the CucumberSwiftTestingMacros
-// product with the Macros trait, and a unit test target in the Swift 6 language mode. See README.md.
+// product with the Macros trait, and a unit test target in the Swift 6 language mode, beside a test target
+// that runs its feature files with XCTest. See README.md.
 
 import PackageDescription
 
@@ -25,6 +26,11 @@ let package = Package(
                 .plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift"),
                 // Checks the feature files and step definitions on every build.
                 .plugin(name: "CucumberSwiftLint", package: "CucumberSwift")
-            ])
+            ]),
+        // Runs its feature files with CucumberSwift's XCTest runner, in the same `swift test` run.
+        .testTarget(
+            name: "SwiftTestingPackageXCTests",
+            dependencies: [.product(name: "CucumberSwiftMacros", package: "CucumberSwift")],
+            resources: [.copy("Features")])
     ]
 )

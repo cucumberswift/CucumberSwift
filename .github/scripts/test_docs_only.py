@@ -84,7 +84,10 @@ class KindTests(unittest.TestCase):
             ".github/scripts/parallel_matrix.py",
             ".github/scripts/test_parallel_matrix.py",
             ".github/scripts/test_check_lockfiles.py",
+            ".github/scripts/test_fixture_tests.py",
             ".github/scripts/test_gherkin_highlighting.py",
+            ".github/scripts/nightly_report.py",
+            ".github/scripts/test_nightly_report.py",
             ".github/scripts/publish-docs.sh",
         ]:
             with self.subTest(path=path):
@@ -97,6 +100,7 @@ class KindTests(unittest.TestCase):
             ".github/scripts/parallel-fixture.sh",
             ".github/scripts/macros-trait-fixture.sh",
             ".github/scripts/check_lockfiles.py",
+            ".github/scripts/fixture_tests.py",
             ".github/scripts/new_script.py",
             ".github/scripts/__pycache__/release.cpython-313.pyc",
             ".github/workflows/CI.yml",

@@ -64,7 +64,7 @@ ROOT_DOCS = {"LICENSE"}
 DOCS_FOLDERS = (".github/ISSUE_TEMPLATE/",)
 # The scripts that only Linux jobs run, and their tests: Script tests runs the
 # tests, the changes jobs run docs_only.py, queue_checked.py and parallel_matrix.py, the Release workflow's plan and release
-# jobs run release.py, and docs.yml runs publish-docs.sh.
+# jobs run release.py, CI.yml's nightly_report job runs nightly_report.py, and docs.yml runs publish-docs.sh.
 LINUX_SCRIPTS = {
     ".github/scripts/docs_only.py",
     ".github/scripts/test_docs_only.py",
@@ -75,7 +75,10 @@ LINUX_SCRIPTS = {
     ".github/scripts/release.py",
     ".github/scripts/test_release.py",
     ".github/scripts/test_check_lockfiles.py",
+    ".github/scripts/test_fixture_tests.py",
     ".github/scripts/test_gherkin_highlighting.py",
+    ".github/scripts/nightly_report.py",
+    ".github/scripts/test_nightly_report.py",
     ".github/scripts/publish-docs.sh",
 }
 # The documentation that Script tests checks: test_gherkin_highlighting.py reads

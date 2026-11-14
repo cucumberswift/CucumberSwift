@@ -92,14 +92,13 @@ final class CoverageReporter: CucumberTestObserver {
     func didFinish(feature: Feature, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {
         let parts = recorder?.featureFinished(feature: feature.uri, featureName: feature.title, line: Int(feature.location.line)) ?? []
         for part in parts {
-            let report = CoverageReport(scores: part.scores, settings: readSettings)
-            if let rule = part.rule {
-                output(report.summary(name: "\(feature.title) › \(rule.title)"))
-                report.issues(file: feature.coverageIssueFile, line: rule.line, subject: "Rule").forEach(record)
-            } else {
-                output(report.summary(name: feature.title))
-                report.issues(file: feature.coverageIssueFile, line: Int(feature.location.line), subject: "Feature").forEach(record)
-            }
+            let report = CoverageReport.report(part,
+                                               featureName: feature.title,
+                                               featureLine: Int(feature.location.line),
+                                               file: feature.coverageIssueFile,
+                                               settings: readSettings)
+            output(report.summary)
+            report.issues.forEach(record)
         }
     }
 
@@ -111,7 +110,9 @@ final class CoverageReporter: CucumberTestObserver {
                                                                      tags: scenario.tags,
                                                                      duration: duration.converted(to: .seconds).value,
                                                                      group: Self.group(of: scenario),
-                                                                     rule: scenario.rule))
+                                                                     rule: scenario.rule,
+                                                                     featureLine: scenario.feature.map { Int($0.location.line) },
+                                                                     issueFile: scenario.feature?.coverageIssueFile))
     }
 
     func didFinish(step: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {

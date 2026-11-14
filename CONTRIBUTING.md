@@ -142,7 +142,7 @@ Or, with [mise](https://mise.jdx.dev) installed and the repository trusted (step
 mise run test-swiftpm
 ```
 
-**Why separate packages.** SwiftPM links all of a package's test targets into 1 test bundle. Each test target here declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle, so the others would silently run nothing. So each consumer test folder is a package of its own, and the root package contains only `CucumberSwiftTests`. The same rule applies to projects that use CucumberSwift: see "Running tests with Swift Package Manager" in the documentation.
+**Why separate packages.** SwiftPM links all of a package's test targets into one test bundle. Each test target here declares its own `extension Cucumber: StepImplementation`, and only one of those can take effect in a bundle, so the others would silently run nothing. So each consumer test folder is a package of its own, and the root package contains only `CucumberSwiftTests`. The same rule applies to projects that use CucumberSwift: see [Use one StepImplementation per package](https://cucumberswift.org/CucumberSwift/documentation/cucumberswift/running-tests-with-swift-package-manager#Use-1-StepImplementation-per-package).
 
 **The Swift 6 package has no Xcode target.** `Tests/CucumberSwiftSwift6ConsumerTests` builds its test target in the Swift 6 language mode, as a project that has moved to Swift 6 would, while CucumberSwift itself stays in the Swift 5 language mode. It checks that the setup in "Swift 6 language mode" in "Matching steps" compiles and runs. If a change makes Swift 6 code stop compiling, this package fails to build.
 
@@ -152,7 +152,7 @@ mise run test-swiftpm
 
 With Swift 6.2 or later, the converter tool's own use of swift-syntax still makes `swift test --enable-all-traits` fail to link the macros' plugin, for the same reason. Add `--disable-experimental-prebuilts`, and delete `.build` after changing the flag, because the old objects don't link. Our CI's SwiftPM job uses Swift 6.1, a version with no prebuilts. The converter shares `StepPattern.swift`, `RegexLiteralPattern.swift` and `LocalizedStepDefinitionNames.swift` with the macros and the lint tool through symlinks, so it gives a converted closure the arguments that the macro reads.
 
-**Why the root package skips `CucumberTest`.** `CucumberTest` is the run of `Tests/CucumberSwiftTests/Features`, whose steps have no step definitions, so each of those steps would fail. The Xcode test plan skips it too, and `--skip 'CucumberSwift\.CucumberTest'` does the same for SwiftPM.
+**Why the root package skips `CucumberTest`.** `CucumberTest` is the run of `Tests/CucumberSwiftTests/Features`, whose steps have no step definitions, so each of those steps would fail. The Xcode test plan skips it too, and the root package's `swift test` skips it with `--skip 'CucumberSwift\.CucumberTest'`.
 
 **Comparing the counts with `xcodebuild`.** The consumer packages run the same tests as their Xcode bundles, and the root package the same as the `CucumberSwiftTests` bundle, apart from the tests that need UIKit. `swift test` on macOS doesn't have UIKit.
 
@@ -215,13 +215,13 @@ Keep these points in mind when you change the Bazel setup:
 mise run test-fixtures
 ```
 
-To run some of them, list their folder names in `FIXTURES`, separated by commas. A name that isn't a fixture fails the task:
+To run some of them, list their folder names after the task's name. A name that isn't a fixture fails the task:
 
 ```bash
-FIXTURES=SwiftTestingPackage,BrokenFeaturesPackage mise run test-fixtures
+mise run test-fixtures SwiftTestingPackage BrokenFeaturesPackage
 ```
 
-Our CI runs them in the `Fixture tests` job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
+Our CI runs each fixture in a job of its own on `macos-26`, named `Fixture tests (<folder name>)`, and the Swift package fixtures in the `SwiftPM tests` job too. The `Fixture tests` check passes only when every fixture's job passes. A new folder in `Fixtures/` gets a job of its own with no change to the workflow.
 
 `Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with this task. The task first builds the framework with Carthage. Our CI runs it in the `Carthage tests` jobs:
 
@@ -235,17 +235,25 @@ It builds and tests with the selected Xcode. The pinned Tuist can't read the fix
 
 A fixture follows these rules:
 
-- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`. Name the project and its scheme after the fixture's folder, because the task finds them by that name. A fixture runs on macOS, unless it has an `xcodebuild-destination` file with another `-destination`, such as `platform=iOS Simulator,name=iPhone 17`. A fixture that checks the oldest Xcode a feature needs has an `xcode-version` file, such as `26.4`. The task runs it with `/Applications/Xcode_26.4.app`, the name that GitHub's runner images use. In our CI, that Xcode must be there. On your Mac, the task warns and uses the selected Xcode.
+- **A fixture is a Swift package or a Tuist project.** A Swift package (`Package.swift`) is tested with `swift test`, and with the arguments in its `swift-test-arguments` file if it has one, such as `--enable-code-coverage`. A Tuist project (`Project.swift` and `Tuist.swift`) is generated with the Tuist version in `.mise.toml` and tested with `xcodebuild`. Name the project and its scheme after the fixture's folder, because the task finds them by that name. A fixture runs on macOS, unless it has an `xcodebuild-destination` file with another `-destination`, such as `platform=iOS Simulator,name=iPhone 17`. A fixture that checks the oldest Xcode a feature needs has an `xcode-version` file, such as `26.4`. The task runs it with `/Applications/Xcode_26.4.app`, the name that GitHub's runner images use. In our CI, that Xcode must be there. On your Mac, the task warns and uses the selected Xcode.
 - **Depend on CucumberSwift by path.** `.package(name: "CucumberSwift", path: "../..")` in a Swift package, `.package(path: "../..")` in a Tuist project.
 - **Apply the plugins a project would.** Every test target applies `CucumberSwiftLint`, and a Swift Testing target also `CucumberSwiftTestingPlugin`. Each test target, other than `StepDefinitionMacrosPackage`'s (below), has a `LintCheck.feature` with 1 misspelt keyword, and the fixture's `expected-warnings` lists the warning it must cause. The plugin only warns, so `mise run test-fixtures` fails when a listed warning is missing from the build output. That's how a fixture shows that the plugin's warnings reach the build. The task also fails when the plugin made no stamp file, because that shows it didn't run.
 - **Nothing generated is committed.** `.gitignore` covers each fixture's Xcode project, `Derived` folder, `.build` folder and `Package.resolved`. They are outside `Project.swift`'s globs, so they are not in CucumberSwift's Xcode project or in what Carthage builds.
-- **The checkout's own `Package.resolved` stays as it is.** Xcode's package resolution of a project that depends on this checkout by path writes the checkout's `Package.resolved` for the traits that project enables, so without the `Macros` trait, or with an Xcode before 26.4, it drops the swift-syntax pin. `.github/scripts/keep-package-resolved.sh` puts the file back after each `tuist generate` and `xcodebuild test` of a Tuist fixture, after `mise run generate-fixtures` and after `.github/scripts/parallel-fixture.sh`. Use it for any new step that resolves such a project. Building a [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample) project against your checkout with `CUCUMBER_SWIFT_PATH` does the same, so afterwards run `git checkout Package.resolved` here.
+- **The checkout's own `Package.resolved` stays as it is.** Xcode's package resolution of a project that depends on this checkout by path writes the checkout's `Package.resolved` for the traits that project enables, so without the `Macros` trait, or with an Xcode before 26.4, it drops the swift-syntax pin. `.github/scripts/keep-package-resolved.sh` puts the file back after each `tuist generate` and `xcodebuild test` of a Tuist fixture, after `mise run generate-fixtures` and after `.github/scripts/parallel-fixture.sh`. Use it for any new step that resolves such a project. Building a [CucumberSwiftSample](https://github.com/cucumberswift/CucumberSwiftSample) project against your checkout with `CUCUMBER_SWIFT_PATH` also rewrites the checkout's `Package.resolved`, so afterwards run `git checkout Package.resolved` here.
 
 #### What the fixtures check
 
 The fixtures check these things:
 
 - **No warnings from CucumberSwift, other than the expected ones.** `mise run test-fixtures` fails on any warning from CucumberSwift that a fixture's `expected-warnings` doesn't list. That includes CucumberSwiftLint's warnings, a warning in a macro's expansion or in the library, the plugins or the tools, and SwiftPM's warnings about the package. `.github/scripts/fixture-warnings.sh` separates them from the fixture's own warnings. Our CI's other fixture runs use the same script.
+- **Every fixture runs at least the tests it lists.** Each fixture has an `expected-tests` file with the fewest tests that each test framework must run, for example:
+
+  ```text
+  XCTest: 6
+  Swift Testing: 3
+  ```
+
+  `mise run test-fixtures` and `mise run test-carthage` fail a fixture that runs fewer tests, or runs tests of a framework that the file doesn't list. The error names the fixture and both counts. A test run can exit with success after running no tests at all, and this check fails it. `.github/scripts/fixture_tests.py` adds up the summaries that `swift test` and `xcodebuild` print. With the XCTest runner, each step of a scenario is a test. When you add tests to a fixture, raise its counts.
 - **`StepDefinitionMacrosPackage` uses every feature together**, as a project does: the lint plugin, macros and plain step definitions, localized ones too, a commented-out step definition, and feature files in English and Spanish with tables, doc strings and outlines. It has no `LintCheck.feature`, so it must build with no warnings from CucumberSwift at all, and the task runs Fix Feature Files on it, and the command must change nothing. The task then runs Convert to Gherkin Macros on it. The command's report must have each line of its `expected-conversion`, and its tests must pass again on the converted step definitions, before the task puts its Swift files back. A pull request that adds a user-facing feature also uses it in this fixture.
 - **`BrokenFeaturesPackage` is broken on purpose.** Its feature files have a misspelt keyword, an undefined step, an uneven table and an unsupported language, run by both runners. Its tests must fail, with every failure in its `expected-failures` and every warning in its `expected-warnings`. When CucumberSwift's messages change, update the expectations, not the feature files.
 - **Make it fail when the thing it tests breaks.** The Tuist fixture's step definitions only compile when the `Macros` trait reaches Xcode, as in Tuist's own fixtures.

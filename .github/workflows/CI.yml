@@ -139,9 +139,11 @@ jobs:
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      coverage_merge: ${{ steps.merge.outputs.coverage_merge }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
+      fixtures: ${{ steps.fixtures.outputs.fixtures }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
       # no file contents.
@@ -187,6 +189,43 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # The folders in Fixtures/, as a JSON list, for Fixture tests' matrix: one job each.
+      # CarthageXCFramework and CoverageMergePackage are left out, as `mise run test-fixtures` leaves
+      # them out: Carthage tests and Coverage merge fixture run them. Read from the commit's tree,
+      # which the sparse checkout has.
+      - name: List the fixtures
+        id: fixtures
+        run: |
+          fixtures=$(git ls-tree -d --name-only HEAD Fixtures/ | sed 's|^Fixtures/||' | grep -vxE 'CarthageXCFramework|CoverageMergePackage' \
+            | python3 -c 'import json, sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          echo "Fixtures: $fixtures"
+          if [ "$fixtures" = "[]" ]; then
+            echo "::error::Found no fixtures in Fixtures/"
+            exit 1
+          fi
+          echo "fixtures=$fixtures" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes the coverage merge: the code that writes the coverage files and
+      # scores them, the cucumberswift tool, its fixture and script, the package manifests or this workflow. Not
+      # the documentation, which lives in Sources too. Always on any other event, such as the merge queue.
+      - name: Decide whether the coverage merge fixture runs
+        id: merge
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwift/Runner/CoverageScoreTests\.swift$|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Coverage merge fixture runs: $run"
+          echo "coverage_merge=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -346,10 +385,12 @@ jobs:
           # The DocC catalog and the stubs too, which test_docs_examples.py reads,
           # and the Gherkin highlighting for Xcode, which test_gherkin_highlighting.py
           # checks against the catalog's "Running Tests in Xcode" article. And the
-          # workflows, which test_queue_checked.py checks the release bot against.
+          # workflows, which test_queue_checked.py checks the release bot against. And the
+          # fixtures, whose expected-tests files test_fixture_tests.py reads.
           sparse-checkout: |
             .github/scripts
             .github/workflows
+            Fixtures
             Sources/CucumberSwift/CucumberSwift.docc
             Tests/DocumentationExamples
             Tools/Xcode
@@ -451,14 +492,16 @@ jobs:
   # still install the framework. It needs no Tuist: consumers never do.
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
-  # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with, after
-  # installing its iOS platform, which the image doesn't have.
+  # Pull requests run the newest Xcode, the macos-26 image's own, which a new release
+  # most likely breaks. The merge queue and main also run Xcode 16.0, the oldest Xcode
+  # CI builds with, on macos-15, after installing its iOS platform, which the image
+  # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
+  # or later (#553).
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -466,13 +509,14 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)","ios_platform":true}]') }}
+          && '[{"os":"macos-26","variant":""}]'
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","xcode":"16.0","variant":" (Xcode 16)","ios_platform":true,"tuist_developer_dir":"/Applications/Xcode_26.2.app/Contents/Developer"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
         run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
@@ -509,7 +553,7 @@ jobs:
           CARTHAGE_LOG: carthage-build.log
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           # The pinned Tuist can't generate the fixture's project with Xcode 16.0.
-          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+          TUIST_DEVELOPER_DIR: ${{ matrix.tuist_developer_dir }}
         run: mise run test-carthage
       - name: Show what Carthage produced
         if: always()
@@ -518,7 +562,7 @@ jobs:
       # matrix entry, so each run has one artifact. The wildcard keeps the
       # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
       - name: Upload the xcframework
-        if: matrix.xcode == '26.2'
+        if: matrix.variant == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: CucumberSwift.xcframework
@@ -529,7 +573,7 @@ jobs:
       # Nightly and manual runs only, with the newest Xcode: pull requests build for tvOS in
       # Catalyst tests. After the upload, as it replaces the iOS xcframework.
       - name: Build the tvOS framework with Carthage
-        if: matrix.xcode == '26.2' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: matrix.variant == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
           carthage build --no-skip-current --use-xcframeworks --platform tvOS --log-path carthage-build.log
           xcf=Carthage/Build/CucumberSwift.xcframework
@@ -717,6 +761,32 @@ jobs:
             echo "::error::Fewer tests ran on watchOS than the floors. If you removed tests on purpose, lower MIN_TESTS or MIN_SWIFT_TESTING_TESTS in CI.yml."
             status=1
           fi
+          exit $status
+      # Coverage and redundancy scores on iOS, tvOS, watchOS and Mac Catalyst (#526): the tests above run without code
+      # coverage, so the coverage tests skip there. This runs the CoverageDefaultsPackage fixture, which
+      # turns it on, and each runner must print the Grading feature's scores: 50% coverage, 33% redundancy.
+      - name: Measure coverage on iOS, tvOS and watchOS Simulators and Mac Catalyst
+        if: ${{ !cancelled() }}
+        run: |
+          status=0
+          for platform in iOS tvOS watchOS Catalyst; do
+            if [ "$platform" = Catalyst ]; then
+              destination='platform=macOS,variant=Mac Catalyst'
+            else
+              destination=$(.github/scripts/simulator-destination.sh "$platform Simulator")
+            fi
+            log="$RUNNER_TEMP/coverage-$platform.log"
+            (cd Fixtures/CoverageDefaultsPackage && xcodebuild test -scheme CoverageDefaultsPackage-Package \
+              -destination "$destination" -enableCodeCoverage YES -skipPackagePluginValidation \
+              CODE_SIGNING_ALLOWED=NO > "$log" 2>&1) || status=1
+            grep -E 'error:|\*\* TEST (FAILED|SUCCEEDED)' "$log" | sort -u | head -20
+            scores=$(grep -c 'CucumberSwift coverage: Grading: 50% of the code its scenarios ran (4 of 8 regions in 1 function), .*redundancy 33%' "$log" || true)
+            echo "$platform: ${scores:-0} correct coverage summaries (2 expected, one for each runner)"
+            if [ "${scores:-0}" -ne 2 ]; then
+              echo "::error::CucumberSwift gave the Grading feature the expected scores ${scores:-0} times on $platform, not 2."
+              status=1
+            fi
+          done
           exit $status
 
   # The tests on the oldest iOS and tvOS Simulator runtimes CI has (#271), which no other job
@@ -1008,23 +1078,26 @@ jobs:
           grep -F "swift-syntax.git\", exact: \"$floor\"" Package.swift
           swift test --enable-all-traits --filter 'CucumberSwiftMacrosTests|CucumberSwiftMacroConverterTests'
 
-  # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
-  # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
-  # package trait only compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4,
-  # named in its xcode-version file. A required check.
+  # Builds and tests each project in Fixtures/ as a project that uses CucumberSwift would, Tuist
+  # projects included, in a job of its own (`mise run test-fixtures <fixture>`), so the fixtures run
+  # at the same time (#593). The changes job lists them from the folder, so a new fixture gets a job
+  # with no change here. macos-26, because a Tuist fixture that turns on a package trait only
+  # compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4, named in its
+  # xcode-version file. Fixture tests, below, is the required check that sums them up.
   #
-  # 45 minutes, not 30: a run takes about 13-27 minutes, typically 20-25, and a
-  # slow runner reached 30 with no test failing, which cancelled the job and
-  # dropped a merge queue entry. The timeout only bounds a hung job; a normal
-  # run takes no longer for it.
-  fixture_tests:
-    name: Fixture tests
+  # 30 minutes, what the old single job took for every fixture; the timeout only bounds a hung job.
+  fixture_test:
+    name: Fixture tests (${{ matrix.fixture }})
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: ${{ fromJSON(needs.changes.outputs.fixtures) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1047,16 +1120,94 @@ jobs:
       # fixture depend on it by URL instead, as a project does: a git repository of this commit. So the
       # next step checks that the Macros trait resolves and builds from a URL, as the docs show (#418).
       - name: Use the macros package fixture with CucumberSwift from a URL
+        if: ${{ matrix.fixture == 'StepDefinitionMacrosPackage' }}
         run: .github/scripts/macros-fixture-by-url.sh "$RUNNER_TEMP"
-      - name: Build and test the fixtures
+      - name: Build and test the fixture
         env:
+          FIXTURE: ${{ matrix.fixture }}
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-        run: mise run test-fixtures
-      # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
-      # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
-      # cancelled, which hides whether it passed (#480).
+        run: mise run test-fixtures "$FIXTURE"
+
+  # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
+  # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
+  # cancelled, which hides whether it passed (#480). Fixture tests, below, requires it.
+  swift_6_3_tests:
+    name: Swift 6.3 tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Run the root package's Swift Testing tests with Swift 6.3
         run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
+  # their coverage folders, and fails unless every way gives the same scores (#515). It takes minutes, so a pull
+  # request runs it only when it changes the coverage merge (coverage_merge, from the changes job). Fixture
+  # tests, below, requires it when it runs.
+  coverage_merge_fixture:
+    name: Coverage merge fixture
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.coverage_merge == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Merge the coverage of parallel and sharded runs
+        run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
+
+  # A required check: passes only when every fixture's job, Swift 6.3 tests and, when it runs, the coverage merge fixture passed. A job
+  # without a matrix, so that it reports under this name when the jobs it needs are skipped. It
+  # skips when they skip, on a run with no code, which counts as passing.
+  fixture_tests:
+    name: Fixture tests
+    needs: [changes, fixture_test, swift_6_3_tests, coverage_merge_fixture]
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check that every fixture's job passed
+        env:
+          FIXTURES: ${{ needs.fixture_test.result }}
+          SWIFT_6_3: ${{ needs.swift_6_3_tests.result }}
+          COVERAGE_MERGE: ${{ needs.coverage_merge_fixture.result }}
+        run: |
+          echo "Fixture jobs: $FIXTURES"
+          echo "Swift 6.3 tests: $SWIFT_6_3"
+          echo "Coverage merge fixture: $COVERAGE_MERGE"
+          # The coverage merge fixture skips on a pull request that doesn't change it.
+          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ] || { [ "$COVERAGE_MERGE" != success ] && [ "$COVERAGE_MERGE" != skipped ]; }; then
+            echo "::error::A fixture's job, Swift 6.3 tests or the coverage merge fixture didn't pass: see the jobs above."
+            exit 1
+          fi
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:
@@ -1171,3 +1322,31 @@ jobs:
           grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+
+  # On the nightly run only, after every other job, reports the run in an issue with
+  # .github/scripts/nightly_report.py: a run with a failed, timed-out or cancelled job
+  # opens an issue titled "Nightly CI run failed" that names those jobs and links the
+  # run, or comments on that issue if it is still open. A run that passes comments on
+  # the open issue so a maintainer can close it. Nothing closes the issue. It needs
+  # every other job, so it runs last; test_nightly_report.py checks the list. It reads
+  # the run's jobs from the API (actions: read) and is the only job that can write
+  # issues.
+  nightly_report:
+    name: Report the nightly run
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, bazel_tests]
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - name: Open or comment on the nightly run's issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/nightly_report.py

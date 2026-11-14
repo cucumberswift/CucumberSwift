@@ -1,0 +1,7 @@
+# The features `mise run test-fixtures` expects in this fixture's Cucumber JSON report, one per line, and
+# no others: the UI test target's, run with XCTest, and the unit test target's, run with Swift Testing,
+# which one scheme's test run writes to one report. See .github/scripts/fixture_report.py.
+Shopping
+Lint check
+Basket
+Basket in Swift
