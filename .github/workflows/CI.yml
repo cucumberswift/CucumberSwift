@@ -1328,6 +1328,8 @@ jobs:
       - name: Trial - mutation testing with bazel run //cli:cucumberswift
         if: ${{ matrix.bazel == '' }}
         run: |
+          # Bazel leaves the first run's coverage files read-only, and the script starts by deleting its reports folder.
+          chmod -R u+w "$RUNNER_TEMP/mutation-Bazel" || true
           started=$SECONDS
           bazel build //cli:cucumberswift --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --xcode_version=26.2
           echo "Trial timing: bazel build //cli:cucumberswift $((SECONDS - started)) s"
