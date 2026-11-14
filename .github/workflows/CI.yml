@@ -14,7 +14,8 @@ name: CI
 # every nightly and manual run (see parallel_tests). A manual run's inputs can
 # narrow the parallel tests to some combinations, and skip every other job.
 # The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
-# the nightly and manual runs (tvOS and watchOS tests, Older runtime tests); pull
+# the nightly and manual runs (tvOS and watchOS tests, Older runtime tests), and so
+# does mutation testing on Mac Catalyst, tvOS and watchOS; pull
 # requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
 #
 # A pull request that merges through the merge queue is tested twice on one
@@ -1318,6 +1319,127 @@ jobs:
             echo "::error::A fixture's job, Swift 6.3 tests, the coverage merge fixture or the mutation testing fixture didn't pass: see the jobs above."
             exit 1
           fi
+
+  # Mutation testing on an Xcode project with an iOS Simulator as the test destination (#536): the same mutants with the
+  # same statuses as the macOS run in Fixture tests. The run script's build runs on the Mac, and the tests run on the
+  # Simulator. It runs in parallel with Fixture tests, on the same events as that job's mutation steps: the merge queue,
+  # nightly and manual runs, and a pull request that changes mutation testing (mutation_code, from the changes job).
+  mutation_ios_tests:
+    name: Mutation tests (iOS)
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i 'ios' || true
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      # A pull request runs the tool that this action builds once, with a cache that every job running the tool shares
+      # (.github/actions/mutation-tool/action.yml). The other events run `swift run`, as the script does without
+      # MUTATION_TOOL.
+      - name: Build the mutation testing tool
+        if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.mutation_code == 'true' }}
+        uses: ./.github/actions/mutation-tool
+      - name: Run mutation testing on the Xcode project fixture with an iOS Simulator
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-ios"
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          # Boots the Simulator once, so that none of the run's xcodebuild test actions boots it again.
+          xcrun simctl boot "${destination##*id=}" || true
+          xcrun simctl bootstatus "${destination##*id=}" -b
+          MUTATION_DESTINATION="$destination" .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-ios"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the Xcode mutation testing reports and log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-xcode-ios
+          path: |
+            ${{ runner.temp }}/mutation-xcode-ios/mutation-MutationTestingTuist
+            ${{ runner.temp }}/mutation-xcode-ios/mutation-MutationTestingTuist-build.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # Mutation testing on an Xcode project with the destinations that pull requests don't run (#536): Mac Catalyst, a tvOS
+  # Simulator and a watchOS Simulator. Fixture tests runs macOS, and Mutation tests (iOS) an iOS Simulator. Each run must find the same mutants
+  # with the same statuses as macOS. Nightly and manual runs only, because the three runs take about 45 minutes.
+  mutation_destinations_tests:
+    name: Mutation tests (Catalyst, tvOS and watchOS)
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes | grep -i -E 'tvos|watchos' || true
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Run mutation testing on the Xcode project fixture with Mac Catalyst
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-catalyst"
+          MUTATION_DESTINATION="platform=macOS,variant=Mac Catalyst" .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-catalyst"
+      - name: Run mutation testing on the Xcode project fixture with a tvOS Simulator
+        if: ${{ !cancelled() }}
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-tvos"
+          destination=$(.github/scripts/simulator-destination.sh "tvOS Simulator")
+          MUTATION_DESTINATION="$destination" .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-tvos"
+      - name: Run mutation testing on the Xcode project fixture with a watchOS Simulator
+        if: ${{ !cancelled() }}
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/mutation-xcode-watchos"
+          destination=$(.github/scripts/simulator-destination.sh "watchOS Simulator")
+          MUTATION_DESTINATION="$destination" .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP/mutation-xcode-watchos"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the Xcode mutation testing reports and logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-xcode-destinations
+          path: |
+            ${{ runner.temp }}/mutation-xcode-*/mutation-MutationTestingTuist
+            ${{ runner.temp }}/mutation-xcode-*/mutation-MutationTestingTuist-build.log
+          if-no-files-found: ignore
+          retention-days: 3
 
   # Checks the Bazel module the way a Bazel project uses it, so BUILD.bazel and
   # MODULE.bazel cannot drift from Package.swift or break for consumers:

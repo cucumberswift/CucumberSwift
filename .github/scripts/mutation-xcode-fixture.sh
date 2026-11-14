@@ -9,6 +9,11 @@
 #
 #   .github/scripts/mutation-xcode-fixture.sh <directory> [selection]
 #
+# MUTATION_DESTINATION is where the tests run, the `-destination` value of the command's `xcodebuild`: `platform=macOS`,
+# the default, `platform=macOS,variant=Mac Catalyst`, or a Simulator such as the one that
+# `.github/scripts/simulator-destination.sh "iOS Simulator"` prints. The build with the Run Script phase always runs
+# on the Mac, and the run must find the same mutants with the same statuses on every destination.
+#
 # The fixture's own path to this checkout doesn't reach it from another folder, so the run uses a copy of the
 # fixture's files in <directory>, which depends on CucumberSwift by URL, as a project does: a git repository of the
 # checked-out commit, tagged 999.0.0, in <directory>, which the fixture's Project.swift reads from TUIST_CUCUMBERSWIFT.
@@ -63,6 +68,7 @@ mise exec -- tuist generate --no-open --path "$project"
 # so the step puts it back. The build log has the command's output, with each survivor as a warning.
 export CUCUMBERSWIFT_CHECKOUT="$PWD"
 export MUTATION_REPORTS="$reports"
+export MUTATION_DESTINATION="${MUTATION_DESTINATION:-platform=macOS}"
 log="$(cd "$dir" && pwd -P)/mutation-$name-build.log"
 status=0
 .github/scripts/keep-package-resolved.sh xcodebuild build \
