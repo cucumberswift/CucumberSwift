@@ -1312,6 +1312,33 @@ jobs:
           done
           exit $status
 
+  # One check that sums up the run, for main's ruleset to require instead of each job (#606).
+  # It needs every job but the nightly report, and test_ci_gate.py checks the list, so a job
+  # added later can't be left out. It passes when each job passed or was skipped, which covers
+  # a run with no code, a push to main that the merge queue checked, and the jobs that run only
+  # on some events or paths, and fails when any failed or was cancelled. `!cancelled()` makes it
+  # run, and report, whatever the jobs it needs did, so it reports on every pull request and
+  # every merge queue entry. A job without a matrix, so it always reports under this name.
+  ci_gate:
+    name: CI gate
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, bazel_tests]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check that every job passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -o pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          failed=$(echo "$NEEDS" | jq -r 'to_entries[] | select(.value.result != "success" and .value.result != "skipped") | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::These jobs didn't pass: $(echo "$failed" | paste -sd, - | sed 's/,/, /g')"
+            exit 1
+          fi
+
   # On the nightly run only, after every other job, reports the run in an issue with
   # .github/scripts/nightly_report.py: a run with a failed, timed-out or cancelled job
   # opens an issue titled "Nightly CI run failed" that names those jobs and links the
@@ -1322,7 +1349,7 @@ jobs:
   # issues.
   nightly_report:
     name: Report the nightly run
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, bazel_tests, ci_gate]
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
