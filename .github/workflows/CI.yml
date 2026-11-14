@@ -1266,6 +1266,14 @@ jobs:
         run: |
           echo "Bazel cache: exact key hit = '${{ steps.bazel_cache.outputs.cache-hit }}', restored from '${{ steps.bazel_cache.outputs.cache-matched-key }}'"
           du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache" 2>/dev/null || echo "Bazel cache: nothing restored, so a cold run"
+      # Every `bazel` command below, in this module and in Tests/, reads the runner's ~/.bazelrc.
+      - name: Point Bazel at the caches
+        run: |
+          {
+            echo "common --disk_cache=$RUNNER_TEMP/bazel-disk-cache"
+            echo "common --repository_cache=$RUNNER_TEMP/bazel-repository-cache"
+          } >> "$HOME/.bazelrc"
+          cat "$HOME/.bazelrc"
       - name: Show the Bazel version
         run: bazel version
       - name: Check MODULE.bazel's CucumberSwiftExpressions is at least Package.swift's
