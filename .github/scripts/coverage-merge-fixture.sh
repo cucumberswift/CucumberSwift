@@ -12,7 +12,7 @@
 #
 #   .github/scripts/coverage-merge-fixture.sh [work folder]
 #
-# Used by the Fixture tests job in CI.yml, and by `mise run test-coverage-merge`.
+# Used by the Coverage merge fixture job in CI.yml, and by `mise run test-coverage-merge`.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
