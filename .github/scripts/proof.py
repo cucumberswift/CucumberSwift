@@ -230,22 +230,22 @@ def render(items, artifact_urls, limit=SUMMARY_LIMIT):
 
 
 def omitted_page(items, artifact_urls, limit):
-    """What the check shows when the items still don't fit with every text cut to nothing: the title of
-    each item, as many as fit, and a link to each proof artifact that holds the rest."""
+    """What the check shows when the items still don't fit with every text cut to nothing: a link to each
+    proof artifact, then the title of each item, with as many lines as fit and a count of the rest."""
     artifacts = sorted({artifact for artifact, _, _ in items})
-    lines = ["The items don't fit on this page. The whole proof is in these artifacts:\n"]
-    for artifact in artifacts:
-        link = artifact_urls.get(artifact)
-        lines.append(f"- [{artifact}]({link})" if link else f"- {artifact or 'proof'}")
-    lines.append("")
-    kept = "\n".join(lines)
-    for index, (_, fields, _) in enumerate(items):
-        entry = f"- {one_line(fields.get('title') or 'Untitled proof')}\n"
-        if len((kept + entry + f"- {len(items) - index} more\n").encode("utf-8")) > limit:
-            kept += f"- {len(items) - index} more\n"
+    links = [f"- [{artifact}]({artifact_urls[artifact]})" if artifact in artifact_urls else f"- {artifact or 'proof'}"
+             for artifact in artifacts]
+    titles = [f"- {one_line(fields.get('title') or 'Untitled proof')}" for _, fields, _ in items]
+    head = "The items don't fit on this page. The whole proof is in these artifacts:\n"
+    lines = links + ["", "The items:\n"] + titles
+    kept = head
+    for index, line in enumerate(lines):
+        rest = f"- {len(lines) - index} more lines\n"
+        if len((kept + line + "\n" + rest).encode("utf-8")) > limit:
+            kept += rest
             break
-        kept += entry
-    return kept
+        kept += line + "\n"
+    return kept[:limit] if len(kept.encode("utf-8")) > limit else kept
 
 
 def report(root, artifact_urls):

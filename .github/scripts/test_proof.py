@@ -183,6 +183,15 @@ class ReportTests(ProofTestCase):
         self.assertIn("[proof-a](https://example.test/a/1)", page)
         self.assertIn("more", page)
 
+    def test_an_oversized_artifact_list_is_bounded_too(self):
+        urls = {}
+        for number in range(300):
+            proof.write_item(self.folder / f"proof-job-{number}", "Item", "S", "text")
+            urls[f"proof-job-{number}"] = f"https://example.test/artifacts/{number}"
+        page = proof.render(proof.collect(self.folder), urls, limit=2000)
+        self.assertLessEqual(len(page.encode("utf-8")), 2000)
+        self.assertIn("more lines", page)
+
     def test_multibyte_text_is_cut_by_bytes(self):
         proof.write_item(self.folder / "proof-a", "Long", "S", "é" * 3000)
         page = proof.render(proof.collect(self.folder), {}, limit=3000)
