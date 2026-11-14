@@ -46,7 +46,8 @@ final class SwiftTestingSourceTests: XCTestCase {
     /// Names the test bundle these tests are in, which the JSON report names its feature files and its copy after.
     private final class CucumberFeaturesBundle {}
 
-    private func cucumberGherkinProblems() {
+    @MainActor private func cucumberGherkinProblems() {
+        CucumberSwiftTesting.Cucumber.shared.reportInvalidStepDefinitions()
     }
 
     private let cucumberScenario1 = CucumberSwiftTesting.GherkinScenario(

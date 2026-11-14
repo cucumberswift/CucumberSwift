@@ -32,18 +32,49 @@ extension CucumberTests {
     }
 
     @available(*, deprecated)
-    @Test func aPatternThatDoesNotCompileFailsAtItsLineAndMatchesNothing() async {
+    @Test func aPatternThatDoesNotCompileIsReportedAtItsLineAndMatchesNothing() async {
         // A string literal would bind to the Cucumber expression overload, as with CucumberSwift.
         let pattern = "(unclosed"
+        let line = #line + 1
+        Given(pattern) { _, _ in }
+        // Written outside any test, as `setupSteps()` runs while Swift Testing discovers them: nothing is
+        // recorded until the Gherkin test reports it.
         await withKnownIssue {
-            Given(pattern) { _, _ in }
+            Cucumber.shared.reportInvalidStepDefinitions()
         } matching: { issue in
-            issue.comments.contains { $0.rawValue.hasPrefix("Invalid regular expression '(unclosed'") }
+            issue.sourceLocation?.line == line
+                && issue.sourceLocation?.fileID.hasSuffix("RegularExpressionStepDefinitionTests.swift") == true
+                && issue.comments.contains { $0.rawValue == "Invalid regular expression '(unclosed': expected ')'" }
         }
         await withKnownIssue {
             await Cucumber.shared.run(scenario([step(.given, "(unclosed", line: 3)]))
         } matching: { issue in
             issue.sourceLocation?.line == 3
         }
+    }
+
+    @Test func anExpressionThatIsAnInvalidRegularExpressionIsReportedAtItsLineAndMatchesNothing() async {
+        let line = #line + 1
+        Given("^(unclosed$") { _, _ in }
+        await withKnownIssue {
+            Cucumber.shared.reportInvalidStepDefinitions()
+        } matching: { issue in
+            issue.sourceLocation?.line == line
+                && issue.sourceLocation?.fileID.hasSuffix("RegularExpressionStepDefinitionTests.swift") == true
+                && issue.comments.contains { $0.rawValue.contains("^(unclosed$") }
+        }
+        // It matches nothing, and the step is undefined rather than trapping.
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "unclosed", line: 3)]))
+        } matching: { issue in
+            issue.sourceLocation?.line == 3
+        }
+    }
+
+    @Test func validStepDefinitionsReportNothing() {
+        Given("^I have (\\d+) cukes$") { _, _ in }
+        Given("I have {int} apples") { _, _ in }
+        Cucumber.shared.reportInvalidStepDefinitions()
+        #expect(Cucumber.shared.invalidDefinitions.isEmpty)
     }
 }

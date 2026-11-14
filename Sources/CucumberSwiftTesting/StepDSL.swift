@@ -93,6 +93,12 @@ public class StepDSL {
                 line: Int = #line,
                 file: StaticString = #file) {
         definitionSite = ("\(file)", line)
+        // An expression with anchors or slashes is a regular expression. One that doesn't compile can
+        // never match, and matching it traps, so it is reported where it is written instead.
+        if let invalid = expression.invalidRegularExpression {
+            Cucumber.shared.invalidDefinitions.append(.init(message: invalid.description, file: "\(file)", line: line))
+            return
+        }
         Cucumber.shared.register(keyword: Self.keyword, file: file, line: line) { text in
             guard let match = expression.match(in: text) else { return nil }
             return { step in try await callback(match, step) }
