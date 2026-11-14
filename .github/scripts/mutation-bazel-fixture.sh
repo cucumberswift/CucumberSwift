@@ -39,9 +39,9 @@ started=$SECONDS
 if [[ -n "${MUTATION_TOOL:-}" ]]; then
   tool="$MUTATION_TOOL"
 else
-  build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-mutation-test)
+  build=(swift build --package-path "$repo" --traits Macros --product cucumberswift)
   "${build[@]}"
-  tool="$("${build[@]}" --show-bin-path)/cucumberswift-mutation-test"
+  tool="$("${build[@]}" --show-bin-path)/cucumberswift"
 fi
 
 built=$SECONDS
@@ -60,7 +60,7 @@ diagnose() {
 }
 
 status=0
-"$tool" \
+"$tool" mutation-test \
   --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
   --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
   --bazel-disk-cache "$folder/bazel-disk-cache" --bazel-arg "--repository_cache=$folder/bazel-repository-cache" \
@@ -69,7 +69,7 @@ status=0
 echo "Bazel fixture timings: the tool's build $((built - started)) s, its run $((SECONDS - built)) s."
 if [[ "$status" -gt 128 ]]; then diagnose "$status"; fi
 if [[ "$status" -ne 0 ]]; then
-  echo "::error::Bazel fixture: cucumberswift-mutation-test exited with $status"
+  echo "::error::Bazel fixture: cucumberswift mutation-test exited with $status"
   exit 1
 fi
 cd "$repo"

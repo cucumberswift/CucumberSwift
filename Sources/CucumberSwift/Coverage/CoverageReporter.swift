@@ -115,14 +115,13 @@ final class CoverageReporter: CucumberTestObserver {
                                               line: Int(feature.location.line),
                                               detections: detections) ?? []
         for part in parts {
-            let report = CoverageReport(scores: part.scores, settings: readSettings)
-            if let rule = part.rule {
-                output(report.summary(name: "\(feature.title) › \(rule.title)"))
-                report.issues(file: feature.coverageIssueFile, line: rule.line, subject: "Rule").forEach(record)
-            } else {
-                output(report.summary(name: feature.title))
-                report.issues(file: feature.coverageIssueFile, line: Int(feature.location.line), subject: "Feature").forEach(record)
-            }
+            let report = CoverageReport.report(part,
+                                               featureName: feature.title,
+                                               featureLine: Int(feature.location.line),
+                                               file: feature.coverageIssueFile,
+                                               settings: readSettings)
+            output(report.summary)
+            report.issues.forEach(record)
         }
     }
 
@@ -140,7 +139,7 @@ final class CoverageReporter: CucumberTestObserver {
         }
         let line = Int(feature.location.line)
         guard let path = readSettings.mutationReport else {
-            let message = "Mutation testing is on, but no mutation report is set. Run `cucumberswift-mutation-test`, then set "
+            let message = "Mutation testing is on, but no mutation report is set. Run `swift run cucumberswift mutation-test`, then set "
                 + "Cucumber.mutationReport or CUCUMBER_MUTATION_REPORT to the mutation-report.json it writes to .build/mutation-testing."
             record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
             return nil
@@ -149,7 +148,7 @@ final class CoverageReporter: CucumberTestObserver {
         mutationReport = read
         switch read {
             case .failure(let error):
-                let message = "Mutation testing is on, but \(error.message). Run `cucumberswift-mutation-test` to write it."
+                let message = "Mutation testing is on, but \(error.message). Run `swift run cucumberswift mutation-test` to write it."
                 record(CoverageIssue(severity: .error, message: message, file: feature.coverageIssueFile, line: line, kind: .mutation))
                 return nil
             case .success(let report):
@@ -193,7 +192,9 @@ final class CoverageReporter: CucumberTestObserver {
                                                                      tags: scenario.tags,
                                                                      duration: duration.converted(to: .seconds).value,
                                                                      group: Self.group(of: scenario),
-                                                                     rule: scenario.rule))
+                                                                     rule: scenario.rule,
+                                                                     featureLine: scenario.feature.map { Int($0.location.line) },
+                                                                     issueFile: scenario.feature?.coverageIssueFile))
     }
 
     func didFinish(step: Step, result _: Reporter.Result, duration _: Measurement<UnitDuration>) {

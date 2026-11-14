@@ -10,7 +10,7 @@ import Testing
 
 extension CucumberTests {
     @Test func cucumberScenariosRunsOnlyTheScenariosItNames() {
-        Cucumber.shared.environment = ["CUCUMBER_SCENARIOS": "/Features/F.feature:5, /Features/G.feature:9"]
+        Cucumber.shared.environment = ["CUCUMBER_SCENARIOS": "/Features/F.feature:5,/Features/G.feature:9"]
         #expect(Cucumber.shared.shouldRun(scenario("Named", line: 5, steps: [])))
         #expect(Cucumber.shared.shouldRun(scenario("In another feature", feature: "G", line: 9, steps: [])))
         #expect(!Cucumber.shared.shouldRun(scenario("Other line", line: 6, steps: [])))

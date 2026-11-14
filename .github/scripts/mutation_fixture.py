@@ -81,6 +81,9 @@ def read_report(path):
         for name, file in report["files"].items():
             for mutant in file["mutants"]:
                 key = (name, mutant["location"]["start"]["line"], mutant["mutatorName"], mutant["replacement"])
+                # A second entry would replace the first: the run would pass with a mutant more than it lists.
+                if key in found:
+                    raise MutantsError(f"has a mutation-report.json that lists a mutant twice: {describe(key)}")
                 found[key] = mutant["status"]
         return found
     except OSError as error:
@@ -155,33 +158,72 @@ def scenarios_in_report(path):
     except OSError:
         return None
     except (ValueError, AttributeError, TypeError):
-        raise MutantsError(f"{path} isn't a Cucumber JSON report")
+        raise MutantsError(f"{path} isn't a Cucumber JSON report") from None
 
 
-def check_scenarios(name, expected, log, reports):
-    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them."""
+def read_tested_ids(path):
+    """Return {mutant number: status} for the mutants of a Stryker report that were tested, or None when it has no ids."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            report = json.load(f)
+        return {int(mutant["id"]): mutant["status"] for file in report["files"].values() for mutant in file["mutants"]
+                if mutant["status"] in TESTED}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def read_counts(log):
+    """Return {mutant number: (status, scenarios run, every scenario)} from the lines of a log that show a count."""
     counts = {}
     for line in log.splitlines():
         found = SCENARIO_COUNT.match(line)
         if found:
             counts[int(found.group(1))] = (found.group(3), int(found.group(4)), int(found.group(5)))
+    return counts
+
+
+def check_tested_ids(name, counts, tested_ids):
+    """Return the errors for the mutants that the log counts against the ones the report says were tested."""
+    errors = []
+    for number in sorted(set(counts) ^ set(tested_ids)):
+        if number in counts:
+            errors.append(f"error: {name}: the log shows a count for mutant {number}, which the report doesn't list as tested")
+        else:
+            errors.append(f"error: {name}: the log shows no count for mutant {number}, which the report lists as tested")
+    for number in sorted(set(counts) & set(tested_ids)):
+        if counts[number][0] != tested_ids[number]:
+            errors.append(f"error: {name}: the log says mutant {number} is {counts[number][0]}, and the report says {tested_ids[number]}")
+    return errors
+
+
+def check_report_count(name, number, ran, reports):
+    """Return the errors for a mutant's Cucumber report holding more scenarios than the log says its run used."""
+    try:
+        held = scenarios_in_report(os.path.join(reports, f"cucumber-mutant-{number}.json"))
+    except MutantsError as error:
+        return [f"error: {name}: {error}"]
+    # Not `!=`, until the report overwrite is fixed in main (#546): a package with an XCTest and a Swift Testing
+    # target has both runners write one report, and the last replaces the other's, so the report can hold fewer
+    # scenarios than ran. Then it must equal the log's count.
+    if held is not None and held > ran:
+        return [f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}"]
+    return []
+
+
+def check_scenarios(name, expected, log, reports, tested_ids=None):
+    """Return the errors for the scenario counts in a log: every tested mutant ran some of the scenarios, not all of them.
+
+    With `tested_ids`, the numbers and statuses of the mutants that the report says were tested, the log must show a count
+    for exactly those mutants, each with the status the report gives it."""
+    counts = read_counts(log)
     tested = sum(1 for status in expected.values() if status in TESTED)
     if len(counts) != tested:
         return [f"error: {name}: the log shows the number of scenarios run for {len(counts)} mutants, and {tested} were tested"]
-    errors = []
+    errors = [] if tested_ids is None else check_tested_ids(name, counts, tested_ids)
     for number, (_status, ran, every) in sorted(counts.items()):
         if not 1 <= ran <= every:
             errors.append(f"error: {name}: mutant {number} ran {ran} of {every} scenarios, which a run of covering scenarios can't")
-        try:
-            held = scenarios_in_report(os.path.join(reports, f"cucumber-mutant-{number}.json"))
-        except MutantsError as error:
-            errors.append(f"error: {name}: {error}")
-            continue
-        # Not `!=`, until the report overwrite is fixed in main (#546): a package with an XCTest and a Swift Testing
-        # target has both runners write one report, and the last replaces the other's, so the report can hold fewer
-        # scenarios than ran. Then it must equal the log's count.
-        if held is not None and held > ran:
-            errors.append(f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}")
+        errors += check_report_count(name, number, ran, reports)
     if all(ran == every for (_status, ran, every) in counts.values()):
         errors.append(f"error: {name}: every mutant ran every scenario: the run didn't select the scenarios that cover them")
     return errors
@@ -205,7 +247,7 @@ def main(argv):
             with open(safe_path(argv[3]), encoding="utf-8", errors="replace") as f:
                 log = f.read()
             errors += check_log(name, expected, log)
-            errors += check_scenarios(name, expected, log, reports)
+            errors += check_scenarios(name, expected, log, reports, read_tested_ids(os.path.join(reports, "mutation-report.json")))
         except (OSError, MutantsError) as error:
             errors.append(f"error: {name}: can't read the build log: {error}")
     for error in errors:

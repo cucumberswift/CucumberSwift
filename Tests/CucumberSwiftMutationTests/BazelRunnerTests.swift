@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -140,6 +141,27 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(none.testsRun, 0, "A run with no test log ran no test")
     }
 
+    func testACommandThatNeverStartedOrAnInfrastructureStatusIsNotATestResult() throws {
+        let copy = try makeCopy()
+        let missing = BazelRunner(target: target, bazel: "no-such-bazel", cleanUpCommands: RecordingCommands(), environment: ["PATH": folder.path])
+        XCTAssertFalse(missing.build(in: copy, timeout: nil).started)
+        XCTAssertFalse(missing.test(in: copy, request: TestRequest()).started)
+        let notLaunched = RecordingCommands { _ in
+            var result = CommandResult.finished(127)
+            result.started = false
+            return result
+        }
+        XCTAssertFalse(runner(commands: notLaunched).build(in: copy, timeout: nil).started)
+        XCTAssertFalse(runner(commands: notLaunched).test(in: copy, request: TestRequest()).started)
+        // 36 is Bazel's status for a problem with the machine: no test failed.
+        let infrastructure = runner(commands: commands(in: copy, output: "Executed 5 tests, with 0 failures", status: 36)).test(in: copy, request: TestRequest())
+        XCTAssertFalse(infrastructure.started)
+        for status: Int32 in [0, 3] {
+            XCTAssertTrue(runner(commands: commands(in: copy, status: status)).test(in: copy, request: TestRequest()).started)
+        }
+        XCTAssertTrue(runner(commands: commands(in: copy, status: 1)).build(in: copy, timeout: nil).started)
+    }
+
     func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)
@@ -162,6 +184,63 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(second.coverageFolder?.lastPathComponent, "coverage-2")
         XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(first.coverageFolder).appendingPathComponent("run-1/manifest.json").path))
         XCTAssertNil(bazel.test(in: copy, request: TestRequest()).coverageFolder, "A run that doesn't measure has no coverage folder")
+    }
+
+    func testRepeatedRunsAndShardsAreReadFromTheirOwnFolders() throws {
+        let copy = try makeCopy()
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "test" {
+                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
+                for (result, count) in [("run_1_of_2/shard_1_of_2", 2), ("run_1_of_2/shard_2_of_2", 3), ("run_2_of_2", 5)] {
+                    let folder = target.appendingPathComponent(result)
+                    let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
+                    try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+                    try? "Executed \(count) tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
+                }
+            }
+            return .finished(0, output: "bazel output")
+        }
+        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        XCTAssertEqual(run.testsRun, 10, "Each run's and shard's own log counts its tests, and the counts add up: 2 + 3 + 5")
+        let coverage = try XCTUnwrap(run.coverageFolder)
+        let kept = try FileManager.default.contentsOfDirectory(atPath: coverage.path).sorted()
+        XCTAssertEqual(kept.count, 3, "Every run and shard keeps its run folder: \(kept)")
+        XCTAssertTrue(kept.allSatisfy { $0.hasPrefix("run-") })
+        for folder in kept {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: coverage.appendingPathComponent(folder).appendingPathComponent("manifest.json").path))
+        }
+    }
+
+    func testCoverageThatMissesAShardIsNotKept() throws {
+        let copy = try makeCopy()
+        let commands = RecordingCommands { call in
+            if call.arguments.first == "test" {
+                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
+                for (shard, measured) in [("shard_1_of_2", true), ("shard_2_of_2", false)] {
+                    let folder = target.appendingPathComponent(shard)
+                    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    try? "Executed 2 tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    if measured {
+                        let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
+                        try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+                        try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
+                    }
+                }
+            }
+            return .finished(0, output: "bazel output")
+        }
+        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        XCTAssertNil(run.coverageFolder, "A shard without coverage would make its scenarios' code look untested")
+    }
+
+    func testTheTestsOutputsAreNotZipped() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        _ = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
+        let arguments = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertTrue(arguments.contains("--nozip_undeclared_test_outputs"), "A zipped outputs folder has no coverage folder to keep")
+        XCTAssertGreaterThan(try XCTUnwrap(arguments.firstIndex(of: "--nozip_undeclared_test_outputs")), try XCTUnwrap(arguments.firstIndex(of: "--nocache_test_results")))
     }
 
     func testCleanUpDeletesTheOutputBaseAndFallsBackToShuttingTheServerDown() throws {
@@ -205,3 +284,4 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(options.rootProblem)
     }
 }
+#endif

@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds a Swift package with `swift build --build-tests` and tests it with `swift test --skip-build`.
@@ -45,7 +46,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
         // build uses the same flags, so a mutant's rebuilds only what it changed.
         let coverage = ["-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"]
         let result = commands.run(swift, ["build", "--build-tests"] + arguments + coverage, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
@@ -67,7 +68,7 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             coverage = folder
         }
         let result = commands.run(swift, ["test", "--skip-build"] + arguments, in: copy, environment: environment, timeout: request.timeout)
-        return TestRun(
+        var run = TestRun(
             status: result.status,
             timedOut: result.timedOut,
             duration: result.duration,
@@ -76,6 +77,8 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
+        run.started = result.started
+        return run
     }
 
     private func nextRun() -> Int {
@@ -91,3 +94,4 @@ public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif

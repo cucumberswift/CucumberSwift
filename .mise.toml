@@ -59,12 +59,21 @@ description = "Build and test every project in Fixtures/"
 # with expected-output must print each line it lists, such as a test that must have run.
 # A fixture must run at least as many XCTest and Swift Testing tests as its expected-tests lists, since
 # a run can exit with success having run none (.github/scripts/fixture_tests.py).
+# A fixture with expected-report writes its Cucumber JSON report to the caller's CUCUMBER_REPORT_PATH, or
+# to a new path, which every test target shares, and the report must have exactly the features it lists.
+# A Swift package fixture's run starts with a report that an earlier run left, so the report must not have
+# its feature. A fixture with expected-report-rerun then runs its tests again at once: a Swift package
+# with CUCUMBER_TAGS set to the tags it gives, an Xcode project with -only-testing for the target it gives.
+# The report must then have only the features that file lists: a new run replaces the report
+# (.github/scripts/fixture_report.py).
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either, and run as many tests as expected-tests lists. Its Swift files are put back as they were afterwards.
-# FIXTURES, a comma-separated list of folder names in Fixtures/, runs only those fixtures, such as
-# FIXTURES=SwiftTestingPackage mise run test-fixtures. A name that isn't a fixture is an error, so
-# that a typo fails instead of passing with nothing run.
+# Folder names in Fixtures/ after the task's name run only those fixtures, such as
+# `mise run test-fixtures SwiftTestingPackage`; with none, it runs them all. A name that isn't a
+# fixture is an error, so that a typo fails instead of passing with nothing run. Our CI runs each
+# fixture in a job of its own this way.
+usage = 'arg "[fixture]" var=#true help="Folder names in Fixtures/ to run; all of them when none is given"'
 run = '''
 set -e
 # Fails unless every line of $1, other than comments and blank lines, is in the output $2.
@@ -81,27 +90,31 @@ expect_all() {
 with_xcode() {
   if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
 }
-if [ "${FIXTURES+x}" ]; then
-  if [ -z "$(echo "$FIXTURES" | tr -d ', ')" ]; then
-    echo "error: FIXTURES names no fixture"
+# mise gives the names in usage_fixture, separated by spaces. Fixture folder names have none.
+selected=$(echo "${usage_fixture:-}" | tr -d "'\"")
+for name in $selected; do
+  if [ "$name" = CarthageXCFramework ]; then
+    echo "error: CarthageXCFramework is a fixture that mise run test-carthage runs"
+    exit 1
+  elif [ "$name" = CoverageMergePackage ]; then
+    echo "error: CoverageMergePackage is a fixture that mise run test-coverage-merge runs"
+    exit 1
+  elif [ ! -d "Fixtures/$name" ] || [ "${name#*/}" != "$name" ] || [ "${name#.}" != "$name" ]; then
+    echo "error: $name is not a folder in Fixtures/"
     exit 1
   fi
-  for name in $(echo "$FIXTURES" | tr ',' ' '); do
-    if [ "$name" = CarthageXCFramework ]; then
-      echo "error: FIXTURES names CarthageXCFramework, which mise run test-carthage runs"
-      exit 1
-    elif [ ! -d "Fixtures/$name" ]; then
-      echo "error: FIXTURES names $name, which is not a folder in Fixtures/"
-      exit 1
-    fi
-  done
-fi
+done
+# The report paths the caller set, which every fixture uses, and the one with expected-report checks.
+caller_report="${CUCUMBER_REPORT_PATH:-}"
+caller_runner_report="${TEST_RUNNER_CUCUMBER_REPORT_PATH:-}"
 for fixture in Fixtures/*/; do
   name=$(basename "$fixture")
   # Needs a Carthage build first: `mise run test-carthage` runs it.
   if [ "$name" = CarthageXCFramework ]; then continue; fi
-  case ",$(echo "${FIXTURES:-$name}" | tr -d ' ')," in
-    *",$name,"*) ;;
+  # Runs in several ways with code coverage: `mise run test-coverage-merge` runs it.
+  if [ "$name" = CoverageMergePackage ]; then continue; fi
+  case " ${selected:-$name} " in
+    *" $name "*) ;;
     *) continue ;;
   esac
   developer_dir=
@@ -121,6 +134,28 @@ for fixture in Fixtures/*/; do
   log=$(mktemp)
   status=0
   build="$fixture/.build"
+  # `swift test` passes its environment to the tests, and `xcodebuild test` passes TEST_RUNNER_ variables
+  # without the prefix. A fixture with expected-report writes to the caller's path, or to a new one.
+  report=
+  report_folder=
+  if [ -f "$fixture/expected-report" ]; then
+    report="$caller_report"
+    if [ -z "$report" ]; then
+      # In our CI, RUNNER_TEMP is under the home folder, which a Simulator's test processes can write to.
+      report_folder=$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/fixture-report.XXXXXX")
+      report="$report_folder/report.json"
+    fi
+    export CUCUMBER_REPORT_PATH="$report" TEST_RUNNER_CUCUMBER_REPORT_PATH="$report"
+    # A report that an earlier run left, as new as one can be: the run must start with an empty report
+    # without anything deleting it first. The report has no record of a run, as one from Xcode has none.
+    if [ -f "$fixture/Package.swift" ]; then
+      mkdir -p "$(dirname "$report")"
+      # A marker an earlier run left would pass the check without this run ageing the report.
+      stale_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report 2>/dev/null || true)
+      if [ -n "$stale_suffix" ]; then rm -f "$report$stale_suffix"; fi
+      printf '%s\n' '[{"id":"stale","keyword":"Feature","line":1,"name":"Stale feature from an earlier run","uri":"Stale.feature","elements":[]}]' > "$report"
+    fi
+  fi
   if [ -f "$fixture/Package.swift" ]; then
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
     # A swift-test-arguments file gives the fixture's extra `swift test` arguments, such as --enable-code-coverage.
@@ -153,6 +188,39 @@ for fixture in Fixtures/*/; do
     exit "$status"
   fi
   python3 .github/scripts/fixture_tests.py "$fixture" "$log"
+  if [ -n "$report" ]; then
+    # The marker that a fixture's first runner writes after it sets the report's age.
+    aged_suffix=$(python3 .github/scripts/fixture_report.py get "$name" expected-report ages-report 2>/dev/null || true)
+    if [ -n "$aged_suffix" ] && [ ! -e "$report$aged_suffix" ]; then
+      echo "error: $name: the fixture didn't age the report: there is no $report$aged_suffix"
+      exit 1
+    fi
+    python3 .github/scripts/fixture_report.py check "$name" expected-report < "$report"
+    if [ -f "$fixture/expected-report-rerun" ]; then
+      rerun_log=$(mktemp)
+      rerun_status=0
+      if [ -f "$fixture/Package.swift" ]; then
+        rerun_tags=$(python3 .github/scripts/fixture_report.py get "$name" expected-report-rerun tags)
+        CUCUMBER_TAGS="$rerun_tags" with_xcode swift test --package-path "$fixture" > "$rerun_log" 2>&1 || rerun_status=$?
+      else
+        rerun_target=$(python3 .github/scripts/fixture_report.py get "$name" expected-report-rerun only-testing)
+        with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" \
+          -destination "$destination" -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO \
+          -only-testing:"$rerun_target" > "$rerun_log" 2>&1 || rerun_status=$?
+      fi
+      cat "$rerun_log"
+      rm -f "$rerun_log"
+      if [ "$rerun_status" -ne 0 ]; then exit "$rerun_status"; fi
+      python3 .github/scripts/fixture_report.py check "$name" expected-report-rerun < "$report"
+    fi
+    if [ -n "$report_folder" ]; then rm -rf "$report_folder"; fi
+    if [ -n "$caller_report" ]; then export CUCUMBER_REPORT_PATH="$caller_report"; else unset CUCUMBER_REPORT_PATH; fi
+    if [ -n "$caller_runner_report" ]; then
+      export TEST_RUNNER_CUCUMBER_REPORT_PATH="$caller_runner_report"
+    else
+      unset TEST_RUNNER_CUCUMBER_REPORT_PATH
+    fi
+  fi
   if [ -f "$fixture/expected-output" ]; then
     expect_all "$fixture/expected-output" "$log"
     echo "$name: the output has every line in expected-output."
@@ -221,7 +289,8 @@ done
 description = "Build the framework with Carthage and test a project that uses it"
 # Builds Carthage/Build/CucumberSwift.xcframework as `carthage update` does for a consumer, then
 # runs Fixtures/CarthageXCFramework, an iOS test target that links and embeds it, on a simulator.
-# The fixture must run as many tests as its expected-tests lists, and CucumberSwift must score its feature.
+# The fixture must run as many tests as its expected-tests lists, and with Xcode 26 or later
+# CucumberSwift must score its feature.
 # See "Fixtures" in CONTRIBUTING.md.
 run = '''
 set -eu
@@ -266,11 +335,23 @@ if ! grep -q "Then the basket holds 1 cuke\]' passed" "$log"; then
 fi
 python3 .github/scripts/fixture_tests.py Fixtures/CarthageXCFramework "$log"
 # The fixture's framework is built with code coverage, so CucumberSwift must score the feature.
-if ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xcframework: 100% of the code its scenarios ran (4 of 4 regions in 1 function).*redundancy 33%" "$log"; then
+# CucumberSwift reads only Xcode 26's coverage formats, so the check runs only with Xcode 26 or
+# later until #552 adds Xcode 16 support.
+xcode_major=$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')
+if [ "$xcode_major" -lt 26 ]; then
+  echo "Skipping the scoring check: CucumberSwift's coverage needs Xcode 26 or later (#552)"
+elif ! grep -q "CucumberSwift coverage: CucumberSwift from the Carthage-built xcframework: 100% of the code its scenarios ran (4 of 4 regions in 1 function).*redundancy 33%" "$log"; then
   echo "CucumberSwift did not score the fixture's feature"
   exit 1
 fi
 '''
+
+[tasks.test-coverage-merge]
+description = "Check that cucumberswift coverage merge scores parallel and sharded runs as one run"
+# Runs Fixtures/CoverageMergePackage with code coverage one scenario at a time, with Xcode's parallel
+# testing and in 2 shards, with each runner, and fails unless the merged scores are the same every way.
+# See "Fixtures" in CONTRIBUTING.md.
+run = ".github/scripts/coverage-merge-fixture.sh"
 
 [tasks.test-docs-examples]
 description = "Compile every Swift example in the DocC catalog"

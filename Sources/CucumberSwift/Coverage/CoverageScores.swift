@@ -55,17 +55,22 @@ struct MeasuredCode: Equatable {
         return !URL(fileURLWithPath: binary).pathComponents.contains { $0.hasSuffix(".xctest") }
     }
 
-    /// The function that region `region` belongs to.
-    func function(of region: Int) -> Function? {
+    /// The index in ``functions`` of the function that region `region` belongs to.
+    func functionIndex(of region: Int) -> Int? {
         var low = 0
         var high = functions.count - 1
         while low <= high {
             let middle = (low + high) / 2
             let function = functions[middle]
-            if function.regions.contains(region) { return function }
+            if function.regions.contains(region) { return middle }
             if region < function.regions.lowerBound { high = middle - 1 } else { low = middle + 1 }
         }
         return nil
+    }
+
+    /// The function that region `region` belongs to.
+    func function(of region: Int) -> Function? {
+        functionIndex(of: region).map { functions[$0] }
     }
 }
 
@@ -222,8 +227,6 @@ struct CoverageScores: Codable, Equatable {
     let gaps: [Gap]
     /// The redundant steps, by line. Empty with the redundancy score off.
     let redundantSteps: [RedundantStep]
-    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
-    let isMutationAware: Bool
 
     /// The feature's coverage, from 0 to 100: the regions its scenarios ran, of the regions in the
     /// functions they entered.
@@ -284,6 +287,41 @@ struct CoverageScores: Codable, Equatable {
         return found.values.sorted { $0.line < $1.line }
     }
 
+    /// A part of a feature that is scored on its own: its scenarios that aren't in a Rule, when `rule` is
+    /// nil, or the scenarios of one of its Rules.
+    struct Part: Equatable {
+        let rule: ScenarioRule?
+        let scores: CoverageScores
+    }
+
+    /// Whether the redundancy judged the scenarios by the mutants they detect as well as by their code.
+    let isMutationAware: Bool
+
+    /// The scores of a feature's scenarios: one part for its scenarios outside a Rule, first, then one for
+    /// each Rule, in the order of their lines. Each part scores its scenarios in the order of their lines in
+    /// the feature file, whatever order they ran in.
+    /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
+    static func parts(of scenarios: [(rule: ScenarioRule?, scenario: Scenario)],
+                      code: MeasuredCode,
+                      isRedundancy: Bool,
+                      detections: Detections? = nil) -> [Part] {
+        let inOrder = scenarios.enumerated()
+            .sorted { ($0.element.scenario.line, $0.offset) < ($1.element.scenario.line, $1.offset) }
+            .map(\.element)
+        let rules = Set(inOrder.compactMap(\.rule)).sorted { $0.line < $1.line }
+        let parts: [ScenarioRule?] = (inOrder.contains { $0.rule == nil } ? [nil] : []) + rules
+        return parts.map { rule in
+            let ran = inOrder.filter { $0.rule == rule }.map(\.scenario)
+            return Part(rule: rule, scores: CoverageScores(scenarios: ran, code: code, isRedundancy: isRedundancy, detections: detections))
+        }
+    }
+
+    private func percent(_ part: Int, of whole: Int) -> Double {
+        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
+    }
+}
+
+extension CoverageScores {
     /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
     init(scenarios: [Scenario], code: MeasuredCode, isRedundancy: Bool, detections: Detections? = nil) {
         var runs = [Int: Int]()
@@ -343,7 +381,19 @@ struct CoverageScores: Codable, Equatable {
         .sorted { ($0.regionsNotRun, $1.file, $1.line) > ($1.regionsNotRun, $0.file, $0.line) }
     }
 
-    private func percent(_ part: Int, of whole: Int) -> Double {
-        whole == 0 ? 0 : 100 * Double(part) / Double(whole)
+    /// Reads the scores from a manifest. A manifest that CucumberSwift 6.8 wrote has no `isMutationAware`, which is
+    /// then false: the field is new, so the manifest's form, and its version, stay the same.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coveredRegions = try container.decode(Int.self, forKey: .coveredRegions)
+        regionsInFunctionsRun = try container.decode(Int.self, forKey: .regionsInFunctionsRun)
+        measuredRegions = try container.decode(Int.self, forKey: .measuredRegions)
+        functionsRun = try container.decode(Int.self, forKey: .functionsRun)
+        redundancy = try container.decodeIfPresent(Double.self, forKey: .redundancy)
+        wastedTime = try container.decodeIfPresent(TimeInterval.self, forKey: .wastedTime)
+        scenarios = try container.decode([ScenarioScore].self, forKey: .scenarios)
+        gaps = try container.decode([Gap].self, forKey: .gaps)
+        redundantSteps = try container.decode([RedundantStep].self, forKey: .redundantSteps)
+        isMutationAware = try container.decodeIfPresent(Bool.self, forKey: .isMutationAware) ?? false
     }
 }

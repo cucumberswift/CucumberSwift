@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// A mutant and what the tests did with it.
@@ -28,3 +29,4 @@ public struct MutantResult: Equatable, Sendable {
         self.killedBy = killedBy
     }
 }
+#endif

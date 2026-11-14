@@ -30,15 +30,11 @@ final class MutationRunScenarioTests: TemporaryFolderTestCase {
         // Two scenarios ran: the first ran the code of both mutants, the second ran none of it.
         let fake = FakeRunner { call in
             if call.arguments.first == "build" { return .finished(0) }
-            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE_REGIONS"] == "YES" {
-                let run = URL(fileURLWithPath: folder).appendingPathComponent("run-1")
-                try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                let json = """
-                {"version": 1, "regions": [{"file": "/x/Sources/Voting/Voting.swift", "lineStart": 1, "columnStart": 1, "lineEnd": 1, "columnEnd": 99}],
-                 "scenarios": [{"feature": "Voting.feature", "line": 4, "name": "An adult can vote", "ran": [0]},
-                               {"feature": "Voting.feature", "line": 8, "name": "A child cannot", "ran": []}]}
-                """
-                try? json.write(to: run.appendingPathComponent("regions.json"), atomically: true, encoding: .utf8)
+            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE"] == "YES" {
+                let voting = CoverageRunFixture.Function(name: "canVote", file: "/x/Sources/Voting/Voting.swift", spans: [[1, 1, 1, 99]])
+                let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [0])
+                let child = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 8, name: "A child cannot", ran: [])
+                try? CoverageRunFixture(functions: [voting], scenarios: [adult, child]).write(named: "1", in: URL(fileURLWithPath: folder))
             }
             return .finished(0, output: "Executed 2 tests")
         }

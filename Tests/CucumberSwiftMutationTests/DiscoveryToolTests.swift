@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 import XCTest
 @testable import CucumberSwiftMutation
@@ -17,17 +18,17 @@ final class DiscoveryToolTests: XCTestCase {
         let error: String
     }
 
-    /// The tool as SwiftPM builds it: named after its executable product, cucumberswift-mutation-test.
+    /// The tool as SwiftPM builds it: named after its executable product, cucumberswift.
     private var tool: URL {
         let bundle = Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }
-        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("cucumberswift-mutation-test") }
-            ?? URL(fileURLWithPath: "cucumberswift-mutation-test")
+        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("cucumberswift") }
+            ?? URL(fileURLWithPath: "cucumberswift")
     }
 
     private func launch(_ arguments: [String], input: String = "") throws -> Launched {
         let process = Process()
         process.executableURL = tool
-        process.arguments = arguments
+        process.arguments = ["mutation-test"] + arguments
         let stdin = Pipe()
         let stdout = Pipe()
         let stderr = Pipe()
@@ -179,3 +180,4 @@ final class DiscoveryToolTests: XCTestCase {
     }
     #endif
 }
+#endif

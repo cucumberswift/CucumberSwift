@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// What a finished command printed, and how it ended.
@@ -12,6 +13,9 @@ public struct CommandResult: Equatable, Sendable {
     /// The command was stopped because it ran longer than its timeout.
     public let timedOut: Bool
     public let duration: TimeInterval
+    /// Whether the command ran at all: false when it couldn't be launched, or the run was cancelled first. Its
+    /// status then says nothing about the tests.
+    public internal(set) var started = true
 
     public var succeeded: Bool { status == 0 && !timedOut }
 
@@ -42,3 +46,4 @@ public protocol CommandRunning: Sendable {
         timeout: TimeInterval?
     ) -> CommandResult
 }
+#endif

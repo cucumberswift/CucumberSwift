@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds an Xcode project or workspace with `xcodebuild build-for-testing`, with code coverage on, and tests it
@@ -55,6 +56,12 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let lock = NSLock()
     private var runs = 0
 
+    /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
+    private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
+        let features = scenarios.map(\.feature)
+        return files.contains { file in features.contains { file == $0 || file.hasSuffix("/" + $0) } }
+    }
+
     /// `totalTestCount` of the summary that `xcresulttool get test-results summary` prints.
     static func testCount(inSummary json: String) -> Int {
         guard let data = json.data(using: .utf8),
@@ -100,14 +107,13 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
         let arguments = ["build-for-testing"] + common(in: copy) + ["-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
         let result = commands.run(xcodebuild, arguments, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
         let folder = runnerFolder(for: copy)
         let number = nextRun()
-        var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
-        settings.merge(request.settings) { _, new in new }
+        var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }.merging(request.settings) { _, new in new }
         let coverage = request.measuresCoverage ? folder.appendingPathComponent("coverage-\(number)") : nil
         if let coverage {
             settings["CUCUMBER_COVERAGE"] = "YES"
@@ -121,69 +127,67 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
                 identifiers = selection.identifiers
                 if selection.testPerScenario { settings["CUCUMBER_ONE_TEST_PER_SCENARIO"] = "YES" }
             } catch {
-                return TestRun(status: 1, log: write("error: \(error)\n", named: "test-\(number)", in: copy))
+                // The names can't be resolved, as when two test targets have the same feature file. That isn't a failed
+                // test, so the run neither fails nor counts a mutant as killed: CUCUMBER_SCENARIOS selects the scenarios
+                // alone, in every test target. Nothing is lost but the saved time of -only-testing.
+                _ = write("note: -only-testing isn't used: \(error)\n", named: "selection-\(number)", in: copy)
             }
         }
-        // Each test bundle runs in a process of its own, and the processes write one report, the last replacing the
-        // others. So a project with several test targets gets an `xcodebuild` run for each, and their reports are merged.
-        let groups = testTargetGroups(for: request.scenarios, in: copy)
-        var runs = [(result: CommandResult, report: URL?, tests: Int)]()
-        for (index, group) in groups.enumerated() {
-            let name = groups.count > 1 ? "\(number)-\(index + 1)" : "\(number)"
-            var runSettings = settings
-            var report: URL?
-            if request.writesReport {
-                report = folder.appendingPathComponent("reports/report-\(name).json")
-                runSettings["CUCUMBER_REPORT_PATH"] = report?.path
-            }
-            let bundle = folder.appendingPathComponent("results/test-\(name).xcresult")
-            var arguments = ["test-without-building"] + common(in: copy)
-            arguments += ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
-            // A failing test, which is how a mutant dies, makes xcodebuild collect diagnostics, such as log archives, for about
-            // 20 seconds longer than a passing run takes. The run needs the result bundle and the report, not those.
-            arguments += ["-collect-test-diagnostics", "never"]
-            arguments += onlyTestingArguments(for: group, identifiers: identifiers, selectsTargets: !target.testTargets.isEmpty)
-            // The prefixed variables are how xcodebuild gives the tests a setting.
-            var prefixed = [String: String]()
-            for (key, value) in runSettings { prefixed["TEST_RUNNER_\(key)"] = value }
-            let result = commands.run(xcodebuild, arguments, in: copy, environment: prefixed, timeout: request.timeout)
-            runs.append((result, report, testsRun(inBundle: bundle, in: copy)))
-        }
-        let reports = runs.compactMap(\.report).filter { FileManager.default.fileExists(atPath: $0.path) }
-        return TestRun(
-            status: runs.map(\.result.status).first { $0 != 0 } ?? 0,
-            timedOut: runs.contains { $0.result.timedOut },
-            duration: runs.map(\.result.duration).reduce(0, +),
-            testsRun: runs.map(\.tests).reduce(0, +),
-            log: write(combinedOutput(of: zip(groups, runs.map(\.result)).map { ($0.joined(separator: ", "), $1) }), named: "test-\(number)", in: copy),
-            cucumberReport: reports.count > 1 ? mergedReport(reports, named: "report-\(number).json", in: folder) : reports.first,
+        // One run for every test target: each test bundle's process adds its scenarios to the one report of the run.
+        let report = request.writesReport ? folder.appendingPathComponent("reports/report-\(number).json") : nil
+        if let report { settings["CUCUMBER_REPORT_PATH"] = report.path }
+        let bundle = folder.appendingPathComponent("results/test-\(number).xcresult")
+        var arguments = ["test-without-building"] + common(in: copy)
+        arguments += ["-resultBundlePath", bundle.path, "-enableCodeCoverage", "YES", "CODE_SIGNING_ALLOWED=NO"]
+        // A failing test, which is how a mutant dies, makes xcodebuild collect diagnostics, such as log archives, for about
+        // 20 seconds longer than a passing run takes. The run needs the result bundle and the report, not those.
+        arguments += ["-collect-test-diagnostics", "never"]
+        arguments += onlyTestingArguments(identifiers: identifiers, targets: testTargets(for: request.scenarios, in: copy))
+        // The prefixed variables are how xcodebuild gives the tests a setting.
+        var prefixed = [String: String]()
+        for (key, value) in settings { prefixed["TEST_RUNNER_\(key)"] = value }
+        let result = commands.run(xcodebuild, arguments, in: copy, environment: prefixed, timeout: request.timeout)
+        var run = TestRun(
+            status: result.status,
+            timedOut: result.timedOut,
+            duration: result.duration,
+            testsRun: testsRun(inBundle: bundle, in: copy),
+            log: write(result.output, named: "test-\(number)", in: copy),
+            cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
+        run.started = result.started
+        return run
     }
 
-    /// The test targets to run, a group for each `xcodebuild` run: one run for all of them, or one for each of several
-    /// targets. A target that holds none of the scenarios is left out: its run would start `xcodebuild` to run no test,
-    /// which takes seconds.
-    private func testTargetGroups(for scenarios: [ScenarioID]?, in copy: URL) -> [[String]] {
-        guard target.testTargets.count > 1 else { return [target.testTargets] }
-        let targets = scenarios.map { testTargets(holding: $0, in: copy) } ?? target.testTargets
-        return targets.map { [$0] }
+    /// The test targets that one run starts: all of them for a run of every scenario or a project with one test target,
+    /// else only the ones that can run one of `scenarios`. A target that holds none is left out: its bundle would start
+    /// and run no test, which takes seconds.
+    private func testTargets(for scenarios: [ScenarioID]?, in copy: URL) -> [String] {
+        guard target.testTargets.count > 1, let scenarios else { return target.testTargets }
+        return testTargets(holding: scenarios, in: copy)
     }
 
-    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file, in
-    /// the order of the target's test targets. A target whose bundle isn't found is kept, because it may hold one, and
-    /// so is every target when none of them holds any, so that a run never skips all of them.
+    /// The test targets that can run one of `scenarios`: the ones whose built bundle holds the scenario's feature file
+    /// anywhere inside it, in the order of the target's test targets. A feature file can be in the bundle itself, in
+    /// `Contents/Resources` of a macOS bundle, or in a resource bundle inside it, as SwiftPM makes for a target's resources.
+    /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
+    /// any, so that a run never skips all of them.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
             guard let bundle = bundles[name] else { return true }
-            return scenarios.contains { scenario in
-                [bundle, bundle.appendingPathComponent("Contents/Resources")].contains { root in
-                    FileManager.default.fileExists(atPath: root.appendingPathComponent(scenario.feature).path)
-                }
-            }
+            return Self.holds(featureFiles(in: bundle), oneOf: scenarios)
         }
         return holding.isEmpty ? target.testTargets : holding
+    }
+
+    /// The paths of the feature files anywhere inside `bundle`, relative to it.
+    private func featureFiles(in bundle: URL) -> [String] {
+        guard let enumerator = FileManager.default.enumerator(at: bundle, includingPropertiesForKeys: nil) else { return [] }
+        let base = bundle.resolvingSymlinksInPath().path.count + 1
+        let urls = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "feature" }
+        return urls.map { String($0.resolvingSymlinksInPath().path.dropFirst(base)) }
     }
 
     /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,
@@ -199,32 +203,14 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return bundles
     }
 
-    /// What the runs printed: one run's output as it is, and several runs' each under the name of its test target.
-    private func combinedOutput(of results: [(testTarget: String, result: CommandResult)]) -> String {
-        guard results.count > 1 else { return results.first?.result.output ?? "" }
-        let sections = results.map { "== test target \($0.testTarget) ==\n\($0.result.output)" }
-        return sections.joined(separator: "\n")
-    }
-
-    /// The Cucumber reports of several runs as one report: each is a JSON array of features, so the merge is one array.
-    private func mergedReport(_ reports: [URL], named name: String, in folder: URL) -> URL? {
-        var features = [Any]()
-        for report in reports {
-            if let data = try? Data(contentsOf: report), let array = try? JSONSerialization.jsonObject(with: data) as? [Any] { features += array }
-        }
-        let merged = folder.appendingPathComponent("reports/\(name)")
-        guard let data = try? JSONSerialization.data(withJSONObject: features) else { return nil }
-        return (try? data.write(to: merged)) == nil ? nil : merged
-    }
-
-    /// The `-only-testing` arguments of a run of the test targets in `group`: each of `identifiers` in each target, because a
-    /// scenario doesn't say which target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. With no
-    /// identifiers, a run of a named target selects it, so that `--test-target` limits the run to the targets it names, and
-    /// a run with no test target named selects nothing.
-    private func onlyTestingArguments(for group: [String], identifiers: [String]?, selectsTargets: Bool) -> [String] {
-        guard let identifiers else { return selectsTargets ? group.flatMap { ["-only-testing", $0] } : [] }
+    /// The `-only-testing` arguments of a run of the test `targets`: each of `identifiers` in each target, because a scenario doesn't say which
+    /// target holds it, and `xcodebuild` ignores an identifier that a target doesn't have. With no identifiers, a run of named
+    /// test targets selects them, so that `--test-target` limits the run to the targets it names, and a run with no test
+    /// target named selects nothing.
+    private func onlyTestingArguments(identifiers: [String]?, targets: [String]) -> [String] {
+        guard let identifiers else { return targets.flatMap { ["-only-testing", $0] } }
         var seen = Set<String>()
-        return group.flatMap { testTarget in
+        return targets.flatMap { testTarget in
             identifiers.filter { seen.insert("\(testTarget)/\($0)").inserted }.flatMap { ["-only-testing", "\(testTarget)/\($0)"] }
         }
     }
@@ -274,3 +260,4 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif

@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// Builds a Bazel test target with `bazel build` and tests it with `bazel test`, with code coverage on.
@@ -51,6 +52,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
 
     /// The files whose presence says a folder is a Bazel workspace.
     static let workspaceFiles = ["MODULE.bazel", "WORKSPACE.bazel", "WORKSPACE"]
+
+    /// What `bazel test` exits with after it ran the tests: 0 when they passed, 3 when one failed or timed out.
+    static let testExitStatuses: Set<Int32> = [0, 3]
 
     /// The disk cache every run shares, in the user's caches folder.
     public static var defaultDiskCache: URL? {
@@ -117,19 +121,23 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
-        guard let executable else { return BuildResult(succeeded: false) }
+        guard let executable else { return BuildResult(succeeded: false, started: false) }
         let result = commands.run(executable, ["build", target.label] + common, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
-        guard let executable else { return TestRun(status: 127) }
+        guard let executable else {
+            var run = TestRun(status: 127)
+            run.started = false
+            return run
+        }
         let folder = runnerFolder(for: copy)
         let number = nextRun()
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
         settings.merge(request.scenarioSettings) { _, new in new }
-        var arguments = ["test", target.label] + common + ["--nocache_test_results", "--test_output=all"]
+        var arguments = ["test", target.label] + common + ["--nocache_test_results", "--test_output=all", "--nozip_undeclared_test_outputs"]
         var report: URL?
         if request.writesReport {
             // The test's sandbox allows writes only to the test's own folders and what it is told: the report folder.
@@ -143,33 +151,64 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         if request.measuresCoverage { settings["CUCUMBER_COVERAGE"] = "YES" }
         for (key, value) in settings.sorted(by: { $0.key < $1.key }) { arguments.append("--test_env=\(key)=\(value)") }
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
-        let log = testLog(in: copy)
-        let output = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-        return TestRun(
+        let results = resultFolders(in: copy)
+        // Each result folder's log counts its own tests: the shards of a run share its tests, so the run's count is the sum.
+        let logs = results.compactMap { try? String(contentsOf: $0.appendingPathComponent("test.log"), encoding: .utf8) }
+        let testsRun = logs.reduce(0) { $0 + CommandResult(status: 0, output: $1, timedOut: false, duration: 0).testsRun }
+        var run = TestRun(
             status: result.status,
             timedOut: result.timedOut,
             duration: result.duration,
-            testsRun: CommandResult(status: 0, output: output, timedOut: false, duration: 0).testsRun,
+            testsRun: testsRun,
             log: write(result.output, named: "test-\(number)", in: copy),
             cucumberReport: report.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil },
-            coverageFolder: request.measuresCoverage ? keepCoverage(from: log.deletingLastPathComponent(), as: number, in: folder) : nil
+            coverageFolder: request.measuresCoverage ? keepCoverage(from: results, as: number, in: folder) : nil
         )
+        // Bazel exits with 0 when the tests pass and 3 when one fails or times out. Any other status, such as 36 for a problem
+        // with the machine, says nothing about the tests: a run that stopped there tested nothing, and isn't a killed mutant.
+        run.started = result.started && (result.timedOut || Self.testExitStatuses.contains(result.status))
+        return run
     }
 
-    /// The test's log in `bazel-testlogs`, which Bazel writes to the copy's convenience link.
-    private func testLog(in copy: URL) -> URL {
-        let (folder, name) = target.package ?? ("", "")
-        let logs = copy.appendingPathComponent("bazel-testlogs").appendingPathComponent(folder)
-        return logs.appendingPathComponent(name).appendingPathComponent("test.log")
+    /// The folders in `bazel-testlogs` that hold the test's results, each with its `test.log` and `test.outputs`. They are
+    /// the target's folder, or, when the workspace runs a test more than once (`--runs_per_test`) or in shards, the
+    /// `run_N_of_M` and `shard_N_of_M` folders inside it, which Bazel writes instead.
+    private func resultFolders(in copy: URL) -> [URL] {
+        let (package, name) = target.package ?? ("", "")
+        let target = copy.appendingPathComponent("bazel-testlogs").appendingPathComponent(package).appendingPathComponent(name)
+        func parts(of folder: URL) -> [URL] {
+            let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            return children
+                .filter { ($0.lastPathComponent.hasPrefix("run_") || $0.lastPathComponent.hasPrefix("shard_")) && $0.lastPathComponent.contains("_of_") }
+                .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        }
+        func leaves(of folder: URL) -> [URL] {
+            let inner = parts(of: folder)
+            return inner.isEmpty ? [folder] : inner.flatMap(leaves(of:))
+        }
+        return leaves(of: target)
     }
 
-    /// Copies the coverage the test left in its outputs to a folder of its own, because the next test run replaces the outputs.
-    private func keepCoverage(from testFolder: URL, as number: Int, in folder: URL) -> URL? {
-        let source = testFolder.appendingPathComponent("test.outputs/_cucumberCoverage")
+    /// Copies the coverage the test left in its outputs to a folder of its own, because the next test run replaces the
+    /// outputs, or nothing when a result folder has none. The run folders of every result folder go into it, named for
+    /// the result folder they came from when there is more than one.
+    private func keepCoverage(from results: [URL], as number: Int, in folder: URL) -> URL? {
         let destination = folder.appendingPathComponent("coverage-\(number)")
-        guard FileManager.default.fileExists(atPath: source.path) else { return nil }
+        let sources = results.map { ($0, $0.appendingPathComponent("test.outputs/_cucumberCoverage")) }
+        // Coverage that misses a result folder would name some scenarios' code as code no scenario runs: keep all or none.
+        guard !sources.isEmpty, sources.allSatisfy({ FileManager.default.fileExists(atPath: $0.1.path) }) else { return nil }
         try? FileManager.default.removeItem(at: destination)
-        return (try? FileManager.default.copyItem(at: source.resolvingSymlinksInPath(), to: destination)) == nil ? nil : destination
+        guard (try? FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)) != nil else { return nil }
+        for (result, source) in sources {
+            let runs = (try? FileManager.default.contentsOfDirectory(at: source.resolvingSymlinksInPath(), includingPropertiesForKeys: nil)) ?? []
+            // A run folder is `run-<id>`: a prefix of the result folder's name keeps the ids of two results apart.
+            let tag = results.count > 1 ? result.pathComponents.suffix(2).joined(separator: "-") + "-" : ""
+            for run in runs {
+                let name = run.lastPathComponent.hasPrefix("run-") ? "run-" + tag + run.lastPathComponent.dropFirst(4) : tag + run.lastPathComponent
+                guard (try? FileManager.default.copyItem(at: run, to: destination.appendingPathComponent(name))) != nil else { return nil }
+            }
+        }
+        return destination
     }
 
     /// Stops the server and deletes the output base of the copy, which Bazel keeps outside it. Killing `bazel` leaves
@@ -195,3 +234,4 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         return (try? output.write(to: url, atomically: true, encoding: .utf8)) == nil ? nil : url
     }
 }
+#endif

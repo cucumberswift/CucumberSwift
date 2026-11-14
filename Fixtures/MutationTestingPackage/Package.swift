@@ -1,7 +1,7 @@
 // swift-tools-version:6.1
 // 6.1 for package traits, the oldest tools version that can turn on CucumberSwift's Macros trait, which the
 // mutation testing tool needs. A Swift package with an XCTest target and a Swift Testing target, for
-// `swift run cucumberswift-mutation-test`. See README.md.
+// `swift run cucumberswift mutation-test`. See README.md.
 
 import PackageDescription
 

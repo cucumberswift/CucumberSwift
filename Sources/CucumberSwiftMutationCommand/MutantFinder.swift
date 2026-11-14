@@ -1,9 +1,9 @@
 //
 //  MutantFinder.swift
-//  CucumberSwiftMutationTestingTool
+//  CucumberSwiftMutationCommand
 //
 
-#if Macros
+#if Macros && (os(macOS) || os(Linux))
 import CucumberSwiftMutation
 import Foundation
 import SwiftOperators

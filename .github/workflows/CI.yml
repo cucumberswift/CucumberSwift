@@ -83,8 +83,8 @@ env:
   # the iOS Simulator (iOS tests) and on Mac Catalyst (Catalyst tests). A test that
   # silently stops running still reports success (#231), so
   # .github/scripts/xcode-test.sh fails below this. It is what the three bundles
-  # run today (572 + 61 + 28): raise it when you add tests.
-  MIN_TESTS: 661
+  # run today (575 + 61 + 28): raise it when you add tests.
+  MIN_TESTS: 664
   # The fewest Swift Testing tests the root package's `swift test` may run, in
   # SwiftPM tests. A test process that ends early still exits 0 (#442), so that
   # step fails below this. It is what the step's Swift 6.1 runs today, 11 fewer
@@ -141,9 +141,11 @@ jobs:
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
       mutation_code: ${{ steps.mutation.outputs.mutation_code }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
+      coverage_merge: ${{ steps.merge.outputs.coverage_merge }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
       queue_checked: ${{ steps.queue.outputs.queue_checked }}
       version_commit: ${{ steps.queue.outputs.version_commit }}
+      fixtures: ${{ steps.fixtures.outputs.fixtures }}
     steps:
       # The full history, for the merge base, but only the paths: the diffs read
       # no file contents.
@@ -190,8 +192,9 @@ jobs:
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
-      # the Cucumber report it reads, its plugin, its fixtures, scripts and action, the package manifests or this
-      # workflow.
+      # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), the coverage
+      # merge that reads the coverage, the cucumberswift tool, its plugin, its fixtures, scripts and action, the
+      # package manifests or this workflow.
       # Not the documentation, which lives in Sources too. Always on any other event.
       - name: Decide whether the mutation testing fixture runs
         id: mutation
@@ -200,7 +203,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.sha }}
         run: |
-          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|bazel/|BUILD\.bazel$|MODULE\.bazel$|Tests/(BUILD\.bazel|MODULE\.bazel|\.bazelrc|expected-mutants|Grades/|CucumberSwiftCoverageTests/)|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter|TestNaming)/|Sources/CucumberSwiftGherkin/|Sources/CucumberSwiftTestingGenerator/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Tests/CucumberSwiftMutationTests/|Plugins/MutationTestingPlugin/|Fixtures/Mutation|bazel/|BUILD\.bazel$|MODULE\.bazel$|Tests/(BUILD\.bazel|MODULE\.bazel|\.bazelrc|expected-mutants|Grades/|CucumberSwiftCoverageTests/)|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
           if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
             run=true
           elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
@@ -212,6 +215,43 @@ jobs:
           fi
           echo "Mutation testing fixture runs: $run"
           echo "mutation_code=$run" >> "$GITHUB_OUTPUT"
+      # The folders in Fixtures/, as a JSON list, for Fixture tests' matrix: one job each.
+      # CarthageXCFramework and CoverageMergePackage are left out, as `mise run test-fixtures` leaves
+      # them out: Carthage tests and Coverage merge fixture run them. Read from the commit's tree,
+      # which the sparse checkout has.
+      - name: List the fixtures
+        id: fixtures
+        run: |
+          fixtures=$(git ls-tree -d --name-only HEAD Fixtures/ | sed 's|^Fixtures/||' | grep -vxE 'CarthageXCFramework|CoverageMergePackage' \
+            | python3 -c 'import json, sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+          echo "Fixtures: $fixtures"
+          if [ "$fixtures" = "[]" ]; then
+            echo "::error::Found no fixtures in Fixtures/"
+            exit 1
+          fi
+          echo "fixtures=$fixtures" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes the coverage merge: the code that writes the coverage files and
+      # scores them, the cucumberswift tool, its fixture and script, the package manifests or this workflow. Not
+      # the documentation, which lives in Sources too. Always on any other event, such as the merge queue.
+      - name: Decide whether the coverage merge fixture runs
+        id: merge
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwiftCommand/|Sources/CucumberSwift/Coverage/|Sources/CucumberSwift/Runner/CoverageScoreTests\.swift$|Sources/CucumberSwiftTesting/Coverage|Fixtures/CoverageMergePackage/|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/scripts/(coverage-merge-fixture|keep-package-resolved)\.sh$)'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Coverage merge fixture runs: $run"
+          echo "coverage_merge=$run" >> "$GITHUB_OUTPUT"
       - name: Build the parallel tests' matrix
         id: matrix
         env:
@@ -478,14 +518,16 @@ jobs:
   # still install the framework. It needs no Tuist: consumers never do.
   #
   # Two Xcode versions, because consumers build with whatever Xcode they have.
-  # Pull requests run Xcode 26, which a new release most likely breaks. The merge
-  # queue and main also run Xcode 16.0, the oldest Xcode CI builds with, after
-  # installing its iOS platform, which the image doesn't have.
+  # Pull requests run the newest Xcode, the macos-26 image's own, which a new release
+  # most likely breaks. The merge queue and main also run Xcode 16.0, the oldest Xcode
+  # CI builds with, on macos-15, after installing its iOS platform, which the image
+  # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
+  # or later (#553).
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
       contents: read
@@ -493,13 +535,14 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"xcode":"26.2","variant":""}]'
-          || '[{"xcode":"26.2","variant":""},{"xcode":"16.0","variant":" (Xcode 16)","ios_platform":true}]') }}
+          && '[{"os":"macos-26","variant":""}]'
+          || '[{"os":"macos-26","variant":""},{"os":"macos-15","xcode":"16.0","variant":" (Xcode 16)","ios_platform":true,"tuist_developer_dir":"/Applications/Xcode_26.2.app/Contents/Developer"}]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Select Xcode ${{ matrix.xcode }}
+        if: matrix.xcode
         env:
           XCODE_VERSION: ${{ matrix.xcode }}
         run: .github/scripts/select-xcode.sh "$XCODE_VERSION"
@@ -536,7 +579,7 @@ jobs:
           CARTHAGE_LOG: carthage-build.log
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           # The pinned Tuist can't generate the fixture's project with Xcode 16.0.
-          TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+          TUIST_DEVELOPER_DIR: ${{ matrix.tuist_developer_dir }}
         run: mise run test-carthage
       - name: Show what Carthage produced
         if: always()
@@ -545,7 +588,7 @@ jobs:
       # matrix entry, so each run has one artifact. The wildcard keeps the
       # CucumberSwift.xcframework folder itself in the artifact, not just its contents.
       - name: Upload the xcframework
-        if: matrix.xcode == '26.2'
+        if: matrix.variant == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: CucumberSwift.xcframework
@@ -556,7 +599,7 @@ jobs:
       # Nightly and manual runs only, with the newest Xcode: pull requests build for tvOS in
       # Catalyst tests. After the upload, as it replaces the iOS xcframework.
       - name: Build the tvOS framework with Carthage
-        if: matrix.xcode == '26.2' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        if: matrix.variant == '' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         run: |
           carthage build --no-skip-current --use-xcframeworks --platform tvOS --log-path carthage-build.log
           xcf=Carthage/Build/CucumberSwift.xcframework
@@ -1061,23 +1104,26 @@ jobs:
           grep -F "swift-syntax.git\", exact: \"$floor\"" Package.swift
           swift test --enable-all-traits --filter 'CucumberSwiftMacrosTests|CucumberSwiftMacroConverterTests'
 
-  # Builds and tests every project in Fixtures/ as a project that uses CucumberSwift would, Tuist
-  # projects included (`mise run test-fixtures`). macos-26, because a Tuist fixture that turns on a
-  # package trait only compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4,
-  # named in its xcode-version file. A required check.
+  # Builds and tests each project in Fixtures/ as a project that uses CucumberSwift would, Tuist
+  # projects included, in a job of its own (`mise run test-fixtures <fixture>`), so the fixtures run
+  # at the same time (#593). The changes job lists them from the folder, so a new fixture gets a job
+  # with no change here. macos-26, because a Tuist fixture that turns on a package trait only
+  # compiles with Xcode 26.4 or later; that fixture runs with exactly Xcode 26.4, named in its
+  # xcode-version file. Fixture tests, below, is the required check that sums them up.
   #
-  # 45 minutes, not 30: a run takes about 13-27 minutes, typically 20-25, and a
-  # slow runner reached 30 with no test failing, which cancelled the job and
-  # dropped a merge queue entry. The timeout only bounds a hung job; a normal
-  # run takes no longer for it.
-  fixture_tests:
-    name: Fixture tests
+  # 30 minutes, what the old single job took for every fixture; the timeout only bounds a hung job.
+  fixture_test:
+    name: Fixture tests (${{ matrix.fixture }})
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture: ${{ fromJSON(needs.changes.outputs.fixtures) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1100,23 +1146,98 @@ jobs:
       # fixture depend on it by URL instead, as a project does: a git repository of this commit. So the
       # next step checks that the Macros trait resolves and builds from a URL, as the docs show (#418).
       - name: Use the macros package fixture with CucumberSwift from a URL
+        if: ${{ matrix.fixture == 'StepDefinitionMacrosPackage' }}
         run: .github/scripts/macros-fixture-by-url.sh "$RUNNER_TEMP"
-      - name: Build and test the fixtures
+      - name: Build and test the fixture
         env:
+          FIXTURE: ${{ matrix.fixture }}
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
-        run: mise run test-fixtures
-      # The mutation testing steps run the tool that this action builds once, with a cache that every job running
-      # the tool shares. See .github/actions/mutation-tool/action.yml.
+        run: mise run test-fixtures "$FIXTURE"
+
+  # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
+  # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
+  # cancelled, which hides whether it passed (#480). Fixture tests, below, requires it.
+  swift_6_3_tests:
+    name: Swift 6.3 tests
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Run the root package's Swift Testing tests with Swift 6.3
+        run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # Scores the same features run one at a time, in parallel and in shards, with each runner, by merging
+  # their coverage folders, and fails unless every way gives the same scores (#515). It takes minutes, so a pull
+  # request runs it only when it changes the coverage merge (coverage_merge, from the changes job). Fixture
+  # tests, below, requires it when it runs.
+  coverage_merge_fixture:
+    name: Coverage merge fixture
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.coverage_merge == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Install mise
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
+      - name: Merge the coverage of parallel and sharded runs
+        run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
+
+  # Mutation testing on a Swift package and on an Xcode project, each with an XCTest and a Swift Testing target,
+  # with the command-line tool as a script runs it. The run must kill and keep the mutants that the fixture's expected-mutants file lists,
+  # and print a warning for each survivor (#519). It takes minutes, so a pull request runs it only when it changes
+  # mutation testing (mutation_code, from the changes job). The merge queue and every nightly and manual run
+  # always run it. Fixture tests, below, requires it when it runs.
+  mutation_fixture:
+    name: Mutation testing fixture
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      # On a pull request, the run uses the tool that this action builds once, with a cache that every job running
+      # the tool shares. See .github/actions/mutation-tool/action.yml. The merge queue and every nightly and manual
+      # run leave MUTATION_TOOL unset, so the script builds and runs the tool with `swift run`, as a user's package
+      # does.
       - name: Build the mutation testing tool
-        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        if: ${{ github.event_name == 'pull_request' }}
         uses: ./.github/actions/mutation-tool
-      # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
-      # as a script runs it, here the tool built above. The run must kill and keep the
-      # mutants that the fixture's expected-mutants file lists, and print a warning for each survivor (#519).
-      # It takes minutes, so a pull request runs it only when it changes mutation testing (mutation_code, from the
-      # changes job). The merge queue and every nightly and manual run always run it.
       - name: Run mutation testing on the Swift package fixture
-        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
         run: .github/scripts/mutation-package-fixture.sh "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the mutation testing reports and log
@@ -1129,6 +1250,18 @@ jobs:
             ${{ runner.temp }}/mutation-MutationTestingPackage.log
           if-no-files-found: ignore
           retention-days: 3
+      - name: Install mise
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        run: command -v mise || brew install mise
+      - name: Install the pinned Tuist
+        if: ${{ github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true' }}
+        env:
+          # mise verifies the download's checksum through the GitHub API.
+          GITHUB_TOKEN: ${{ github.token }}
+          MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+        run: |
+          mise --version
+          mise install
       # Mutation testing on an Xcode project, run from a Run Script build phase with xcodebuild, a scheme and a
       # destination, for the XCTest and the Swift Testing runner. The run must kill and keep the mutants that the
       # fixture's expected-mutants file lists, and the build log must warn at each survivor (#521). It runs on a copy
@@ -1156,11 +1289,36 @@ jobs:
             ${{ runner.temp }}/mutation-MutationTestingTuist-selection.log
           if-no-files-found: ignore
           retention-days: 3
-      # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
-      # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
-      # cancelled, which hides whether it passed (#480).
-      - name: Run the root package's Swift Testing tests with Swift 6.3
-        run: .github/scripts/swift-testing-unit-tests.sh "$MIN_SWIFT_TESTING_TESTS" "$RUNNER_TEMP/swift-testing-6.3.log"
+
+  # A required check: passes only when every fixture's job, Swift 6.3 tests and, when they run, the coverage merge
+  # and mutation testing fixtures passed. A job without a matrix, so that it reports under this name when the jobs
+  # it needs are skipped. It skips when they skip, on a run with no code, which counts as passing.
+  fixture_tests:
+    name: Fixture tests
+    needs: [changes, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture]
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check that every fixture's job passed
+        env:
+          FIXTURES: ${{ needs.fixture_test.result }}
+          SWIFT_6_3: ${{ needs.swift_6_3_tests.result }}
+          COVERAGE_MERGE: ${{ needs.coverage_merge_fixture.result }}
+          MUTATION: ${{ needs.mutation_fixture.result }}
+        run: |
+          echo "Fixture jobs: $FIXTURES"
+          echo "Swift 6.3 tests: $SWIFT_6_3"
+          echo "Coverage merge fixture: $COVERAGE_MERGE"
+          echo "Mutation testing fixture: $MUTATION"
+          # The coverage merge and mutation testing fixtures skip on a pull request that doesn't change them.
+          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ] \
+            || { [ "$COVERAGE_MERGE" != success ] && [ "$COVERAGE_MERGE" != skipped ]; } \
+            || { [ "$MUTATION" != success ] && [ "$MUTATION" != skipped ]; }; then
+            echo "::error::A fixture's job, Swift 6.3 tests, the coverage merge fixture or the mutation testing fixture didn't pass: see the jobs above."
+            exit 1
+          fi
 
   # Mutation testing on an Xcode project with an iOS Simulator as the test destination (#536): the same mutants with the
   # same statuses as the macOS run in Fixture tests. The run script's build runs on the Mac, and the tests run on the

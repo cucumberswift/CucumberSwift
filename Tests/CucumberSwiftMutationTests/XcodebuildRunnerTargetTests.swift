@@ -6,7 +6,7 @@
 import XCTest
 @testable import CucumberSwiftMutation
 
-/// Which test targets a run of some scenarios starts `xcodebuild` for: only the ones whose bundle holds one of them.
+/// Which test targets the one `xcodebuild` run of some scenarios names: only the ones whose bundle holds one of them.
 final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
     private let target = XcodebuildRunner.Target(container: "Voting.xcodeproj", scheme: "Voting", destination: "platform=macOS", testTargets: ["A", "B"])
     private let voting = ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")
@@ -45,11 +45,16 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         }
     }
 
-    /// The test targets that `-only-testing` names in each `xcodebuild test-without-building` call.
+    /// The test targets that `-only-testing` names in the one `xcodebuild test-without-building` call, in order.
     private func testedTargets(_ commands: RecordingCommands) -> [String] {
-        commands.calls.filter { $0.arguments.first == "test-without-building" }.compactMap { call in
-            call.arguments.firstIndex(of: "-only-testing").map { call.arguments[$0 + 1].components(separatedBy: "/")[0] }
+        let calls = commands.calls.filter { $0.arguments.first == "test-without-building" }
+        XCTAssertEqual(calls.count, 1, "All the test targets run in one xcodebuild run")
+        var targets = [String]()
+        for (index, argument) in (calls.first?.arguments ?? []).enumerated() where argument == "-only-testing" {
+            let name = calls[0].arguments[index + 1].components(separatedBy: "/")[0]
+            if !targets.contains(name) { targets.append(name) }
         }
+        return targets
     }
 
     func testATestTargetWithNoneOfTheScenariosIsNotRun() throws {
@@ -84,6 +89,19 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(none), ["A", "B"], "A run never skips every target")
     }
 
+    func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
+        let copy = try makeCopy()
+        // A is found by a feature file next to its tests, and B by one in the resource bundle that SwiftPM makes.
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Pkg_B.bundle/Features/Retiring.feature"], in: copy, macOS: false)
+        let both = commands()
+        _ = XcodebuildRunner(target: target, commands: both).test(in: copy, request: TestRequest(scenarios: [voting, retiring]))
+        XCTAssertEqual(testedTargets(both), ["A", "B"], "B's feature is only in its nested bundle")
+        let onlyB = commands()
+        _ = XcodebuildRunner(target: target, commands: onlyB).test(in: copy, request: TestRequest(scenarios: [retiring]))
+        XCTAssertEqual(testedTargets(onlyB), ["B"])
+    }
+
     func testARunOfEveryScenarioStartsEveryTarget() throws {
         let copy = try makeCopy()
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
@@ -91,5 +109,24 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         let commands = commands()
         _ = XcodebuildRunner(target: target, commands: commands).test(in: copy, request: TestRequest())
         XCTAssertEqual(testedTargets(commands), ["A", "B"])
+    }
+
+    func testScenariosWhoseTestNamesCantBeResolvedRunThroughCucumberScenariosAlone() throws {
+        // The same feature file in two test targets is a path that names no single test: not a failed test.
+        let copy = try makeCopy()
+        try FileManager.default.createDirectory(at: copy.appendingPathComponent("A/Features"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: copy.appendingPathComponent("B/Features"), withIntermediateDirectories: true)
+        for folder in ["A", "B"] {
+            try "Feature: Voting\n\n  Scenario: An adult can vote\n    Given a person aged 30\n"
+                .write(to: copy.appendingPathComponent("\(folder)/Features/Voting.feature"), atomically: true, encoding: .utf8)
+        }
+        let commands = commands()
+        let run = XcodebuildRunner(target: target, commands: commands).test(
+            in: copy, request: TestRequest(scenarios: [voting]))
+        XCTAssertEqual(run.status, 0, "The run starts instead of returning a failure that counts as a killed mutant")
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_SCENARIOS"], "Features/Voting.feature:3")
+        XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"])
+        XCTAssertEqual(call.arguments.filter { $0 == "-only-testing" }.count, 2, "Each test target, not a test")
     }
 }

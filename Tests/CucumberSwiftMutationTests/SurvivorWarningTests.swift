@@ -5,6 +5,7 @@
 //  Each surviving mutant as a warning, in the compiler's format for an Xcode build phase.
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -28,3 +29,4 @@ final class SurvivorWarningTests: XCTestCase {
         XCTAssertEqual(SurvivorWarning.read(report: URL(fileURLWithPath: "/nonexistent.json"), root: URL(fileURLWithPath: "/")), [])
     }
 }
+#endif

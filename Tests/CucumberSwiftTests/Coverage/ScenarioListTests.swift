@@ -40,6 +40,31 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///Users/x/Tests.xctest/Features/Other.feature", line: 2, environment: environment))
     }
 
+    func testEmptyEntriesNameNoScenarioAndAnEntryIsNotTrimmed() {
+        let uri = "file:///x/Tests.xctest/Features/Basket.feature"
+        let environment = ["CUCUMBER_SCENARIOS": "Features/Basket.feature:2,,"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 3, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 2, environment: ["CUCUMBER_SCENARIOS": " Features/Basket.feature:2"]), "A space is part of the path")
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 2, environment: ["CUCUMBER_SCENARIOS": ",,"]), "Only empty entries: no scenario")
+    }
+
+    func testACommaOrPercentInAPathSurvivesTheListTheToolWrites() {
+        // The tool writes `%2C` for a comma and `%25` for a percent sign, and the list is split at the commas that remain.
+        let uri = "file:///x/Tests.xctest/Features/Basket, large 100%.feature"
+        let environment = ["CUCUMBER_SCENARIOS": "Features/Basket%2C large 100%25.feature:2,Features/Other.feature:4"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 4, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Features/Basket", line: 2, environment: environment), "Not split at the comma")
+    }
+
+    func testAnEntryIsReadAsWrittenSoLeadingWhitespaceInAPathCounts() {
+        let uri = "file:///x/Tests.xctest/\t Basket.feature"
+        let environment = ["CUCUMBER_SCENARIOS": "\t Basket.feature:2,Other.feature:3"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 2, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Basket.feature", line: 2, environment: environment))
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }

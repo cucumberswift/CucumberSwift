@@ -17,4 +17,13 @@ enum FeatureFlagValue {
             default: return nil
         }
     }
+
+    /// A number of seconds above 0, with spaces and tabs around it ignored. Any other value is not a setting.
+    static func seconds(_ value: String?) -> TimeInterval? {
+        guard let text = value?.trimmingCharacters(in: .whitespaces),
+              let seconds = TimeInterval(text),
+              seconds.isFinite,
+              seconds > 0 else { return nil }
+        return seconds
+    }
 }

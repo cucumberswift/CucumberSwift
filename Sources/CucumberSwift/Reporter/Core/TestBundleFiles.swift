@@ -64,8 +64,17 @@ enum TestBundleFiles {
         prefix + String(bundleURL.lastPathComponent.prefix { $0 != "." }) + ".json"
     }
 
+    /// Whether a feature of the report belongs to the test bundle: its `uri` is inside the bundle, or inside no
+    /// test bundle, as with a Swift package, whose one bundle runs every target.
+    static func isFeature(_ feature: [String: Any], inBundleAt bundleURL: URL) -> Bool {
+        guard let uri = (feature["uri"] as? String).map({ $0.removingPercentEncoding ?? $0 }) else { return true }
+        let bundleName = bundleURL.lastPathComponent
+        return uri.contains("/\(bundleName)/") || !uri.contains(".xctest/")
+    }
+
     /// Copies the report to `CucumberTestResultsFor<bundle name>.json` in `folder`, the documents folder
-    /// unless given, when the test bundle finishes. The copy replaces the one an earlier run left.
+    /// unless given, when the test bundle finishes. The copy has only the features of the bundle, because a
+    /// run's other test bundles write to the same report (#546). It replaces the one an earlier run left.
     static func copyReport(at reportURL: URL?, forBundleAt bundleURL: URL, prefix: String = resultsName, into folder: URL? = nil) {
         guard let reportURL,
               let folder = folder ?? (try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false))
@@ -74,8 +83,8 @@ enum TestBundleFiles {
         // The report is already there when `reportPath` names the copy, and only a written report replaces one.
         guard reportURL.standardizedFileURL.resolvingSymlinksInPath() != fileURL.standardizedFileURL.resolvingSymlinksInPath(),
               FileManager.default.fileExists(atPath: reportURL.path) else { return }
-        // copyItem doesn't overwrite, so without this the first run's copy would stay.
-        try? FileManager.default.removeItem(at: fileURL)
-        try? FileManager.default.copyItem(at: reportURL, to: fileURL)
+        let features = ReportFile.at(reportURL).read().filter { isFeature($0, inBundleAt: bundleURL) }
+        guard let data = ReportFile.serialize(features) else { return }
+        try? data.write(to: fileURL, options: .atomic)
     }
 }

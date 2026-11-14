@@ -14,50 +14,11 @@ import Foundation
 /// A run writes everything to a folder of its own, `run-<id>`, inside the coverage folder, so that the
 /// folders of several runs, such as the shards of one suite, can be collected in one place and merged.
 final class CoverageRecorder {
-    /// The manifest's contents.
-    struct Manifest: Codable, Equatable {
-        /// Changes when the manifest's form changes, so that a reader can refuse one it doesn't know.
-        static let currentVersion = 1
-
-        var version = Manifest.currentVersion
-        var run: String
-        var startDate: Date
-        var binaries: [Binary]
-        var scenarios: [ScenarioRecord]
-        /// Each feature's scores, in the order the features finished.
-        var features = [FeatureRecord]()
-        /// Why no profile was written, when the run couldn't write any.
-        var problem: String?
-        /// Why the run has no scores, when it has profiles but couldn't read a coverage map.
-        var scoresProblem: String?
-    }
-
-    /// The scores of a feature that finished: of its scenarios that aren't in a Rule, or of one of its
-    /// Rules, which has scores of its own.
-    struct FeatureRecord: Codable, Equatable {
-        var feature: String
-        var featureName: String
-        var line: Int
-        /// The title of the Rule these scores are for, or `nil` for the feature's scenarios outside a Rule.
-        var rule: String?
-        /// The line of the Rule these scores are for.
-        var ruleLine: Int?
-        var scores: CoverageScores
-    }
-
-    /// The scores of one part of a feature: the scenarios in `rule`, or, when it is `nil`, the scenarios
-    /// that aren't in a Rule.
-    struct PartScores: Equatable {
-        let rule: ScenarioRule?
-        let scores: CoverageScores
-    }
-
-    /// A binary built with code coverage. A report needs it, with the profiles, to map the counters back to
-    /// source lines, and its UUID identifies the build that ran.
-    struct Binary: Codable, Equatable {
-        var path: String
-        var uuid: String?
-    }
+    typealias Manifest = CoverageManifest
+    typealias FeatureRecord = CoverageManifest.FeatureRecord
+    typealias Binary = CoverageManifest.Binary
+    typealias ScenarioRecord = CoverageManifest.ScenarioRecord
+    typealias PartScores = CoverageScores.Part
 
     /// A scenario that finished, as the runner describes it.
     struct FinishedScenario {
@@ -73,19 +34,10 @@ final class CoverageRecorder {
         var group: String?
         /// The Rule the scenario is in, which is scored on its own.
         var rule: ScenarioRule?
-    }
-
-    /// A scenario that ran, and its profile files, one for each binary, in the run's folder.
-    struct ScenarioRecord: Codable, Equatable {
-        /// The feature file's URI, as the JSON report gives it.
-        var feature: String
-        var featureName: String
-        var line: Int
-        var name: String
-        var tags: [String]
-        var profiles: [String]
-        /// How long the scenario took, in seconds.
-        var duration: Double?
+        /// The line of the feature's `Feature:`.
+        var featureLine: Int?
+        /// The feature file that the runner reports the feature's coverage issues on.
+        var issueFile: URL?
     }
 
     /// How long before a run starts the runs it deletes with `removesEarlierRuns` started, at least. The
@@ -103,8 +55,6 @@ final class CoverageRecorder {
     /// The regions each of the running scenario's steps after its Background ran.
     private var stepRuns = [CoverageScores.StepRun]()
     private var scenarios = [ScenarioRecord]()
-    /// The code each scenario ran, when the settings ask for `regions.json`.
-    private var scenarioRegions = [ScenarioRegions]()
     private var features = [FeatureRecord]()
     private var problem: String?
     private let settings: CoverageSettings
@@ -113,6 +63,8 @@ final class CoverageRecorder {
     private(set) var code: MeasuredCode?
     /// The measured functions: the binary each is in, its coverage map entry, and the number of its first region.
     private(set) var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
+    /// The functions the scores measure, as the manifest lists them for `cucumberswift coverage merge`.
+    private var measured: [CoverageManifest.MeasuredFunction]?
     private(set) var scoresProblem: String?
     /// The scenarios of each feature that hasn't finished, by its URI, for its scores.
     private var featureScenarios = [String: [(rule: ScenarioRule?, scenario: CoverageScores.Scenario)]]()
@@ -125,7 +77,9 @@ final class CoverageRecorder {
             scenarios: scenarios,
             features: features,
             problem: problem,
-            scoresProblem: problem == nil ? scoresProblem : nil
+            scoresProblem: problem == nil ? scoresProblem : nil,
+            measured: problem == nil ? measured : nil,
+            settings: CoverageManifest.Settings(settings)
         )
     }
 
@@ -183,22 +137,22 @@ final class CoverageRecorder {
         }
     }
 
-    /// Numbers the regions of the functions the scores measure, from every binary with a coverage map.
+    /// Numbers the regions of the functions the scores measure, from every binary with a coverage map. A run
+    /// that doesn't score, as ``CoverageSettings/scoresOffReason`` says, still measures them, for
+    /// `cucumberswift coverage merge`.
     private func measureCode() {
-        if let reason = settings.scoresOffReason {
-            scoresProblem = reason
-            return
-        }
+        scoresProblem = settings.scoresOffReason
         #if canImport(Compression)
         let mapped = counters.binaries.enumerated().filter { $0.element.map != nil }
         guard !mapped.isEmpty else {
-            scoresProblem = counters.binaries.compactMap(\.mapProblem).first
+            scoresProblem = counters.binaries.compactMap(\.mapProblem).first ?? scoresProblem
             return
         }
         // When the test bundle is the only binary, it holds the code under test too, as `swift test`
         // builds it.
         let testBundleHoldsAllCode = mapped.allSatisfy { $0.element.path.contains(".xctest/") }
         var measured = [MeasuredCode.Function]()
+        var listed = [CoverageManifest.MeasuredFunction]()
         for (index, binary) in mapped {
             for function in binary.map?.functions ?? [] where !function.regions.isEmpty {
                 guard MeasuredCode.isMeasured(file: function.file,
@@ -211,9 +165,17 @@ final class CoverageRecorder {
                                                       line: function.line,
                                                       regions: first..<first + function.regions.count))
                 functions.append((index, function, first))
+                listed.append(CoverageManifest.MeasuredFunction(binary: URL(fileURLWithPath: binary.path).lastPathComponent,
+                                                                name: function.name,
+                                                                readableName: ReadableName.of(function.name),
+                                                                file: function.file,
+                                                                line: function.line,
+                                                                regions: function.regions.count,
+                                                                spans: function.regions.map { [$0.lineStart, $0.columnStart, $0.lineEnd, $0.columnEnd] }))
             }
         }
         code = MeasuredCode(functions: measured)
+        self.measured = listed
         #else
         scoresProblem = "this platform can't read coverage maps"
         #endif
@@ -234,11 +196,6 @@ final class CoverageRecorder {
         }
         #endif
         return ran
-    }
-
-    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
-    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
-        featureScenarios[feature]?.map(\.scenario) ?? []
     }
 
     func scenarioStarted() {
@@ -275,6 +232,16 @@ final class CoverageRecorder {
         self.snapshot = nil
         let fileName = String(format: "S%04d-L%d", scenarios.count + 1, finished.line)
         let counts = counters.differences(since: snapshot)
+        let scenario = code.map { _ in
+            CoverageScores.Scenario(name: finished.name,
+                                    line: finished.line,
+                                    tags: finished.tags,
+                                    duration: finished.duration ?? 0,
+                                    regions: regions(ran: counts),
+                                    group: finished.group)
+                .with(backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [])
+                .with(steps: stepRuns)
+        }
         do {
             let profiles = try counters.writeProfiles(named: fileName, in: folder, counts: counts)
             scenarios.append(ScenarioRecord(
@@ -284,29 +251,28 @@ final class CoverageRecorder {
                 name: finished.name,
                 tags: finished.tags,
                 profiles: profiles,
-                duration: finished.duration
+                duration: finished.duration,
+                featureLine: finished.featureLine,
+                issueFile: finished.issueFile?.absoluteString,
+                coverage: scenario.map { Self.coverage(of: $0, rule: finished.rule) }
             ))
         } catch {
             problem = "Couldn't write the scenario's coverage: \(error)"
             return
         }
-        if code != nil {
-            let scenario = CoverageScores.Scenario(name: finished.name,
-                                                   line: finished.line,
-                                                   tags: finished.tags,
-                                                   duration: finished.duration ?? 0,
-                                                   regions: regions(ran: counts),
-                                                   group: finished.group)
-                .with(backgroundRegions: backgroundCounts.map(regions(ran:)) ?? [])
-                .with(steps: stepRuns)
+        if let scenario {
             featureScenarios[finished.feature, default: []].append((finished.rule, scenario))
-            if settings.writesRegions {
-                scenarioRegions.append(ScenarioRegions(feature: finished.feature,
-                                                       line: finished.line,
-                                                       name: finished.name,
-                                                       ran: scenario.regions.sorted()))
-            }
         }
+    }
+
+    /// The code `scenario`, in `rule`, ran, as the manifest records it.
+    static func coverage(of scenario: CoverageScores.Scenario, rule: ScenarioRule?) -> CoverageManifest.ScenarioCoverage {
+        CoverageManifest.ScenarioCoverage(regions: scenario.regions.sorted(),
+                                          backgroundRegions: scenario.backgroundRegions.sorted(),
+                                          steps: scenario.steps.map { .init(line: $0.line, regions: $0.regions.sorted()) },
+                                          group: scenario.group,
+                                          rule: rule?.title,
+                                          ruleLine: rule?.line)
     }
 
     /// The scores of the feature at `feature`, its URI, from the scenarios of it that ran: one for its
@@ -314,17 +280,18 @@ final class CoverageRecorder {
     /// run has no scores, or none of the feature's scenarios ran.
     /// With `detections`, the redundancy also judges the scenarios by the mutants they detect.
     func featureFinished(feature: String, featureName: String, line: Int, detections: CoverageScores.Detections? = nil) -> [PartScores] {
-        guard problem == nil, let code, let ran = featureScenarios.removeValue(forKey: feature) else { return [] }
-        let rules = Set(ran.compactMap(\.rule)).sorted { $0.line < $1.line }
-        let parts: [ScenarioRule?] = (ran.contains { $0.rule == nil } ? [nil] : []) + rules
-        return parts.map { rule in
-            let scores = CoverageScores(scenarios: ran.filter { $0.rule == rule }.map(\.scenario),
-                                        code: code,
-                                        isRedundancy: settings.isRedundancy,
-                                        detections: detections)
-            features.append(FeatureRecord(feature: feature, featureName: featureName, line: line, rule: rule?.title, ruleLine: rule?.line, scores: scores))
-            return PartScores(rule: rule, scores: scores)
+        guard let ran = featureScenarios.removeValue(forKey: feature),
+              problem == nil, settings.scoresOffReason == nil, let code else { return [] }
+        let parts = CoverageScores.parts(of: ran, code: code, isRedundancy: settings.isRedundancy, detections: detections)
+        for part in parts {
+            features.append(FeatureRecord(feature: feature,
+                                          featureName: featureName,
+                                          line: line,
+                                          rule: part.rule?.title,
+                                          ruleLine: part.rule?.line,
+                                          scores: part.scores))
         }
+        return parts
     }
 
     /// Writes `manifest.json` in the run's folder. Returns its URL, or nil if it couldn't be written.
@@ -335,9 +302,14 @@ final class CoverageRecorder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         guard let data = try? encoder.encode(manifest), (try? data.write(to: url)) != nil else { return nil }
-        if settings.writesRegions, let regions = try? encoder.encode(RegionsFile(regions: codeRegions(), scenarios: scenarioRegions)) {
-            try? regions.write(to: folder.appendingPathComponent("regions.json"))
-        }
         return url
+    }
+}
+
+// What the Mutation test reads while a feature runs.
+extension CoverageRecorder {
+    /// The scenarios of the feature at `feature`, its URI, that ran so far, with the regions each ran.
+    func scenarios(of feature: String) -> [CoverageScores.Scenario] {
+        featureScenarios[feature]?.map(\.scenario) ?? []
     }
 }

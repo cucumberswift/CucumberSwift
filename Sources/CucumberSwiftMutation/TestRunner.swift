@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// What one test run is asked to do.
@@ -21,8 +22,9 @@ public struct TestRequest: Sendable {
     /// `CUCUMBER_SCENARIOS`, which makes CucumberSwift run only `scenarios`, whichever build tool starts the tests. Empty
     /// for a run of every scenario.
     var scenarioSettings: [String: String] {
-        scenarios.map { ["CUCUMBER_SCENARIOS": $0.map(\.id).joined(separator: ",")] } ?? [:]
+        scenarios.map { ["CUCUMBER_SCENARIOS": $0.map { Self.escaped($0.id) }.joined(separator: ",")] } ?? [:]
     }
+
     /// Stop the run after this many seconds and report it as timed out.
     public var timeout: TimeInterval?
 
@@ -52,6 +54,9 @@ public struct TestRun: Sendable {
     public var log: URL?
     public var cucumberReport: URL?
     public var coverageFolder: URL?
+    /// The command that runs the tests started. A command that never started, because the run was cancelled or the tool
+    /// couldn't be launched, tested nothing: its non-zero status is not a failing test.
+    public var started = true
 
     public var succeeded: Bool { status == 0 && !timedOut }
 
@@ -79,11 +84,15 @@ public struct BuildResult: Sendable {
     public var succeeded: Bool
     public var duration: TimeInterval
     public var log: URL?
+    /// The build command started. A command that never started, because the run was cancelled or the tool couldn't be
+    /// launched, built nothing: its failure doesn't mean that a mutant doesn't build.
+    public var started: Bool
 
-    public init(succeeded: Bool, duration: TimeInterval = 0, log: URL? = nil) {
+    public init(succeeded: Bool, duration: TimeInterval = 0, log: URL? = nil, started: Bool = true) {
         self.succeeded = succeeded
         self.duration = duration
         self.log = log
+        self.started = started
     }
 }
 
@@ -123,3 +132,12 @@ func makeFolder(_ folder: URL) throws -> URL {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
 }
+
+extension TestRequest {
+    /// `id` with `%` and `,` written as `%25` and `%2C`, so that a comma in a feature file's path doesn't split the list.
+    /// CucumberSwift's `ScenarioList` reads it back, and reads every other character, whitespace included, as written.
+    static func escaped(_ id: String) -> String {
+        id.replacingOccurrences(of: "%", with: "%25").replacingOccurrences(of: ",", with: "%2C")
+    }
+}
+#endif

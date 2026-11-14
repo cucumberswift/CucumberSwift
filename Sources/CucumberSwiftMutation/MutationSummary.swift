@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// The text a run prints at its end and writes to `summary.txt`.
@@ -30,3 +31,4 @@ public enum MutationSummary {
         return lines.joined(separator: "\n") + "\n"
     }
 }
+#endif

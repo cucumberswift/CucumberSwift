@@ -3,6 +3,7 @@
 //  CucumberSwiftMutation
 //
 
+#if os(macOS) || os(Linux)
 import Foundation
 
 /// One small change to the code under test: the text at a place in a file is replaced with another.
@@ -88,3 +89,4 @@ public struct Mutant: Codable, Equatable, Sendable {
         return String(bytes: bytes, encoding: .utf8) ?? source
     }
 }
+#endif

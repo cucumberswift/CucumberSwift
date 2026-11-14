@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -29,6 +30,14 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(build.succeeded)
         XCTAssertEqual(commands.calls.first?.arguments, ["build", "--build-tests", "--disable-sandbox", "-Xswiftc", "-profile-generate", "-Xswiftc", "-profile-coverage-mapping"])
         XCTAssertEqual(try String(contentsOf: XCTUnwrap(build.log), encoding: .utf8), "Build complete!")
+    }
+
+    func testABuildThatNeverStartedSaysSo() throws {
+        let commands = RecordingCommands { _ in CommandResult(status: 127, output: "no swift", timedOut: false, duration: 0, started: false) }
+        let copy = try makeCopy()
+        let build = SwiftPMRunner(commands: commands).build(in: copy, timeout: nil)
+        XCTAssertFalse(build.succeeded)
+        XCTAssertFalse(build.started)
     }
 
     func testSettingsAreTheEnvironmentOfTheTestRunAndTheRunnerPicksTheFolders() throws {
@@ -65,6 +74,16 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertNil(commands.calls.last?.environment["CUCUMBER_SCENARIOS"], "A request of every scenario sets nothing")
     }
 
+    func testACommaInAScenariosPathIsEscapedSoTheListIsNotSplit() throws {
+        let commands = RecordingCommands()
+        _ = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(scenarios: [
+            ScenarioID(feature: "Features/Basket, large 100%.feature", line: 3, name: "One"),
+            ScenarioID(feature: "\t Other.feature", line: 9, name: "Two")
+        ]))
+        let expected = "Features/Basket%2C large 100%25.feature:3,\t Other.feature:9"
+        XCTAssertEqual(commands.calls.first?.environment["CUCUMBER_SCENARIOS"], expected, "Leading whitespace is written as it is")
+    }
+
     func testReturnsTheReportAndCoverageTheTestsWrote() throws {
         let commands = RecordingCommands { call in
             for key in ["CUCUMBER_REPORT_PATH", "CUCUMBER_COVERAGE_PATH"] {
@@ -92,6 +111,13 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(Set(commands.calls.compactMap { $0.environment["CUCUMBER_REPORT_PATH"] }).count, 2)
     }
 
+    func testACommandThatNeverStartedIsNotAFailingTest() throws {
+        let commands = RecordingCommands { _ in CommandResult(status: 130, output: "Cancelled", timedOut: false, duration: 0, started: false) }
+        let run = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertFalse(run.started)
+        XCTAssertTrue(SwiftPMRunner(commands: RecordingCommands()).test(in: try makeCopy(), request: TestRequest()).started)
+    }
+
     func testTheTimeoutAndTheTimedOutAnswerPassThrough() throws {
         let commands = RecordingCommands { _ in .finished(15, timedOut: true) }
         let run = SwiftPMRunner(commands: commands).test(in: try makeCopy(), request: TestRequest(timeout: 42))
@@ -100,3 +126,4 @@ final class SwiftPMRunnerTests: TemporaryFolderTestCase {
         XCTAssertFalse(run.succeeded)
     }
 }
+#endif

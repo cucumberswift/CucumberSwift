@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -77,8 +78,8 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testTheCopyAndTheLockFileAreGoneAtTheEnd() throws {
-        _ = run(runner { _ in .finished(0) })
-        let work = (try? FileManager.default.contentsOfDirectory(atPath: folder.appendingPathComponent("work").path)) ?? []
+        XCTAssertEqual(run(runner { _ in .finished(0) }), MutationRun.Status.completed)
+        let work = try FileManager.default.contentsOfDirectory(atPath: folder.appendingPathComponent("work").path)
         XCTAssertEqual(work, [])
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation.lock").path))
     }
@@ -126,12 +127,14 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testTheTimeoutIsAMultipleOfTheBaselineWithAFloor() {
-        let fake = runner { _ in .finished(0, duration: 20) }
+        let fake = runner { _ in .finished(0, duration: 25) }
         var settings = options()
         settings.minimumTimeout = 30
         _ = run(fake, options: settings)
-        let timeouts = fake.calls.compactMap { $0.timeout }
-        XCTAssertEqual(Set(timeouts), [60], "3 times the 20 s baseline; only the mutants' runs have a timeout")
+        // Only `swift test`: the package's git commands have a timeout of their own.
+        let tests = fake.calls.filter { $0.arguments.first == "test" }
+        XCTAssertEqual(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] == nil }.map(\.timeout), [nil, nil], "The baseline runs have none")
+        XCTAssertEqual(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }.map(\.timeout), [75, 75], "3 times the 25 s baseline")
     }
 
     func testMaxMutantsLimitsTheRun() {
@@ -226,17 +229,13 @@ final class MutationRunTests: TemporaryFolderTestCase {
     }
 
     func testAMutantInCodeThatNoScenarioRanIsNotTested() throws {
-        // The first baseline run writes regions.json where the run asks: no scenario ran line 1, where both mutants are.
+        // The first baseline run measures the scenarios where the run asks: no scenario ran line 1, where both mutants are.
         let fake = FakeRunner { call in
             if call.arguments.first == "build" { return .finished(0) }
-            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE_REGIONS"] == "YES" {
-                let run = URL(fileURLWithPath: folder).appendingPathComponent("run-1")
-                try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                let json = """
-                {"version": 1, "regions": [{"file": "/x/Sources/Voting/Voting.swift", "lineStart": 1, "columnStart": 1, "lineEnd": 1, "columnEnd": 99}],
-                 "scenarios": [{"feature": "Voting.feature", "line": 4, "name": "An adult can vote", "ran": []}]}
-                """
-                try? json.write(to: run.appendingPathComponent("regions.json"), atomically: true, encoding: .utf8)
+            if let folder = call.environment["CUCUMBER_COVERAGE_PATH"], call.environment["CUCUMBER_COVERAGE"] == "YES" {
+                let canVote = CoverageRunFixture.Function(name: "canVote", file: "/x/Sources/Voting/Voting.swift", spans: [[1, 1, 1, 99]])
+                let adult = CoverageRunFixture.Scenario(feature: "Voting.feature", line: 4, name: "An adult can vote", ran: [])
+                try? CoverageRunFixture(functions: [canVote], scenarios: [adult]).write(named: "1", in: URL(fileURLWithPath: folder))
             }
             return .finished(0, output: "Executed 2 tests")
         }
@@ -251,7 +250,6 @@ final class MutationRunTests: TemporaryFolderTestCase {
         let fake = runner { _ in .finished(0) }
         _ = run(fake)
         let tests = fake.calls.filter { $0.arguments.first == "test" }
-        XCTAssertEqual(tests.first?.environment["CUCUMBER_COVERAGE_REGIONS"], "YES")
         XCTAssertEqual(tests.first?.environment["CUCUMBER_COVERAGE"], "YES")
         XCTAssertNil(tests.dropFirst().first?.environment["CUCUMBER_COVERAGE"], "The second baseline run is a plain run")
         XCTAssertTrue(tests.filter { $0.environment["CUCUMBERSWIFT_MUTANT"] != nil }.allSatisfy { $0.environment["CUCUMBER_COVERAGE"] == "NO" })
@@ -307,3 +305,87 @@ extension MutationRunTests {
         XCTAssertEqual(tests?.compactMap { $0["id"] as? String }, ["Features/Voting.feature:3", "Features/Voting.feature:7"])
     }
 }
+
+// What a run does after a crash and without a report of its own.
+extension MutationRunTests {
+    func testTestsThatCrashForAMutantKillIt() throws {
+        var tests = 0
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            // A crash, such as an index out of range, ends the tests before they print a count.
+            return tests <= 2 ? .finished(0, output: "Executed 5 tests, with 0 failures") : .finished(1, output: "error: Exited with unexpected signal code 4")
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.completed, log.joined())
+        let summary = try String(contentsOf: output.appendingPathComponent("summary.txt"), encoding: .utf8)
+        XCTAssertTrue(summary.contains("Mutation score: 100.0%"), summary)
+    }
+
+    func testTestsThatCantStartForAMutantStopTheRun() {
+        var tests = 0
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            guard tests > 2 else { return .finished(0, output: "Executed 5 tests, with 0 failures") }
+            return CommandResult(status: 127, output: "Couldn't run swift", timedOut: false, duration: 0, started: false)
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.failed, "A launch failure isn't a kill")
+        XCTAssertTrue(log.joined().contains("the tests didn't start"), log.joined())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+    }
+
+    func testARunThatWritesNoReportRemovesTheLastOne() throws {
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        for name in ["mutation-report.json", "summary.txt"] {
+            try "an earlier run's".write(to: output.appendingPathComponent(name), atomically: true, encoding: .utf8)
+        }
+        var settings = options()
+        settings.dryRun = true
+        XCTAssertEqual(run(runner { _ in .finished(0) }, options: settings), MutationRun.Status.completed)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("summary.txt").path))
+    }
+
+    func testABuildThatCantStartForAMutantStopsTheRun() {
+        var testsRan = false
+        let fake = FakeRunner { call in
+            if call.arguments.first == "test" {
+                testsRan = true
+                return .finished(0, output: "Executed 5 tests, with 0 failures")
+            }
+            // The baseline's build starts; a mutant's, after the baseline's tests, doesn't.
+            guard call.arguments.first == "build", testsRan else { return .finished(0) }
+            return CommandResult(status: 127, output: "Couldn't run swift", timedOut: false, duration: 0, started: false)
+        }
+        XCTAssertEqual(run(fake), MutationRun.Status.failed, "A launch failure isn't a mutant that doesn't build")
+        XCTAssertTrue(log.joined().contains("the build didn't start"), log.joined())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+    }
+
+    func testACancelDuringTheLastMutantsTestsWritesNoReport() {
+        var tests = 0
+        var cancelled = 0
+        var mutationRun: MutationRun?
+        let fake = FakeRunner { call in
+            guard call.arguments.first == "test" else { return .finished(0) }
+            tests += 1
+            // 2 baseline runs, then 1 for each of the 2 mutants. The cancel stops the last one, which then fails.
+            guard tests == 4 else { return .finished(0, output: "Executed 5 tests, with 0 failures") }
+            mutationRun?.cancel()
+            return .finished(1, output: "Executed 5 tests, with 1 failure")
+        }
+        let run = MutationRun(
+            options: options(),
+            discoverer: FakeDiscoverer(),
+            runner: fake,
+            log: { [weak self] in self?.log.append($0) },
+            cancelCommands: { cancelled += 1 }
+        )
+        mutationRun = run
+        XCTAssertEqual(run.run(), MutationRun.Status.cancelled)
+        XCTAssertEqual(cancelled, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("summary.txt").path))
+    }
+}
+#endif

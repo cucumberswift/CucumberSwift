@@ -7,14 +7,16 @@ private enum MutationError: Error, CustomStringConvertible {
     case failed(Int32)
     case notSetUp
     case missingValue(String)
+    case unknownOption(String)
 
     var description: String {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .noTargets: return "The package has no target with code to mutate"
-            case .failed(let status): return "CucumberSwiftMutationTestingTool exited with status \(status)"
+            case .failed(let status): return "cucumberswift mutation-test exited with status \(status)"
             case .notSetUp: return "Mutation testing needs CucumberSwift's Macros package trait, which brings in swift-syntax. Turn it on and run the command again."
             case .missingValue(let option): return "\(option) needs a value"
+            case .unknownOption(let option): return "Unknown option \(option)"
         }
     }
 }
@@ -41,13 +43,13 @@ struct MutationTestingPlugin: CommandPlugin {
         }
     }
 
-    /// The source folders of the named targets, or of every target that isn't a test target, relative to `root`. A
-    /// named test target is left out, because its code isn't mutated: Xcode names every target of the package, test
-    /// targets included, when it runs the command.
+    /// The source folders of the named targets, or of every library and executable target, relative to `root`, as the
+    /// command-line tool chooses them. A named target of another kind is left out, because its code isn't mutated:
+    /// Xcode names every target of the package, test targets included, when it runs the command.
     private static func sourceFolders(of package: Package, named names: [String], root: URL) throws -> [String] {
         let unknown = names.filter { name in !package.targets.contains { $0.name == name } }
         guard unknown.isEmpty else { throw MutationError.unknownTargets(unknown) }
-        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind != .test }
+        let modules = package.targets.compactMap { $0 as? SourceModuleTarget }.filter { $0.kind == .generic || $0.kind == .executable }
         let named = names.filter { name in modules.contains { $0.name == name } }
         let chosen = modules.filter { names.isEmpty || named.contains($0.name) }
         guard !chosen.isEmpty else { throw MutationError.noTargets }
@@ -64,20 +66,29 @@ struct MutationTestingPlugin: CommandPlugin {
         return URL(fileURLWithPath: passed[index + 1])
     }
 
+    /// The options the plugin passes on to the tool as they are, after the plugin extracted its own. Throws for any
+    /// argument left: a misspelt option would otherwise be dropped without a word, and `--max-mutant 5` would test
+    /// every mutant.
+    private static func passedOptions(from extractor: inout ArgumentExtractor) throws -> [String] {
+        var passed = [String]()
+        for option in valueOptions {
+            for value in extractor.extractOption(named: option) { passed += ["--\(option)", value] }
+        }
+        if let unknown = extractor.remainingArguments.first { throw MutationError.unknownOption(unknown) }
+        return passed
+    }
+
     func performCommand(context: PluginContext, arguments: [String]) async throws {
         try Self.requireValues(in: arguments)
         var extractor = ArgumentExtractor(arguments)
         let names = extractor.extractOption(named: "target")
         let dryRun = extractor.extractFlag(named: "dry-run") > 0
         let tags = extractor.extractOption(named: "tags").last
-        var passed = [String]()
-        for option in Self.valueOptions {
-            for value in extractor.extractOption(named: option) { passed += ["--\(option)", value] }
-        }
+        let passed = try Self.passedOptions(from: &extractor)
         let root = context.package.directoryURL.resolvingSymlinksInPath()
         let sources = try Self.sourceFolders(of: context.package, named: names, root: root)
         // Built step by step: one long concatenation is too slow for some compilers to type-check.
-        var toolArguments: [String] = ["--root", root.path]
+        var toolArguments: [String] = ["mutation-test", "--root", root.path]
         for source in sources { toolArguments += ["--sources", source] }
         // The reports go to .build/mutation-testing in the package, as from the command-line tool, so a test run reads
         // the last report whichever way the command ran. Xcode would put the plugin's own folder in DerivedData. The
@@ -88,8 +99,10 @@ struct MutationTestingPlugin: CommandPlugin {
         if dryRun { toolArguments.append("--dry-run") }
         if let tags { toolArguments += ["--tags", tags] }
         toolArguments.append("--disable-prebuilts")
+        // The Swift of the toolchain that runs the command, so that the copy builds with it too.
+        if let swift = try? context.tool(named: "swift") { toolArguments += ["--swift", swift.url.path] }
         let process = Process()
-        process.executableURL = try context.tool(named: "CucumberSwiftMutationTestingTool").url
+        process.executableURL = try context.tool(named: "CucumberSwiftCommand").url
         process.arguments = toolArguments
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()
