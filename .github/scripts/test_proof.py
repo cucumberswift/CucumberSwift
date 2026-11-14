@@ -119,6 +119,19 @@ class AttachmentsTests(ProofTestCase):
         self.assertTrue((self.folder / fields["image"]).exists())
         self.assertIn("Basket/testAddCukes()", body)
 
+    def test_an_exported_file_name_that_leaves_the_folder_is_refused(self):
+        exported = self.root / "exported"
+        exported.mkdir()
+        (self.root / "outside.png").write_bytes(b"png")
+        (exported / "manifest.json").write_text(json.dumps([{
+            "testIdentifier": "Basket/testAddCukes()",
+            "attachments": [{"exportedFileName": "../outside.png", "suggestedHumanReadableName": "Escape"}],
+        }]))
+        with self.assertRaises(ValueError):
+            proof.save_attachments(self.folder, "UI tests", exported)
+        self.assertTrue((self.root / "outside.png").exists())
+        self.assertFalse(self.folder.exists())
+
 
 class ReportTests(ProofTestCase):
     def test_no_items_is_neutral(self):

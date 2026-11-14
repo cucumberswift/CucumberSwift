@@ -131,7 +131,10 @@ def save_attachments(folder, source, exported):
     saved = 0
     for test in manifest:
         for attachment in test.get("attachments", []):
-            file = exported / attachment["exportedFileName"]
+            exported_name = attachment["exportedFileName"]
+            if Path(exported_name).name != exported_name:
+                raise ValueError(f"{exported_name!r} is not a file name in the exported folder")
+            file = exported / exported_name
             if file.suffix.lower() not in IMAGE_SUFFIXES or not file.exists():
                 continue
             name = attachment.get("suggestedHumanReadableName") or file.stem
