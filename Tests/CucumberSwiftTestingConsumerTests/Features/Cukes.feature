@@ -1,0 +1,49 @@
+Feature: Counting cukes
+
+  Scenario Outline: Eating cukes
+    Given I have <start> cukes
+    When I eat <eaten> cukes
+    Then I have <left> cukes
+
+    Examples: Small
+      | start | eaten | left |
+      | 12    | 5     | 7    |
+      | 20    | 5     | 15   |
+
+    @big
+    Examples: Big
+      | start | eaten | left |
+      | 100   | 1     | 99   |
+
+    @left-out-in-code
+    Examples: Left out
+      | start | eaten | left |
+      | 10    | 1     | 0    |
+
+  Scenario: A shopping list
+    Given my shopping list is
+      """
+      cukes
+      apples
+      """
+    And these prices
+      | item  | price |
+      | cukes | 2     |
+    Then the list has 2 items and the cukes cost 2
+
+  Scenario: Closures with capture lists
+    Given I have 3 cukes
+    When I get a bonus cuke
+    And I eat 2 cukes later
+    Then 2 cukes are left in this step
+
+  Scenario: Regex literals
+    Given I have 4 cukes from "Lisbon"
+    When I eat 1 cuke with a regex
+    And I eat 1 cuke with a regex quickly
+    Then the regex step sees 2 cukes
+    And 2 cukes are left in a weak regex step
+
+  @left-out-in-code
+  Scenario: Left out by shouldRunWith
+    Given a step that fails if the scenario runs

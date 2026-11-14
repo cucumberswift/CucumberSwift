@@ -9,7 +9,7 @@ Run your feature files with Swift Testing in a unit test target, with the step d
 
 ## Overview
 
-In a unit test target, you can run your feature files with Swift Testing instead of XCTest. A build tool plugin reads the target's feature files when it builds, and generates Swift Testing tests from them:
+In a unit test target, you can run your feature files with Swift Testing instead of XCTest. A build tool plugin reads the target's feature files when it builds, and generates Swift Testing tests from them. With Bazel, the `cucumberswift_testing_sources` rule generates the same tests:
 
 - A suite for each feature.
 - A test for each Scenario.
@@ -23,7 +23,7 @@ You write step definitions as for CucumberSwift: `extension Cucumber: StepImplem
 
 The Swift Testing runner has these requirements:
 
-- **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager.** The runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. Carthage can't deliver a build tool plugin. <doc:Running-Tests-In-Xcode#CucumberSwiftTestingPlugin> covers this plugin together with CucumberSwift's other plugins.
+- **Swift 6.1 (Xcode 16.3) or later, and Swift Package Manager or Bazel.** With Swift Package Manager, the runner is the `CucumberSwiftTesting` product, and the plugin is `CucumberSwiftTestingPlugin`. With Bazel, the runner is the `@cucumberswift//:CucumberSwiftTesting` target, and the `cucumberswift_testing_sources` rule generates the tests. Carthage can't deliver a build tool plugin. <doc:Running-Tests-In-Xcode#CucumberSwiftTestingPlugin> covers this plugin together with CucumberSwift's other plugins.
 - **Unit test targets only.** Xcode doesn't allow Swift Testing in UI test targets. UI tests keep running their feature files with CucumberSwift and XCTest.
 - **`#expect` and `#require`, not `XCTAssert`.** Step definitions that this runner runs must use Swift Testing's expectations. Before Swift 6.4, Swift Testing ignores an XCTest assertion that fails inside one of its tests, so the scenario would pass.
 - **Swift 6.2 or later for 2 features.** `Attach` needs it, and so does reporting a failed `#expect` on its step. With Swift 6.1, `Attach` is a compile error, and a failed `#expect` is reported where you wrote it, not on the step. See <doc:#Attachments> and <doc:#After-a-failed-assertion>.
@@ -72,6 +72,10 @@ To use the runner in an Xcode project, follow these steps:
    Setting a package dependency's traits in an Xcode project needs Xcode 26.4 or later. With an earlier Xcode, add a local package that only turns the trait on, as <doc:Using-Step-Definition-Macros#Before-Xcode-264> describes, and then add `CucumberSwiftTestingMacros` from the CucumberSwift package to your unit test target. Or add `CucumberSwiftTesting`, and write step definitions without the macros.
 2. In the test target's **Build Phases**, add `CucumberSwiftTestingPlugin` and `CucumberSwiftLint` under **Run Build Tool Plug-ins**. Xcode asks you to trust the plugins the first time they run. On a build server, pass `-skipPackagePluginValidation` to `xcodebuild` instead.
 3. Add your `Features` folder to the test target, for example as a folder reference in **Copy Bundle Resources**. The plugin finds only files that belong to the target.
+
+## Set up a Bazel project
+
+To use the runner in a Bazel project, depend on `@cucumberswift//:CucumberSwiftTesting` and generate the tests with the `cucumberswift_testing_sources` rule. <doc:Running-Tests-With-Bazel#Run-feature-files-with-Swift-Testing> shows the `BUILD.bazel` file. Write the step definitions without the macros, as <doc:#Without-the-macros> shows.
 
 ## Write step definitions
 

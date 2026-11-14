@@ -141,11 +141,17 @@ if [[ "$status" -ne 0 ]]; then
   exit "$status"
 fi
 
-# xctest passes when the bundle has no tests; treat that as a failure.
+# xctest passes when the bundle has no tests; treat that as a failure. It runs the Swift Testing
+# tests of a bundle that links XCTest after its XCTest tests, and reports them in a summary of
+# their own, so a bundle of Swift Testing tests, such as CucumberSwiftTesting's, has none to count
+# in the XCTest summary.
 summary="$(grep -E 'Executed [0-9]+ tests?,' "$log" | tail -1 || true)"
-if [[ -z "$summary" || "$summary" == *"Executed 0 tests"* ]]; then
+swift_testing_summary="$(grep -E 'Test run with [0-9]+ tests? ' "$log" | tail -1 || true)"
+if [[ ( -z "$summary" || "$summary" == *"Executed 0 tests"* ) &&
+      ( -z "$swift_testing_summary" || "$swift_testing_summary" == *"Test run with 0 tests"* ) ]]; then
   echo "error: no tests ran. Is the test bundle empty, or does the filter match nothing?" >&2
   echo "Last xctest summary: ${summary:-none}" >&2
+  echo "Last Swift Testing summary: ${swift_testing_summary:-none}" >&2
   exit 1
 fi
 

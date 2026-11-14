@@ -1,6 +1,6 @@
 # Running tests with Bazel
 
-Run your features with `bazel test`, from an `ios_unit_test`, `macos_unit_test` or `watchos_unit_test` target.
+Run your features with `bazel test`, from an `ios_unit_test`, `macos_unit_test` or `watchos_unit_test` target, with the XCTest runner or the Swift Testing runner.
 
 ## Overview
 
@@ -151,3 +151,65 @@ system_sdk.configure_sdks(names = ["WatchSimulator"])
 ```
 
 Bazel passes the variables you set with `--test_env` on to the tests on the simulator, as on the other platforms.
+
+### Run feature files with Swift Testing
+
+Run your features with Swift Testing by depending on `@cucumberswift//:CucumberSwiftTesting` instead of `@cucumberswift//:CucumberSwift`, and by generating the tests from your feature files with the `cucumberswift_testing_sources` rule. The rule does what `CucumberSwiftTestingPlugin` does in a Swift package: it reads the feature files and writes one Swift file with a suite for each feature, a test for each Scenario and a parameterized test for each Scenario Outline. Add that file to the `srcs` of your test target's `swift_library`:
+
+```starlark
+load("@cucumberswift//bazel:swift_testing.bzl", "cucumberswift_testing_sources")
+load("@rules_apple//apple:ios.bzl", "ios_unit_test")
+load("@rules_apple//apple:resources.bzl", "apple_resource_group")
+load("@rules_swift//swift:swift_library.bzl", "swift_library")
+
+apple_resource_group(
+    name = "MyAppFeatures",
+    structured_resources = glob(["MyAppFeatureTests/Features/**"]),
+    strip_structured_resources_prefixes = ["MyAppFeatureTests"],
+)
+
+cucumberswift_testing_sources(
+    name = "MyAppFeatureTestsGenerated",
+    feature_files = glob(["MyAppFeatureTests/Features/**/*.feature"]),
+    swift_srcs = glob(["MyAppFeatureTests/*.swift"]),
+)
+
+swift_library(
+    name = "MyAppFeatureTestsLib",
+    testonly = True,
+    srcs = glob(["MyAppFeatureTests/*.swift"]) + [":MyAppFeatureTestsGenerated"],
+    data = [":MyAppFeatures"],
+    module_name = "MyAppFeatureTests",
+    deps = ["@cucumberswift//:CucumberSwiftTesting"],
+)
+
+ios_unit_test(
+    name = "MyAppFeatureTests",
+    minimum_os_version = "13.0",
+    deps = [":MyAppFeatureTestsLib"],
+)
+```
+
+The rule reads the Swift files in `swift_srcs` to find features that you write in the Swift DSL, and the `apple_resource_group` puts the same feature files in the test bundle, as <doc:#Put-the-Features-folder-at-the-root-of-the-test-bundle> describes. Like `CucumberSwift`, `CucumberSwiftTesting` links XCTest, so it's a `testonly` target.
+
+Write the step definitions with `Given`, `When`, `Then`, `And` and `But`, and check results with `#expect` instead of `XCTAssert`, as <doc:Running-Feature-Files-With-Swift-Testing> describes. The runner finds its test bundle itself, so your `StepImplementation` needs no `bundle` property:
+
+```swift
+import CucumberSwiftTesting
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        Given("I have {int} cukes") { match, _ in
+            let count = try match.first(\.int)
+            Basket.shared.add(count)
+        }
+        Then("the basket has {int} cukes") { match, _ in
+            let count = try match.first(\.int)
+            #expect(Basket.shared.count == count)
+        }
+    }
+}
+```
+
+Run the tests with the same rules and runners as the XCTest runner. `xctest` runs the Swift Testing tests of a test bundle that links XCTest, and `CucumberSwiftTesting` links XCTest, so no other runner is needed. `CUCUMBER_TAGS` and the other settings in <doc:Settings> reach the tests through `--test_env`, as <doc:#Choose-scenarios-with-tags> describes.
