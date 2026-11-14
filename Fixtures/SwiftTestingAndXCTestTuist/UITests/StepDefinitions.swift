@@ -26,6 +26,7 @@ extension Cucumber: @retroactive StepImplementation {
         Then("the app shows {int} cukes") { match, _ in
             let count = try match.first(\.int)
             XCTAssertEqual(BasketUI.cukes(), "Cukes: \(count)")
+            BasketUI.attachScreenshot(named: "Basket with \(count) cukes")
         }
     }
 }

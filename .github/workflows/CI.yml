@@ -1126,7 +1126,22 @@ jobs:
         env:
           FIXTURE: ${{ matrix.fixture }}
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+          # A fixture with a Proof.xctestplan keeps its attachments and saves its result bundle here.
+          PROOF_RESULT_BUNDLE: ${{ runner.temp }}/proof.xcresult
         run: mise run test-fixtures "$FIXTURE"
+      # The proof of a pull request (#604): the screenshots its tests attached. Only the exported files
+      # are uploaded, not the result bundle, and only for seven days.
+      - name: Export the proof's attachments
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.fixture == 'SwiftTestingAndXCTestTuist' }}
+        run: xcrun xcresulttool export attachments --path "$RUNNER_TEMP/proof.xcresult" --output-path "$RUNNER_TEMP/proof"
+      - name: Upload the proof
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.fixture == 'SwiftTestingAndXCTestTuist' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: proof-${{ matrix.fixture }}
+          path: ${{ runner.temp }}/proof
+          retention-days: 7
+          if-no-files-found: error
 
   # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
   # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
