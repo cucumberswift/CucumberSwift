@@ -1322,7 +1322,7 @@ jobs:
   # issues.
   nightly_report:
     name: Report the nightly run
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
+    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, bazel_tests]
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
