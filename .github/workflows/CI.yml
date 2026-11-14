@@ -248,9 +248,9 @@ jobs:
   # fails on anything DocC warns about, such as a broken symbol or page link, a
   # missing image or a malformed directive.
   docs:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Docs
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.scripts_only != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -272,9 +272,9 @@ jobs:
   # the scripts are not, and it reads those files from a pull request, which a
   # merge queue commit does not have.
   coverage_no_code:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Coverage (no code)
     needs: changes
-    if: ${{ needs.changes.outputs.no_code == 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -296,9 +296,9 @@ jobs:
   # Catalyst tests covers. OS=latest is the newest iOS Simulator runtime on the
   # runner image.
   ios_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: iOS tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 45
     permissions:
@@ -337,9 +337,9 @@ jobs:
   # - The package builds for release with SwiftPM, from only the versions
   #   Package.resolved pins.
   project_checks:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Project checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -379,9 +379,9 @@ jobs:
   # Gherkin highlighting for Xcode in Tools/Xcode against the article that
   # documents it, so it checks those out as well.
   script_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Script tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     # 10, not 5: the last step pulls the Swift image.
     timeout-minutes: 10
@@ -421,9 +421,9 @@ jobs:
   # versions are the ones .mise.lint.toml pins. Each download is checked against the
   # digest GitHub publishes for it, as mise does.
   workflow_checks:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Workflow checks
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -507,9 +507,9 @@ jobs:
   # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
   # or later (#553).
   carthage_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Carthage tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
@@ -618,9 +618,9 @@ jobs:
   # Xcode 16.3, the oldest Xcode the docs give for that route (Fixture tests runs it
   # with a newer one).
   catalyst_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Catalyst tests${{ matrix.variant }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     permissions:
@@ -700,9 +700,9 @@ jobs:
   # The newest Xcode, on macos-26, with the runtimes it comes with. Nightly and manual runs
   # only: pull requests build for tvOS and watchOS in Catalyst tests.
   tvos_watchos_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: tvOS and watchOS tests
     needs: changes
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
@@ -804,9 +804,9 @@ jobs:
   # 16.4, not 16.0: it is the oldest Xcode the image has Simulator runtimes for. Nightly and
   # manual runs only.
   older_runtime_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Older runtime tests (Xcode 16)
     needs: changes
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 60
     permissions:
@@ -853,9 +853,9 @@ jobs:
   # that every platform and kind has run both across the two Xcode versions, with the same
   # number of jobs: see LAYOUT in the parallel_tests job.
   parallel_smoke:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Parallel tests (macOS, hostless)
     needs: changes
-    if: needs.changes.outputs.parallel_tests == 'true' && needs.changes.outputs.parallel_smoke == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     permissions:
@@ -909,14 +909,10 @@ jobs:
           retention-days: 3
 
   parallel_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Parallel tests (${{ matrix.platform }}, ${{ matrix.kind }}${{ matrix.xcode == '16' && ', Xcode 16' || '' }})
     needs: [changes, parallel_smoke]
     # Runs after parallel_smoke passes, or without it when a manual run leaves it out.
-    if: >-
-      ${{ !cancelled() && needs.changes.result == 'success'
-      && needs.changes.outputs.parallel_tests == 'true'
-      && needs.changes.outputs.parallel_matrix != '[]'
-      && (needs.parallel_smoke.result == 'success' || needs.parallel_smoke.result == 'skipped') }}
     runs-on: ${{ matrix.xcode == '16' && 'macos-15' || 'macos-26' }}
     timeout-minutes: 40
     permissions:
@@ -988,9 +984,9 @@ jobs:
   # compiles the documentation's Swift examples. Nightly and manual runs also test
   # the macros against the oldest swift-syntax they accept, the last step.
   swiftpm_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: SwiftPM tests
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -1097,9 +1093,9 @@ jobs:
   # dropped a merge queue entry. The timeout only bounds a hung job; a normal
   # run takes no longer for it.
   fixture_tests:
+    if: ${{ github.event_name == 'trial-never' }}
     name: Fixture tests
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
@@ -1321,6 +1317,27 @@ jobs:
       - name: Run mutation testing on the Bazel fixture
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
         run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
+      # TRIAL (#522, throwaway branch): what a consumer's module graph resolves with swift-syntax added, and whether the
+      # command that Bazel builds gives the verdicts that the SwiftPM-built one just gave.
+      - name: Trial - the module graph a consumer resolves
+        run: |
+          cd Tests
+          bazel mod graph --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --depth=3 2>&1 | grep -E 'swift-syntax|rules_swift|rules_apple|apple_support|rules_cc|bazel_skylib|platforms|cucumberswift' | sort -u | head -60
+          echo "--- resolved versions"
+          bazel mod graph --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --depth=1 2>&1 | head -40
+      - name: Trial - mutation testing with bazel run //cli:cucumberswift
+        if: ${{ matrix.bazel == '' }}
+        run: |
+          started=$SECONDS
+          bazel build //cli:cucumberswift --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --xcode_version=26.2
+          echo "Trial timing: bazel build //cli:cucumberswift $((SECONDS - started)) s"
+          cat > "$RUNNER_TEMP/bazel-run-tool.sh" <<EOF
+          #!/bin/bash
+          cd "$PWD"
+          exec bazel run --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --xcode_version=26.2 //cli:cucumberswift -- "\$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/bazel-run-tool.sh"
+          MUTATION_TOOL="$RUNNER_TEMP/bazel-run-tool.sh" .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Bazel mutation testing reports and log
         if: ${{ failure() && matrix.bazel == '' }}

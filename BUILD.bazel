@@ -43,6 +43,34 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
+swift_library(
+    name = "CucumberSwiftGherkin",
+    srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
+    module_name = "CucumberSwiftGherkin",
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
+    name = "CucumberSwiftMutation",
+    srcs = glob(["Sources/CucumberSwiftMutation/**/*.swift"]),
+    module_name = "CucumberSwiftMutation",
+    visibility = ["//visibility:public"],
+    deps = [":CucumberSwiftCoverageMerge", ":CucumberSwiftGherkin"],
+)
+
+swift_library(
+    name = "CucumberSwiftMutationCommand",
+    srcs = glob(["Sources/CucumberSwiftMutationCommand/*.swift"]),
+    module_name = "CucumberSwiftMutationCommand",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":CucumberSwiftMutation",
+        "@swift-syntax//:SwiftOperators",
+        "@swift-syntax//:SwiftParser",
+        "@swift-syntax//:SwiftSyntax",
+    ],
+)
+
 # The sources of the cucumberswift tool, which cli/BUILD.bazel builds in a package of its own: Bazel's output
 # folders are not case-sensitive on macOS, so a binary named cucumberswift can't sit next to the CucumberSwift
 # library.

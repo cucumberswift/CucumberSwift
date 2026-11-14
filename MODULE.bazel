@@ -12,3 +12,5 @@ bazel_dep(name = "rules_cc", version = "0.2.25")
 bazel_dep(name = "rules_swift", version = "4.1.2")
 # At least the version Package.swift starts from (CI checks this).
 bazel_dep(name = "cucumberswift_expressions", version = "1.4.2")
+# For `cucumberswift mutation-test`, which finds the code to change (trial for #522).
+bazel_dep(name = "swift-syntax", version = "603.0.1")
