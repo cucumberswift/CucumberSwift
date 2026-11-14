@@ -29,6 +29,12 @@ struct CoverageIssue: Equatable {
     let file: URL?
     let line: Int
     var kind = Kind.coverage
+
+    /// The issue as a compiler prints a warning or an error, `file:line: warning: message`, which each
+    /// runner prints.
+    var printedLine: String {
+        "\(file?.path ?? ""):\(max(line, 1)): \(severity == .warning ? "warning" : "error"): \(message)"
+    }
 }
 
 /// A feature's scores as text: the summary that the run prints, and the issues for the scores past their levels.
