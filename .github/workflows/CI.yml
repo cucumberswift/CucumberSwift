@@ -308,14 +308,18 @@ jobs:
           fail_ci_if_error: true
 
   # The iOS Simulator run, and the coverage report codecov/patch reads. A required
-  # check. Name the destination: the scheme also builds for Mac Catalyst, which
-  # Catalyst tests covers. OS=latest is the newest iOS Simulator runtime on the
-  # runner image.
+  # check. The newest Xcode, the macos-26 image's own, which a new release most
+  # likely breaks. The destination is an iPhone of that Xcode's own iOS runtime,
+  # from simulator-destination.sh, so it works whatever devices the image has:
+  # naming it also keeps the scheme from building for Mac Catalyst, which
+  # Catalyst tests covers. No matrix, unlike Catalyst tests: a skipped matrix
+  # job reports its name unexpanded (see changes), and this is a required check.
+  # iOS tests (Xcode 16) runs the older Xcode outside pull requests.
   ios_tests:
     name: iOS tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     permissions:
       contents: read
@@ -326,13 +330,40 @@ jobs:
           xcodebuild -version
           xcrun simctl list runtimes | grep -i ios || true
       - name: Run the tests on an iOS Simulator
-        run: .github/scripts/xcode-test.sh -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' -enableCodeCoverage YES
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination" -enableCodeCoverage YES
       # Finds the coverage xcodebuild wrote to the default DerivedData folder.
       # Pull requests from forks have no token, so only a push fails on an upload error.
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
+
+  # The iOS Simulator run of iOS tests with Xcode 16.4 on macos-15, the Xcode iOS
+  # tests ran before it moved to macos-26, on an iPhone of its own iOS 18 runtime.
+  # The merge queue, pushes, nightly and manual runs only, like the other Xcode 16
+  # variants. No coverage upload: iOS tests uploads it.
+  ios_tests_xcode16:
+    name: iOS tests (Xcode 16)
+    needs: changes
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 16.4
+        run: .github/scripts/select-xcode.sh 16.4
+      - name: Show the toolchain
+        run: xcrun simctl list runtimes | grep -i ios || true
+      - name: Run the tests on an iOS Simulator
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination"
 
   # Three quick checks of the package and the Xcode project, in one job so they
   # share one macOS runner. A required check. Each check runs even when one
@@ -1393,7 +1424,7 @@ jobs:
   # issues.
   nightly_report:
     name: Report the nightly run
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
+    needs: [changes, docs, coverage_no_code, ios_tests, ios_tests_xcode16, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, bazel_tests]
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
