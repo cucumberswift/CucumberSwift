@@ -1243,6 +1243,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The default shell has no pipefail, so a failed `gh api` would leave an empty list: "No proof saved".
+          set -o pipefail
           mkdir "$RUNNER_TEMP/proof"
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --paginate \
             --jq ".artifacts[] | select(.name | startswith(\"proof-\")) | {(.name): \"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/\(.id)\"}" \
