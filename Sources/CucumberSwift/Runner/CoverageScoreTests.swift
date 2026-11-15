@@ -29,6 +29,7 @@ enum CoverageScoreTests {
         switch kind {
             case .coverage: "Coverage"
             case .redundancy: "Redundancy"
+            case .mutation: "Mutation"
         }
     }
 
@@ -67,7 +68,8 @@ enum CoverageScoreTests {
                       finish: @escaping (Feature) -> Void = { Cucumber.shared.finishIfStarted($0) }) -> XCTestSuite? {
         guard FeatureFlags.isCoverage, let key = feature.coverageIssueFile?.absoluteString,
               let testClass = TestCaseGenerator.makeClass(className: className) else { return nil }
-        let kinds = CoverageIssue.Kind.allCases
+        // The Mutation test only with mutation testing turned on.
+        let kinds = CoverageIssue.Kind.allCases.filter { $0 != .mutation || settings().isMutationTesting }
         let selectors = kinds.map { kind in
             TestCaseGenerator.addTestMethod(testCase: testClass,
                                             method: TestCaseMethod(withName: CucumberTest.generatedTestName(testName(kind))) {

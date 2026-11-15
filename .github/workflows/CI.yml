@@ -138,6 +138,7 @@ jobs:
       no_code: ${{ steps.changes.outputs.no_code }}
       catalog: ${{ steps.changes.outputs.catalog }}
       parallel_tests: ${{ steps.parallel.outputs.parallel_tests }}
+      mutation_code: ${{ steps.mutation.outputs.mutation_code }}
       parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
       coverage_merge: ${{ steps.merge.outputs.coverage_merge }}
       parallel_smoke: ${{ steps.matrix.outputs.parallel_smoke }}
@@ -189,6 +190,30 @@ jobs:
           fi
           echo "Parallel tests run: $run"
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
+      # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
+      # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), the coverage
+      # merge that reads the coverage, the cucumberswift tool, its plugin, its fixtures, scripts and action, the
+      # package manifests or this workflow.
+      # Not the documentation, which lives in Sources too. Always on any other event.
+      - name: Decide whether the mutation testing fixture runs
+        id: mutation
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          relevant='^(Sources/CucumberSwiftMutation|Sources/CucumberSwiftCommand/|Sources/CucumberSwiftCoverageMerge/|Sources/CucumberSwift/(Coverage|Reporter)/|Sources/CucumberSwift/Runner/Cucumber\.swift$|Sources/CucumberSwiftTesting/(Coverage|Reporter|JSONReporter)|Plugins/MutationTestingPlugin/|Fixtures/Mutation|Package(@swift-[0-9.]+)?\.swift$|\.github/workflows/CI\.yml$|\.github/actions/mutation-tool/|\.github/scripts/(mutation[-_]|build-mutation-tool\.sh$))'
+          if [ "$EVENT" != pull_request ] && [ "$EVENT" != push ]; then
+            run=true
+          elif [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            run=true
+          elif git diff --no-renames --name-only "$BASE" "$HEAD" | grep -vE '\.docc/' | grep -qE "$relevant"; then
+            run=true
+          else
+            run=false
+          fi
+          echo "Mutation testing fixture runs: $run"
+          echo "mutation_code=$run" >> "$GITHUB_OUTPUT"
       # The folders in Fixtures/, as a JSON list, for Fixture tests' matrix: one job each.
       # CarthageXCFramework and CoverageMergePackage are left out, as `mise run test-fixtures` leaves
       # them out: Carthage tests and Coverage merge fixture run them. Read from the commit's tree,
@@ -1183,12 +1208,54 @@ jobs:
       - name: Merge the coverage of parallel and sharded runs
         run: .github/scripts/coverage-merge-fixture.sh "$RUNNER_TEMP/coverage-merge"
 
-  # A required check: passes only when every fixture's job, Swift 6.3 tests and, when it runs, the coverage merge fixture passed. A job
-  # without a matrix, so that it reports under this name when the jobs it needs are skipped. It
-  # skips when they skip, on a run with no code, which counts as passing.
+  # Mutation testing on a Swift package with an XCTest and a Swift Testing target, with the command-line tool
+  # as a script runs it. The run must kill and keep the mutants that the fixture's expected-mutants file lists,
+  # and print a warning for each survivor (#519). It takes minutes, so a pull request runs it only when it changes
+  # mutation testing (mutation_code, from the changes job). The merge queue and every nightly and manual run
+  # always run it. Fixture tests, below, requires it when it runs.
+  mutation_fixture:
+    name: Mutation testing fixture
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      # On a pull request, the run uses the tool that this action builds once, with a cache that every job running
+      # the tool shares. See .github/actions/mutation-tool/action.yml. The merge queue and every nightly and manual
+      # run leave MUTATION_TOOL unset, so the script builds and runs the tool with `swift run`, as a user's package
+      # does.
+      - name: Build the mutation testing tool
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: ./.github/actions/mutation-tool
+      - name: Run mutation testing on the Swift package fixture
+        run: .github/scripts/mutation-package-fixture.sh "$RUNNER_TEMP"
+      # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
+      - name: Upload the mutation testing reports and log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-testing-package-fixture
+          path: |
+            ${{ runner.temp }}/mutation-MutationTestingPackage
+            ${{ runner.temp }}/mutation-MutationTestingPackage.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # A required check: passes only when every fixture's job, Swift 6.3 tests and, when they run, the coverage merge
+  # and mutation testing fixtures passed. A job without a matrix, so that it reports under this name when the jobs
+  # it needs are skipped. It skips when they skip, on a run with no code, which counts as passing.
   fixture_tests:
     name: Fixture tests
-    needs: [changes, fixture_test, swift_6_3_tests, coverage_merge_fixture]
+    needs: [changes, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture]
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1199,13 +1266,17 @@ jobs:
           FIXTURES: ${{ needs.fixture_test.result }}
           SWIFT_6_3: ${{ needs.swift_6_3_tests.result }}
           COVERAGE_MERGE: ${{ needs.coverage_merge_fixture.result }}
+          MUTATION: ${{ needs.mutation_fixture.result }}
         run: |
           echo "Fixture jobs: $FIXTURES"
           echo "Swift 6.3 tests: $SWIFT_6_3"
           echo "Coverage merge fixture: $COVERAGE_MERGE"
-          # The coverage merge fixture skips on a pull request that doesn't change it.
-          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ] || { [ "$COVERAGE_MERGE" != success ] && [ "$COVERAGE_MERGE" != skipped ]; }; then
-            echo "::error::A fixture's job, Swift 6.3 tests or the coverage merge fixture didn't pass: see the jobs above."
+          echo "Mutation testing fixture: $MUTATION"
+          # The coverage merge and mutation testing fixtures skip on a pull request that doesn't change them.
+          if [ "$FIXTURES" != success ] || [ "$SWIFT_6_3" != success ] \
+            || { [ "$COVERAGE_MERGE" != success ] && [ "$COVERAGE_MERGE" != skipped ]; } \
+            || { [ "$MUTATION" != success ] && [ "$MUTATION" != skipped ]; }; then
+            echo "::error::A fixture's job, Swift 6.3 tests, the coverage merge fixture or the mutation testing fixture didn't pass: see the jobs above."
             exit 1
           fi
 
