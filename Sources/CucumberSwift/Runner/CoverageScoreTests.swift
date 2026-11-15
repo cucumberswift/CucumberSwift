@@ -29,17 +29,19 @@ enum CoverageScoreTests {
         switch kind {
             case .coverage: "Coverage"
             case .redundancy: "Redundancy"
+            case .mutation: "Mutation"
         }
     }
 
     /// The coverage settings for the XCTest runner. With parallel testing, a feature can end after its
     /// worker's last test, where an error couldn't fail a test: when Xcode hands out its scenarios to
-    /// different workers, or runs only some of its tests. The runner then scores nothing.
+    /// different workers, or runs only some of its tests. The runner then scores nothing, and each worker
+    /// records its scenarios' coverage for `cucumberswift-cli coverage merge`, which scores them together.
     static func settings(environment: [String: String] = Cucumber.shared.environment) -> CoverageSettings {
         var settings = CoverageSettings.read(environment: environment)
         if FeatureFlags.isParallelTesting {
             settings.scoresOffReason = "with parallel testing, a feature can end after its worker's last test, where a score's error "
-                + "couldn't fail a test. Turn parallel testing off to score each feature."
+                + "couldn't fail a test. Score the workers' runs together with cucumberswift-cli coverage merge, or turn parallel testing off"
         }
         return settings
     }
@@ -66,7 +68,8 @@ enum CoverageScoreTests {
                       finish: @escaping (Feature) -> Void = { Cucumber.shared.finishIfStarted($0) }) -> XCTestSuite? {
         guard FeatureFlags.isCoverage, let key = feature.coverageIssueFile?.absoluteString,
               let testClass = TestCaseGenerator.makeClass(className: className) else { return nil }
-        let kinds = CoverageIssue.Kind.allCases
+        // The Mutation test only with mutation testing turned on.
+        let kinds = CoverageIssue.Kind.allCases.filter { $0 != .mutation || settings().isMutationTesting }
         let selectors = kinds.map { kind in
             TestCaseGenerator.addTestMethod(testCase: testClass,
                                             method: TestCaseMethod(withName: CucumberTest.generatedTestName(testName(kind))) {

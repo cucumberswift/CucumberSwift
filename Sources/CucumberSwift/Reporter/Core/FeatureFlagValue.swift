@@ -26,12 +26,4 @@ enum FeatureFlagValue {
               seconds > 0 else { return nil }
         return seconds
     }
-
-    /// How long a report can go unwritten before a worker takes it for an earlier run's: the static variable
-    /// when it is a number of seconds above 0, then the environment variable, then
-    /// ``ReportFile/staleAfter``. Both runners read the setting through it.
-    static func reportStaleAfter(setting: TimeInterval?, environment: String?) -> TimeInterval {
-        if let setting, setting.isFinite, setting > 0 { return setting }
-        return seconds(environment) ?? ReportFile.staleAfter
-    }
 }
