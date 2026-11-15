@@ -177,14 +177,14 @@ for fixture in Fixtures/*/; do
     with_xcode .github/scripts/keep-package-resolved.sh tuist generate --no-open --path "$fixture"
     # Our CI's proof job sets PROOF_RESULT_BUNDLE. A fixture with a Proof.xctestplan then runs that plan, which keeps
     # every attachment, and saves the result bundle there for `xcrun xcresulttool export attachments`.
-    proof_arguments=
+    # The arguments are the task's positional parameters, so a bundle path with spaces stays one argument.
+    set --
     if [ -n "${PROOF_RESULT_BUNDLE:-}" ] && [ -f "$fixture/Proof.xctestplan" ]; then
       rm -rf "$PROOF_RESULT_BUNDLE"
-      proof_arguments="-testPlan Proof -resultBundlePath $PROOF_RESULT_BUNDLE"
+      set -- -testPlan Proof -resultBundlePath "$PROOF_RESULT_BUNDLE"
     fi
-    # shellcheck disable=SC2086
     with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
-      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO $proof_arguments > "$log" 2>&1 || status=$?
+      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO "$@" > "$log" 2>&1 || status=$?
   fi
   cat "$log"
   if [ -f "$fixture/expected-failures" ]; then
