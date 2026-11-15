@@ -13,7 +13,7 @@ private enum MutationError: Error, CustomStringConvertible {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .noTargets: return "The package has no target with code to mutate"
-            case .failed(let status): return "cucumberswift mutation-test exited with status \(status)"
+            case .failed(let status): return "cucumberswift-cli mutation-test exited with status \(status)"
             case .notSetUp: return "Mutation testing needs CucumberSwift's Macros package trait, which brings in swift-syntax. Turn it on and run the command again."
             case .missingValue(let option): return "\(option) needs a value"
             case .unknownOption(let option): return "Unknown option \(option)"

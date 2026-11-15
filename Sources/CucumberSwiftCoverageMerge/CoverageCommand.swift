@@ -2,14 +2,14 @@
 //  CoverageCommand.swift
 //  CucumberSwiftCoverageMerge
 //
-//  `cucumberswift coverage …`, which the cucumberswift tool's main.swift calls.
+//  `cucumberswift-cli coverage …`, which the cucumberswift-cli tool's main.swift calls.
 //
 
 import Foundation
 
-/// `cucumberswift coverage …`: what the tool does with the coverage that runs write.
+/// `cucumberswift-cli coverage …`: what the tool does with the coverage that runs write.
 public enum CoverageCommand {
-    public static let usage = "usage: cucumberswift coverage merge <coverage folder or run folder>…"
+    public static let usage = "usage: cucumberswift-cli coverage merge <coverage folder or run folder>…"
 
     /// Runs the subcommand named by `arguments`, which follow `coverage`, and returns the exit status: 0, 1 when a
     /// score reaches an error level, 2 when the arguments or the runs can't be used. A missing or unknown

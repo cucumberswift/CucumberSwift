@@ -2,7 +2,7 @@
 //  CoverageMergeRunsTests.swift
 //  CucumberSwiftTests
 //
-//  How cucumberswift coverage merge finds and reads the runs, and numbers their regions again (#515).
+//  How cucumberswift-cli coverage merge finds and reads the runs, and numbers their regions again (#515).
 //
 
 import Foundation

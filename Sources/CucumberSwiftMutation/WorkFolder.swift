@@ -50,7 +50,7 @@ private final class Removal: @unchecked Sendable {
 /// after a run that was killed. The user's own files are never mutated, so nothing needs reverting.
 ///
 /// The lock keeps runs in different processes apart. One process runs one `MutationRun` at a time: the
-/// `cucumberswift mutation-test` command and the Mutation Testing plugin each start one. Several runs at once in
+/// `cucumberswift-cli mutation-test` command and the Mutation Testing plugin each start one. Several runs at once in
 /// one process aren't supported.
 public struct WorkFolder {
     public enum Failure: Error, Equatable, CustomStringConvertible {
