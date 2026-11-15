@@ -189,11 +189,11 @@ xcrun llvm-cov report /path/to/MyAppTests.xctest/Contents/MacOS/MyAppTests -inst
 
 ## Merge parallel and sharded runs
 
-Run `cucumberswift coverage merge` after the tests to score the scenarios of several runs as one run. It reads each run's folder, such as the workers of a parallel run or the shards of a suite split across machines, and scores every feature and every Rule. It prints the same summaries and warnings as a run of all the scenarios one at a time:
+Run `cucumberswift-cli coverage merge` after the tests to score the scenarios of several runs as one run. It reads each run's folder, such as the workers of a parallel run or the shards of a suite split across machines, and scores every feature and every Rule. It prints the same summaries and warnings as a run of all the scenarios one at a time:
 
 ```bash
 CUCUMBER_COVERAGE=YES CUCUMBER_COVERAGE_PATH="$HOME/coverage" swift test --enable-code-coverage
-swift run cucumberswift coverage merge "$HOME/coverage"
+swift run cucumberswift-cli coverage merge "$HOME/coverage"
 ```
 
 The tool takes coverage folders, which hold the `run-<id>` folders, or run folders. It exits with status 1 when a score reaches an error level, so a script or our GitHub Actions CI workflow can fail on it. It exits with status 2 when it can't merge the runs, such as runs of two different builds or with different levels. Set the same levels for every run.
@@ -204,9 +204,9 @@ Run the tool with your build tool:
 
 | Build tool | Command |
 |:--|:--|
-| Swift Package Manager | `swift run cucumberswift coverage merge <folder>` |
-| Xcode and Carthage | `swift run --package-path <CucumberSwift checkout> cucumberswift coverage merge <folder>` |
-| Bazel | `bazel run @cucumberswift//cli:cucumberswift -- coverage merge <folder>` |
+| Swift Package Manager | `swift run cucumberswift-cli coverage merge <folder>` |
+| Xcode and Carthage | `swift run --package-path <CucumberSwift checkout> cucumberswift-cli coverage merge <folder>` |
+| Bazel | `bazel run @cucumberswift//cli:cucumberswift-cli -- coverage merge <folder>` |
 
 The Swift Testing runner can't score scenarios that run at the same time in one process, because coverage counters are per process. To score a Swift Testing suite, run it one scenario at a time with `CUCUMBER_COVERAGE=YES`, or split it into shards, run them as separate processes, and merge them.
 
