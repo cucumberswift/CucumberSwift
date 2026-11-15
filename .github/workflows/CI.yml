@@ -1168,6 +1168,28 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # TEMPORARY test (#604): can `gh --attach` upload with the workflow's GITHUB_TOKEN? Removed after one run.
+  attach_proof_test:
+    name: Attach proof test
+    needs: [fixture_test]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Attach the screenshot with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir "$RUNNER_TEMP/proof"
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" -n proof-SwiftTestingAndXCTestTuist -D "$RUNNER_TEMP/proof"
+          image=$(find "$RUNNER_TEMP/proof" -name '*.jpeg' | head -1)
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "Test: this comment was posted by CI with GITHUB_TOKEN." --attach "$image#The Basket app screenshot"
+
   # The image's Swift is 6.3 or later, which SwiftPM tests' macos-15 doesn't have: the Swift Testing
   # runner then reports a skipped scenario case with Test.cancel. The script fails if a test ends
   # cancelled, which hides whether it passed (#480). Fixture tests, below, requires it.
