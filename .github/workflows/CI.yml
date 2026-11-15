@@ -1008,7 +1008,8 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
-    timeout-minutes: 20
+    # Typical runs take 14 to 19 minutes; 30 leaves room for a slow runner (#609).
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
