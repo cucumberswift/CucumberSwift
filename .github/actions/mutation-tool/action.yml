@@ -1,0 +1,32 @@
+# Builds the mutation testing tool once for a job, with a cache, and sets MUTATION_TOOL to its path for the job's later
+# steps (#518). Every job that runs the tool uses this action, so they share one cache key:
+#
+#     - name: Build the mutation testing tool
+#       uses: ./.github/actions/mutation-tool
+#
+# .github/scripts/build-mutation-tool.sh builds cucumberswift, whose `mutation-test` command runs mutation testing,
+# from the checkout into a build folder that actions/cache keeps between runs. Building it from cold compiles
+# swift-syntax, which takes about a minute. The key names the runner, the Xcode, the resolved packages and the tool's
+# sources, so a change to any of them builds a new cache. A cache from older sources is still restored, and SwiftPM
+# rebuilds what changed, so the tool always comes from the checkout's sources.
+name: Build the mutation testing tool
+description: Builds cucumberswift with a cached build folder and sets MUTATION_TOOL to its path.
+runs:
+  using: composite
+  steps:
+    - name: Choose the cache key
+      id: key
+      shell: bash
+      run: echo "xcode=$(xcodebuild -version | tr -cs 'A-Za-z0-9.' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+    - name: Restore the tool's build
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/mutation-tool
+        key: mutation-tool-${{ runner.os }}-${{ steps.key.outputs.xcode }}-${{ hashFiles('Package.resolved', 'Package.swift', 'Package@swift-*.swift', 'Sources/CucumberSwiftMutation/**', 'Sources/CucumberSwiftMutationCommand/**', 'Sources/CucumberSwiftCommand/**', 'Sources/CucumberSwiftCoverageMerge/**', 'Sources/CucumberSwift/Coverage/**') }}
+        restore-keys: mutation-tool-${{ runner.os }}-${{ steps.key.outputs.xcode }}-
+    - name: Build the tool
+      shell: bash
+      # Two lines, so that a failed build fails the step: `echo` would succeed and set an empty MUTATION_TOOL.
+      run: |
+        tool=$("$GITHUB_WORKSPACE/.github/scripts/build-mutation-tool.sh" "$RUNNER_TEMP/mutation-tool")
+        echo "MUTATION_TOOL=$tool" >> "$GITHUB_ENV"
