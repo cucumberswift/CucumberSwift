@@ -37,6 +37,14 @@ enum BasketUI {
         }
     }
 
+    /// Attaches text to the running test, as a plain text file. Like a screenshot, a passing test keeps
+    /// it only when the test plan says to keep every attachment (Proof.xctestplan).
+    static func attachText(_ text: String, named name: String) {
+        let attachment = XCTAttachment(string: text)
+        attachment.name = name
+        Attach(attachment)
+    }
+
     /// The cuke count the app shows, found by its identifier whatever kind of element SwiftUI makes of
     /// the text, and waited for, since the first launch on a simulator can be slow.
     static func cukes() -> String {
