@@ -180,7 +180,7 @@ for fixture in Fixtures/*/; do
     proof_arguments=
     if [ -n "${PROOF_RESULT_BUNDLE:-}" ] && [ -f "$fixture/Proof.xctestplan" ]; then
       rm -rf "$PROOF_RESULT_BUNDLE"
-      proof_arguments="-testPlan ${PROOF_TEST_PLAN:-Proof} -resultBundlePath $PROOF_RESULT_BUNDLE"
+      proof_arguments="-testPlan Proof -resultBundlePath $PROOF_RESULT_BUNDLE"
     fi
     # shellcheck disable=SC2086
     with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
