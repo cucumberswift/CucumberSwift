@@ -6,13 +6,13 @@
 import CucumberSwiftGherkin
 import Foundation
 
-/// `cucumberswift generate --output <file.swift> <feature files…> [--swift <Swift file>]…`
+/// `cucumberswift-cli generate --output <file.swift> <feature files…> [--swift <Swift file>]…`
 ///
 /// Writes the Swift Testing tests for the feature files, and the test for the features that the Swift files
 /// write in the Swift DSL, if they write any. The CucumberSwiftTestingPlugin build tool plugin and the Bazel
 /// rule cucumberswift_testing_sources run it.
 public enum GenerateCommand {
-    public static let usage = "usage: cucumberswift generate --output <file.swift> <feature files…> [--swift <Swift file>]…"
+    public static let usage = "usage: cucumberswift-cli generate --output <file.swift> <feature files…> [--swift <Swift file>]…"
 
     /// Returns the exit status: 0, 1 when a feature file can't be read or the output can't be written, 2 when the
     /// arguments can't be used.
@@ -49,7 +49,7 @@ public enum GenerateCommand {
             do {
                 try source.write(toFile: output, atomically: true, encoding: .utf8)
             } catch {
-                print("error: cucumberswift generate can't write \(output): \(error.localizedDescription)")
+                print("error: cucumberswift-cli generate can't write \(output): \(error.localizedDescription)")
                 return 1
             }
         }

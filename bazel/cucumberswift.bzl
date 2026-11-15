@@ -1,7 +1,7 @@
-"""Runs CucumberSwift's plugins in a Bazel project, as commands of the cucumberswift tool.
+"""Runs CucumberSwift's plugins in a Bazel project, as commands of the cucumberswift-cli tool.
 
 SwiftPM and Xcode run the plugins as plugins. Bazel has no plugins, so these rules run the same commands of
-`@cucumberswift//cli:cucumberswift`:
+`@cucumberswift//cli:cucumberswift-cli`:
 
     load("@cucumberswift//bazel:cucumberswift.bzl", "cucumberswift_fix_feature_files", "cucumberswift_generate", "cucumberswift_lint")
 
@@ -27,7 +27,7 @@ SwiftPM and Xcode run the plugins as plugins. Bazel has no plugins, so these rul
     )
 """
 
-_CLI = Label("//cli:cucumberswift")
+_CLI = Label("//cli:cucumberswift-cli")
 
 def _cucumberswift_lint_impl(ctx):
     stamp = ctx.actions.declare_file(ctx.label.name + ".lint-stamp")
@@ -65,7 +65,7 @@ cucumberswift_lint = rule(
             cfg = "exec",
         ),
     },
-    doc = "Runs `cucumberswift lint`, the CucumberSwiftLint plugin's check. Bazel shows each warning, and the build fails on an error.",
+    doc = "Runs `cucumberswift-cli lint`, the CucumberSwiftLint plugin's check. Bazel shows each warning, and the build fails on an error.",
 )
 
 def _cucumberswift_generate_impl(ctx):
@@ -103,7 +103,7 @@ cucumberswift_generate = rule(
             cfg = "exec",
         ),
     },
-    doc = "Runs `cucumberswift generate`, the CucumberSwiftTestingPlugin's tests for feature files. Compile its output into a Swift Testing test target.",
+    doc = "Runs `cucumberswift-cli generate`, the CucumberSwiftTestingPlugin's tests for feature files. Compile its output into a Swift Testing test target.",
 )
 
 def _cucumberswift_fix_feature_files_impl(ctx):
@@ -146,5 +146,5 @@ cucumberswift_fix_feature_files = rule(
             cfg = "exec",
         ),
     },
-    doc = "`bazel run` it to run `cucumberswift fix-feature-files`, the Fix Feature Files plugin, on the feature files in the source tree. Extra arguments after `--` are more files or folders.",
+    doc = "`bazel run` it to run `cucumberswift-cli fix-feature-files`, the Fix Feature Files plugin, on the feature files in the source tree. Extra arguments after `--` are more files or folders.",
 )

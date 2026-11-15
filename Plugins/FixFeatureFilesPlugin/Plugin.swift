@@ -8,7 +8,7 @@ private enum FixError: Error, CustomStringConvertible {
     var description: String {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
-            case .failed(let status): return "cucumberswift fix-feature-files exited with status \(status)"
+            case .failed(let status): return "cucumberswift-cli fix-feature-files exited with status \(status)"
         }
     }
 }

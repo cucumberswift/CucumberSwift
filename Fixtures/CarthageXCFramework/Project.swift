@@ -44,7 +44,7 @@ let project = Project(
                     export CUCUMBERSWIFT_CHECKOUT="$SRCROOT/../.."
                     "$SRCROOT/cucumberswift.sh" lint --features "$SRCROOT"/Tests/Features/*.feature --step-definitions "$SRCROOT"/Tests/*.swift
                     """,
-                    name: "Check feature files with cucumberswift",
+                    name: "Check feature files with cucumberswift-cli",
                     basedOnDependencyAnalysis: false
                 )
             ],

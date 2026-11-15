@@ -42,13 +42,13 @@ consumer_tests(
     copts = ["-swift-version", "6"],
 )
 
-# The commands of the cucumberswift tool that the plugins run, run as a Bazel project runs them: directly
+# The commands of the cucumberswift-cli tool that the plugins run, run as a Bazel project runs them: directly
 # (cucumberswift_commands_test), and through the rules in bazel/cucumberswift.bzl.
 sh_test(
     name = "cucumberswift_commands_test",
     srcs = ["cucumberswift_commands_test.sh"],
-    args = ["$(rootpath @cucumberswift//cli:cucumberswift)"],
-    data = ["@cucumberswift//cli:cucumberswift"],
+    args = ["$(rootpath @cucumberswift//cli:cucumberswift-cli)"],
+    data = ["@cucumberswift//cli:cucumberswift-cli"],
 )
 
 cucumberswift_lint(

@@ -1,6 +1,10 @@
 import CucumberSwiftCoverageMerge
 import CucumberSwiftLintTool
 import Foundation
+// Mutation testing runs only on macOS and Linux, and the Bazel target doesn't build it yet.
+#if canImport(CucumberSwiftMutationCommand) && (os(macOS) || os(Linux))
+import CucumberSwiftMutationCommand
+#endif
 // Swift 6.0 reads Package@swift-6.0.swift, which has neither the Swift Testing runner nor the macros.
 #if canImport(CucumberSwiftMacroConverterTool)
 import CucumberSwiftMacroConverterTool
@@ -9,26 +13,28 @@ import CucumberSwiftMacroConverterTool
 import CucumberSwiftTestingGenerator
 #endif
 
-// cucumberswift <command> …
+// cucumberswift-cli <command> …
 //
-// CucumberSwift's command-line tool, run with `swift run cucumberswift`. It picks the command by its first
+// CucumberSwift's command-line tool, run with `swift run cucumberswift-cli`. It picks the command by its first
 // argument, and the command's library target runs it with `run(arguments:) -> Int32`, which returns the exit
 // status. Another command is another case here and a library target that the tool depends on. The plugins for
 // SwiftPM and Xcode run the same commands, so every build tool shares one implementation.
 //
 //   coverage merge <folder>…                scores the scenarios of several runs as one run (CoverageCommand)
 //   generate --output <file> <feature>…     writes the Swift Testing tests of feature files (GenerateCommand)
+//   mutation-test [options]                 runs mutation testing in the package (MutationTestCommand)
 //   lint --stamp <file> --features …        checks feature files (LintCommand)
 //   fix-feature-files <path>…               fixes the misspelt keywords that lint reports (LintCommand)
 //   convert-to-gherkin-macros <path>…       rewrites step definitions as macros (ConvertCommand)
 
-/// The `cucumberswift` command line: the commands and the usage, shared by the cucumberswift tool, by Bazel's
+/// The `cucumberswift-cli` command line: the commands and the usage, shared by the cucumberswift-cli tool, by Bazel's
 /// swift_binary, and by the tool the SwiftPM and Xcode plugins run.
 public enum CucumberSwiftCommandLine {
     public static let usage = """
-        usage: cucumberswift <command> …
+        usage: cucumberswift-cli <command> …
           coverage merge <coverage folder or run folder>…
           generate --output <file.swift> <feature files…> [--swift <Swift file>]…
+          mutation-test [options]
           lint --stamp <file> --features <feature files…> --step-definitions <Swift files…>
           fix-feature-files <feature files or folders…>
           convert-to-gherkin-macros [--dry-run] <Swift files or folders…>
@@ -40,6 +46,12 @@ public enum CucumberSwiftCommandLine {
         switch arguments.first {
             case "coverage":
                 return CoverageCommand.run(arguments: rest)
+            case "mutation-test":
+#if canImport(CucumberSwiftMutationCommand) && (os(macOS) || os(Linux))
+                return MutationTestCommand.run(arguments: rest)
+#else
+                return unavailable("mutation-test")
+#endif
             case "generate":
 #if canImport(CucumberSwiftTestingGenerator)
                 return GenerateCommand.run(arguments: rest)
@@ -67,6 +79,11 @@ public enum CucumberSwiftCommandLine {
                 print(usage)
                 return 2
         }
+    }
+
+    private static func unavailable(_ command: String) -> Int32 {
+        FileHandle.standardError.write(Data("error: \(command) isn't available in this build of cucumberswift-cli\n".utf8))
+        return 2
     }
 
     private static func needsSwift61(_ command: String) -> Int32 {

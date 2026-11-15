@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs each command of the cucumberswift tool that the plugins run, as a Bazel project runs it
+# Runs each command of the cucumberswift-cli tool that the plugins run, as a Bazel project runs it
 # (bazel/cucumberswift.bzl): lint, generate, fix-feature-files and convert-to-gherkin-macros.
 # $1 is the tool.
 

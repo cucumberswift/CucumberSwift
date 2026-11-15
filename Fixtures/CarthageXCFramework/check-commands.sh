@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs the cucumberswift commands that a Carthage project can run besides the Run Script phase's lint, through
+# Runs the cucumberswift-cli commands that a Carthage project can run besides the Run Script phase's lint, through
 # cucumberswift.sh as the project does: fix-feature-files and generate. The build phase runs lint.
 
 set -euo pipefail
@@ -22,4 +22,4 @@ diff "$here/Tests/Features/Basket.feature" "$work/Basket.feature" || { echo "fix
 
 "$here/cucumberswift.sh" generate --output "$work/Generated.swift" "$work/Basket.feature"
 grep -q "Typed arguments from Cucumber expressions" "$work/Generated.swift" || { echo "generate wrote no test for the scenario"; exit 1; }
-echo "The cucumberswift commands ran from the checkout."
+echo "The cucumberswift-cli commands ran from the checkout."

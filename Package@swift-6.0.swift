@@ -18,12 +18,14 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftLint",
             targets: ["CucumberSwiftLintPlugin"]),
-        // CucumberSwift's command-line tool: `swift run cucumberswift coverage merge <folder>` scores the
+        // CucumberSwift's command-line tool. `swift run cucumberswift-cli coverage merge <folder>` scores the
         // scenarios of several runs as one run, such as a parallel run's workers or a suite's shards. It also has
         // the commands that the plugins run: generate, lint, fix-feature-files and convert-to-gherkin-macros, so
         // that Carthage and Bazel projects, which have no plugins, run them too.
+        // Not "cucumberswift": macOS folders are not case-sensitive, and Xcode would build the CucumberSwift library
+        // in that product's folder, under a module named cucumberswift (#603).
         .executable(
-            name: "cucumberswift",
+            name: "cucumberswift-cli",
             targets: ["CucumberSwiftCommand"]),
         // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
         // or Fix Feature Files on the project's or package's menu in Xcode.
@@ -64,7 +66,7 @@ let package = Package(
         .target(
             name: "CucumberSwiftCoverageMerge",
             path: "Sources/CucumberSwiftCoverageMerge"),
-        // The commands of the cucumberswift tool: one library target for each, and the line that picks one.
+        // The commands of the cucumberswift-cli tool: one library target for each, and the line that picks one.
         .target(
             name: "CucumberSwiftCommandLine",
             dependencies: [
@@ -73,19 +75,19 @@ let package = Package(
                 "CucumberSwiftLintTool"
             ],
             path: "Sources/CucumberSwiftCommandLine"),
-        // The tool behind the cucumberswift product.
+        // The tool behind the cucumberswift-cli product.
         .executableTarget(
             name: "CucumberSwiftCommand",
             dependencies: ["CucumberSwiftCommandLine"],
             path: "Sources/CucumberSwiftCommand"),
         // The tool that the plugins run: the same command line. A plugin can only run an executable target that
-        // has an implicit product, and CucumberSwiftCommand is in the cucumberswift product under another name.
+        // has an implicit product, and CucumberSwiftCommand is in the cucumberswift-cli product under another name.
         .executableTarget(
             name: "CucumberSwiftPluginCommand",
             dependencies: ["CucumberSwiftCommandLine"],
             path: "Sources/CucumberSwiftPluginCommand"),
         // The lint and fix-feature-files commands, which the CucumberSwiftLint and Fix Feature Files plugins run
-        // through the cucumberswift tool. CucumberSwiftGherkin for the keywords of feature files in other languages.
+        // through the cucumberswift-cli tool. CucumberSwiftGherkin for the keywords of feature files in other languages.
         .target(
             name: "CucumberSwiftLintTool",
             dependencies: ["CucumberSwiftExpressions", "CucumberSwiftGherkin"],

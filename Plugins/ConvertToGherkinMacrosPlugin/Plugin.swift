@@ -11,7 +11,7 @@ private enum ConvertError: Error, CustomStringConvertible {
         switch self {
             case .unknownTargets(let names): return "No target named \(names.joined(separator: ", "))"
             case .notSetUp(let message): return message
-            case .failed(let status): return "cucumberswift convert-to-gherkin-macros exited with status \(status)"
+            case .failed(let status): return "cucumberswift-cli convert-to-gherkin-macros exited with status \(status)"
             case .missingValue(let option): return "\(option) needs a value: \(option == "--path" ? "the file or folder to convert" : "the name of a target")"
         }
     }

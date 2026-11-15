@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// `cucumberswift convert-to-gherkin-macros [--dry-run] <folder or .swift file>…`, which the Convert to Gherkin
+/// `cucumberswift-cli convert-to-gherkin-macros [--dry-run] <folder or .swift file>…`, which the Convert to Gherkin
 /// Macros command plugin runs. It rewrites the step definitions it can convert exactly, marks each one it leaves
 /// with a #warning, and lists them all with the reason.
 public enum ConvertCommand {

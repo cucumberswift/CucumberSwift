@@ -7,7 +7,7 @@
 import Foundation
 import XCTest
 
-/// Runs `cucumberswift convert-to-gherkin-macros`, built next to the test bundle. The tests run it as a program because SwiftPM
+/// Runs `cucumberswift-cli convert-to-gherkin-macros`, built next to the test bundle. The tests run it as a program because SwiftPM
 /// links every test target into one bundle, and linking swift-syntax into a second target breaks the
 /// macros' tests with Swift 6.2's prebuilt swift-syntax.
 enum ConverterTool {
