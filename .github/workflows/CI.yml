@@ -192,7 +192,7 @@ jobs:
           echo "parallel_tests=$run" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes mutation testing: its code, the code that writes the coverage and
       # the Cucumber report it reads (the XCTest runner's Cucumber.swift sends that code its events), the coverage
-      # merge that reads the coverage, the cucumberswift tool, its plugin, its fixtures, scripts and action, the
+      # merge that reads the coverage, the cucumberswift-cli tool, its plugin, its fixtures, scripts and action, the
       # package manifests or this workflow.
       # Not the documentation, which lives in Sources too. Always on any other event.
       - name: Decide whether the mutation testing fixture runs
@@ -230,7 +230,7 @@ jobs:
           fi
           echo "fixtures=$fixtures" >> "$GITHUB_OUTPUT"
       # Whether a pull request or a push changes the coverage merge: the code that writes the coverage files and
-      # scores them, the cucumberswift tool, its fixture and script, the package manifests or this workflow. Not
+      # scores them, the cucumberswift-cli tool, its fixture and script, the package manifests or this workflow. Not
       # the documentation, which lives in Sources too. Always on any other event, such as the merge queue.
       - name: Decide whether the coverage merge fixture runs
         id: merge

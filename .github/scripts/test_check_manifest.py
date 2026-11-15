@@ -11,6 +11,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import unittest
 
@@ -18,10 +19,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_manifest  # noqa: E402
 
 
-def dump(version, products=("CucumberSwift",)):
+def dump(version, products=("CucumberSwift",), targets=("CucumberSwift",)):
     return json.dumps({"toolsVersion": {"_version": version},
                        "products": [{"name": name, "type": {"library": ["automatic"]}}
-                                    for name in products]})
+                                    for name in products],
+                       "targets": [{"name": name} for name in targets]})
 
 
 class CheckManifestTests(unittest.TestCase):
@@ -31,6 +33,30 @@ class CheckManifestTests(unittest.TestCase):
         self.assertTrue(ok, message)
         self.assertIn("read Package.swift (tools version 6.1.0)", message)
         self.assertIn("CucumberSwiftMacros (library)", message)
+
+    def test_a_product_named_like_its_target_passes(self):
+        ok, message = check_manifest.check("Package.swift", "// swift-tools-version:6.1\n",
+                                           dump("6.1", ("CucumberSwift", "cucumberswift-cli"),
+                                                ("CucumberSwift", "CucumberSwiftCommand")))
+        self.assertTrue(ok, message)
+
+    def test_names_that_differ_only_in_case_fail(self):
+        # #603: a cucumberswift product shared the CucumberSwift target's build folder in Xcode.
+        ok, message = check_manifest.check("Package.swift", "// swift-tools-version:6.1\n",
+                                           dump("6.1", ("CucumberSwift", "cucumberswift"),
+                                                ("CucumberSwift", "CucumberSwiftCommand")))
+        self.assertFalse(ok)
+        self.assertIn("differ only in case: CucumberSwift and cucumberswift.", message)
+
+    def test_this_package_has_no_names_that_differ_only_in_case(self):
+        names = set()
+        for path in ("Package.swift", "Package@swift-6.0.swift"):
+            with open(path, encoding="utf-8") as handle:
+                names.update(re.findall(r'^\s*name: "([^"]+)"', handle.read(), re.MULTILINE))
+        folded = {}
+        for name in names:
+            folded.setdefault(name.casefold(), set()).add(name)
+        self.assertEqual([group for group in folded.values() if len(group) > 1], [])
 
     def test_another_manifest_fails(self):
         ok, message = check_manifest.check("Package@swift-6.0.swift", "// swift-tools-version:6.0\n",
