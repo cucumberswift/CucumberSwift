@@ -2,7 +2,7 @@
 //  MergedCoverageTests.swift
 //  CucumberSwiftCoverageMergeTests
 //
-//  What mutation testing and cucumberswift coverage merge read through MergedCoverage (#515).
+//  What mutation testing and cucumberswift-cli coverage merge read through MergedCoverage (#515).
 //
 
 import Foundation
