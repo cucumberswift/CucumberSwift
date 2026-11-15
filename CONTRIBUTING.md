@@ -351,6 +351,20 @@ Each of these problems has a simple fix:
 - Think about the edge cases: empty or whitespace-only input, accented characters and other Unicode, `And` and `But` steps, tags, comments, data tables and doc strings.
 - A failing step must never be reported as passing. Anything that could hide a failure is a serious bug.
 
+**Proof.** Show that your change works by attaching what your tests saw to your pull request's description. A UI test attaches a screenshot with `Attach(_:)`:
+
+```swift
+let attachment = XCTAttachment(screenshot: app.screenshot(), quality: .medium)
+attachment.name = "Basket with 2 cukes"
+Attach(attachment)
+```
+
+- A fixture's scheme lists a `Proof.xctestplan` that sets `userAttachmentLifetime` to `keepAlways`. `mise run test-fixtures` runs it when `PROOF_RESULT_BUNDLE` names a path.
+- Our CI exports the attachments with `xcrun xcresulttool export attachments` and uploads them as the `proof-<fixture>` artifact for seven days.
+- Download the artifact with `gh run download <run-id> -n proof-<fixture> -D <folder>` and open the image to check it shows what your change should do. Then run `gh pr edit <number> --body-file <file> --attach '<folder>/<image>.jpeg#<what it shows>'`, with the file's `## Proof` section naming the image by that path. This needs gh 2.104 or later.
+
+Under the image, say in a line or two what it proves and which CI run made it. On a new run, replace the whole `## Proof` section.
+
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
 - Swift regex literals need iOS 16, macOS 13, tvOS 16 or watchOS 9 at runtime. Put them behind an `if #available` check, or use `NSRegularExpression`.

@@ -8,3 +8,7 @@ Fixes #
   -
   -
   -
+
+## Proof
+
+<!-- Attach what your tests saw, say what it shows and which CI run made it, and say why it proves the change. See "Proof" in CONTRIBUTING.md. No proof needed? Say why. -->
