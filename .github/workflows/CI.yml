@@ -1153,12 +1153,18 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           # A fixture with a Proof.xctestplan keeps its attachments and saves its result bundle here.
           PROOF_RESULT_BUNDLE: ${{ runner.temp }}/proof.xcresult
+          # TEMPORARY (#604): run the Default plan, to see that it keeps no attachment of a passing test.
+          PROOF_TEST_PLAN: Default
         run: mise run test-fixtures "$FIXTURE"
       # The proof of a pull request (#604): the screenshots its tests attached. Only the exported files
       # are uploaded, not the result bundle, and only for seven days.
       - name: Export the proof's attachments
         if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.fixture == 'SwiftTestingAndXCTestTuist' }}
-        run: xcrun xcresulttool export attachments --path "$RUNNER_TEMP/proof.xcresult" --output-path "$RUNNER_TEMP/proof"
+        run: |
+          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/proof.xcresult" --output-path "$RUNNER_TEMP/proof"
+          echo "TEMPORARY (#604): the exported files:"
+          find "$RUNNER_TEMP/proof" -type f | sort
+          cat "$RUNNER_TEMP/proof/manifest.json"
       - name: Upload the proof
         if: ${{ !cancelled() && github.event_name == 'pull_request' && matrix.fixture == 'SwiftTestingAndXCTestTuist' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
