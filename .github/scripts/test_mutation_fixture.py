@@ -207,12 +207,13 @@ class CheckTests(Folder):
         self.assertEqual(len(errors), 1)
         self.assertIn("mutant 1 ran 0 of 2", errors[0])
 
-    def test_the_mutants_cucumber_report_may_hold_fewer_scenarios_than_the_log_counts_but_not_more(self):
+    def test_the_mutants_cucumber_report_must_hold_as_many_scenarios_as_the_log_counts(self):
         self.write_cucumber_report(1, 0)
         self.write_cucumber_report(2, 3)
         errors = self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))
-        self.assertEqual(len(errors), 1)
-        self.assertIn("mutant 2 ran 2 scenarios, and its Cucumber report holds 3", errors[0])
+        self.assertEqual(len(errors), 2)
+        self.assertIn("mutant 1 ran 1 scenarios, and its Cucumber report holds 0", errors[0])
+        self.assertIn("mutant 2 ran 2 scenarios, and its Cucumber report holds 3", errors[1])
         with open(os.path.join(self.reports, "cucumber-mutant-1.json"), "w", encoding="utf-8") as f:
             f.write("not json")
         self.assertIn("isn't a Cucumber JSON report", self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))[0])
