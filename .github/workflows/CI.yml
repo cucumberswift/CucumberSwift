@@ -1316,16 +1316,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # Bazel's disk cache and repository cache, kept between runs: the C++ tools that rules_swift builds for the
-      # coverage step's Xcode took 18 of its 22 minutes, and a run starts with nothing otherwise. Each run adds what
-      # it built, and the key changes with the module files, the Bazel and the two Xcode versions the steps build with
-      # (the image's, and the 26.2 that the coverage step and the mutation testing step pass).
+      # Bazel's disk cache and repository cache, restored on every run: the C++ tools that rules_swift builds for the
+      # coverage step's Xcode took 18 of its 22 minutes, and a run starts with nothing otherwise. Only runs of main save
+      # them (the last step), so a pull request can't put anything in a cache that other runs restore. The key changes
+      # with the module files, the Bazel and the two Xcode versions the steps build with (the image's, and the 26.2
+      # that the coverage step and the mutation testing step pass).
       - name: Find the Xcode that the cache is for
         id: xcode
         run: echo "default=$(xcodebuild -version | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
       - name: Restore the Bazel caches
         id: bazel_cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ${{ runner.temp }}/bazel-disk-cache
@@ -1426,6 +1427,18 @@ jobs:
           python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
       - name: Report the Bazel cache sizes
         run: du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache"
+      # Saves only when the restore missed the exact key, and only from main: a push to main and the nightly run, which
+      # runs on main. A pull request never saves, and the merge queue's run doesn't either: a run restores caches only from
+      # its own branch, its base branch and the default branch, so a cache saved on the queue's temporary branch is one
+      # that no pull request can restore.
+      - name: Save the Bazel caches
+        if: ${{ success() && steps.bazel_cache.outputs.cache-hit != 'true' && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/bazel-disk-cache
+            ${{ runner.temp }}/bazel-repository-cache
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-${{ hashFiles('MODULE.bazel', 'Tests/MODULE.bazel', '.bazelversion', 'Tests/.bazelversion') }}
 
   # One check that sums up the run, for main's ruleset to require instead of each job (#606).
   # It needs every job but the nightly report, and test_ci_gate.py checks the list, so a job
