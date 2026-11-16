@@ -303,6 +303,8 @@ env -i HOME="$HOME" PATH="$PATH" swift run --quiet \
 
 The command prints each problem as `file:line:column: warning: …`, so Xcode shows it on that line, as it shows the plugin's warnings. It checks the same problems as the plugin, and exits with status 1 for the same errors, which fails the build. The first build compiles the command, so it takes longer than the builds after it. `env -i` starts SwiftPM with a clean environment: in a Run Script phase, Xcode sets `SDKROOT` and the deployment target for the iOS build, and SwiftPM would otherwise build the command for iOS instead of your Mac.
 
+The phase reads `cucumberswift.sh` and your feature files, and it declares no input files. When the test target's `ENABLE_USER_SCRIPT_SANDBOXING` build setting is `YES`, which is the default in new Xcode projects, Xcode denies those reads and fails the build with `error: Sandbox: bash(…) deny(1) file-read-data …/cucumberswift.sh`. Set the setting to `NO` for the test target that has the phase.
+
 To fix the keywords that the command suggests, run `swift run --package-path Carthage/Checkouts/CucumberSwift cucumberswift-cli fix-feature-files Tests/Features` in your project's folder. It takes feature files and folders, and prints each line it changed, as `swift package fix-feature-files` does.
 
 ### Know its limits
