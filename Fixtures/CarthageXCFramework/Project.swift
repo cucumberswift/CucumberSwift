@@ -60,7 +60,8 @@ let project = Project(
                 "SWIFT_VERSION": "5.0",
                 "SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY": "YES",
                 // Builds and runs without a signing team.
-                "CODE_SIGN_IDENTITY": "-"
+                "CODE_SIGN_IDENTITY": "-",
+                "ENABLE_USER_SCRIPT_SANDBOXING": "YES"
             ])
         )
     ],
