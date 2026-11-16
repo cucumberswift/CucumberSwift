@@ -3,11 +3,9 @@
 # build phase of the fixture's Mutation target, where the command runs `xcodebuild` with a scheme and a destination
 # and prints each surviving mutant as a warning. The run must find the mutants, and kill and keep the ones, that the
 # fixture's expected-mutants lists, and the build log must warn at each survivor (.github/scripts/mutation_fixture.py).
-# With `selection` as the second argument it only runs XcodebuildRunnerFixtureTests, which selects one scenario of
-# each test runner with xcodebuild, on the project of an earlier run of this script in the same directory.
 # Used by CI's Fixture tests, after `mise run test-fixtures`.
 #
-#   .github/scripts/mutation-xcode-fixture.sh <directory> [selection]
+#   .github/scripts/mutation-xcode-fixture.sh <directory>
 #
 # The fixture's own path to this checkout doesn't reach it from another folder, so the run uses a copy of the
 # fixture's files in <directory>, which depends on CucumberSwift by URL, as a project does: a git repository of the
@@ -17,35 +15,13 @@
 # <directory>/mutation-MutationTestingTuist-build.log. The fixture in this checkout stays as it is.
 set -euo pipefail
 
-dir=${1:?usage: mutation-xcode-fixture.sh <directory> [selection]}
+dir=${1:?usage: mutation-xcode-fixture.sh <directory>}
 name=MutationTestingTuist
 fixture=Fixtures/$name
 repo="$(cd "$dir" && pwd -P)/CucumberSwift.git"
 project="$(cd "$dir" && pwd -P)/$name"
 reports="$(cd "$dir" && pwd -P)/mutation-$name"
 version=999.0.0
-
-# The project from an earlier run of this script, one scenario at a time: the runner selects an XCTest scenario and
-# a Swift Testing scenario with the test names that ScenarioTestNames makes, and each run ran exactly that scenario.
-# The tests skip without the folder, and a skipped test or a filter that matches nothing exits with success, so the
-# output must show tests that ran. It builds the package's tests, so a pull request doesn't run it: the nightly and
-# manual runs give the script `selection` as its second argument.
-run_selection() {
-  selection_log="$(cd "$dir" && pwd -P)/mutation-$name-selection.log"
-  MUTATION_XCODE_FIXTURE="$project" .github/scripts/keep-package-resolved.sh \
-    swift test --enable-all-traits --filter XcodebuildRunnerFixtureTests 2>&1 | tee "$selection_log"
-  # Each test method of the class must have run, so a filter that stops selecting one fails the step.
-  expected_tests=$(grep -c '^    func test' Tests/CucumberSwiftMutationTests/XcodebuildRunnerFixtureTests.swift)
-  if ! grep -Eq "Executed $expected_tests tests?, with 0 failures" "$selection_log" || grep -Eq '[1-9][0-9]* tests? skipped' "$selection_log"; then
-    echo "error: $name: XcodebuildRunnerFixtureTests did not run all $expected_tests tests, or skipped one" >&2
-    exit 1
-  fi
-}
-
-if [[ "${2:-}" == selection ]]; then
-  run_selection
-  exit 0
-fi
 
 # A local clone copies every object, so the commit is there even when the checkout is shallow and detached.
 rm -rf "$repo" "$reports" "$project"

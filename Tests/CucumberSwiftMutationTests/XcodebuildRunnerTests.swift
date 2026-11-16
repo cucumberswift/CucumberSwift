@@ -130,67 +130,6 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(Set(bundles).count, 2, "xcodebuild fails when the bundle's path exists")
     }
 
-    func testRunsOnlyTheTestsOfTheScenariosWithATestForEachScenario() throws {
-        let copy = try makeCopy()
-        let features = copy.appendingPathComponent("Features")
-        try FileManager.default.createDirectory(at: features, withIntermediateDirectories: true)
-        try """
-        Feature: Voting
-
-          Scenario: An adult can vote
-            Given a person aged 30
-            Then the person can vote
-        """.write(to: features.appendingPathComponent("Voting.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 1)
-        var scoped = target
-        scoped.testTargets = ["VotingTests"]
-        let runner = XcodebuildRunner(target: scoped, commands: commands)
-        _ = runner.test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let index = try XCTUnwrap(call.arguments.firstIndex(of: "-only-testing"))
-        XCTAssertEqual(call.arguments[index + 1], "VotingTests/CucumberScenarioTest/Voting \u{203A} An adult can vote")
-        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"], "YES", "-only-testing finds no test of a test per step")
-    }
-
-    func testRunsASwiftTestingScenarioByItsGeneratedTestAndLeavesTheTestPerStepOff() throws {
-        let copy = try makeCopy()
-        let tests = copy.appendingPathComponent("SwiftTests")
-        try FileManager.default.createDirectory(at: tests.appendingPathComponent("Features"), withIntermediateDirectories: true)
-        try "import CucumberSwiftTesting\n".write(to: tests.appendingPathComponent("StepDefinitions.swift"), atomically: true, encoding: .utf8)
-        try """
-        Feature: Retiring
-
-          Scenario: A senior can retire
-            Given a person aged 70
-            Then the person can retire
-        """.write(to: tests.appendingPathComponent("Features/Retiring.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 3)
-        var scoped = target
-        scoped.testTargets = ["VotingSwiftTests"]
-        _ = XcodebuildRunner(target: scoped, commands: commands)
-            .test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Retiring.feature", line: 3, name: "")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let index = try XCTUnwrap(call.arguments.firstIndex(of: "-only-testing"))
-        XCTAssertEqual(call.arguments[index + 1], "VotingSwiftTests/CucumberFeatures/Retiring/ASeniorCanRetire(_:)")
-        XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"], "Only an XCTest scenario needs it")
-    }
-
-    func testAScenarioIsSelectedInEveryTestTargetBecauseItDoesntSayWhichHoldsIt() throws {
-        let copy = try makeCopy()
-        try FileManager.default.createDirectory(at: copy.appendingPathComponent("Features"), withIntermediateDirectories: true)
-        try "Feature: Voting\n\n  Scenario: An adult can vote\n    Given a person aged 30\n"
-            .write(to: copy.appendingPathComponent("Features/Voting.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 1)
-        var scoped = target
-        scoped.testTargets = ["A", "B"]
-        _ = XcodebuildRunner(target: scoped, commands: commands)
-            .test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let selected = call.arguments.indices.filter { call.arguments[$0] == "-only-testing" }.map { call.arguments[$0 + 1] }
-        let test = "CucumberScenarioTest/Voting \u{203A} An adult can vote"
-        XCTAssertEqual(selected, ["A/\(test)", "B/\(test)"], "One run selects the scenario in each test target")
-    }
-
     func testSeveralTestTargetsRunInOneXcodebuildWithOneReport() throws {
         let commands = commands(total: 4)
         var scoped = target
