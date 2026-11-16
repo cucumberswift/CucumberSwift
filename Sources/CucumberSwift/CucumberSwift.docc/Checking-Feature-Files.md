@@ -10,7 +10,7 @@ The `CucumberSwiftLint` build tool plugin checks every `.feature` file in a targ
 
 The plugin's warnings never fail a build, and the plugin changes nothing about how the tests run. A step in the wrong place in a feature written in the Swift DSL is the one exception. That is an error that fails the build, as <doc:#What-it-checks> explains.
 
-The plugin needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later. Carthage can't deliver Swift package plugins.
+The plugin needs CucumberSwift added with Swift Package Manager, and Xcode 16.0 or later. Carthage can't deliver Swift package plugins, so a Carthage project runs the same check with a build phase (see <doc:Checking-Feature-Files#Check-feature-files-in-a-Carthage-project>), and a Bazel project runs it with a rule (see <doc:Running-Tests-With-Bazel#Check-feature-files-and-generate-tests>).
 
 ### Add the plugin to a Swift package
 
@@ -288,6 +288,22 @@ Text between a header and its first step is a description, where any text is all
 The command leaves a file with nothing to fix exactly as it was. If the command can't read or save a file, for example because the file is read-only, it names the file and fails. The command fixes keywords only. Other warnings, such as an undefined step or a table row with too many cells, are still yours to fix.
 
 The command needs CucumberSwift added with Swift Package Manager. You don't need to add the build plugin to a target to use the command.
+
+### Check feature files in a Carthage project
+
+A Carthage project runs the plugin's check with the `cucumberswift-cli lint` command, from a Run Script build phase in the test target. Carthage checks CucumberSwift out into `Carthage/Checkouts/CucumberSwift`, and SwiftPM builds and runs the command from that checkout. Add this script to the test target's build phases, before **Compile Sources**, and change the two paths to your feature files and your Swift files with step definitions:
+
+```bash
+env -i HOME="$HOME" PATH="$PATH" swift run --quiet \
+  --package-path "$SRCROOT/Carthage/Checkouts/CucumberSwift" \
+  cucumberswift-cli lint \
+  --features "$SRCROOT"/Tests/Features/*.feature \
+  --step-definitions "$SRCROOT"/Tests/*.swift
+```
+
+The command prints each problem as `file:line:column: warning: …`, so Xcode shows it on that line, as it shows the plugin's warnings. It checks the same problems as the plugin, and exits with status 1 for the same errors, which fails the build. The first build compiles the command, so it takes longer than the builds after it. `env -i` starts SwiftPM with a clean environment: in a Run Script phase, Xcode sets `SDKROOT` and the deployment target for the iOS build, and SwiftPM would otherwise build the command for iOS instead of your Mac.
+
+To fix the keywords that the command suggests, run `swift run --package-path Carthage/Checkouts/CucumberSwift cucumberswift-cli fix-feature-files Tests/Features` in your project's folder. It takes feature files and folders, and prints each line it changed, as `swift package fix-feature-files` does.
 
 ### Know its limits
 
