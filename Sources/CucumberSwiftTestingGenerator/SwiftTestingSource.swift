@@ -47,6 +47,11 @@ enum SwiftTestingSource {
     /// The last line of a suggested step definition, which fails the step until it is filled in.
     static let failure = "Issue.record(\"Step not implemented: replace this line with your test code\")"
 
+    /// Names the generated code can't use for a suite or a test: they would hide what it refers to.
+    static let reservedNames: Set<String> = [
+        "CucumberFeatures", "CucumberSwiftTesting", "Testing", "Test", "Suite", "Self", "Type", "Protocol", "Any", "Sendable"
+    ]
+
     /// Whether the test target defines the compilation condition `CUCUMBER_PARALLEL_TESTING`.
     private static let parallelTesting = """
         #if CUCUMBER_PARALLEL_TESTING
@@ -258,7 +263,15 @@ enum SwiftTestingSource {
 
     /// `name`, or `fallback` when it is empty or reserved, with a number added if it is already used.
     static func uniqueName(_ name: String, fallback: String, in used: inout Set<String>) -> String {
-        FeatureFile.uniqueSwiftTestingName(name, fallback: fallback, in: &used)
+        let base = name.isEmpty || reservedNames.contains(name) ? fallback : name
+        var candidate = base
+        var count = 2
+        while used.contains(candidate) {
+            candidate = "\(base)_\(count)"
+            count += 1
+        }
+        used.insert(candidate)
+        return candidate
     }
 
     /// `text` as a Swift string literal.

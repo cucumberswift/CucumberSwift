@@ -16,8 +16,6 @@ public struct TestRequest: Sendable {
     public var measuresCoverage: Bool
     /// Write the Cucumber JSON report. The runner picks the file, and returns it in `TestRun.cucumberReport`.
     public var writesReport: Bool
-    /// Run only these scenarios. `nil` runs every one.
-    public var scenarios: [ScenarioID]?
     /// Stop the run after this many seconds and report it as timed out.
     public var timeout: TimeInterval?
 
@@ -25,13 +23,11 @@ public struct TestRequest: Sendable {
         settings: [String: String] = [:],
         measuresCoverage: Bool = false,
         writesReport: Bool = false,
-        scenarios: [ScenarioID]? = nil,
         timeout: TimeInterval? = nil
     ) {
         self.settings = settings
         self.measuresCoverage = measuresCoverage
         self.writesReport = writesReport
-        self.scenarios = scenarios
         self.timeout = timeout
     }
 }
