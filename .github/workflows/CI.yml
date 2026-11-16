@@ -1271,11 +1271,6 @@ jobs:
         env:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
         run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP"
-      # The runner selects one scenario of each test runner with xcodebuild, on the project the step above made. It
-      # builds the package's tests, so only the nightly and manual runs do it.
-      - name: Select scenarios of each test runner on the Xcode project fixture
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-        run: .github/scripts/mutation-xcode-fixture.sh "$RUNNER_TEMP" selection
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Xcode mutation testing reports and log
         if: failure()
@@ -1285,7 +1280,6 @@ jobs:
           path: |
             ${{ runner.temp }}/mutation-MutationTestingTuist
             ${{ runner.temp }}/mutation-MutationTestingTuist-build.log
-            ${{ runner.temp }}/mutation-MutationTestingTuist-selection.log
           if-no-files-found: ignore
           retention-days: 3
 

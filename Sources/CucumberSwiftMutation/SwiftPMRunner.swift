@@ -7,10 +7,6 @@
 import Foundation
 
 /// Builds a Swift package with `swift build --build-tests` and tests it with `swift test --skip-build`.
-///
-/// It runs every scenario whatever `TestRequest.scenarios` says. `swift test --filter` knows only the tests that the
-/// bundle declares, and CucumberSwift generates one for each scenario while the bundle runs, so no filter can select
-/// one: it runs no test, and succeeds. A mutant still gets the verdict of the whole suite, only slower.
 public final class SwiftPMRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
