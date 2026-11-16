@@ -4,6 +4,8 @@ The `Voting` framework is a macOS framework that two test targets test with Cucu
 
 `mise run test-fixtures` runs the tests like those of any other fixture. Our GitHub Actions CI workflow then runs `.github/scripts/mutation-xcode-fixture.sh` in the Mutation testing fixture job, in the merge queue and on nightly and manual runs, and on a pull request that changes mutation testing. The script builds a copy of this folder's project, which runs the mutation testing command from a Run Script build phase of its `Mutation` target with `xcodebuild`, a scheme and a destination. The `expected-mutants` file lists each mutant the run must find and its status. `.github/scripts/mutation_fixture.py` fails the job when a mutant is missing, has another status or isn't listed, and when the build log has no warning for a surviving mutant. The script also checks that the run's report names the scenarios of both runners.
 
+The nightly and manual runs also give `.github/scripts/mutation-xcode-fixture.sh` a second argument, `selection`, which runs `XcodebuildRunnerFixtureTests` on the project. Those tests run one XCTest scenario and one Swift Testing scenario through `xcodebuild`.
+
 The copy can't reach CucumberSwift by this fixture's path. The script sets `TUIST_CUCUMBERSWIFT` to a git URL of the checked-out commit, and `Project.swift` depends on that URL when the variable is set.
 
 This fixture needs the Tuist version pinned in `.mise.toml`.
