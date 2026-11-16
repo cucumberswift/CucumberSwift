@@ -361,11 +361,11 @@ Attach(attachment)
 
 - A fixture's scheme lists a `Proof.xctestplan` that sets `userAttachmentLifetime` to `keepAlways`. `mise run test-fixtures` runs it when `PROOF_RESULT_BUNDLE` names a path.
 - Our CI exports the attachments of the `SwiftTestingAndXCTestTuist` fixture with `xcrun xcresulttool export attachments` and uploads them as the `proof-SwiftTestingAndXCTestTuist` artifact for seven days. No other fixture is exported yet.
-- Download the artifact with `gh run download <run-id> -n proof-SwiftTestingAndXCTestTuist -D <folder>` and open the image to check it shows what your change should do. Then run `gh pr edit <number> --body-file <file> --attach '<folder>/<image>.jpeg#<what it shows>'`, with the file's `## Proof` section naming the image by that path. This needs gh 2.104 or later.
+- Download the artifact with `gh run download <run-id> -R cucumberswift/CucumberSwift -n proof-SwiftTestingAndXCTestTuist -D <folder>` and open the image to check it shows what your change should do. Then run `gh pr edit <number> -R cucumberswift/CucumberSwift --body-file <file> --attach '<folder>/<image>.jpeg#<what it shows>'`, with the file's `## Proof` section naming the image by that path. This needs gh 2.104 or later.
 
 Under the image, say in a line or two what it proves and which run of our CI made it. On a new run, replace the whole `## Proof` section.
 
-The `--body-file` option replaces the whole description, so the file must contain all of it. Copy the current description first with `gh pr view <number> --json body --jq .body > <file>`, then add or replace the `## Proof` section. A contributor without write access to the repository can't use `--attach`, so drag the image into the description in the browser instead.
+The `--body-file` option replaces the whole description, so the file must contain all of it. Copy the current description first with `gh pr view <number> -R cucumberswift/CucumberSwift --json body --jq .body > <file>`, then add or replace the `## Proof` section. A text file in the artifact can't be attached, so copy the relevant text into a fenced code block in that section. A contributor without write access to the repository can't use `--attach`, so drag the image into the description in the browser instead.
 
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
