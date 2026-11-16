@@ -1,6 +1,6 @@
 #!/bin/bash
 # Runs Fixtures/CoverageMergePackage's feature files with code coverage in every way the merge scores, with
-# each runner, and fails unless cucumberswift coverage merge gives each way the same scores (#515):
+# each runner, and fails unless cucumberswift-cli coverage merge gives each way the same scores (#515):
 #
 # - XCTest: one scenario at a time; with Xcode's parallel testing, in 3 workers; and in 2 shards, one
 #   for each tag, @shard1 and @shard2, as CUCUMBER_TAGS picks them.
@@ -30,10 +30,10 @@ keep="$root/.github/scripts/keep-package-resolved.sh"
 cp "$root/Package.resolved" "$work/Package.resolved.saved"
 trap 'cp "$work/Package.resolved.saved" "$root/Package.resolved"' EXIT
 
-echo "Building cucumberswift coverage merge"
-swift build --package-path "$root" --scratch-path "$work/tool" --product cucumberswift > "$logs/tool.log" 2>&1 \
+echo "Building cucumberswift-cli coverage merge"
+swift build --package-path "$root" --scratch-path "$work/tool" --product cucumberswift-cli > "$logs/tool.log" 2>&1 \
   || { cat "$logs/tool.log"; exit 1; }
-merge="$work/tool/debug/cucumberswift"
+merge="$work/tool/debug/cucumberswift-cli"
 cp "$work/Package.resolved.saved" "$root/Package.resolved"
 
 cd "$fixture"
