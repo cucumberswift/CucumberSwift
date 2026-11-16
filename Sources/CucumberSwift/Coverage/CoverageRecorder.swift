@@ -63,7 +63,7 @@ final class CoverageRecorder {
     private(set) var code: MeasuredCode?
     /// The measured functions: the binary each is in, its coverage map entry, and the number of its first region.
     private(set) var functions = [(binary: Int, function: CoverageMap.Function, firstRegion: Int)]()
-    /// The functions the scores measure, as the manifest lists them for `cucumberswift coverage merge`.
+    /// The functions the scores measure, as the manifest lists them for `cucumberswift-cli coverage merge`.
     private var measured: [CoverageManifest.MeasuredFunction]?
     private(set) var scoresProblem: String?
     /// The scenarios of each feature that hasn't finished, by its URI, for its scores.
@@ -139,7 +139,7 @@ final class CoverageRecorder {
 
     /// Numbers the regions of the functions the scores measure, from every binary with a coverage map. A run
     /// that doesn't score, as ``CoverageSettings/scoresOffReason`` says, still measures them, for
-    /// `cucumberswift coverage merge`.
+    /// `cucumberswift-cli coverage merge`.
     private func measureCode() {
         scoresProblem = settings.scoresOffReason
         #if canImport(Compression)

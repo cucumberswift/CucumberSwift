@@ -39,9 +39,9 @@ started=$SECONDS
 if [[ -n "${MUTATION_TOOL:-}" ]]; then
   tool="$MUTATION_TOOL"
 else
-  build=(swift build --package-path "$repo" --traits Macros --product cucumberswift)
+  build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-cli)
   "${build[@]}"
-  tool="$("${build[@]}" --show-bin-path)/cucumberswift"
+  tool="$("${build[@]}" --show-bin-path)/cucumberswift-cli"
 fi
 
 built=$SECONDS
@@ -69,7 +69,7 @@ status=0
 echo "Bazel fixture timings: the tool's build $((built - started)) s, its run $((SECONDS - built)) s."
 if [[ "$status" -gt 128 ]]; then diagnose "$status"; fi
 if [[ "$status" -ne 0 ]]; then
-  echo "::error::Bazel fixture: cucumberswift mutation-test exited with $status"
+  echo "::error::Bazel fixture: cucumberswift-cli mutation-test exited with $status"
   exit 1
 fi
 cd "$repo"

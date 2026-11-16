@@ -14,6 +14,11 @@ with `-`), and fails unless the tools version in it is the one <manifest> declar
 The two manifests declare different tools versions, so that tells them apart. It
 prints the products, so the log shows what the toolchain sees.
 
+It also fails when two products or targets have names that differ only in case,
+such as a `cucumberswift` product and the `CucumberSwift` target. Folders on macOS
+are not case-sensitive, so Xcode builds both in one folder and compiles the
+library under the other's module name (#603).
+
 Only the standard library is used.
 """
 import glob
@@ -38,6 +43,15 @@ def declared_tools_version(text, path):
     return match.group(1)
 
 
+def names_differing_only_in_case(package):
+    """The product and target names that another name equals except for case, sorted."""
+    names = {item["name"] for item in package["products"] + package.get("targets", [])}
+    by_folded = {}
+    for name in names:
+        by_folded.setdefault(name.casefold(), []).append(name)
+    return sorted(sorted(group) for group in by_folded.values() if len(group) > 1)
+
+
 def check(manifest_path, manifest_text, dump):
     """Return (ok, message) for a dump-package JSON string."""
     expected = declared_tools_version(manifest_text, manifest_path)
@@ -48,6 +62,11 @@ def check(manifest_path, manifest_text, dump):
     if normalized(read) != normalized(expected):
         return False, (f"This toolchain read a manifest with tools version {read}, not "
                        f"{manifest_path} (tools version {expected}). Products: {products}")
+    clashes = names_differing_only_in_case(package)
+    if clashes:
+        listed = "; ".join(" and ".join(group) for group in clashes)
+        return False, (f"{manifest_path} has products or targets whose names differ only in case: {listed}. "
+                       "Xcode builds them in one folder on macOS and compiles the wrong module. Rename one.")
     return True, f"This toolchain read {manifest_path} (tools version {read}). Products: {products}"
 
 

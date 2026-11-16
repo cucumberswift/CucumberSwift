@@ -20,12 +20,14 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftLint",
             targets: ["CucumberSwiftLintPlugin"]),
-        // CucumberSwift's command-line tool. `swift run cucumberswift coverage merge <folder>` scores the
+        // CucumberSwift's command-line tool. `swift run cucumberswift-cli coverage merge <folder>` scores the
         // scenarios of several runs as one run, such as a parallel run's workers or a suite's shards.
-        // `swift run cucumberswift mutation-test` runs mutation testing, for scripts, build servers and Xcode
+        // `swift run cucumberswift-cli mutation-test` runs mutation testing, for scripts, build servers and Xcode
         // build phases, and needs the Macros trait.
+        // Not "cucumberswift": macOS folders are not case-sensitive, and Xcode would build the CucumberSwift library
+        // in that product's folder, under a module named cucumberswift (#603).
         .executable(
-            name: "cucumberswift",
+            name: "cucumberswift-cli",
             targets: ["CucumberSwiftCommand"]),
         // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
         // or Fix Feature Files on the project's or package's menu in Xcode.
@@ -105,7 +107,7 @@ let package = Package(
         .target(
             name: "CucumberSwiftCoverageMerge",
             path: "Sources/CucumberSwiftCoverageMerge"),
-        // The tool behind the cucumberswift product: one file for each command.
+        // The tool behind the cucumberswift-cli product: one file for each command.
         .executableTarget(
             name: "CucumberSwiftCommand",
             dependencies: ["CucumberSwiftCoverageMerge", "CucumberSwiftMutationCommand"],
@@ -167,10 +169,10 @@ let package = Package(
             name: "CucumberSwiftMutation",
             dependencies: ["CucumberSwiftGherkin", "CucumberSwiftCoverageMerge"],
             path: "Sources/CucumberSwiftMutation"),
-        // `cucumberswift mutation-test`, which the Mutation Testing plugin runs too. It builds for the Mac that builds
-        // the tests. It finds the mutants with swift-syntax, so without the Macros trait it only says what to turn on.
-        // Its tests run the cucumberswift tool as a program (`mutation-test --discover`), for the reason the
-        // converter's do.
+        // `cucumberswift-cli mutation-test`, which the Mutation Testing plugin runs too. It builds for the Mac that
+        // builds the tests. It finds the mutants with swift-syntax, so without the Macros trait it only says what to
+        // turn on. Its tests run the cucumberswift-cli tool as a program (`mutation-test --discover`), for the reason
+        // the converter's do.
         .target(
             name: "CucumberSwiftMutationCommand",
             dependencies: [

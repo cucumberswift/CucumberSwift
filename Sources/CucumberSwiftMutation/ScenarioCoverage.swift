@@ -8,8 +8,8 @@ import CucumberSwiftCoverageMerge
 import Foundation
 
 /// The code each scenario ran in the unmutated copy, read from the coverage folders that CucumberSwift writes with
-/// `CUCUMBER_COVERAGE` on, as `cucumberswift coverage merge` reads them. A mutant whose code no scenario ran can't be
-/// detected by any scenario, so the run doesn't test it.
+/// `CUCUMBER_COVERAGE` on, as `cucumberswift-cli coverage merge` reads them. A mutant whose code no scenario ran
+/// can't be detected by any scenario, so the run doesn't test it.
 public struct ScenarioCoverage: Equatable, Sendable {
     /// Why the coverage can't tell which scenarios ran a mutant's code.
     public enum ReadError: Error, Equatable, CustomStringConvertible {
@@ -73,7 +73,7 @@ public struct ScenarioCoverage: Equatable, Sendable {
     public let regions: [Region]
     public let scenarios: [Scenario]
 
-    /// The coverage of the runs under `folder`, merged as `cucumberswift coverage merge` merges them, or nil when
+    /// The coverage of the runs under `folder`, merged as `cucumberswift-cli coverage merge` merges them, or nil when
     /// there is no run there, or the runs measured no code. A test run that has several test bundles, as an Xcode scheme can,
     /// or several test processes, as `swift test` does for XCTest and Swift Testing, writes a run folder for each. The
     /// merge numbers each function's regions once, whichever runs measured it. Throws when a run folder has no
