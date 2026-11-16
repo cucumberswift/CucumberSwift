@@ -3,6 +3,7 @@
 //  CucumberSwiftMutationTests
 //
 
+#if os(macOS) || os(Linux)
 import XCTest
 @testable import CucumberSwiftMutation
 
@@ -59,3 +60,4 @@ final class MutationRunScenarioTests: TemporaryFolderTestCase {
         XCTAssertFalse(log.contains { $0.contains(" scenarios)") }, "No count: every scenario ran")
     }
 }
+#endif
