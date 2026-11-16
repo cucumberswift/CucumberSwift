@@ -15,8 +15,8 @@ import Foundation
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
 /// `--features=llvm_coverage_map_format`, because the bundle doesn't link with Bazel's default, gcov's. It runs every
-/// scenario whatever `TestRequest.scenarios` says, as the SwiftPM runner does: a filter selects tests by the names the
-/// bundle declares, and CucumberSwift generates one for each scenario while the bundle runs.
+/// scenario of the test target in each run: a filter selects tests by the names the bundle declares, and CucumberSwift
+/// generates one for each scenario while the bundle runs.
 ///
 /// The disk cache is shared by every copy and every run, so a new copy, which Bazel builds in a folder of its own, finds
 /// what an earlier one built. The copy's output base is deleted with `bazel clean --expunge` after the run: Bazel keeps
