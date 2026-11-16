@@ -18,10 +18,12 @@ let package = Package(
         .plugin(
             name: "CucumberSwiftLint",
             targets: ["CucumberSwiftLintPlugin"]),
-        // CucumberSwift's command-line tool. `swift run cucumberswift coverage merge <folder>` scores the
+        // CucumberSwift's command-line tool. `swift run cucumberswift-cli coverage merge <folder>` scores the
         // scenarios of several runs as one run, such as a parallel run's workers or a suite's shards.
+        // Not "cucumberswift": macOS folders are not case-sensitive, and Xcode would build the CucumberSwift library
+        // in that product's folder, under a module named cucumberswift (#603).
         .executable(
-            name: "cucumberswift",
+            name: "cucumberswift-cli",
             targets: ["CucumberSwiftCommand"]),
         // Fixes the misspelt keywords that CucumberSwiftLint reports: `swift package fix-feature-files`,
         // or Fix Feature Files on the project's or package's menu in Xcode.
@@ -62,7 +64,7 @@ let package = Package(
         .target(
             name: "CucumberSwiftCoverageMerge",
             path: "Sources/CucumberSwiftCoverageMerge"),
-        // The tool behind the cucumberswift product: one file for each command.
+        // The tool behind the cucumberswift-cli product: one file for each command.
         .executableTarget(
             name: "CucumberSwiftCommand",
             dependencies: ["CucumberSwiftCoverageMerge"],

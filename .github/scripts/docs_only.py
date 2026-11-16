@@ -79,6 +79,7 @@ LINUX_SCRIPTS = {
     ".github/scripts/test_gherkin_highlighting.py",
     ".github/scripts/nightly_report.py",
     ".github/scripts/test_nightly_report.py",
+    ".github/scripts/test_ci_gate.py",
     ".github/scripts/publish-docs.sh",
 }
 # The documentation that Script tests checks: test_gherkin_highlighting.py reads
