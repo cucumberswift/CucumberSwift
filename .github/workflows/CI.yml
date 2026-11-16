@@ -1435,15 +1435,16 @@ jobs:
       # Mutation testing on the Bazel fixture, run by the command-line tool as a Bazel project's script would: it
       # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
       # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
-      # lists, and print a warning for each survivor (#522). It shares the coverage step's disk cache, and runs with
+      # lists, and print a warning for each survivor (#522). The tool is the one that `bazel run @cucumberswift//cli:cucumberswift-cli`
+      # gives a Bazel project, built by Bazel with swift-syntax from the Bazel Central Registry. It shares the coverage step's disk cache, and runs with
       # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
       # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
-      - name: Build the mutation testing tool
+      - name: Build the mutation testing tool with Bazel
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
-        uses: ./.github/actions/mutation-tool
+        run: bazel build //cli:cucumberswift-cli --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache"
       - name: Run mutation testing on the Bazel fixture
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
-        run: .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
+        run: MUTATION_TOOL="$PWD/bazel-bin/cli/cucumberswift-cli" .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Bazel mutation testing reports and log
         if: ${{ failure() && matrix.bazel == '' }}
