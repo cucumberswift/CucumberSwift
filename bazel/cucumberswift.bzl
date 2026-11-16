@@ -103,7 +103,7 @@ cucumberswift_generate = rule(
             cfg = "exec",
         ),
     },
-    doc = "Runs `cucumberswift-cli generate`, the CucumberSwiftTestingPlugin's tests for feature files. Compile its output into a Swift Testing test target.",
+    doc = "Runs `cucumberswift-cli generate`, the CucumberSwiftTestingPlugin's tests for feature files. The output imports CucumberSwiftTesting, which this module doesn't build under Bazel yet, so compile it only where that module is available.",
 )
 
 def _cucumberswift_fix_feature_files_impl(ctx):
@@ -124,7 +124,7 @@ exec "$runfiles/{cli}" fix-feature-files {paths} "$@"
 """.format(
             package = ctx.label.package,
             cli = cli_path,
-            paths = " ".join(["'%s'" % path for path in ctx.attr.paths]),
+            paths = " ".join(["'%s'" % path.replace("'", "'\\''") for path in ctx.attr.paths]),
         ),
     )
     return [DefaultInfo(

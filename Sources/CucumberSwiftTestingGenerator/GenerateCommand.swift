@@ -10,7 +10,11 @@ import Foundation
 ///
 /// Writes the Swift Testing tests for the feature files, and the test for the features that the Swift files
 /// write in the Swift DSL, if they write any. The CucumberSwiftTestingPlugin build tool plugin and the Bazel
-/// rule cucumberswift_testing_sources run it.
+/// rule cucumberswift_generate run it. It writes the output file only when the text changes, so that an unchanged
+/// feature file doesn't recompile the tests.
+///
+/// Not API of the CucumberSwift package: this target is not in any product, and only the cucumberswift-cli tool and
+/// the plugins' command target call it, so its interface changes with them.
 public enum GenerateCommand {
     public static let usage = "usage: cucumberswift-cli generate --output <file.swift> <feature files…> [--swift <Swift file>]…"
 

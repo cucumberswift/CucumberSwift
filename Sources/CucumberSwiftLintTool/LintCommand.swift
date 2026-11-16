@@ -9,6 +9,9 @@ import Foundation
 /// `cucumberswift-cli fix-feature-files <file or folder>…`, which the Fix Feature Files command plugin runs,
 /// applies each "Did you mean" suggestion to the feature files, and prints each line it changed. It returns 1
 /// if a path or a feature file can't be checked or fixed.
+///
+/// Not API of the CucumberSwift package: this target is not in any product, and only the cucumberswift-cli tool and
+/// the plugins' command target call it, so its interface changes with them.
 public enum LintCommand {
     /// `cucumberswift-cli lint`: the arguments that follow `lint`.
     public static func lint(arguments: [String]) -> Int32 {

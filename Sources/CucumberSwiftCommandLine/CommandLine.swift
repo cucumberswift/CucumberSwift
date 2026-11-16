@@ -29,6 +29,9 @@ import CucumberSwiftTestingGenerator
 
 /// The `cucumberswift-cli` command line: the commands and the usage, shared by the cucumberswift-cli tool, by Bazel's
 /// swift_binary, and by the tool the SwiftPM and Xcode plugins run.
+///
+/// Not API of the CucumberSwift package: this target is not in any product, and only the cucumberswift-cli tool and
+/// the plugins' command target call it, so its interface changes with them.
 public enum CucumberSwiftCommandLine {
     public static let usage = """
         usage: cucumberswift-cli <command> …
