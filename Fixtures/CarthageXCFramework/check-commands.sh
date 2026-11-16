@@ -22,13 +22,13 @@ diff "$here/Tests/Features/Basket.feature" "$work/Basket.feature" || { echo "fix
 
 # generate needs Swift 6.1: Package@swift-6.0.swift, which Swift 6.0 reads, leaves it out and the command says so.
 swift_version="$(swift --version 2>&1 | sed -n 's/.*Swift version \([0-9]*\.[0-9]*\).*/\1/p' | head -n 1)"
-if [ "$(printf '%s\n6.1\n' "$swift_version" | sort -V | head -n 1)" = "6.1" ]; then
+if [[ "$(printf '%s\n6.1\n' "$swift_version" | sort -V | head -n 1)" == "6.1" ]]; then
   "$here/cucumberswift.sh" generate --output "$work/Generated.swift" "$work/Basket.feature"
   grep -q "Typed arguments from Cucumber expressions" "$work/Generated.swift" || { echo "generate wrote no test for the scenario"; exit 1; }
 else
   status=0
   "$here/cucumberswift.sh" generate --output "$work/Generated.swift" "$work/Basket.feature" > "$work/generate.out" 2>&1 || status=$?
-  [ "$status" = 2 ] || { echo "generate on Swift $swift_version should exit with status 2, not $status: $(cat "$work/generate.out")"; exit 1; }
+  [[ "$status" == 2 ]] || { echo "generate on Swift $swift_version should exit with status 2, not $status: $(cat "$work/generate.out")"; exit 1; }
   grep -q "needs Swift 6.1 or later" "$work/generate.out" || { echo "generate did not say that it needs Swift 6.1: $(cat "$work/generate.out")"; exit 1; }
 fi
 echo "The cucumberswift-cli commands ran from the checkout."
