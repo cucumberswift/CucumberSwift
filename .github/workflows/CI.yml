@@ -1501,7 +1501,7 @@ jobs:
           # The Swift Testing run ran its three scenarios as Swift Testing tests: a run with none passes too.
           python3 ../.github/scripts/fixture_tests.py CucumberSwiftTestingCoverageTests bazel-testlogs/CucumberSwiftTestingCoverageTests/test.log
           # The scores, without the time spent: the Swift Testing runner scores the feature as the XCTest runner does.
-          scores() { grep -h 'CucumberSwift coverage: Grading' "bazel-testlogs/$1/test.log" | sed 's/, about .*//'; }
+          scores() { local test_name="$1"; grep -h 'CucumberSwift coverage: Grading' "bazel-testlogs/$test_name/test.log" | sed 's/, about .*//'; }
           if [ "$(scores CucumberSwiftCoverageTests)" != "$(scores CucumberSwiftTestingCoverageTests)" ]; then
             echo "::error::The runners scored the Grading feature differently:"
             scores CucumberSwiftCoverageTests
