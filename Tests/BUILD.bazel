@@ -1,6 +1,9 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(":consumer_tests.bzl", "consumer_tests")
 load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
+load("@rules_apple//apple:macos.bzl", "macos_unit_test")
+load("@rules_apple//apple:resources.bzl", "apple_resource_group")
+load("@rules_swift//swift:swift_library.bzl", "swift_library")
 load(":xctest_runner_info_test.bzl", "xctest_runner_info_test")
 
 # From this folder: `bazel test //... --test_tag_filters=-tvos` runs each suite on macOS, on an
@@ -39,4 +42,39 @@ consumer_tests(name = "CucumberSwiftDSLConsumerTests")
 consumer_tests(
     name = "CucumberSwiftSwift6ConsumerTests",
     copts = ["-swift-version", "6"],
+)
+
+# Per-scenario coverage (#522): `bazel coverage //:CucumberSwiftCoverageTests` builds Grades with code
+# coverage, and CucumberSwift writes each scenario's coverage into the test's outputs. CI checks them.
+swift_library(
+    name = "Grades",
+    srcs = ["Grades/Grades.swift"],
+    module_name = "Grades",
+)
+
+apple_resource_group(
+    name = "CucumberSwiftCoverageTestsFeatures",
+    strip_structured_resources_prefixes = ["CucumberSwiftCoverageTests"],
+    structured_resources = glob(["CucumberSwiftCoverageTests/Features/**"]),
+)
+
+swift_library(
+    name = "CucumberSwiftCoverageTestsLib",
+    testonly = True,
+    srcs = glob(["CucumberSwiftCoverageTests/*.swift"]),
+    data = [":CucumberSwiftCoverageTestsFeatures"],
+    module_name = "CucumberSwiftCoverageTests",
+    deps = [
+        ":Grades",
+        "@cucumberswift//:CucumberSwift",
+    ],
+)
+
+macos_unit_test(
+    name = "CucumberSwiftCoverageTests",
+    # Grades.swift is the only code the scores measure. CucumberSwift never measures its own files or the tests'.
+    env = {"CUCUMBER_COVERAGE_SOURCES": "Grades.swift"},
+    minimum_os_version = "10.15",
+    runner = ":macos_xctest_runner",
+    deps = [":CucumberSwiftCoverageTestsLib"],
 )
