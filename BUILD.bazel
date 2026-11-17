@@ -73,7 +73,5 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
-# The sources of the cucumberswift tool, which cli/BUILD.bazel builds in a package of its own: Bazel's output
-# folders are not case-sensitive on macOS, so a binary named cucumberswift can't sit next to the CucumberSwift
-# library.
+# The sources of the cucumberswift-cli tool, which cli/BUILD.bazel builds.
 exports_files(glob(["Sources/CucumberSwiftCommand/*.swift"]))

@@ -215,13 +215,13 @@ Keep these points in mind when you change the Bazel setup:
 mise run test-fixtures
 ```
 
-To run some of them, list their folder names in `FIXTURES`, separated by commas. A name that isn't a fixture fails the task:
+To run some of them, list their folder names after the task's name. A name that isn't a fixture fails the task:
 
 ```bash
-FIXTURES=SwiftTestingPackage,BrokenFeaturesPackage mise run test-fixtures
+mise run test-fixtures SwiftTestingPackage BrokenFeaturesPackage
 ```
 
-Our CI runs them in the `Fixture tests` job on `macos-26`, and the Swift package fixtures in the `SwiftPM tests` job too.
+Our CI runs each fixture in a job of its own on `macos-26`, named `Fixture tests (<folder name>)`, and the Swift package fixtures in the `SwiftPM tests` job too. The `Fixture tests` check passes only when every fixture's job passes. A new folder in `Fixtures/` gets a job of its own with no change to the workflow.
 
 `Fixtures/CarthageXCFramework` is the exception. It uses the framework that Carthage builds from this checkout rather than the package, so `mise run test-fixtures` skips it. Run it with this task. The task first builds the framework with Carthage. Our CI runs it in the `Carthage tests` jobs:
 
