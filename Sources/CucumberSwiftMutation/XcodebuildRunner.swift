@@ -30,7 +30,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         /// More arguments for every `xcodebuild`, such as `-skipPackagePluginValidation`.
         public var arguments: [String]
 
-        var isWorkspace: Bool { container.hasSuffix(".xcworkspace") }
+        /// A trailing slash, as tab completion adds, does not change that the container is a workspace.
+        var isWorkspace: Bool { container.hasSuffix(".xcworkspace") || container.hasSuffix(".xcworkspace/") }
 
         public init(container: String, scheme: String, destination: String, testTargets: [String] = [], arguments: [String] = []) {
             self.container = container

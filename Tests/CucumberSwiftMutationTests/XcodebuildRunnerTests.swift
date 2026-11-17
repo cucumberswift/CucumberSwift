@@ -44,6 +44,16 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         }
     }
 
+    func testAWorkspacePathWithATrailingSlashIsStillBuiltWithDashWorkspace() throws {
+        let commands = RecordingCommands()
+        let workspace = XcodebuildRunner.Target(container: "App.xcworkspace/", scheme: "App", destination: "platform=macOS")
+        let copy = try makeCopy(container: "App.xcworkspace")
+        _ = XcodebuildRunner(target: workspace, commands: commands).build(in: copy, timeout: nil)
+        let arguments = try XCTUnwrap(commands.calls.first?.arguments)
+        XCTAssertTrue(arguments.starts(with: ["build-for-testing", "-workspace", "App.xcworkspace/"]))
+        XCTAssertFalse(arguments.contains("-project"))
+    }
+
     func testBuildsForTestingWithCoverageIntoOneDerivedDataFolder() throws {
         let commands = RecordingCommands()
         let runner = XcodebuildRunner(target: target, commands: commands)
