@@ -12,8 +12,8 @@ import Foundation
 /// told to: the tool's own `CUCUMBER_*` variables go the same way, as they do with SwiftPM, where the tests inherit them.
 /// The test count comes from the test's own log in the testlogs folder, which `bazel test` writes whether or not it prints it.
 /// The runner ends its arguments with `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's
-/// `.bazelrc`, or a `--config` it names, sets another prefix; a `--symlink_prefix` in the target's arguments wins, and
-/// the runner reads the folder it names.
+/// `.bazelrc`, or a `--config` it names, sets another prefix. A `--symlink_prefix` in the target's arguments is the
+/// prefix instead, repeated at the end: the runner reads the folder it names.
 /// Bazel's `test.xml` can't give it: Bazel writes that file itself, with one test for the target.
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
@@ -89,10 +89,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     /// The prefix of the convenience links: the one the target's arguments set, or `bazel-`.
-    private var symlinkPrefix: String {
-        let flag = "--symlink_prefix="
-        return target.arguments.last { $0.hasPrefix(flag) }.map { String($0.dropFirst(flag.count)) } ?? "bazel-"
-    }
+    private var symlinkPrefix: String { argument("--symlink_prefix") ?? "bazel-" }
+
+    /// Whether Bazel makes the convenience links: `normal` unless the target's arguments say otherwise.
+    private var convenienceSymlinks: String { argument("--experimental_convenience_symlinks") ?? "normal" }
 
     /// What every `bazel build` and `bazel test` gets, so that the test reuses what the build made: coverage on, in
     /// LLVM's format, the shared disk cache, and the convenience links the runner reads the test logs from.
@@ -103,11 +103,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         }
         arguments += target.arguments
         // Last, so that a `--config` in the target's arguments, which Bazel expands where it stands, can't move the links with
-        // a `--symlink_prefix` of its own. A prefix the arguments set themselves is the project's choice.
-        if !target.arguments.contains(where: { $0.hasPrefix("--symlink_prefix") }) { arguments.append("--symlink_prefix=bazel-") }
-        if !target.arguments.contains(where: { $0.hasPrefix("--experimental_convenience_symlinks") }) {
-            arguments.append("--experimental_convenience_symlinks=normal")
-        }
+        // a `--symlink_prefix` of its own: the prefix the arguments name themselves, or `bazel-`, is the one the runner reads.
+        arguments.append("--symlink_prefix=\(symlinkPrefix)")
+        arguments.append("--experimental_convenience_symlinks=\(convenienceSymlinks)")
         return arguments
     }
 
@@ -125,6 +123,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         self.commands = commands
         self.cleanUpCommands = cleanUpCommands
         self.environment = environment
+    }
+
+    /// The value of the last `flag=` in the target's arguments, if it has one.
+    private func argument(_ flag: String) -> String? {
+        target.arguments.last { $0.hasPrefix(flag + "=") }.map { String($0.dropFirst(flag.count + 1)) }
     }
 
     /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.

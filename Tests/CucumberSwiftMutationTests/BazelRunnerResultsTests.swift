@@ -30,7 +30,17 @@ final class BazelRunnerResultsTests: BazelRunnerTestCase {
         let run = runner(.init(label: "//Tests:AppTests", arguments: ["--symlink_prefix=.bazel/"]), commands: custom).test(in: copy, request: TestRequest())
         XCTAssertEqual(run.testsRun, 4)
         let customArguments = try XCTUnwrap(custom.calls.first).arguments
-        XCTAssertEqual(customArguments.filter { $0.hasPrefix("--symlink_prefix") }, ["--symlink_prefix=.bazel/"])
+        XCTAssertEqual(customArguments.last { $0.hasPrefix("--symlink_prefix") }, "--symlink_prefix=.bazel/")
+        // A named config that sets its own prefix comes after the project's directly given one, and would win: the runner
+        // repeats the prefix it reads at the very end.
+        let configured = commands(prefix: "mine-")
+        let withConfig = BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--symlink_prefix=mine-", "--config=ci"])
+        XCTAssertEqual(runner(withConfig, commands: configured).test(in: copy, request: TestRequest()).testsRun, 4)
+        let configuredArguments = try XCTUnwrap(configured.calls.first).arguments
+        let config = try XCTUnwrap(configuredArguments.firstIndex(of: "--config=ci"))
+        let lastPrefix = try XCTUnwrap(configuredArguments.lastIndex { $0.hasPrefix("--symlink_prefix=") })
+        XCTAssertEqual(configuredArguments[lastPrefix], "--symlink_prefix=mine-")
+        XCTAssertGreaterThan(lastPrefix, config, "The prefix the runner reads must come after the config")
     }
 
     func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {
