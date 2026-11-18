@@ -167,7 +167,7 @@ let package = Package(
         // on a Simulator.
         .target(
             name: "CucumberSwiftMutation",
-            dependencies: ["CucumberSwiftCoverageMerge"],
+            dependencies: ["CucumberSwiftGherkin", "CucumberSwiftCoverageMerge"],
             path: "Sources/CucumberSwiftMutation"),
         // `cucumberswift-cli mutation-test`, which the Mutation Testing plugin runs too. It builds for the Mac that
         // builds the tests. It finds the mutants with swift-syntax, so without the Macros trait it only says what to
