@@ -46,7 +46,8 @@ def feature_problems(features, redundant_count):
     problems = []
     for feature in features:
         scores = feature.get("scores", {})
-        if (scores.get("redundancy") or 0) <= 0:
+        # `not (x > 0)`, not `x <= 0`: JSON decoding accepts NaN, which no comparison with 0 is true for.
+        if not (scores.get("redundancy") or 0) > 0:
             problems.append(f"{feature.get('featureName')} has redundancy {scores.get('redundancy')}, expected above 0")
         adding_nothing = [one["name"] for one in scores.get("scenarios", []) if one.get("addsNothing")]
         if len(adding_nothing) != redundant_count:

@@ -87,13 +87,17 @@ public struct MutationOptions: Equatable, Sendable {
                             : "\(root.path) has no \(file). Pass --root with the folder that holds it."
     }
 
-    public static func parse(_ arguments: [String]) throws -> MutationOptions {
+    /// The options that `arguments` give. `environment` is the tool's: `bazel run` starts the tool in a folder of its own,
+    /// with the workspace's in `BUILD_WORKSPACE_DIRECTORY`, so that is the root when `--root` names none.
+    public static func parse(_ arguments: [String], environment: [String: String] = ProcessInfo.processInfo.environment) throws -> MutationOptions {
         var root: URL?
         var output: URL?
         var options = MutationOptions(root: URL(fileURLWithPath: "."))
         var sources = [String]()
         var xcode = XcodeInput()
         var bazelArguments = [String]()
+        var passedBazel = false
+        var passedXcodebuild = false
         var index = 0
         func value(for option: String, isArgument: Bool = false) throws -> String {
             index += 1
@@ -125,18 +129,23 @@ public struct MutationOptions: Equatable, Sendable {
                 case "--disable-prebuilts": options.disablePrebuilts = true
                 case "--project", "--workspace", "--scheme", "--destination": xcode.values[argument] = try value(for: argument)
                 case "--test-target": xcode.testTargets.append(try value(for: argument))
-                case "--xcodebuild": options.xcodebuild = try value(for: argument)
+                case "--xcodebuild":
+                    options.xcodebuild = try value(for: argument)
+                    passedXcodebuild = true
                 case "--xcodebuild-arg": xcode.arguments.append(try value(for: argument))
                 case "--bazel-target": options.bazelTarget = BazelRunner.Target(label: try value(for: argument))
                 case "--bazel-arg": bazelArguments.append(try value(for: argument, isArgument: true))
-                case "--bazel": options.bazel = try value(for: argument)
+                case "--bazel":
+                    options.bazel = try value(for: argument)
+                    passedBazel = true
                 case "--bazel-disk-cache": options.bazelDiskCache = URL(fileURLWithPath: try value(for: argument)).standardizedFileURL
                 default: throw UsageError(description: "Unknown option \(argument)")
             }
             index += 1
         }
-        // The package is the current folder unless --root names another.
-        let package = root ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).standardizedFileURL
+        // The package is the current folder unless --root names another, or `bazel run` names the workspace it ran in.
+        let workspace = environment["BUILD_WORKSPACE_DIRECTORY"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0).standardizedFileURL }
+        let package = root ?? workspace ?? URL(fileURLWithPath: FileManager.default.currentDirectoryPath).standardizedFileURL
         options.root = package
         options.output = output ?? package.appendingPathComponent(".build/mutation-testing")
         if !sources.isEmpty {
@@ -144,7 +153,7 @@ public struct MutationOptions: Equatable, Sendable {
             options.findsSources = false
         }
         try options.applyXcode(xcode)
-        try options.applyBazel(arguments: bazelArguments)
+        try options.applyBazel(arguments: bazelArguments, passedBazel: passedBazel, passedXcodebuild: passedXcodebuild)
         return options
     }
 
@@ -210,14 +219,16 @@ public struct MutationOptions: Equatable, Sendable {
 
     /// Sets the Bazel target's arguments from `--bazel-arg`. A Bazel workspace has no package to describe either, so its sources
     /// are the folders `--sources` names, and it can't also be an Xcode project.
-    private mutating func applyBazel(arguments: [String]) throws {
+    private mutating func applyBazel(arguments: [String], passedBazel: Bool, passedXcodebuild: Bool) throws {
         guard var target = bazelTarget else {
-            guard arguments.isEmpty, bazel == "bazel", bazelDiskCache == nil else {
+            guard arguments.isEmpty, !passedBazel, bazelDiskCache == nil else {
                 throw UsageError(description: "--bazel, --bazel-arg and --bazel-disk-cache need --bazel-target")
             }
             return
         }
-        guard xcode == nil else { throw UsageError(description: "Pass --bazel-target or --project and --workspace, not both") }
+        guard xcode == nil, !passedXcodebuild else {
+            throw UsageError(description: "Pass --bazel-target or --project and --workspace, not both: --xcodebuild belongs to an Xcode project")
+        }
         guard targets.isEmpty else { throw UsageError(description: "--target names a package's targets: with --bazel-target, pass --sources") }
         guard findsSources == false else { throw UsageError(description: "--bazel-target needs --sources, the folders of the code to mutate") }
         target.arguments = arguments

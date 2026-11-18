@@ -61,6 +61,12 @@ class CheckBazelCoverageTests(unittest.TestCase):
         manifest["features"][0]["scores"]["redundancy"] = 0
         self.assertIn("redundancy 0, expected above 0", self.check(manifest, GOOD_FILES)[0])
 
+    def test_a_redundancy_that_is_not_a_number_fails(self):
+        # json.loads accepts NaN, and NaN <= 0 is false: only a positive comparison rejects it.
+        manifest = good_manifest()
+        manifest["features"][0]["scores"]["redundancy"] = float("nan")
+        self.assertIn("redundancy nan, expected above 0", self.check(manifest, GOOD_FILES)[0])
+
     def test_a_different_number_of_scenarios_adding_nothing_fails(self):
         self.assertIn("expected 1 scenarios that add nothing", self.check(good_manifest(), GOOD_FILES, redundant=1)[0])
 
