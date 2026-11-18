@@ -15,7 +15,8 @@ name: CI
 # narrow the parallel tests to some combinations, and skip every other job.
 # The tests on tvOS, on watchOS and on the oldest Simulator runtimes run only in
 # the nightly and manual runs (tvOS and watchOS tests, Older runtime tests); pull
-# requests build for tvOS (#271) and watchOS (#269) in Catalyst tests.
+# requests build for tvOS (#271) and watchOS (#269) in Catalyst tests, and build
+# every library target for both in Build for watchOS and tvOS (#600).
 #
 # A pull request that merges through the merge queue is tested twice on one
 # commit: the merge_group run tests it, and when that passes, main moves to that
@@ -308,14 +309,18 @@ jobs:
           fail_ci_if_error: true
 
   # The iOS Simulator run, and the coverage report codecov/patch reads. A required
-  # check. Name the destination: the scheme also builds for Mac Catalyst, which
-  # Catalyst tests covers. OS=latest is the newest iOS Simulator runtime on the
-  # runner image.
+  # check. The newest Xcode, the macos-26 image's own, which a new release most
+  # likely breaks. The destination is an iPhone of that Xcode's own iOS runtime,
+  # from simulator-destination.sh, so it works whatever devices the image has:
+  # naming it also keeps the scheme from building for Mac Catalyst, which
+  # Catalyst tests covers. No matrix, unlike Catalyst tests: a skipped matrix
+  # job reports its name unexpanded (see changes), and this is a required check.
+  # iOS tests (Xcode 16) runs the older Xcode outside pull requests.
   ios_tests:
     name: iOS tests
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     permissions:
       contents: read
@@ -326,13 +331,40 @@ jobs:
           xcodebuild -version
           xcrun simctl list runtimes | grep -i ios || true
       - name: Run the tests on an iOS Simulator
-        run: .github/scripts/xcode-test.sh -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' -enableCodeCoverage YES
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination" -enableCodeCoverage YES
       # Finds the coverage xcodebuild wrote to the default DerivedData folder.
       # Pull requests from forks have no token, so only a push fails on an upload error.
       - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: ${{ github.event_name == 'push' }}
+
+  # The iOS Simulator run of iOS tests with Xcode 16.4 on macos-15, the Xcode iOS
+  # tests ran before it moved to macos-26, on an iPhone of its own iOS 18 runtime.
+  # The merge queue, pushes, nightly and manual runs only, like the other Xcode 16
+  # variants. No coverage upload: iOS tests uploads it.
+  ios_tests_xcode16:
+    name: iOS tests (Xcode 16)
+    needs: changes
+    if: ${{ !cancelled() && github.event_name != 'pull_request' && needs.changes.outputs.no_code != 'true' && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
+    runs-on: macos-15
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Select Xcode 16.4
+        run: .github/scripts/select-xcode.sh 16.4
+      - name: Show the toolchain
+        run: xcrun simctl list runtimes | grep -i ios || true
+      - name: Run the tests on an iOS Simulator
+        run: |
+          destination=$(.github/scripts/simulator-destination.sh "iOS Simulator")
+          .github/scripts/xcode-test.sh -destination "$destination"
 
   # Three quick checks of the package and the Xcode project, in one job so they
   # share one macOS runner. A required check. Each check runs even when one
@@ -708,6 +740,38 @@ jobs:
           MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
           TUIST_DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
         run: mise exec -- .github/scripts/macros-trait-fixture.sh 16.3
+
+  # Builds every library target of the package for the watchOS and tvOS Simulators, with
+  # no tests (#600), on pull requests that change code. A file that uses Process, or another
+  # API those platforms lack, without a guard builds on macOS and Linux and fails only
+  # there. tvOS and watchOS tests runs the tests, in nightly and manual runs. From a copy of
+  # the checkout without the Xcode project, because xcodebuild picks a project over a
+  # package, as in tvOS and watchOS tests. No matrix, so that it can be a required check
+  # that a run with no code skips.
+  build_watchos_tvos:
+    name: Build for watchOS and tvOS
+    needs: changes
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.no_code != 'true' && !inputs.parallel_only }}
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: xcodebuild -version
+      - name: Build the package for the watchOS and tvOS Simulators
+        run: |
+          package="$RUNNER_TEMP/package"
+          mkdir "$package"
+          rsync -a --exclude .git --exclude CucumberSwift.xcodeproj --exclude CucumberSwift.xcworkspace ./ "$package/"
+          cd "$package"
+          for platform in watchOS tvOS; do
+            xcodebuild build -scheme CucumberSwift-Package -destination "generic/platform=$platform Simulator" \
+              -skipPackagePluginValidation -skipMacroValidation -quiet
+          done
 
   # The tests on a tvOS Simulator (#271): the CucumberSwift scheme's test bundles, as iOS tests
   # runs them, then the consumer test packages, which build CucumberSwift as a Swift package.
@@ -1349,6 +1413,38 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Bazel's disk cache and repository cache, restored on every run: the C++ tools that rules_swift builds for the
+      # coverage step's Xcode took 18 of its 22 minutes, and a run starts with nothing otherwise. Only runs of main save
+      # them (the last step), so a pull request can't put anything in a cache that other runs restore. The key changes
+      # with the module files, the Bazel and the two Xcode versions the steps build with (the image's, and the 26.2
+      # that the coverage step and the mutation testing step pass).
+      - name: Find the Xcode that the cache is for
+        id: xcode
+        run: echo "default=$(xcodebuild -version | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
+      - name: Restore the Bazel caches
+        id: bazel_cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/bazel-disk-cache
+            ${{ runner.temp }}/bazel-repository-cache
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-${{ hashFiles('MODULE.bazel', 'Tests/MODULE.bazel', '.bazelversion', 'Tests/.bazelversion') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-
+      - name: Say whether the Bazel caches were restored
+        run: |
+          echo "Bazel cache: exact key hit = '${{ steps.bazel_cache.outputs.cache-hit }}', restored from '${{ steps.bazel_cache.outputs.cache-matched-key }}'"
+          du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache" 2>/dev/null || echo "Bazel cache: nothing restored, so a cold run"
+      # Every `bazel` command below, in this module and in Tests/, reads the runner's ~/.bazelrc. The disk cache also
+      # keeps test results, and a run that finds one prints "(cached) PASSED" without running the test, so tests always run.
+      - name: Point Bazel at the caches
+        run: |
+          {
+            echo "common --disk_cache=$RUNNER_TEMP/bazel-disk-cache"
+            echo "common --repository_cache=$RUNNER_TEMP/bazel-repository-cache"
+            echo "test --nocache_test_results"
+          } >> "$HOME/.bazelrc"
+          cat "$HOME/.bazelrc"
       - name: Show the Bazel version
         run: bazel version
       - name: Check MODULE.bazel's CucumberSwiftExpressions is at least Package.swift's
@@ -1422,7 +1518,7 @@ jobs:
       - name: Check per-scenario coverage under bazel coverage
         working-directory: Tests
         run: |
-          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache" --test_output=errors
+          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
           grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
           python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
@@ -1430,12 +1526,12 @@ jobs:
       # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
       # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
       # lists, and print a warning for each survivor (#522). The tool is the one that `bazel run @cucumberswift//cli:cucumberswift-cli`
-      # gives a Bazel project, built by Bazel with swift-syntax from the Bazel Central Registry. It shares the coverage step's disk cache, and runs with
+      # gives a Bazel project, built by Bazel with swift-syntax from the Bazel Central Registry. It uses the job's Bazel caches, and runs with
       # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
       # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
       - name: Build the mutation testing tool with Bazel
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
-        run: bazel build //cli:cucumberswift-cli --disk_cache="$RUNNER_TEMP/bazel-disk-cache" --repository_cache="$RUNNER_TEMP/bazel-repository-cache"
+        run: bazel build //cli:cucumberswift-cli
       - name: Run mutation testing on the Bazel fixture
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
         run: MUTATION_TOOL="$PWD/bazel-bin/cli/cucumberswift-cli" .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
@@ -1450,6 +1546,20 @@ jobs:
             ${{ runner.temp }}/mutation-Bazel.log
           if-no-files-found: ignore
           retention-days: 3
+      - name: Report the Bazel cache sizes
+        run: du -sh "$RUNNER_TEMP/bazel-disk-cache" "$RUNNER_TEMP/bazel-repository-cache"
+      # Saves only when the restore missed the exact key, and only from main: a push to main and the nightly run, which
+      # runs on main. A pull request never saves, and the merge queue's run doesn't either: a run restores caches only from
+      # its own branch, its base branch and the default branch, so a cache saved on the queue's temporary branch is one
+      # that no pull request can restore.
+      - name: Save the Bazel caches
+        if: ${{ success() && steps.bazel_cache.outputs.cache-hit != 'true' && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/bazel-disk-cache
+            ${{ runner.temp }}/bazel-repository-cache
+          key: bazel-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.default }}-26.2-${{ matrix.bazel || 'default' }}-${{ hashFiles('MODULE.bazel', 'Tests/MODULE.bazel', '.bazelversion', 'Tests/.bazelversion') }}
 
   # One check that sums up the run, for main's ruleset to require instead of each job (#606).
   # It needs every job but the nightly report, and test_ci_gate.py checks the list, so a job
@@ -1460,7 +1570,7 @@ jobs:
   # every merge queue entry. A job without a matrix, so it always reports under this name.
   ci_gate:
     name: CI gate
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture, bazel_tests]
+    needs: [changes, docs, coverage_no_code, ios_tests, ios_tests_xcode16, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, build_watchos_tvos, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture, bazel_tests]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -1488,7 +1598,7 @@ jobs:
   # issues.
   nightly_report:
     name: Report the nightly run
-    needs: [changes, docs, coverage_no_code, ios_tests, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture, bazel_tests, ci_gate]
+    needs: [changes, docs, coverage_no_code, ios_tests, ios_tests_xcode16, project_checks, script_tests, workflow_checks, carthage_tests, catalyst_tests, build_watchos_tvos, tvos_watchos_tests, older_runtime_tests, parallel_smoke, parallel_tests, swiftpm_tests, fixture_tests, fixture_test, swift_6_3_tests, coverage_merge_fixture, mutation_fixture, bazel_tests, ci_gate]
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5

@@ -19,7 +19,12 @@ cat > "$work/bin/xcrun" <<'EOF'
 #!/bin/bash
 if [[ "$1" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
 if [[ "$1" == "llvm-profdata" ]]; then echo "$*" >> "$FAKE_LLVM"; touch "${@: -1}"; exit 0; fi
-if [[ "$1" == "llvm-cov" ]]; then echo "$*" >> "$FAKE_LLVM"; echo "SF:Fake.swift"; exit "${FAKE_COV_STATUS:-0}"; fi
+if [[ "$1" == "llvm-cov" ]]; then
+  echo "$*" >> "$FAKE_LLVM"
+  echo "SF:Fake.swift"
+  [[ -z "${FAKE_COV_STDERR-}" ]] || printf '%s\n' "$FAKE_COV_STDERR" >&2
+  exit "${FAKE_COV_STATUS:-0}"
+fi
 if [[ "$1" == "simctl" ]]; then
   echo "${*:2}" >> "$FAKE_SIMCTL"
   if [[ "$2" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
@@ -171,6 +176,15 @@ run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat"
 [[ "$status" -eq 0 ]] || fail "a coverage run with no profile exited $status"
 grep -q "wrote no coverage profile" "$work/err" || fail "no warning: $(cat "$work/err")"
 [[ ! -e "$work/llvm" ]] || fail "a coverage tool ran with no profile: $(cat "$work/llvm")"
+
+# llvm-cov's warning that the binary is newer than the profile doesn't fail the test; any other message does.
+stale="warning: /x/Fake: profile data may be out of date - object is newer"
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STDERR="$stale"
+[[ "$status" -eq 0 ]] || fail "the out-of-date warning failed the run: $(cat "$work/err")"
+[[ "$(cat "$work/lcov.dat")" == "SF:Fake.swift" ]] || fail "no lcov report after the warning"
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STDERR="$stale"$'\n'"warning: 1 functions have mismatched data"
+[[ "$status" -ne 0 ]] || fail "another llvm-cov warning next to the out-of-date one passed"
+grep -q "mismatched data" "$work/err" || fail "the other warning wasn't shown: $(cat "$work/err")"
 
 # A failing export fails the test.
 run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STATUS=1
