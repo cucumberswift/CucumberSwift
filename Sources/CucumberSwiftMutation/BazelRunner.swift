@@ -107,16 +107,6 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         return arguments + target.arguments
     }
 
-    /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
-    private func outputBase(for copy: URL) -> URL {
-        runnerFolder(for: copy).appendingPathComponent("output-base")
-    }
-
-    /// The startup options that go before the command: the copy's own output base.
-    private func startupOptions(for copy: URL) -> [String] {
-        ["--output_base=\(outputBase(for: copy).path)"]
-    }
-
     public init(
         target: Target,
         bazel: String = "bazel",
@@ -131,6 +121,16 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         self.commands = commands
         self.cleanUpCommands = cleanUpCommands
         self.environment = environment
+    }
+
+    /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
+    private func outputBase(for copy: URL) -> URL {
+        runnerFolder(for: copy).appendingPathComponent("output-base")
+    }
+
+    /// The startup options that go before the command: the copy's own output base.
+    private func startupOptions(for copy: URL) -> [String] {
+        ["--output_base=\(outputBase(for: copy).path)"]
     }
 
     public func prepare(copy: URL) throws {
