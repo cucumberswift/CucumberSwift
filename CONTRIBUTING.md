@@ -360,8 +360,8 @@ Attach(attachment)
 ```
 
 - A fixture's scheme lists a `Proof.xctestplan` that sets `userAttachmentLifetime` to `keepAlways`. `mise run test-fixtures` runs it when `PROOF_RESULT_BUNDLE` names a path.
-- Our CI exports the attachments of the `SwiftTestingAndXCTestTuist` fixture with `xcrun xcresulttool export attachments` and uploads them as the `proof-SwiftTestingAndXCTestTuist` artifact for seven days. No other fixture is exported yet.
-- Download the artifact with `gh run download <run-id> -R cucumberswift/CucumberSwift -n proof-SwiftTestingAndXCTestTuist -D <folder>` and open the image to check it shows what your change should do. Then run `gh pr edit <number> -R cucumberswift/CucumberSwift --body-file <file> --attach '<folder>/<image>.jpeg#<what it shows>'`, with the file's `## Proof` section naming the image by that path. This needs gh 2.104 or later.
+- Our CI exports the attachments of each fixture that has a `Proof.xctestplan` with `xcrun xcresulttool export attachments`, and uploads them as that fixture's `proof-<fixture>` artifact for seven days.
+- Download the artifact with `gh run download <run-id> -R cucumberswift/CucumberSwift -n proof-<fixture> -D <folder>` and open the image to check it shows what your change should do. Then run `gh pr edit <number> -R cucumberswift/CucumberSwift --body-file <file> --attach '<folder>/<image>.jpeg#<what it shows>'`, with the file's `## Proof` section naming the image by that path. This needs gh 2.104 or later.
 
 Under the image, say in a line or two what it proves and which run of our CI made it. On a new run, replace the whole `## Proof` section.
 
