@@ -46,7 +46,10 @@ final class BazelRunnerTests: BazelRunnerTestCase {
         XCTAssertTrue(call.arguments.contains("--features=llvm_coverage_map_format"))
         XCTAssertTrue(call.arguments.contains("--features=-gcc_coverage_map_format"))
         XCTAssertTrue(call.arguments.contains("--disk_cache=\(folder.appendingPathComponent("cache").path)"))
-        XCTAssertEqual(call.arguments.last, "--config=ci")
+        XCTAssertEqual(call.arguments.last, "--experimental_convenience_symlinks=normal", "The runner's own link flags come after the target's")
+        let config = try XCTUnwrap(call.arguments.firstIndex(of: "--config=ci"))
+        let prefix = try XCTUnwrap(call.arguments.firstIndex(of: "--symlink_prefix=bazel-"))
+        XCTAssertLessThan(config, prefix, "A --config expands where it stands: the runner's prefix must come after it, or the config's wins")
         XCTAssertEqual(call.timeout, 90)
     }
 

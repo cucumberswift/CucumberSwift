@@ -11,8 +11,9 @@ import Foundation
 /// CucumberSwift's settings reach the tests as `--test_env=K=V`, because Bazel gives a test only the variables it is
 /// told to: the tool's own `CUCUMBER_*` variables go the same way, as they do with SwiftPM, where the tests inherit them.
 /// The test count comes from the test's own log in the testlogs folder, which `bazel test` writes whether or not it prints it.
-/// The runner sets `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's `.bazelrc` sets
-/// another prefix; a `--symlink_prefix` in the target's arguments wins, and the runner reads the folder it names.
+/// The runner ends its arguments with `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's
+/// `.bazelrc`, or a `--config` it names, sets another prefix; a `--symlink_prefix` in the target's arguments wins, and
+/// the runner reads the folder it names.
 /// Bazel's `test.xml` can't give it: Bazel writes that file itself, with one test for the target.
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
@@ -100,11 +101,14 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         if let diskCache, !target.arguments.contains(where: { $0.hasPrefix("--disk_cache") }) {
             arguments.append("--disk_cache=\(diskCache.path)")
         }
+        arguments += target.arguments
+        // Last, so that a `--config` in the target's arguments, which Bazel expands where it stands, can't move the links with
+        // a `--symlink_prefix` of its own. A prefix the arguments set themselves is the project's choice.
         if !target.arguments.contains(where: { $0.hasPrefix("--symlink_prefix") }) { arguments.append("--symlink_prefix=bazel-") }
         if !target.arguments.contains(where: { $0.hasPrefix("--experimental_convenience_symlinks") }) {
             arguments.append("--experimental_convenience_symlinks=normal")
         }
-        return arguments + target.arguments
+        return arguments
     }
 
     public init(

@@ -36,7 +36,12 @@ final class BazelOptionsTests: BazelRunnerTestCase {
         XCTAssertThrowsError(try MutationOptions.parse(root + ["--bazel-target", "//:t", "--sources", "A", "--xcodebuild", "/custom/xcodebuild"])) {
             XCTAssertTrue("\($0)".contains("--xcodebuild"), "\($0)")
         }
-        XCTAssertNoThrow(try MutationOptions.parse(root + ["--xcodebuild", "/custom/xcodebuild"]), "SwiftPM and Xcode runs keep accepting it")
+        XCTAssertNoThrow(try MutationOptions.parse(root + ["--xcodebuild", "/custom/xcodebuild"]), "SwiftPM runs keep accepting it")
+        let xcode = try? MutationOptions.parse(root + [
+            "--project", "A.xcodeproj", "--scheme", "A", "--destination", "d", "--sources", "A", "--xcodebuild", "/custom/xcodebuild"
+        ])
+        XCTAssertEqual(xcode?.xcodebuild, "/custom/xcodebuild", "An Xcode run keeps accepting it, and uses it")
+        XCTAssertNotNil(xcode?.xcode)
     }
 
     func testBazelRunStartsInTheRunfilesAndTheWorkspaceIsTheDefaultRoot() throws {

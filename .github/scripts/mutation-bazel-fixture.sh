@@ -31,13 +31,15 @@ expressions=$(absolute "$2")
 folder=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "${3:-${RUNNER_TEMP:-$(mktemp -d)}}")
 # mutation_fixture.py reads only files in the checkout or a temporary folder, so refuse any other folder now, not after the run.
 inside=false
-for root in "$repo" "${TMPDIR:-/tmp}" "${RUNNER_TEMP:-}"; do
+# Python's own temporary folder, which also reads TEMP and TMP: the checker uses it, so this check must too.
+temporary=$(python3 -c 'import tempfile; print(tempfile.gettempdir())')
+for root in "$repo" "$temporary" "${RUNNER_TEMP:-}"; do
   [[ -n "$root" && -d "$root" ]] || continue
   root=$(cd "$root" && pwd -P)
   if [[ "$folder" == "$root" || "$folder" == "$root"/* ]]; then inside=true; fi
 done
 if [[ "$inside" != true ]]; then
-  echo "error: $folder isn't in the checkout, \$TMPDIR or \$RUNNER_TEMP, where mutation_fixture.py reads reports and the log" >&2
+  echo "error: $folder isn't in the checkout, the temporary folder ($temporary) or \$RUNNER_TEMP, where mutation_fixture.py reads reports and the log" >&2
   exit 2
 fi
 mkdir -p "$folder"
