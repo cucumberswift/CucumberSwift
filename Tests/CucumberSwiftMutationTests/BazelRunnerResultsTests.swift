@@ -41,6 +41,12 @@ final class BazelRunnerResultsTests: BazelRunnerTestCase {
         let lastPrefix = try XCTUnwrap(configuredArguments.lastIndex { $0.hasPrefix("--symlink_prefix=") })
         XCTAssertEqual(configuredArguments[lastPrefix], "--symlink_prefix=mine-")
         XCTAssertGreaterThan(lastPrefix, config, "The prefix the runner reads must come after the config")
+        // Bazel also takes the flag and its value as two arguments.
+        let separate = commands(prefix: "apart-")
+        let twoArguments = BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--symlink_prefix", "apart-", "--config=ci"])
+        XCTAssertEqual(runner(twoArguments, commands: separate).test(in: copy, request: TestRequest()).testsRun, 4)
+        let separateArguments = try XCTUnwrap(separate.calls.first).arguments
+        XCTAssertEqual(separateArguments.last { $0.hasPrefix("--symlink_prefix=") }, "--symlink_prefix=apart-")
     }
 
     func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {

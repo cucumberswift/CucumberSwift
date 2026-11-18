@@ -125,9 +125,18 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         self.environment = environment
     }
 
-    /// The value of the last `flag=` in the target's arguments, if it has one.
+    /// The value of the last `flag` in the target's arguments, if it has one. Bazel takes it as `flag=value`, or as `flag` and
+    /// then `value`.
     private func argument(_ flag: String) -> String? {
-        target.arguments.last { $0.hasPrefix(flag + "=") }.map { String($0.dropFirst(flag.count + 1)) }
+        var value: String?
+        for (index, argument) in target.arguments.enumerated() {
+            if argument.hasPrefix(flag + "=") {
+                value = String(argument.dropFirst(flag.count + 1))
+            } else if argument == flag, index + 1 < target.arguments.count {
+                value = target.arguments[index + 1]
+            }
+        }
+        return value
     }
 
     /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
