@@ -365,7 +365,7 @@ Attach(attachment)
 
 Under the image, say in a line or two what it proves and which run of our CI made it. On a new run, replace the whole `## Proof` section.
 
-The `--body-file` option replaces the whole description, so the file must contain all of it. Copy the current description first with `gh pr view <number> -R cucumberswift/CucumberSwift --json body --jq .body > <file>`, then add or replace the `## Proof` section. A text file in the artifact can't be attached, so copy the relevant text into a fenced code block in that section. A contributor without write access to the repository can't use `--attach`, so drag the image into the description in the browser instead.
+The `--body-file` option replaces the whole description, so the file must contain all of it. Copy the current description first with `gh pr view <number> -R cucumberswift/CucumberSwift --json body --jq .body > <file>`, then add or replace the `## Proof` section. A text file in the artifact can't be attached, so copy the relevant text into a fenced code block in that section. A pull request whose change prints new output shows that output as text proof. #531's pull request is the first to do so. A contributor without write access to the repository can't use `--attach`, so drag the image into the description in the browser instead.
 
 **Platforms.** The minimum deployment targets are iOS 13, macOS 10.15, tvOS 13 and watchOS 7.4.
 
