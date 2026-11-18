@@ -18,11 +18,11 @@ final class DiscoveryToolTests: XCTestCase {
         let error: String
     }
 
-    /// The tool as SwiftPM builds it: named after its executable product, cucumberswift.
+    /// The tool as SwiftPM builds it: named after its executable product, cucumberswift-cli.
     private var tool: URL {
         let bundle = Bundle.allBundles.first { $0.bundlePath.hasSuffix(".xctest") }
-        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("cucumberswift") }
-            ?? URL(fileURLWithPath: "cucumberswift")
+        return bundle.map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("cucumberswift-cli") }
+            ?? URL(fileURLWithPath: "cucumberswift-cli")
     }
 
     private func launch(_ arguments: [String], input: String = "") throws -> Launched {

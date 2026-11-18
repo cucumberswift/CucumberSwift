@@ -50,7 +50,7 @@ private final class Removal: @unchecked Sendable {
 /// after a run that was killed. The user's own files are never mutated, so nothing needs reverting.
 ///
 /// The lock keeps runs in different processes apart. One process runs one `MutationRun` at a time: the
-/// `cucumberswift mutation-test` command and the Mutation Testing plugin each start one. Several runs at once in
+/// `cucumberswift-cli mutation-test` command and the Mutation Testing plugin each start one. Several runs at once in
 /// one process aren't supported.
 public struct WorkFolder {
     public enum Failure: Error, Equatable, CustomStringConvertible {
@@ -194,11 +194,11 @@ public struct WorkFolder {
     }
 
     /// Copies the package at `root` to `copy`, without the folders a build or a checkout makes.
-    private static func copyProject(_ root: URL, to copy: URL, runner: CommandRunning) throws {
+    private static func copyProject(_ root: URL, to copy: URL, excluding: [String], runner: CommandRunning) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: copy, withIntermediateDirectories: true)
         let top = try fileManager.contentsOfDirectory(atPath: root.path)
-        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") {
+        for name in top.sorted() where !ProjectFingerprint.ignoredFolders.contains(name) && !name.hasPrefix("bazel-") && !excluding.contains(name) {
             try clone(root.appendingPathComponent(name), to: copy.appendingPathComponent(name), runner: runner)
         }
         // The dependencies SwiftPM already checked out, so that the copy builds without the network.
@@ -209,8 +209,9 @@ public struct WorkFolder {
         }
     }
 
-    /// Writes the lock file, then copies the project into a new folder inside `location`.
-    public init(copying root: URL, into location: URL, lockFolder: URL, runner: CommandRunning = ProcessRunner()) throws {
+    /// Writes the lock file, then copies the project into a new folder inside `location`. `excluding` names the
+    /// top-level files and folders the copy leaves out, besides the ones every run leaves out.
+    public init(copying root: URL, into location: URL, lockFolder: URL, excluding: [String] = [], runner: CommandRunning = ProcessRunner()) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: lockFolder, withIntermediateDirectories: true)
         folder = location.appendingPathComponent("\(Self.folderPrefix)\(getpid())-\(UUID().uuidString.prefix(8))")
@@ -232,7 +233,7 @@ public struct WorkFolder {
         do {
             try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
             try Data("\(getpid())\n".utf8).write(to: folder.appendingPathComponent(Self.ownerMarker))
-            try Self.copyProject(root, to: copy, runner: runner)
+            try Self.copyProject(root, to: copy, excluding: excluding, runner: runner)
         } catch {
             // No caller gets a WorkFolder to remove, so the partial copy and the lock go now.
             Self.remove(folder)
