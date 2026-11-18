@@ -44,6 +44,16 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         }
     }
 
+    func testAWorkspacePathWithATrailingSlashIsStillBuiltWithDashWorkspace() throws {
+        let commands = RecordingCommands()
+        let workspace = XcodebuildRunner.Target(container: "App.xcworkspace/", scheme: "App", destination: "platform=macOS")
+        let copy = try makeCopy(container: "App.xcworkspace")
+        _ = XcodebuildRunner(target: workspace, commands: commands).build(in: copy, timeout: nil)
+        let arguments = try XCTUnwrap(commands.calls.first?.arguments)
+        XCTAssertTrue(arguments.starts(with: ["build-for-testing", "-workspace", "App.xcworkspace/"]))
+        XCTAssertFalse(arguments.contains("-project"))
+    }
+
     func testBuildsForTestingWithCoverageIntoOneDerivedDataFolder() throws {
         let commands = RecordingCommands()
         let runner = XcodebuildRunner(target: target, commands: commands)
@@ -120,14 +130,31 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(commands.calls.count, 1, "There is no bundle to ask xcresulttool about")
     }
 
-    func testEachRunWritesItsOwnResultBundle() throws {
-        let commands = commands(total: 1)
+    func testEachRunWritesItsOwnResultBundleAndCountsTheTestsOfThatBundle() throws {
+        // The first bundle holds 6 tests and the second 0: a run that read the other run's bundle would count wrongly.
+        var written: [String] = []
+        let commands = RecordingCommands { call in
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                let path = call.arguments[index + 1]
+                try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+                written.append(path)
+            }
+            if call.arguments.first == "xcresulttool", let index = call.arguments.firstIndex(of: "--path") {
+                let position = written.firstIndex(of: call.arguments[index + 1])
+                return .finished(0, output: self.summary(position == 0 ? 6 : 0))
+            }
+            return .finished(0, output: "** TEST SUCCEEDED **")
+        }
         let runner = XcodebuildRunner(target: target, commands: commands)
         let copy = try makeCopy()
-        _ = runner.test(in: copy, request: TestRequest())
-        _ = runner.test(in: copy, request: TestRequest())
-        let bundles = commands.calls.compactMap { call in call.arguments.firstIndex(of: "-resultBundlePath").map { call.arguments[$0 + 1] } }
-        XCTAssertEqual(Set(bundles).count, 2, "xcodebuild fails when the bundle's path exists")
+        let first = runner.test(in: copy, request: TestRequest())
+        let second = runner.test(in: copy, request: TestRequest())
+        XCTAssertEqual(first.testsRun, 6)
+        XCTAssertEqual(second.testsRun, 0, "The second run counts its own bundle, not the first run's")
+        XCTAssertEqual(Set(written).count, 2, "xcodebuild fails when the bundle's path exists")
+        let summaryPaths = commands.calls.filter { $0.arguments.first == "xcresulttool" }
+            .compactMap { call in call.arguments.firstIndex(of: "--path").map { call.arguments[$0 + 1] } }
+        XCTAssertEqual(summaryPaths, written, "Each summary reads the bundle its run wrote")
     }
 
     func testSeveralTestTargetsRunInOneXcodebuildWithOneReport() throws {
