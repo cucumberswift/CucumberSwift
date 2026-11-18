@@ -19,12 +19,38 @@ if [[ $# -lt 2 ]]; then
   echo "usage: $0 <cucumberswift module folder> <cucumberswift_expressions folder> [<folder for the reports and the log>]" >&2
   exit 2
 fi
-repo=$(cd "$(dirname "$0")/../.." && pwd)
+repo=$(cd "$(dirname "$0")/../.." && pwd -P)
 fixture="$repo/Tests"
-folder="${3:-${RUNNER_TEMP:-$(mktemp -d)}}"
+
+# The tool runs in a copy of Tests/ and the checker in the checkout, so every path goes to them as an absolute one.
+absolute() {
+  (cd "$1" 2>/dev/null && pwd -P) || { echo "error: $1 isn't a folder" >&2; exit 2; }
+}
+module=$(absolute "$1")
+expressions=$(absolute "$2")
+folder=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "${3:-${RUNNER_TEMP:-$(mktemp -d)}}")
+# mutation_fixture.py reads only files in the checkout or a temporary folder, so refuse any other folder now, not after the run.
+inside=false
+for root in "$repo" "${TMPDIR:-/tmp}" "${RUNNER_TEMP:-}"; do
+  [[ -n "$root" && -d "$root" ]] || continue
+  root=$(cd "$root" && pwd -P)
+  if [[ "$folder" == "$root" || "$folder" == "$root"/* ]]; then inside=true; fi
+done
+if [[ "$inside" != true ]]; then
+  echo "error: $folder isn't in the checkout, \$TMPDIR or \$RUNNER_TEMP, where mutation_fixture.py reads reports and the log" >&2
+  exit 2
+fi
+mkdir -p "$folder"
 reports="$folder/mutation-Bazel"
 log="$folder/mutation-Bazel.log"
 rm -rf "$reports"
+
+# Bazelisk reads the version from .bazelversion, which Tests/ links to as ../.bazelversion: in the copy of Tests/ that
+# link points at nothing, and Bazelisk would run the newest Bazel. Pin the checkout's version unless one is set.
+if [[ -z "${USE_BAZEL_VERSION:-}" && -f "$repo/.bazelversion" ]]; then
+  USE_BAZEL_VERSION=$(tr -d '[:space:]' < "$repo/.bazelversion")
+  export USE_BAZEL_VERSION
+fi
 
 # The seconds each part took, which the job's timings can't show: the tool prints its own output only when it ends.
 started=$SECONDS
@@ -62,7 +88,7 @@ diagnose() {
 status=0
 "$tool" mutation-test \
   --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
-  --bazel-arg "--override_module=cucumberswift=$1" --bazel-arg "--override_module=cucumberswift_expressions=$2" \
+  --bazel-arg "--override_module=cucumberswift=$module" --bazel-arg "--override_module=cucumberswift_expressions=$expressions" \
   --bazel-disk-cache "$folder/bazel-disk-cache" --bazel-arg "--repository_cache=$folder/bazel-repository-cache" \
   --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \
   --format xcode --baseline-runs 1 --output "$reports" 2>&1 | tee "$log" || status=$?
