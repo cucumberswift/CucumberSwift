@@ -235,7 +235,7 @@ A Bazel workspace has no package to read its targets from, so `--target` isn't a
 | `--sources <folder>` | A folder with code to mutate, relative to the workspace. Pass it once for each folder. |
 | `--bazel-arg <flag>` | Adds one flag to every `bazel build` and `bazel test` command, such as `--config=ci`. Repeat it for more flags. |
 | `--bazel <path>` | The `bazel` that the command runs. The default is `bazel`, which the command looks for in `PATH`. |
-| `--bazel-disk-cache <folder>` | The disk cache of the run, instead of that folder. |
+| `--bazel-disk-cache <folder>` | The disk cache of the run, instead of `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`. |
 
 The Bazel options can't be combined with `--project` or `--workspace`, which are for an Xcode project.
 
