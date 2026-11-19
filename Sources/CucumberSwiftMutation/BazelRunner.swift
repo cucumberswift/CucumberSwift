@@ -220,7 +220,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// `run_N_of_M` and `shard_N_of_M` folders inside it, which Bazel writes instead.
     private func resultFolders(in copy: URL) -> [URL] {
         let (package, name) = target.package ?? ("", "")
-        let testlogs = URL(fileURLWithPath: copy.path + "/" + symlinkPrefix + "testlogs", isDirectory: true)
+        // An absolute prefix names a folder of its own, as Bazel reads it; a relative one is relative to the workspace.
+        let testlogs = symlinkPrefix.hasPrefix("/")
+            ? URL(fileURLWithPath: symlinkPrefix + "testlogs", isDirectory: true)
+            : copy.appendingPathComponent(symlinkPrefix + "testlogs", isDirectory: true)
         let target = testlogs.appendingPathComponent(package).appendingPathComponent(name)
         func parts(of folder: URL) -> [URL] {
             let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []

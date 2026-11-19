@@ -49,6 +49,23 @@ final class BazelRunnerResultsTests: BazelRunnerTestCase {
         XCTAssertEqual(separateArguments.last { $0.hasPrefix("--symlink_prefix=") }, "--symlink_prefix=apart-")
     }
 
+    func testTheTestLogsAreReadFromAnAbsoluteSymlinkPrefix() throws {
+        let copy = try makeCopy()
+        let links = FileManager.default.temporaryDirectory.appendingPathComponent("links-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: links) }
+        let commands = RecordingCommands { call in
+            if call.command == "test" {
+                let logs = links.appendingPathComponent("mine-testlogs/Tests/AppTests")
+                try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+                try? "Executed 4 tests, with 0 failures".write(to: logs.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+            }
+            return .finished(0)
+        }
+        let absolute = BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--symlink_prefix=\(links.path)/mine-"])
+        let run = runner(absolute, commands: commands).test(in: copy, request: TestRequest())
+        XCTAssertEqual(run.testsRun, 4, "An absolute prefix names the folder itself, not a folder in the copy")
+    }
+
     func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)
