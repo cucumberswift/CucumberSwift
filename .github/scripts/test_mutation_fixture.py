@@ -163,5 +163,43 @@ class CheckTests(Folder):
                 m.read_report(os.path.join(self.reports, "mutation-report.json")))
 
 
+class DocumentedCommands(unittest.TestCase):
+    """Each build tool's command in the mutation testing article must be the one that a fixture runs in our CI (#522)."""
+
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+    def read(self, *path):
+        with open(os.path.join(self.root, *path), encoding="utf-8") as f:
+            return f.read()
+
+    def article(self):
+        return self.read("Sources", "CucumberSwift", "CucumberSwift.docc", "Mutation-Testing.md")
+
+    def test_the_swift_package_command_is_the_one_the_package_fixture_runs(self):
+        command = "swift run cucumberswift-cli mutation-test"
+        self.assertIn(command, self.article())
+        self.assertIn(command, self.read(".github", "scripts", "mutation-package-fixture.sh"))
+
+    def test_the_xcode_options_are_the_ones_the_xcode_fixtures_run_script_passes(self):
+        article, project = self.article(), self.read("Fixtures", "MutationTestingTuist", "Project.swift")
+        for option in ("--project", "--scheme", "--destination"):
+            self.assertIn(option, article)
+            self.assertIn(option, project)
+        self.assertIn("cucumberswift-cli mutation-test", project)
+
+    def test_the_bazel_command_is_the_one_the_bazel_fixture_runs_without_a_root(self):
+        label = "bazel run @cucumberswift//cli:cucumberswift-cli -- mutation-test"
+        script = self.read(".github", "scripts", "mutation-bazel-fixture.sh")
+        self.assertIn(label, self.article())
+        self.assertIn("@cucumberswift//cli:cucumberswift-cli -- mutation-test", script)
+        for option in ("--bazel-target", "--sources"):
+            self.assertIn(option, self.article())
+            self.assertIn(option, script)
+        # The article's command has no --root, so under `bazel run` the tool reads BUILD_WORKSPACE_DIRECTORY.
+        bazel_run = script[script.index("command=(bazel run"):script.index("else\n  command=(")]
+        self.assertNotIn("--root", bazel_run)
+        self.assertIn("MUTATION_VIA_BAZEL_RUN=1 .github/scripts/mutation-bazel-fixture.sh", self.read(".github", "workflows", "CI.yml"))
+
+
 if __name__ == "__main__":
     unittest.main()
