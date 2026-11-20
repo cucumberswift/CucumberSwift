@@ -10,41 +10,42 @@ import XCTest
 final class BazelRunnerResultsTests: BazelRunnerTestCase {
     func testTheTestLogsAreReadWhateverPrefixTheProjectSetsForItsLinks() throws {
         let copy = try makeCopy()
-        func commands(prefix: String) -> RecordingCommands {
+        func commands(prefix: String, count: Int) -> RecordingCommands {
             RecordingCommands { call in
                 if call.command == "test" {
                     let logs = URL(fileURLWithPath: copy.path + "/" + prefix + "testlogs/Tests/AppTests")
                     try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
-                    try? "Executed 4 tests, with 0 failures".write(to: logs.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+                    try? "Executed \(count) tests, with 0 failures".write(to: logs.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
                 }
                 return .finished(0)
             }
         }
-        let normal = commands(prefix: "bazel-")
+        // Each prefix's log has its own count, as the earlier logs stay in the copy: a read of another prefix's log fails the count.
+        let normal = commands(prefix: "bazel-", count: 4)
         XCTAssertEqual(runner(commands: normal).test(in: copy, request: TestRequest()).testsRun, 4)
         let arguments = try XCTUnwrap(normal.calls.first).arguments
         XCTAssertTrue(arguments.contains("--symlink_prefix=bazel-"), "A project's .bazelrc prefix mustn't move the test logs")
         XCTAssertTrue(arguments.contains("--experimental_convenience_symlinks=normal"))
         // A prefix in the target's own arguments is the project's choice, and the logs are where it says.
-        let custom = commands(prefix: ".bazel/")
+        let custom = commands(prefix: ".bazel/", count: 5)
         let run = runner(.init(label: "//Tests:AppTests", arguments: ["--symlink_prefix=.bazel/"]), commands: custom).test(in: copy, request: TestRequest())
-        XCTAssertEqual(run.testsRun, 4)
+        XCTAssertEqual(run.testsRun, 5)
         let customArguments = try XCTUnwrap(custom.calls.first).arguments
         XCTAssertEqual(customArguments.last { $0.hasPrefix("--symlink_prefix") }, "--symlink_prefix=.bazel/")
         // A named config that sets its own prefix comes after the project's directly given one, and would win: the runner
         // repeats the prefix it reads at the very end.
-        let configured = commands(prefix: "mine-")
+        let configured = commands(prefix: "mine-", count: 6)
         let withConfig = BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--symlink_prefix=mine-", "--config=ci"])
-        XCTAssertEqual(runner(withConfig, commands: configured).test(in: copy, request: TestRequest()).testsRun, 4)
+        XCTAssertEqual(runner(withConfig, commands: configured).test(in: copy, request: TestRequest()).testsRun, 6)
         let configuredArguments = try XCTUnwrap(configured.calls.first).arguments
         let config = try XCTUnwrap(configuredArguments.firstIndex(of: "--config=ci"))
         let lastPrefix = try XCTUnwrap(configuredArguments.lastIndex { $0.hasPrefix("--symlink_prefix=") })
         XCTAssertEqual(configuredArguments[lastPrefix], "--symlink_prefix=mine-")
         XCTAssertGreaterThan(lastPrefix, config, "The prefix the runner reads must come after the config")
         // Bazel also takes the flag and its value as two arguments.
-        let separate = commands(prefix: "apart-")
+        let separate = commands(prefix: "apart-", count: 7)
         let twoArguments = BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--symlink_prefix", "apart-", "--config=ci"])
-        XCTAssertEqual(runner(twoArguments, commands: separate).test(in: copy, request: TestRequest()).testsRun, 4)
+        XCTAssertEqual(runner(twoArguments, commands: separate).test(in: copy, request: TestRequest()).testsRun, 7)
         let separateArguments = try XCTUnwrap(separate.calls.first).arguments
         XCTAssertEqual(separateArguments.last { $0.hasPrefix("--symlink_prefix=") }, "--symlink_prefix=apart-")
     }
