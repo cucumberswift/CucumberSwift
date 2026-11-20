@@ -91,8 +91,10 @@ diagnose() {
   echo "::endgroup::"
 }
 
+# The outer `bazel run` takes no --xcode_version. A tool built with --xcode_version=26.2 aborts in dyld on our runner
+# ("built for macOS 26.2 which is newer than running OS"). The runs of the test target get the flag through --bazel-arg below.
 if [[ "${MUTATION_VIA_BAZEL_RUN:-}" == 1 ]]; then
-  command=(bazel run "--override_module=cucumberswift=$module" "--override_module=cucumberswift_expressions=$expressions" --xcode_version=26.2 @cucumberswift//cli:cucumberswift-cli -- mutation-test)
+  command=(bazel run "--override_module=cucumberswift=$module" "--override_module=cucumberswift_expressions=$expressions" @cucumberswift//cli:cucumberswift-cli -- mutation-test)
   cd "$fixture"
 else
   command=("$tool" mutation-test --root "$fixture")
