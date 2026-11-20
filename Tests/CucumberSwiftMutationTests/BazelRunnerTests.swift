@@ -77,6 +77,15 @@ final class BazelRunnerTests: BazelRunnerTestCase {
         XCTAssertTrue(run.succeeded)
     }
 
+    func testAnInheritedCoveragePathIsClearedWhenCoverageIsMeasured() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        _ = runner(commands: commands, environment: ["CUCUMBER_COVERAGE_PATH": "/elsewhere"]).test(in: copy, request: TestRequest(measuresCoverage: true))
+        let arguments = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertTrue(arguments.contains("--test_env=CUCUMBER_COVERAGE_PATH="), "An empty path puts the coverage in the test's outputs")
+        XCTAssertFalse(arguments.contains("--test_env=CUCUMBER_COVERAGE_PATH=/elsewhere"))
+    }
+
     func testCountsTheTestsFromTheTestsOwnLogAndANonZeroStatusFailsTheRun() throws {
         let copy = try makeCopy()
         let passed = runner(commands: commands(in: copy, output: "Executed 5 tests, with 0 failures")).test(in: copy, request: TestRequest())

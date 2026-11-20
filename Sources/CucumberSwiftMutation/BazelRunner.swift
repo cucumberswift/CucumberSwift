@@ -193,7 +193,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             arguments.append("--sandbox_writable_path=\(reports.resolvingSymlinksInPath().path)")
         }
         // CucumberSwift writes its coverage into the test's outputs when no path is set: Bazel gives the test a folder for it.
-        if request.measuresCoverage { settings["CUCUMBER_COVERAGE"] = "YES" }
+        // An inherited CUCUMBER_COVERAGE_PATH would send the files to a folder that keepCoverage doesn't read: an empty one is unset.
+        if request.measuresCoverage {
+            settings["CUCUMBER_COVERAGE"] = "YES"
+            settings["CUCUMBER_COVERAGE_PATH"] = ""
+        }
         for (key, value) in settings.sorted(by: { $0.key < $1.key }) { arguments.append("--test_env=\(key)=\(value)") }
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
         let results = resultFolders(in: copy)
