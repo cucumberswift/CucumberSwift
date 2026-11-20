@@ -182,7 +182,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         let number = nextRun()
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
-        var arguments = startupOptions(for: copy) + ["test", target.label] + common + ["--nocache_test_results", "--test_output=all", "--nozip_undeclared_test_outputs"]
+        // One attempt: a retry that passes makes Bazel exit with 0 and call the test FLAKY, which would hide a failed attempt from the run.
+        var arguments = startupOptions(for: copy) + ["test", target.label] + common
+            + ["--nocache_test_results", "--flaky_test_attempts=1", "--test_output=all", "--nozip_undeclared_test_outputs"]
         var report: URL?
         if request.writesReport {
             // The test's sandbox allows writes only to the test's own folders and what it is told: the report folder.
