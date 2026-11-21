@@ -13,6 +13,12 @@ name: Release
 # (/archive/refs/tags/...) can change byte for byte, but a release asset never
 # does. The run's summary shows the archive's URL and integrity.
 #
+# Before anything is released, the samples' CI (CucumberSwiftSample's CI.yml on its main branch)
+# runs its "main" jobs against the commit being released: each sample is built and tested with
+# CucumberSwift at that commit. A dry run does it too, so the result shows before the release.
+# A failed sample stops the release before it commits the version, and the run's summary names it.
+# It is called as a reusable workflow, so it needs no token or secret and reads nothing but code.
+#
 # The version commit, the tag and the release are written with a short-lived
 # token from the organization's release GitHub App. Its private key is a secret
 # of the `release` environment, which only main and support/* can use. A push
@@ -144,6 +150,48 @@ jobs:
           name: release-notes
           path: notes.md
 
+  # Runs the samples' main jobs on the commit being released, in a release and in a dry run. It waits
+  # for plan, which checks the branch and who started the run, so a rejected run starts no macOS job.
+  samples:
+    name: Samples
+    needs: plan
+    if: ${{ github.repository_owner == 'cucumberswift' || vars.RELEASE_IN_FORK == 'true' }}
+    uses: cucumberswift/CucumberSwiftSample/.github/workflows/CI.yml@main
+    with:
+      cucumber_swift_sha: ${{ github.sha }}
+    permissions:
+      contents: read
+
+  # Names each sample that failed in the run's summary. Failing too is what stops the release job.
+  samples-summary:
+    needs: samples
+    if: ${{ always() && needs.samples.result != 'success' && needs.samples.result != 'skipped' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - name: Name the samples that failed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          failed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" --paginate \
+            --jq '.jobs[] | select(.name | startswith("Samples /") and (. != "Samples / All samples pass")) | select(.conclusion == "failure" or .conclusion == "cancelled" or .conclusion == "timed_out") | .name')
+          {
+            echo "### The samples failed against ${RELEASE_SHA}"
+            echo
+            echo "The release stops before it commits a version. These sample jobs did not pass:"
+            echo
+            if [ -z "$failed" ]; then
+              echo "- None named: see the Samples jobs in this run."
+            else
+              while IFS= read -r job; do echo "- $job"; done <<< "$failed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::These samples failed against the commit being released:"
+          echo "$failed"
+          exit 1
+
   test:
     needs: plan
     if: ${{ !inputs.dry_run }}
@@ -168,7 +216,7 @@ jobs:
   # dependency code: only the release script, git and the gh CLI.
   # The whole tree is checked out, because the source archive is built from it.
   release:
-    needs: [plan, test, docs-build]
+    needs: [plan, test, docs-build, samples]
     if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -125,7 +125,7 @@ BeforeScenario { scenario in
 }
 }
 
-An async hook's closure runs on the main actor, at the same point as a synchronous hook. CucumberSwift waits for each one to finish before it goes on, so hooks and steps never run in parallel. A thrown error fails the test at the hook. The `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Priorities work the same way for async and synchronous hooks.
+An async hook's closure runs on the main actor, at the same point as a synchronous hook. CucumberSwift waits for each one to finish before it goes on, so hooks and steps never run in parallel. A thrown error fails the test at the hook. The `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Each kind of hook runs its async and synchronous hooks together, in `priority` order (see <doc:Hooks#Hook-order>).
 
 ### Feature hooks in a parallel run
 
@@ -217,7 +217,7 @@ In Xcode, open the **Report navigator**, choose the test run, expand the scenari
 
 Give a hook a `priority` to control when it runs. A lower priority runs earlier, so priority 1 runs before priority 2. Hooks without a priority run after the hooks with one, in the order they appear in your code.
 
-To run after hooks in reverse order, as cucumber-jvm does, return `true` from `reverseOrderForAfterHooks` in your `StepImplementation`. A hook with an earlier priority then runs later, and hooks with the same priority run in the reverse of the order you registered them. The Swift Testing runner does the same for `AfterScenario` and `AfterStep` hooks.
+To run after hooks in reverse order, as cucumber-jvm does, return `true` from `reverseOrderForAfterHooks` in your `StepImplementation`. A hook with an earlier priority then runs later, and hooks with the same priority run in the reverse of the order you registered them. The Swift Testing runner also reverses its `AfterFeature`, `AfterScenario` and `AfterStep` hooks when `reverseOrderForAfterHooks` returns `true`.
 
 @TabNavigator {
 @Tab("Swift Package Manager") {

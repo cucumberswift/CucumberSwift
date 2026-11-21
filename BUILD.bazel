@@ -1,4 +1,5 @@
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_swift//swift:swift_binary.bzl", "swift_binary")
 load("@rules_swift//swift:swift_library.bzl", "swift_library")
 
 # The Objective-C base classes of the tests CucumberSwift generates for each step and scenario.
@@ -32,3 +33,46 @@ swift_library(
         "@cucumberswift_expressions//:CucumberSwiftExpressions",
     ],
 )
+
+# Merges the coverage of several runs and scores it. Its sources are symlinks to the coverage scores' files
+# in Sources/CucumberSwift/Coverage, compiled without XCTest.
+swift_library(
+    name = "CucumberSwiftCoverageMerge",
+    srcs = glob(["Sources/CucumberSwiftCoverageMerge/*.swift"]),
+    module_name = "CucumberSwiftCoverageMerge",
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
+    name = "CucumberSwiftGherkin",
+    srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
+    module_name = "CucumberSwiftGherkin",
+    visibility = ["//visibility:public"],
+)
+
+swift_library(
+    name = "CucumberSwiftMutation",
+    srcs = glob(["Sources/CucumberSwiftMutation/**/*.swift"]),
+    module_name = "CucumberSwiftMutation",
+    visibility = ["//visibility:public"],
+    deps = [":CucumberSwiftCoverageMerge", ":CucumberSwiftGherkin"],
+)
+
+# `defines = ["Macros"]` is what the Macros package trait does in SwiftPM: without it the command only prints what to
+# turn on.
+swift_library(
+    name = "CucumberSwiftMutationCommand",
+    srcs = glob(["Sources/CucumberSwiftMutationCommand/*.swift"]),
+    module_name = "CucumberSwiftMutationCommand",
+    defines = ["Macros"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":CucumberSwiftMutation",
+        "@swift-syntax//:SwiftOperators",
+        "@swift-syntax//:SwiftParser",
+        "@swift-syntax//:SwiftSyntax",
+    ],
+)
+
+# The sources of the cucumberswift-cli tool, which cli/BUILD.bazel builds.
+exports_files(glob(["Sources/CucumberSwiftCommand/*.swift"]))

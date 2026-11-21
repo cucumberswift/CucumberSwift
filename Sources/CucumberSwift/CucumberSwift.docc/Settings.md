@@ -59,6 +59,8 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_VERBOSE` | ^ | ^ | ^ | ^ |
 | `Cucumber.reportPath` | `_cucumberReport.json` in the documents folder | XCTest and Swift Testing | None | <doc:Generating-Reports#Choose-where-the-report-is-written> |
 | `CUCUMBER_REPORT_PATH` | ^ | ^ | ^ | ^ |
+| `Cucumber.reportStaleAfter` | 600 seconds (10 minutes) | XCTest and Swift Testing | None | <doc:Generating-Reports#One-report-for-each-test-run> |
+| `CUCUMBER_REPORT_STALE_AFTER` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverage` | Auto | XCTest and Swift Testing | Code coverage on for the test target. With Swift Testing, scenarios run one at a time. | <doc:Measuring-Code-Coverage> |
 | `CUCUMBER_COVERAGE` | ^ | ^ | ^ | ^ |
 | `Cucumber.coveragePath` | `_cucumberCoverage` in the documents folder | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-where-the-files-go> |
@@ -69,18 +71,23 @@ The table lists every setting, with the article that describes it:
 | `CUCUMBER_COVERAGE_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageSources` | Your code, without your dependencies and tests | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Choose-the-code-to-measure> |
 | `CUCUMBER_COVERAGE_SOURCES` | ^ | ^ | ^ | ^ |
+| `Cucumber.mutationTesting` | Off | XCTest and Swift Testing | Coverage on, and a mutation report | <doc:Mutation-Testing#Fail-your-tests-on-a-surviving-mutant> |
+| `CUCUMBER_MUTATION_TESTING` | ^ | ^ | ^ | ^ |
+| `Cucumber.mutationReport` | None | XCTest and Swift Testing | Mutation testing on | <doc:Mutation-Testing#Fail-your-tests-on-a-surviving-mutant> |
+| `CUCUMBER_MUTATION_REPORT` | ^ | ^ | ^ | ^ |
 | `Cucumber.coverageRecordsIssuesInSuites` | Off | Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> |
 | `CUCUMBER_COVERAGE_RECORDS_ISSUES_IN_SUITES` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancy` | On | XCTest and Swift Testing | Coverage on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancyWarningLevel` | 30 | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-scenarios> |
+| `Cucumber.redundancyErrorLevel` | Off | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Which-scenarios-are-redundant> |
 | `CUCUMBER_REDUNDANCY_ERROR_LEVEL` | ^ | ^ | ^ | ^ |
-| `Cucumber.redundantStepWarningLevel` | 50 | XCTest and Swift Testing | Redundancy on | <doc:Measuring-Code-Coverage#Find-redundant-steps> |
+| `Cucumber.redundantStepWarningLevel` | 50 | XCTest and Swift Testing | Redundancy on | <doc:Finding-Redundant-Scenarios#Find-redundant-steps> |
 | `CUCUMBER_REDUNDANT_STEP_WARNING_LEVEL` | ^ | ^ | ^ | ^ |
 | `StepImplementation.shouldRunWith(scenario:tags:)` | All scenarios | XCTest and Swift Testing | None | <doc:Settings#Choose-scenarios-in-code> |
 | `CUCUMBER_TAGS` | All scenarios | XCTest and Swift Testing | None | <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan> |
+| `CUCUMBER_SCENARIOS` | All scenarios | XCTest and Swift Testing | None | <doc:Mutation-Testing#Run-only-the-scenarios-that-cover-a-mutant> |
 | `StepImplementation.continueTestingAfterFailure` | On | XCTest and Swift Testing | None | <doc:Settings#Continue-after-a-failed-assertion> |
 | `StepImplementation.reverseOrderForAfterHooks` | Off | XCTest and Swift Testing | None | <doc:Hooks> |
 | `StepImplementation.asyncStepTimeout` | 60 seconds | XCTest and Swift Testing | None | <doc:Matching-Steps#Async-steps> |
@@ -117,6 +124,8 @@ extension Cucumber: StepImplementation {
 **Info.plist keys apply only to Xcode test targets.** Swift Package Manager generates the test bundle's `Info.plist` itself, so the keys aren't available there.
 
 **`CUCUMBER_TAGS` is a filter, not a flag.** It takes a comma-separated list of regular expressions that match regardless of case. A scenario runs when any of its tags, its Rule's tags or its feature's tags matches any of the expressions. Don't put spaces around the commas, because the spaces become part of the expression. Both runners use `CUCUMBER_TAGS` whenever it's set, even to an empty value, and then don't call `shouldRunWith`. See <doc:Running-Tests-In-Xcode#Run-specific-scenarios-using-a-test-plan>.
+
+**`CUCUMBER_SCENARIOS` is a list of scenario ids, and it has no static variable.** It takes a comma-separated list of ids such as `Features/Basket.feature:12`: the path of the feature file inside the test bundle, a colon and the line of the scenario. A scenario runs only when its id is in the list, so an empty value runs no scenario. CucumberSwift reads each entry exactly as you write it, so spaces around the commas become part of the id. Write `%` as `%25` and `,` as `%2C` in a path. The list narrows what `CUCUMBER_TAGS` or `shouldRunWith` selects: a scenario runs only when that selection and the list both include it. The mutation testing command sets it, and you can set it to run one scenario. See <doc:Mutation-Testing#Run-only-the-scenarios-that-cover-a-mutant>.
 
 **With Swift Testing, some settings work differently.** The Swift Testing runner does the same as the XCTest runner for every setting marked "Swift Testing" above, with these exceptions:
 

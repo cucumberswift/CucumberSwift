@@ -50,6 +50,31 @@ final class CoverageReporterTests: XCTestCase {
         return Int(scenario.location.line)
     }
 
+    func testAScenarioThatReusesAFinishedScenariosIdentityIsStillMeasured() throws {
+        var settings = CoverageSettings()
+        settings.sources = ["CoverageReporterTests.swift"]
+        let probe = CoverageRecorder(coverageFolder: folder, settings: settings)
+        try XCTSkipIf(probe.code?.functions.isEmpty ?? true, "This test file wasn't built with code coverage.")
+        let path = folder.path
+        let reporter = CoverageReporter(isEnabled: { true }, coveragePath: { path }, settings: { settings })
+        let cucumber = Cucumber(withString: """
+        Feature: Greeting
+            Scenario: Say hello
+                Given a friendly user
+        """)
+        let feature = try XCTUnwrap(cucumber.features.first)
+        let scenario = try XCTUnwrap(feature.scenarios.first)
+        let duration = Measurement(value: 1, unit: UnitDuration.seconds)
+        // The Swift Testing runner frees each scenario when it finishes, so the next one can have the same identity.
+        // Running one object twice gives the second run the identity of a finished scenario.
+        for _ in 1...2 {
+            reporter.didStart(scenario: scenario, at: Date())
+            XCTAssertEqual(Self.branch(of: 1), 1)
+            reporter.didFinish(scenario: scenario, result: .passed, duration: duration)
+        }
+        XCTAssertEqual(reporter.recorder?.scenarios(of: feature.uri).count, 2, "Both runs are measured")
+    }
+
     func testTheReporterLeavesTheBackgroundsStepsOutOfTheRedundantSteps() throws {
         var settings = CoverageSettings()
         settings.sources = ["CoverageReporterTests.swift"]

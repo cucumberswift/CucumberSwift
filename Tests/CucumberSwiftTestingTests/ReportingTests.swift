@@ -211,6 +211,29 @@ extension CucumberTests {
         #expect(CucumberSettings.reportPath(environment: [:]) == "/tmp/static.json")
     }
 
+    @Test func theReportIsStaleAfterTenMinutesUnlessTheStaticVariableOrTheEnvironmentVariableSaysOtherwise() {
+        defer { Cucumber.reportStaleAfter = nil }
+        let key = "CUCUMBER_REPORT_STALE_AFTER"
+        #expect(CucumberSettings.reportStaleAfter(environment: [:]) == 600)
+        #expect(CucumberSettings.reportStaleAfter(environment: [key: " 1800 "]) == 1_800)
+
+        Cucumber.reportStaleAfter = 90
+        #expect(CucumberSettings.reportStaleAfter(environment: [key: "1800"]) == 90)
+        #expect(CucumberSettings.reportStaleAfter(environment: [:]) == 90)
+    }
+
+    @Test func aReportStaleAfterThatIsNotANumberAboveZeroIsIgnored() {
+        defer { Cucumber.reportStaleAfter = nil }
+        let key = "CUCUMBER_REPORT_STALE_AFTER"
+        for value in ["", "soon", "0", "-5", "inf", "nan", "10m"] {
+            #expect(CucumberSettings.reportStaleAfter(environment: [key: value]) == 600, "\(value)")
+        }
+        for setting in [0, -1, TimeInterval.infinity, TimeInterval.nan] {
+            Cucumber.reportStaleAfter = setting
+            #expect(CucumberSettings.reportStaleAfter(environment: [key: "1800"]) == 1_800, "\(setting)")
+        }
+    }
+
     /// The scenarios and steps of ReportParityTests.feature in CucumberSwiftTests, as the generator writes them,
     /// with their test bundle when given.
     func parityScenarios(in testBundle: URL? = nil) -> [GherkinScenario] {
@@ -250,19 +273,22 @@ extension CucumberTests {
         When("I pay by voucher") { _, _ in throw XCTSkip("The voucher service is down") }
     }
 
-    /// The report is sorted and rewritten whole each time, so it is written where a scenario finishes, not for
-    /// every step.
-    @Test func theReportIsWrittenWhereAScenarioFinishesNotForEveryStep() async throws {
+    /// The report is sorted and rewritten whole each time, so it is written where a scenario starts and
+    /// finishes, not for every step. A scenario that crashes the process is in the report without its steps.
+    @Test func theReportIsWrittenWhereAScenarioStartsAndFinishesNotForEveryStep() async throws {
         let url = reportURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         Cucumber.reportPath = url.path
         Cucumber.shared.reporters = [try #require(CucumberJSONReporter())]
         var namesInTheReportDuringTheSecondScenario = [String]()
+        var stepsOfTheSecondScenarioInTheReport = [Int]()
         Given("a basket") { _, _ in }
         When("I pay by card") { _, _ in }
         When("I pay {int}") { [self] _, _ in
             let features = try readReport(url)
-            namesInTheReportDuringTheSecondScenario = (features.first?["elements"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+            let elements = features.first?["elements"] as? [[String: Any]] ?? []
+            namesInTheReportDuringTheSecondScenario = elements.compactMap { $0["name"] as? String }
+            stepsOfTheSecondScenarioInTheReport = elements.dropFirst().map { ($0["steps"] as? [[String: Any]])?.count ?? 0 }
         }
         Then("the order is paid") { _, _ in }
 
@@ -270,8 +296,10 @@ extension CucumberTests {
         await Cucumber.shared.run(scenarios[0])
         await Cucumber.shared.run(scenarios[1])
 
-        // The first scenario had finished, so it was in the report; the second was still running, so it wasn't.
-        #expect(namesInTheReportDuringTheSecondScenario == ["Pay by card"])
+        // The first scenario had finished, so it was in the report whole; the second had started, so it was in
+        // it too, without the steps it had run.
+        #expect(namesInTheReportDuringTheSecondScenario == ["Pay by card", "Pay 5 (example 1)"])
+        #expect(stepsOfTheSecondScenarioInTheReport == [0])
         let elements = try #require(try readReport(url).first?["elements"] as? [[String: Any]])
         #expect(elements.compactMap { $0["name"] as? String } == ["Pay by card", "Pay 5 (example 1)"])
     }
