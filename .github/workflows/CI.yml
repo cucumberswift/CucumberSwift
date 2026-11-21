@@ -552,8 +552,7 @@ jobs:
   # Pull requests run the newest Xcode, the macos-26 image's own, which a new release
   # most likely breaks. The merge queue and main also run Xcode 16.0, the oldest Xcode
   # CI builds with, on macos-15, after installing its iOS platform, which the image
-  # doesn't have. The scoring check in mise run test-carthage runs only with Xcode 26
-  # or later (#553).
+  # doesn't have. The scoring check in mise run test-carthage runs with both.
   carthage_tests:
     name: Carthage tests${{ matrix.variant }}
     needs: changes
