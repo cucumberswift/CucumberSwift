@@ -1,6 +1,6 @@
 # Coverage scores with the default levels
 
-A macOS framework, `Grades`, tested by `GradesXCTests` with CucumberSwift and XCTest, and by `GradesSwiftTests` with Swift Testing. The scheme turns
+A framework, `Grades`, tested by `GradesXCTests` with CucumberSwift and XCTest, and by `GradesSwiftTests` with Swift Testing. The scheme turns
 **Code Coverage** on for the framework, as a project does in its scheme or test plan, and leaves
 CucumberSwift's coverage levels at their defaults.
 
@@ -17,6 +17,11 @@ printed the feature's scores, and that the run's total is 2 tests, because the c
 The scheme sets `CUCUMBER_COVERAGE_SOURCES` to the framework's folder. CucumberSwift never measures the
 files in its own package folder, and this fixture is inside it. A project that depends on CucumberSwift
 doesn't need it.
+
+Each target builds for macOS, iOS, tvOS, watchOS and Mac Catalyst. `mise run test-fixtures` runs the tests on macOS.
+The nightly run of our GitHub Actions CI workflow runs them on an iOS, a tvOS and a watchOS Simulator and on Mac Catalyst.
+There, each runner must give the `Grading` feature the scores it gets on macOS, the line in `expected-output`
+(`.github/scripts/xcode-project-coverage.sh`).
 
 Needs the Tuist version pinned in `.mise.toml`, and Xcode 26, whose coverage format CucumberSwift reads.
 Run every fixture with `mise run test-fixtures`.

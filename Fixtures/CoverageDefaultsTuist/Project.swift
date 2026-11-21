@@ -9,6 +9,11 @@ let settings: Settings = .settings(base: [
     "CODE_SIGN_IDENTITY": "-"
 ])
 
+// Each target builds for macOS, iOS, tvOS, watchOS and Mac Catalyst. `mise run test-fixtures` runs the tests on
+// macOS, and the nightly run of our CI runs them on each of the others (#538).
+let destinations: Destinations = [.mac, .iPhone, .iPad, .macCatalyst, .appleTv, .appleWatch]
+let deploymentTargets: DeploymentTargets = .multiplatform(iOS: "16.0", macOS: "14.0", watchOS: "9.0", tvOS: "16.0")
+
 let project = Project(
     name: "CoverageDefaultsTuist",
     packages: [
@@ -17,20 +22,20 @@ let project = Project(
     targets: [
         .target(
             name: "Grades",
-            destinations: .macOS,
+            destinations: destinations,
             product: .framework,
             bundleId: "org.cucumberswift.fixtures.Grades",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["Sources/**"],
             settings: settings
         ),
         .target(
             name: "GradesXCTests",
-            destinations: .macOS,
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.GradesXCTests",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["XCTests/**/*.swift"],
             // CucumberSwift reads the feature files from the "Features" folder in the test bundle.
@@ -46,10 +51,10 @@ let project = Project(
         // The plugin finds the feature files among the target's files and generates a test for each scenario.
         .target(
             name: "GradesSwiftTests",
-            destinations: .macOS,
+            destinations: destinations,
             product: .unitTests,
             bundleId: "org.cucumberswift.fixtures.GradesSwiftTests",
-            deploymentTargets: .macOS("14.0"),
+            deploymentTargets: deploymentTargets,
             infoPlist: .default,
             sources: ["SwiftTests/**/*.swift"],
             resources: [.folderReference(path: "SwiftTests/Features")],
