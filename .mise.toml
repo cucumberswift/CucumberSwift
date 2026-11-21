@@ -69,6 +69,8 @@ description = "Build and test every project in Fixtures/"
 # A Swift package fixture with expected-conversion is then converted with Convert to Gherkin Macros:
 # its report must have each line expected-conversion lists, and the converted tests must pass, with no
 # warnings from CucumberSwift either, and run as many tests as expected-tests lists. Its Swift files are put back as they were afterwards.
+# A Tuist fixture with a Proof.xctestplan runs it, instead of the scheme's default plan, when PROOF_RESULT_BUNDLE
+# names a path: the plan keeps every attachment, and the result bundle is saved at that path.
 # Folder names in Fixtures/ after the task's name run only those fixtures, such as
 # `mise run test-fixtures SwiftTestingPackage`; with none, it runs them all. A name that isn't a
 # fixture is an error, so that a typo fails instead of passing with nothing run. Our CI runs each
@@ -173,8 +175,16 @@ for fixture in Fixtures/*/; do
     find "$build" -name '*.lint-stamp' -delete 2>/dev/null || true
     # Resolving the project rewrites the checkout's Package.resolved, so each step puts it back.
     with_xcode .github/scripts/keep-package-resolved.sh tuist generate --no-open --path "$fixture"
+    # Our CI's proof job sets PROOF_RESULT_BUNDLE. A fixture with a Proof.xctestplan then runs that plan, which keeps
+    # every attachment, and saves the result bundle there for `xcrun xcresulttool export attachments`.
+    # The arguments are the task's positional parameters, so a bundle path with spaces stays one argument.
+    set --
+    if [ -n "${PROOF_RESULT_BUNDLE:-}" ] && [ -f "$fixture/Proof.xctestplan" ]; then
+      rm -rf "$PROOF_RESULT_BUNDLE"
+      set -- -testPlan Proof -resultBundlePath "$PROOF_RESULT_BUNDLE"
+    fi
     with_xcode .github/scripts/keep-package-resolved.sh xcodebuild test -project "$fixture/$name.xcodeproj" -scheme "$name" -destination "$destination" \
-      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$log" 2>&1 || status=$?
+      -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO "$@" > "$log" 2>&1 || status=$?
   fi
   cat "$log"
   if [ -f "$fixture/expected-failures" ]; then
