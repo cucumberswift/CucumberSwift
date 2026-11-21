@@ -90,6 +90,18 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(none), ["A", "B"], "A run never skips every target")
     }
 
+    func testATargetWithACoveringSwiftDSLScenarioIsRun() throws {
+        let copy = try makeCopy()
+        // A holds the feature file of one covering scenario. B's covering scenario is written with the Swift DSL, so its
+        // feature is the Swift file that declares it (`#file`), which B's bundle doesn't hold.
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let dsl = ScenarioID(uri: copy.appendingPathComponent("B/RetiringFeature.swift").path, line: 12, name: "A senior can retire")
+        let commands = commands()
+        _ = XcodebuildRunner(target: target, commands: commands).test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
+        XCTAssertEqual(testedTargets(commands), ["A", "B"], "B runs the DSL scenario, though its bundle holds no feature file of it")
+    }
+
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
         let copy = try makeCopy()
         // A is found by a feature file next to its tests, and B by one in the resource bundle that SwiftPM makes.

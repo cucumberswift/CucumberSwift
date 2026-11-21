@@ -16,7 +16,8 @@ import Foundation
 ///
 /// A run of some scenarios sets `CUCUMBER_SCENARIOS`, as every runner does, so CucumberSwift runs only those. With the
 /// names of the test targets, the run also starts only the test targets whose built bundle holds one of the scenarios'
-/// feature files, which keeps Xcode from starting a test bundle that would run none of them.
+/// feature files, which keeps Xcode from starting a test bundle that would run none of them. A run that includes a Swift
+/// DSL scenario starts every test target, because the DSL scenario has no feature file to look for.
 public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -159,8 +160,10 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// anywhere inside it, in the order of the target's test targets. A feature file can be in the bundle itself, in
     /// `Contents/Resources` of a macOS bundle, or in a resource bundle inside it, as SwiftPM makes for a target's resources.
     /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
-    /// any, so that a run never skips all of them.
+    /// any, so that a run never skips all of them. A Swift DSL scenario has no feature file: its feature is the Swift file
+    /// that declares it, which no bundle holds, so a run with one starts every target.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
+        guard scenarios.allSatisfy({ $0.feature.hasSuffix(".feature") }) else { return target.testTargets }
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
             guard let bundle = bundles[name] else { return true }
