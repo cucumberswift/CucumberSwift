@@ -1,0 +1,192 @@
+//
+//  XcodebuildRunnerTests.swift
+//  CucumberSwiftMutationTests
+//
+
+#if os(macOS) || os(Linux)
+import XCTest
+@testable import CucumberSwiftMutation
+
+final class XcodebuildRunnerTests: TemporaryFolderTestCase {
+    private let target = XcodebuildRunner.Target(container: "Voting.xcodeproj", scheme: "Voting", destination: "platform=macOS")
+
+    private func makeCopy(container: String = "Voting.xcodeproj") throws -> URL {
+        let copy = folder.appendingPathComponent("work/package")
+        try FileManager.default.createDirectory(at: copy.appendingPathComponent(container), withIntermediateDirectories: true)
+        return copy
+    }
+
+    /// The argument after `flag`.
+    private func value(after flag: String, in arguments: [String]) -> String? {
+        arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+    }
+
+    private func summary(_ total: Int) -> String {
+        "{\"totalTestCount\": \(total), \"passedTests\": \(total), \"failedTests\": 0, \"result\": \"Passed\"}"
+    }
+
+    /// An `xcodebuild` that writes the result bundle where it is told and an `xcresulttool` that says `total`.
+    private func commands(total: Int, writesBundle: Bool = true, status: Int32 = 0) -> RecordingCommands {
+        RecordingCommands { call in
+            if call.arguments.first == "xcresulttool" { return .finished(0, output: self.summary(total)) }
+            if writesBundle, let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                try? FileManager.default.createDirectory(atPath: call.arguments[index + 1], withIntermediateDirectories: true)
+            }
+            return .finished(status, output: "** TEST SUCCEEDED **")
+        }
+    }
+
+    func testPrepareRefusesACopyWithoutTheProject() throws {
+        let empty = folder.appendingPathComponent("empty")
+        try FileManager.default.createDirectory(at: empty, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try XcodebuildRunner(target: target, commands: RecordingCommands()).prepare(copy: empty)) {
+            XCTAssertTrue("\($0)".contains("Voting.xcodeproj"))
+        }
+    }
+
+    func testAWorkspacePathWithATrailingSlashIsStillBuiltWithDashWorkspace() throws {
+        let commands = RecordingCommands()
+        let workspace = XcodebuildRunner.Target(container: "App.xcworkspace/", scheme: "App", destination: "platform=macOS")
+        let copy = try makeCopy(container: "App.xcworkspace")
+        _ = XcodebuildRunner(target: workspace, commands: commands).build(in: copy, timeout: nil)
+        let arguments = try XCTUnwrap(commands.calls.first?.arguments)
+        XCTAssertTrue(arguments.starts(with: ["build-for-testing", "-workspace", "App.xcworkspace/"]))
+        XCTAssertFalse(arguments.contains("-project"))
+    }
+
+    func testBuildsForTestingWithCoverageIntoOneDerivedDataFolder() throws {
+        let commands = RecordingCommands()
+        let runner = XcodebuildRunner(target: target, commands: commands)
+        let copy = try makeCopy()
+        try runner.prepare(copy: copy)
+        _ = runner.build(in: copy, timeout: 90)
+        _ = runner.build(in: copy, timeout: nil)
+        let calls = commands.calls
+        XCTAssertEqual(calls.count, 2)
+        let arguments = calls[0].arguments
+        XCTAssertEqual(Array(arguments.prefix(7)), ["build-for-testing", "-project", "Voting.xcodeproj", "-scheme", "Voting", "-destination", "platform=macOS"])
+        XCTAssertEqual(value(after: "-enableCodeCoverage", in: arguments), "YES")
+        XCTAssertEqual(calls[0].timeout, 90)
+        let derivedData = try XCTUnwrap(value(after: "-derivedDataPath", in: arguments))
+        XCTAssertEqual(value(after: "-derivedDataPath", in: calls[1].arguments), derivedData, "Each build reuses the products")
+        XCTAssertTrue(derivedData.contains("/runner/"), "In the folder that holds the copy, so it is deleted with it")
+    }
+
+    func testAWorkspaceIsBuiltWithDashWorkspace() throws {
+        let commands = RecordingCommands()
+        let workspace = XcodebuildRunner.Target(container: "App.xcworkspace", scheme: "App", destination: "platform=macOS", arguments: ["-quiet"])
+        let runner = XcodebuildRunner(target: workspace, commands: commands)
+        let copy = try makeCopy(container: "App.xcworkspace")
+        _ = runner.build(in: copy, timeout: nil)
+        let arguments = try XCTUnwrap(commands.calls.first?.arguments)
+        XCTAssertTrue(arguments.starts(with: ["build-for-testing", "-workspace", "App.xcworkspace"]))
+        XCTAssertTrue(arguments.contains("-quiet"))
+        XCTAssertFalse(arguments.contains("-project"))
+    }
+
+    func testSettingsReachTheTestsAsPrefixedVariablesInXcodebuildsEnvironment() throws {
+        let commands = commands(total: 6)
+        let runner = XcodebuildRunner(target: target, commands: commands)
+        let copy = try makeCopy()
+        let run = runner.test(in: copy, request: TestRequest(settings: ["CUCUMBERSWIFT_MUTANT": "3", "CUCUMBER_COVERAGE": "NO"], writesReport: true))
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertEqual(call.arguments.first, "test-without-building")
+        XCTAssertEqual(value(after: "-collect-test-diagnostics", in: call.arguments), "never", "A failing test run collects diagnostics otherwise")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBERSWIFT_MUTANT"], "3")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_COVERAGE"], "NO")
+        XCTAssertTrue(call.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"]?.contains("/runner/reports/") == true)
+        XCTAssertNil(call.environment["CUCUMBERSWIFT_MUTANT"], "Unprefixed, the variable would reach xcodebuild and not the tests")
+        XCTAssertFalse(call.arguments.contains { $0.hasPrefix("TEST_RUNNER_") }, "A TEST_RUNNER_ build setting never reaches the tests")
+        XCTAssertEqual(run.testsRun, 6)
+        XCTAssertTrue(run.succeeded)
+    }
+
+    func testTheToolsCucumberVariablesReachTheTestsAndTheRequestWins() throws {
+        let commands = commands(total: 2)
+        let environment = ["CUCUMBER_TAGS": "@smoke", "CUCUMBER_COVERAGE": "YES", "PATH": "/usr/bin", "HOME": "/h"]
+        let runner = XcodebuildRunner(target: target, commands: commands, environment: environment)
+        _ = runner.test(in: try makeCopy(), request: TestRequest(settings: ["CUCUMBER_COVERAGE": "NO"]))
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_TAGS"], "@smoke")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_COVERAGE"], "NO", "A setting of the request replaces the tool's")
+        XCTAssertNil(call.environment["TEST_RUNNER_PATH"], "Only CUCUMBER_ variables are passed on")
+        XCTAssertNil(call.environment["TEST_RUNNER_HOME"])
+    }
+
+    func testCountsTheTestsFromTheResultBundleAndNotFromWhatXcodePrinted() throws {
+        // Xcode printed success, and ran nothing: the bundle says so.
+        let commands = commands(total: 0)
+        let run = XcodebuildRunner(target: target, commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertEqual(run.status, 0)
+        XCTAssertEqual(run.testsRun, 0)
+        let summary = try XCTUnwrap(commands.calls.last)
+        XCTAssertEqual(Array(summary.arguments.prefix(5)), ["xcresulttool", "get", "test-results", "summary", "--path"])
+    }
+
+    func testARunWithoutAResultBundleRanNoTests() throws {
+        let commands = commands(total: 5, writesBundle: false)
+        let run = XcodebuildRunner(target: target, commands: commands).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertEqual(run.testsRun, 0, "xcodebuild failed before it made a bundle")
+        XCTAssertEqual(commands.calls.count, 1, "There is no bundle to ask xcresulttool about")
+    }
+
+    func testEachRunWritesItsOwnResultBundleAndCountsTheTestsOfThatBundle() throws {
+        // The first bundle holds 6 tests and the second 0: a run that read the other run's bundle would count wrongly.
+        var written: [String] = []
+        let commands = RecordingCommands { call in
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                let path = call.arguments[index + 1]
+                try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+                written.append(path)
+            }
+            if call.arguments.first == "xcresulttool", let index = call.arguments.firstIndex(of: "--path") {
+                let position = written.firstIndex(of: call.arguments[index + 1])
+                return .finished(0, output: self.summary(position == 0 ? 6 : 0))
+            }
+            return .finished(0, output: "** TEST SUCCEEDED **")
+        }
+        let runner = XcodebuildRunner(target: target, commands: commands)
+        let copy = try makeCopy()
+        let first = runner.test(in: copy, request: TestRequest())
+        let second = runner.test(in: copy, request: TestRequest())
+        XCTAssertEqual(first.testsRun, 6)
+        XCTAssertEqual(second.testsRun, 0, "The second run counts its own bundle, not the first run's")
+        XCTAssertEqual(Set(written).count, 2, "xcodebuild fails when the bundle's path exists")
+        let summaryPaths = commands.calls.filter { $0.arguments.first == "xcresulttool" }
+            .compactMap { call in call.arguments.firstIndex(of: "--path").map { call.arguments[$0 + 1] } }
+        XCTAssertEqual(summaryPaths, written, "Each summary reads the bundle its run wrote")
+    }
+
+    func testSeveralTestTargetsRunInOneXcodebuildWithOneReport() throws {
+        let commands = commands(total: 4)
+        var scoped = target
+        scoped.testTargets = ["A", "B"]
+        let run = XcodebuildRunner(target: scoped, commands: commands).test(in: try makeCopy(), request: TestRequest(writesReport: true))
+        let tests = commands.calls.filter { $0.arguments.first == "test-without-building" }
+        XCTAssertEqual(tests.count, 1)
+        let call = try XCTUnwrap(tests.first)
+        let selected = call.arguments.indices.filter { call.arguments[$0] == "-only-testing" }.map { call.arguments[$0 + 1] }
+        XCTAssertEqual(selected, ["A", "B"])
+        XCTAssertNotNil(call.environment["TEST_RUNNER_CUCUMBER_REPORT_PATH"])
+        XCTAssertEqual(run.testsRun, 4)
+    }
+
+    func testOneNamedTestTargetLimitsTheRunToThatTarget() throws {
+        let named = commands(total: 3)
+        var scoped = target
+        scoped.testTargets = ["A"]
+        _ = XcodebuildRunner(target: scoped, commands: named).test(in: try makeCopy(), request: TestRequest())
+        let call = try XCTUnwrap(named.calls.first { $0.arguments.first == "test-without-building" })
+        XCTAssertEqual(call.arguments.firstIndex(of: "-only-testing").map { call.arguments[$0 + 1] }, "A")
+        let none = commands(total: 3)
+        _ = XcodebuildRunner(target: target, commands: none).test(in: try makeCopy(), request: TestRequest())
+        XCTAssertFalse(try XCTUnwrap(none.calls.first).arguments.contains("-only-testing"), "No test target named: every test of the scheme")
+    }
+
+    func testReadsTheTestCountOfASummary() {
+        XCTAssertEqual(XcodebuildRunner.testCount(inSummary: summary(12)), 12)
+        XCTAssertEqual(XcodebuildRunner.testCount(inSummary: "not json"), 0)
+        XCTAssertEqual(XcodebuildRunner.testCount(inSummary: "{}"), 0)
+    }
+}
+#endif

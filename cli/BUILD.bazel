@@ -10,5 +10,8 @@ swift_binary(
     srcs = ["//:Sources/CucumberSwiftCommand/main.swift"],
     module_name = "CucumberSwiftCommand",
     visibility = ["//visibility:public"],
-    deps = ["//:CucumberSwiftCoverageMerge"],
+    deps = [
+        "//:CucumberSwiftCoverageMerge",
+        "//:CucumberSwiftMutationCommand",
+    ],
 )
