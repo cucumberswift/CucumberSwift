@@ -11,8 +11,9 @@ import Foundation
 /// CucumberSwift's settings reach the tests as `--test_env=K=V`, because Bazel gives a test only the variables it is
 /// told to: the tool's own `CUCUMBER_*` variables go the same way, as they do with SwiftPM, where the tests inherit them.
 /// The test count comes from the test's own log in the testlogs folder, which `bazel test` writes whether or not it prints it.
-/// The runner sets `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's `.bazelrc` sets
-/// another prefix; a `--symlink_prefix` in the target's arguments wins, and the runner reads the folder it names.
+/// The runner ends its arguments with `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's
+/// `.bazelrc`, or a `--config` it names, sets another prefix. A `--symlink_prefix` in the target's arguments is the
+/// prefix instead, repeated at the end: the runner reads the folder it names.
 /// Bazel's `test.xml` can't give it: Bazel writes that file itself, with one test for the target.
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
@@ -88,10 +89,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     }
 
     /// The prefix of the convenience links: the one the target's arguments set, or `bazel-`.
-    private var symlinkPrefix: String {
-        let flag = "--symlink_prefix="
-        return target.arguments.last { $0.hasPrefix(flag) }.map { String($0.dropFirst(flag.count)) } ?? "bazel-"
-    }
+    private var symlinkPrefix: String { argument("--symlink_prefix") ?? "bazel-" }
+
+    /// Whether Bazel makes the convenience links: `normal` unless the target's arguments say otherwise.
+    private var convenienceSymlinks: String { argument("--experimental_convenience_symlinks") ?? "normal" }
 
     /// What every `bazel build` and `bazel test` gets, so that the test reuses what the build made: coverage on, in
     /// LLVM's format, the shared disk cache, and the convenience links the runner reads the test logs from.
@@ -100,21 +101,12 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         if let diskCache, !target.arguments.contains(where: { $0.hasPrefix("--disk_cache") }) {
             arguments.append("--disk_cache=\(diskCache.path)")
         }
-        if !target.arguments.contains(where: { $0.hasPrefix("--symlink_prefix") }) { arguments.append("--symlink_prefix=bazel-") }
-        if !target.arguments.contains(where: { $0.hasPrefix("--experimental_convenience_symlinks") }) {
-            arguments.append("--experimental_convenience_symlinks=normal")
-        }
-        return arguments + target.arguments
-    }
-
-    /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
-    private func outputBase(for copy: URL) -> URL {
-        runnerFolder(for: copy).appendingPathComponent("output-base")
-    }
-
-    /// The startup options that go before the command: the copy's own output base.
-    private func startupOptions(for copy: URL) -> [String] {
-        ["--output_base=\(outputBase(for: copy).path)"]
+        arguments += target.arguments
+        // Last, so that a `--config` in the target's arguments, which Bazel expands where it stands, can't move the links with
+        // a `--symlink_prefix` of its own: the prefix the arguments name themselves, or `bazel-`, is the one the runner reads.
+        arguments.append("--symlink_prefix=\(symlinkPrefix)")
+        arguments.append("--experimental_convenience_symlinks=\(convenienceSymlinks)")
+        return arguments
     }
 
     public init(
@@ -131,6 +123,30 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         self.commands = commands
         self.cleanUpCommands = cleanUpCommands
         self.environment = environment
+    }
+
+    /// The value of the last `flag` in the target's arguments, if it has one. Bazel takes it as `flag=value`, or as `flag` and
+    /// then `value`.
+    private func argument(_ flag: String) -> String? {
+        var value: String?
+        for (index, argument) in target.arguments.enumerated() {
+            if argument.hasPrefix(flag + "=") {
+                value = String(argument.dropFirst(flag.count + 1))
+            } else if argument == flag, index + 1 < target.arguments.count {
+                value = target.arguments[index + 1]
+            }
+        }
+        return value
+    }
+
+    /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
+    private func outputBase(for copy: URL) -> URL {
+        runnerFolder(for: copy).appendingPathComponent("output-base")
+    }
+
+    /// The startup options that go before the command: the copy's own output base.
+    private func startupOptions(for copy: URL) -> [String] {
+        ["--output_base=\(outputBase(for: copy).path)"]
     }
 
     public func prepare(copy: URL) throws {
@@ -167,7 +183,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
         settings.merge(request.scenarioSettings) { _, new in new }
-        var arguments = startupOptions(for: copy) + ["test", target.label] + common + ["--nocache_test_results", "--test_output=all", "--nozip_undeclared_test_outputs"]
+        // One attempt, and a failing run among repeated ones (`--runs_per_test`) fails the test: a retry or a run that passes
+        // makes Bazel exit with 0 and call the test FLAKY, which would hide a failed attempt from the run.
+        var arguments = startupOptions(for: copy) + ["test", target.label] + common
+            + ["--nocache_test_results", "--flaky_test_attempts=1", "--noruns_per_test_detects_flakes", "--test_output=all", "--nozip_undeclared_test_outputs"]
         var report: URL?
         if request.writesReport {
             // The test's sandbox allows writes only to the test's own folders and what it is told: the report folder.
@@ -178,7 +197,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             arguments.append("--sandbox_writable_path=\(reports.resolvingSymlinksInPath().path)")
         }
         // CucumberSwift writes its coverage into the test's outputs when no path is set: Bazel gives the test a folder for it.
-        if request.measuresCoverage { settings["CUCUMBER_COVERAGE"] = "YES" }
+        // An inherited CUCUMBER_COVERAGE_PATH would send the files to a folder that keepCoverage doesn't read: an empty one is unset.
+        if request.measuresCoverage {
+            settings["CUCUMBER_COVERAGE"] = "YES"
+            settings["CUCUMBER_COVERAGE_PATH"] = ""
+        }
         for (key, value) in settings.sorted(by: { $0.key < $1.key }) { arguments.append("--test_env=\(key)=\(value)") }
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
         let results = resultFolders(in: copy)
@@ -205,7 +228,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// `run_N_of_M` and `shard_N_of_M` folders inside it, which Bazel writes instead.
     private func resultFolders(in copy: URL) -> [URL] {
         let (package, name) = target.package ?? ("", "")
-        let testlogs = URL(fileURLWithPath: copy.path + "/" + symlinkPrefix + "testlogs", isDirectory: true)
+        // An absolute prefix names a folder of its own, as Bazel reads it; a relative one is relative to the workspace.
+        let testlogs = symlinkPrefix.hasPrefix("/")
+            ? URL(fileURLWithPath: symlinkPrefix + "testlogs", isDirectory: true)
+            : copy.appendingPathComponent(symlinkPrefix + "testlogs", isDirectory: true)
         let target = testlogs.appendingPathComponent(package).appendingPathComponent(name)
         func parts(of folder: URL) -> [URL] {
             let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []

@@ -31,13 +31,15 @@ expressions=$(absolute "$2")
 folder=$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "${3:-${RUNNER_TEMP:-$(mktemp -d)}}")
 # mutation_fixture.py reads only files in the checkout or a temporary folder, so refuse any other folder now, not after the run.
 inside=false
-for root in "$repo" "${TMPDIR:-/tmp}" "${RUNNER_TEMP:-}"; do
+# Python's own temporary folder, which also reads TEMP and TMP: the checker uses it, so this check must too.
+temporary=$(python3 -c 'import tempfile; print(tempfile.gettempdir())')
+for root in "$repo" "$temporary" "${RUNNER_TEMP:-}"; do
   [[ -n "$root" && -d "$root" ]] || continue
   root=$(cd "$root" && pwd -P)
   if [[ "$folder" == "$root" || "$folder" == "$root"/* ]]; then inside=true; fi
 done
 if [[ "$inside" != true ]]; then
-  echo "error: $folder isn't in the checkout, \$TMPDIR or \$RUNNER_TEMP, where mutation_fixture.py reads reports and the log" >&2
+  echo "error: $folder isn't in the checkout, the temporary folder ($temporary) or \$RUNNER_TEMP, where mutation_fixture.py reads reports and the log" >&2
   exit 2
 fi
 mkdir -p "$folder"
@@ -59,10 +61,14 @@ started=$SECONDS
 # own for the copy it makes, so stop the old one before the Swift build and the runs need the memory.
 (cd "$fixture" && bazel shutdown) || echo "::notice::bazel shutdown failed, or no Bazel server was running."
 
-# Our CI builds the tool once with .github/scripts/build-mutation-tool.sh, which it caches, and sets MUTATION_TOOL to
-# its path. Without it, build the tool here on its own and run the binary, so a failure to start is not mistaken for a
-# failed build.
-if [[ -n "${MUTATION_TOOL:-}" ]]; then
+# MUTATION_VIA_BAZEL_RUN=1 runs the tool as the mutation testing article tells a Bazel project to, with
+# `bazel run @cucumberswift//cli:cucumberswift-cli` from the workspace and no --root, so the tool takes the workspace from
+# BUILD_WORKSPACE_DIRECTORY. The checkout is the module, as the registry is for the article's workspace. Our CI sets it.
+# Otherwise MUTATION_TOOL names a built tool, and without it the script builds the tool here on its own and runs the
+# binary, so a failure to start is not mistaken for a failed build.
+if [[ "${MUTATION_VIA_BAZEL_RUN:-}" == 1 ]]; then
+  tool=bazel
+elif [[ -n "${MUTATION_TOOL:-}" ]]; then
   tool="$MUTATION_TOOL"
 else
   build=(swift build --package-path "$repo" --traits Macros --product cucumberswift-cli)
@@ -85,9 +91,18 @@ diagnose() {
   echo "::endgroup::"
 }
 
+# The outer `bazel run` takes no --xcode_version. A tool built with --xcode_version=26.2 aborts in dyld on our runner
+# ("built for macOS 26.2 which is newer than running OS"). The runs of the test target get the flag through --bazel-arg below.
+if [[ "${MUTATION_VIA_BAZEL_RUN:-}" == 1 ]]; then
+  command=(bazel run "--override_module=cucumberswift=$module" "--override_module=cucumberswift_expressions=$expressions" @cucumberswift//cli:cucumberswift-cli -- mutation-test)
+  cd "$fixture"
+else
+  command=("$tool" mutation-test --root "$fixture")
+fi
+
 status=0
-"$tool" mutation-test \
-  --root "$fixture" --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
+"${command[@]}" \
+  --sources Grades --bazel-target //:CucumberSwiftCoverageTests \
   --bazel-arg "--override_module=cucumberswift=$module" --bazel-arg "--override_module=cucumberswift_expressions=$expressions" \
   --bazel-disk-cache "$folder/bazel-disk-cache" --bazel-arg "--repository_cache=$folder/bazel-repository-cache" \
   --bazel-arg --instrumentation_filter=//:Grades --bazel-arg --xcode_version=26.2 \

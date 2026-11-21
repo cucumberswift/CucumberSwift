@@ -1072,7 +1072,8 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.outputs.no_code != 'true' || needs.changes.outputs.catalog == 'true') && needs.changes.outputs.queue_checked != 'true' && !inputs.parallel_only }}
     runs-on: macos-15
-    timeout-minutes: 20
+    # Typical runs take 14 to 19 minutes; 30 leaves room for a slow runner (#609).
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -1535,12 +1536,9 @@ jobs:
       # gives a Bazel project, built by Bazel with swift-syntax from the Bazel Central Registry. It uses the job's Bazel caches, and runs with
       # the newest Bazel only: the oldest runs the other steps to check the module. Like the other mutation steps, a
       # pull request runs it only when it changes mutation testing (mutation_code, from the changes job).
-      - name: Build the mutation testing tool with Bazel
-        if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
-        run: bazel build //cli:cucumberswift-cli
       - name: Run mutation testing on the Bazel fixture
         if: ${{ matrix.bazel == '' && (github.event_name == 'merge_group' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.mutation_code == 'true') }}
-        run: MUTATION_TOOL="$PWD/bazel-bin/cli/cucumberswift-cli" .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
+        run: MUTATION_VIA_BAZEL_RUN=1 .github/scripts/mutation-bazel-fixture.sh "$MODULE_PATH" "$EXPRESSIONS_PATH" "$RUNNER_TEMP"
       # The reports show which scenario killed which mutant, which the job's own output doesn't. Only on a failure.
       - name: Upload the Bazel mutation testing reports and log
         if: ${{ failure() && matrix.bazel == '' }}

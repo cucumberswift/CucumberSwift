@@ -122,6 +122,40 @@ final class MutationRunWithRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(log.joined().contains("ran no test"), log.joined())
     }
 
+    // MARK: through Bazel
+
+    func testABazelBuildThatStopsWithAMachineProblemStopsTheRunInsteadOfCountingAnUnviableMutant() throws {
+        try "module(name = \"voting\")\n".write(to: root.appendingPathComponent("MODULE.bazel"), atomically: true, encoding: .utf8)
+        var settings = options()
+        settings.bazelTarget = BazelRunner.Target(label: "//Tests:VotingTests")
+        settings.bazel = "/usr/bin/true"
+        settings.bazelDiskCache = folder.appendingPathComponent("cache")
+        let builds = Counter()
+        let commands = RecordingCommands { call in
+            // The output base is `<work folder>/runner/output-base`, and the copy is `<work folder>/package`.
+            let base = call.arguments.first { $0.hasPrefix("--output_base=") }.map { String($0.dropFirst("--output_base=".count)) } ?? ""
+            let copy = URL(fileURLWithPath: base).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("package")
+            let command = call.arguments.first { !$0.hasPrefix("--") }
+            if command == "build" {
+                builds.increment()
+                // The baseline's build works. A mutant's exits with 36, Bazel's status for a problem with the machine.
+                return builds.value == 1 ? .finished(0, output: "Build completed successfully") : .finished(36, output: "ERROR: out of disk space")
+            }
+            if command == "test" {
+                let logs = copy.appendingPathComponent("bazel-testlogs/Tests/VotingTests")
+                try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+                try? "Executed 4 tests, with 0 failures".write(to: logs.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
+            }
+            return .finished(0)
+        }
+        let status = MutationRun(options: settings, discoverer: FakeDiscoverer(), runner: commands) { [weak self] in self?.log.append($0) }.run()
+        XCTAssertEqual(status, MutationRun.Status.failed, "A problem with the machine isn't a mutant that doesn't build: \(log.joined(separator: "\n"))")
+        XCTAssertTrue(log.joined().contains("the build didn't start"), log.joined())
+        XCTAssertTrue(log.joined().contains("out of disk space"), "The run stops with Bazel's own diagnostic: \(log.joined())")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("mutation-report.json").path))
+        XCTAssertEqual(builds.value, 2, "The baseline's build and the first mutant's, which stopped the run")
+    }
+
     func testRefusesAFolderWithoutTheProject() {
         var settings = options()
         settings.xcode = XcodebuildRunner.Target(container: "Missing.xcodeproj", scheme: "Voting", destination: "platform=macOS")
