@@ -74,7 +74,10 @@ let project = Project(
         .scheme(
             name: "SwiftTestingAndXCTestMacrosTuist",
             buildAction: .buildAction(targets: ["BasketApp", "BasketUnitTests", "BasketUITests"]),
-            testAction: .targets(["BasketUnitTests", "BasketUITests"])
+            // Default.xctestplan runs both test targets and keeps an attachment only when a test fails.
+            // Proof.xctestplan runs them too and keeps every attachment, such as the text that our CI's
+            // proof job exports: `xcodebuild -testPlan Proof` selects it.
+            testAction: .testPlans(["Default.xctestplan", "Proof.xctestplan"])
         )
     ]
 )
