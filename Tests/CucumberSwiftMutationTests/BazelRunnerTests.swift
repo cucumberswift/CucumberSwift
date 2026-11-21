@@ -77,12 +77,13 @@ final class BazelRunnerTests: BazelRunnerTestCase {
         XCTAssertTrue(run.succeeded)
     }
 
-    func testATestIsRunOnceWhateverRetriesTheProjectSets() throws {
+    func testATestIsRunOnceAndAFailedRunFailsItWhateverRetriesTheProjectSets() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)
-        _ = runner(.init(label: "//Tests:AppTests", arguments: ["--flaky_test_attempts=3"]), commands: commands).test(in: copy, request: TestRequest())
+        _ = runner(.init(label: "//Tests:AppTests", arguments: ["--flaky_test_attempts=3", "--runs_per_test_detects_flakes"]), commands: commands).test(in: copy, request: TestRequest())
         let arguments = try XCTUnwrap(commands.calls.first).arguments
         XCTAssertEqual(arguments.last { $0.hasPrefix("--flaky_test_attempts") }, "--flaky_test_attempts=1", "A retry that passes would hide a failed attempt")
+        XCTAssertEqual(arguments.last { $0.contains("runs_per_test_detects_flakes") }, "--noruns_per_test_detects_flakes", "A run that passes would hide one that failed")
     }
 
     func testAnInheritedCoveragePathIsClearedWhenCoverageIsMeasured() throws {
