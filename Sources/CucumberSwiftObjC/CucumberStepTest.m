@@ -21,7 +21,13 @@ static Class<CucumberStepTestSupport> _Nullable CucumberStepTestSupport(void) {
 
 /// For experimental parallel testing. Swift can't run code when an image loads, so CucumberSwift is
 /// asked here; it makes each scenario's class at once, before XCTest lists the classes it hands out.
+///
+/// Also turns on XCTest's complete interop mode, unless the environment already sets one, so that a failed
+/// `#expect`, `#require` or `Issue.record` in a step fails the step, as a failed `XCTAssert` does. XCTest
+/// reads the variable after the test bundle loads; from Xcode 26 it then records Swift Testing's issues on
+/// the running test. Before Xcode 26 nothing reads it.
 + (void)load {
+    setenv("SWIFT_TESTING_XCTEST_INTEROP_MODE", "complete", 0);
     [CucumberStepTestSupport() prepareForParallelTesting];
 }
 

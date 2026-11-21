@@ -8,3 +8,13 @@ error: -[CucumberSwift.CucumberTest testGherkin] : failed - File: Unsupported.fe
 ↳ No CucumberSwift expression found that matches this step.
 ✘ Test "Feature files are valid Gherkin" recorded an issue at Unsupported.feature:1:1
 ↳ File: Unsupported.feature declares an unsupported language
+# Both runners fail the step of each failing assertion, whichever framework it comes from.
+# The XCTest runner: XCTest's XCTAssert, and Swift Testing's #expect, #require and Issue.record.
+Assertions.feature:4: error: -[Failing assertions › An XCTest assertion fails its step 1 › When an XCTest assertion fails] : XCTAssertEqual failed
+Assertions.feature:8: error: -[Failing assertions › An expectation fails its step 1 › When an expectation fails] : Expectation failed: 1 == 2: expect failed on purpose
+Assertions.feature:12: error: -[Failing assertions › A requirement fails its step 1 › When a requirement fails] : Expectation failed: 1 == 2: require failed on purpose
+Assertions.feature:16: error: -[Failing assertions › A recorded issue fails its step 1 › When an issue is recorded] : Issue recorded: issue recorded on purpose
+# The Swift Testing runner: #expect, #require and Issue.record, at their lines in the feature file.
+✘ Test "An expectation fails its step" recorded an issue with 1 argument testCase → 1 › When an expectation fails at Assertions.feature:4:5
+✘ Test "A requirement fails its step" recorded an issue with 1 argument testCase → 1 › When a requirement fails at Assertions.feature:8:5
+✘ Test "A recorded issue fails its step" recorded an issue with 1 argument testCase → 1 › When an issue is recorded at Assertions.feature:12:5
