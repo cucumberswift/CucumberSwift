@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "7A1E5C0A-2B9D-4C57-8E11-0D3B6F4A9C01",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:SwiftTestingAndXCTestTuist.xcodeproj",
+      "identifier" : "E3F692D4DE14128F96521B53",
+      "name" : "BasketUITests"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:SwiftTestingAndXCTestTuist.xcodeproj",
+        "identifier" : "9FC3784721D046F2ED9CEC81",
+        "name" : "BasketUnitTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:SwiftTestingAndXCTestTuist.xcodeproj",
+        "identifier" : "E3F692D4DE14128F96521B53",
+        "name" : "BasketUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
