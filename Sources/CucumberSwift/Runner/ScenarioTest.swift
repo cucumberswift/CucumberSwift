@@ -213,7 +213,7 @@ extension CucumberTest {
     /// A step's hooks and cleanup after it ran or was skipped.
     private static func finish(_ step: Step) {
         (step.executeInstance as? XCTestCase)?.tearDown()
-        Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
+        step.runAfterStepHooks()
         Cucumber.shared.setupAfterHooksFor(step)
         step.endTime = Date()
     }
