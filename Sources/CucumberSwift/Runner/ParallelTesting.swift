@@ -108,9 +108,10 @@ enum ParallelTesting {
 
     /// Whether a feature ends after its scenarios in this worker rather than after the last step in its
     /// feature file: whether the scenario or feature classes were made, so that the scenarios run in
-    /// whatever order and worker Xcode chooses.
+    /// whatever order and worker Xcode chooses, or each scenario is a test that `swift test --parallel` runs in
+    /// a process of its own (#567).
     nonisolated static var defersFeatureEnds: Bool {
-        scenarioClassesMade
+        scenarioClassesMade || FeatureFlags.isParallelSwiftTest
     }
 
     /// Whether the step is the last test of its feature's class, made with ``ParallelTestingUnit/feature``.
