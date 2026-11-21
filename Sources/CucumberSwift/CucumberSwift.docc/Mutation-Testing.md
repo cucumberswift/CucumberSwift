@@ -454,7 +454,7 @@ The command builds and runs your test suite once for each mutant, after a few se
 
 ### Run only the scenarios that cover a mutant
 
-The command runs the scenarios that run a mutant's code by setting `CUCUMBER_SCENARIOS` to their ids, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Running-Tests-With-Bazel>). The XCTest runner and the Swift Testing runner both read the variable. You can set it yourself to run one scenario of the sample, the "Three items get a discount" scenario on line 9 of `Basket.feature`:
+The command runs the scenarios that run a mutant's code by setting `CUCUMBER_SCENARIOS` to their ids, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Mutation-Testing#Bazel-targets>). The XCTest runner and the Swift Testing runner both read the variable. You can set it yourself to run one scenario of the sample, the "Three items get a discount" scenario on line 9 of `Basket.feature`:
 
 ```bash
 CUCUMBER_SCENARIOS=Features/Basket.feature:9 swift test
