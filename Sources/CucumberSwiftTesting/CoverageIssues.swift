@@ -25,7 +25,7 @@ extension CoverageIssue {
     /// Swift 6.3 can't record a warning, so it prints it.
     func record(inSuite: Bool = false, output: (String) -> Void = { print($0) }) {
         guard inSuite else {
-            output("\(file?.path ?? ""):\(max(line, 1)): \(severity == .warning ? "warning" : "error"): \(message)")
+            output(printedLine)
             return
         }
         let location = SourceLocation(fileID: "Features/\(file?.lastPathComponent ?? "")",
@@ -38,7 +38,7 @@ extension CoverageIssue {
         if severity == .error {
             Issue.record(Comment(rawValue: message), sourceLocation: location)
         } else {
-            output("\(file?.path ?? ""):\(max(line, 1)): warning: \(message)")
+            output(printedLine)
         }
         #endif
     }
