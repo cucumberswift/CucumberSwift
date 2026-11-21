@@ -32,7 +32,9 @@ enum World {
 extension Cucumber: @retroactive StepImplementation {
     // Xcode shows the scenario this leaves out as skipped: its step would fail if it ran.
     public func shouldRunWith(scenario _: Scenario?, tags: [String]) -> Bool {
-        !tags.contains("left-out-in-code")
+        // The regex steps need iOS 16, macOS 13, tvOS 16 and watchOS 9, so below those the regex scenario is left out.
+        if tags.contains("regex"), #unavailable(macOS 13, iOS 16, tvOS 16, watchOS 9) { return false }
+        return !tags.contains("left-out-in-code")
     }
 
     public func setupSteps() {

@@ -37,6 +37,7 @@ Feature: Counting cukes
     And I eat 2 cukes later
     Then 2 cukes are left in this step
 
+  @regex
   Scenario: Regex literals
     Given I have 4 cukes from "Lisbon"
     When I eat 1 cuke with a regex

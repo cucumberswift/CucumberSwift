@@ -20,7 +20,11 @@ private final class Shop {
 }
 
 @MainActor
-private func openTheShop() { Shop.current.opened = true }
+private func openTheShop() {
+    // The background runs before each scenario, on state that scenario has to itself.
+    #expect(!Shop.current.opened)
+    Shop.current.opened = true
+}
 
 @MainActor
 private func addCukes(_ count: Int) { Shop.current.cukes += count }
