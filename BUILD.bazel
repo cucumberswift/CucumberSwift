@@ -34,15 +34,6 @@ swift_library(
     ],
 )
 
-# The Gherkin parser that the Swift Testing runner's generator links, as Package.swift's CucumberSwiftGherkin
-# target does: CucumberSwift's own Core sources, compiled a second time without XCTest. Not testonly, so
-# the generator can build for the Mac that builds the tests.
-swift_library(
-    name = "CucumberSwiftGherkin",
-    srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
-    module_name = "CucumberSwiftGherkin",
-)
-
 # Writes the Swift Testing tests of a test target's feature files: bazel/swift_testing.bzl runs it.
 swift_binary(
     name = "CucumberSwiftTestingGenerator",
@@ -73,6 +64,9 @@ swift_library(
     visibility = ["//visibility:public"],
 )
 
+# The Gherkin parser that the Swift Testing runner's generator and the command-line tool link, as Package.swift's
+# CucumberSwiftGherkin target does: CucumberSwift's own Core sources, compiled a second time without XCTest.
+# Not testonly, so the generator can build for the Mac that builds the tests.
 swift_library(
     name = "CucumberSwiftGherkin",
     srcs = glob(["Sources/CucumberSwiftGherkin/**/*.swift"]),
