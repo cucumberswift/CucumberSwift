@@ -10,7 +10,10 @@ import Foundation
 ///
 /// CucumberSwift's settings reach the tests as `--test_env=K=V`, because Bazel gives a test only the variables it is
 /// told to: the tool's own `CUCUMBER_*` variables go the same way, as they do with SwiftPM, where the tests inherit them.
-/// The test count comes from the test's own log in `bazel-testlogs`, which `bazel test` writes whether or not it prints it.
+/// The test count comes from the test's own log in the testlogs folder, which `bazel test` writes whether or not it prints it.
+/// The runner ends its arguments with `--symlink_prefix=bazel-`, so that folder is `bazel-testlogs` even when the project's
+/// `.bazelrc`, or a `--config` it names, sets another prefix. A `--symlink_prefix` in the target's arguments is the
+/// prefix instead, repeated at the end: the runner reads the folder it names.
 /// Bazel's `test.xml` can't give it: Bazel writes that file itself, with one test for the target.
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
@@ -20,7 +23,9 @@ import Foundation
 ///
 /// The disk cache is shared by every copy and every run, so a new copy, which Bazel builds in a folder of its own, finds
 /// what an earlier one built. The copy's output base is deleted with `bazel clean --expunge` after the run: Bazel keeps
-/// one for each workspace folder, and the copies are deleted.
+/// one for each workspace folder, and the copies are deleted. Every command runs with `--output_base` set to a folder
+/// of the run's own, so that a project's own `--output_base` can't send the run's builds, or its clean-up, to the
+/// output base of the original workspace.
 public final class BazelRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -56,6 +61,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// What `bazel test` exits with after it ran the tests: 0 when they passed, 3 when one failed or timed out.
     static let testExitStatuses: Set<Int32> = [0, 3]
 
+    /// What `bazel build` exits with after it built: 0 when it succeeded, 1 when the build failed.
+    static let buildExitStatuses: Set<Int32> = [0, 1]
+
     /// The disk cache every run shares, in the user's caches folder.
     public static var defaultDiskCache: URL? {
         try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -80,14 +88,25 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         return folders.map { "\($0)/\(bazel)" }.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
+    /// The prefix of the convenience links: the one the target's arguments set, or `bazel-`.
+    private var symlinkPrefix: String { argument("--symlink_prefix") ?? "bazel-" }
+
+    /// Whether Bazel makes the convenience links: `normal` unless the target's arguments say otherwise.
+    private var convenienceSymlinks: String { argument("--experimental_convenience_symlinks") ?? "normal" }
+
     /// What every `bazel build` and `bazel test` gets, so that the test reuses what the build made: coverage on, in
-    /// LLVM's format, and the shared disk cache.
+    /// LLVM's format, the shared disk cache, and the convenience links the runner reads the test logs from.
     private var common: [String] {
         var arguments = ["--collect_code_coverage", "--features=llvm_coverage_map_format", "--features=-gcc_coverage_map_format"]
         if let diskCache, !target.arguments.contains(where: { $0.hasPrefix("--disk_cache") }) {
             arguments.append("--disk_cache=\(diskCache.path)")
         }
-        return arguments + target.arguments
+        arguments += target.arguments
+        // Last, so that a `--config` in the target's arguments, which Bazel expands where it stands, can't move the links with
+        // a `--symlink_prefix` of its own: the prefix the arguments name themselves, or `bazel-`, is the one the runner reads.
+        arguments.append("--symlink_prefix=\(symlinkPrefix)")
+        arguments.append("--experimental_convenience_symlinks=\(convenienceSymlinks)")
+        return arguments
     }
 
     public init(
@@ -106,6 +125,30 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         self.environment = environment
     }
 
+    /// The value of the last `flag` in the target's arguments, if it has one. Bazel takes it as `flag=value`, or as `flag` and
+    /// then `value`.
+    private func argument(_ flag: String) -> String? {
+        var value: String?
+        for (index, argument) in target.arguments.enumerated() {
+            if argument.hasPrefix(flag + "=") {
+                value = String(argument.dropFirst(flag.count + 1))
+            } else if argument == flag, index + 1 < target.arguments.count {
+                value = target.arguments[index + 1]
+            }
+        }
+        return value
+    }
+
+    /// The output base of the copy, in the folder that holds the copy: the run's `WorkFolder` deletes it with the copy.
+    private func outputBase(for copy: URL) -> URL {
+        runnerFolder(for: copy).appendingPathComponent("output-base")
+    }
+
+    /// The startup options that go before the command: the copy's own output base.
+    private func startupOptions(for copy: URL) -> [String] {
+        ["--output_base=\(outputBase(for: copy).path)"]
+    }
+
     public func prepare(copy: URL) throws {
         guard Self.workspaceFiles.contains(where: { FileManager.default.fileExists(atPath: copy.appendingPathComponent($0).path) }) else {
             throw Failure(description: "\(copy.path) has no MODULE.bazel")
@@ -122,8 +165,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
 
     public func build(in copy: URL, timeout: TimeInterval?) -> BuildResult {
         guard let executable else { return BuildResult(succeeded: false, started: false) }
-        let result = commands.run(executable, ["build", target.label] + common, in: copy, environment: [:], timeout: timeout)
-        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: result.started)
+        let result = commands.run(executable, startupOptions(for: copy) + ["build", target.label] + common, in: copy, environment: [:], timeout: timeout)
+        // Bazel exits with 1 when the build fails. Any other status, such as 36 for a problem with the machine, says nothing
+        // about the code: a mutant isn't unviable because of it, and the run stops with Bazel's output.
+        let built = result.started && (result.succeeded || result.timedOut || Self.buildExitStatuses.contains(result.status))
+        return BuildResult(succeeded: result.succeeded, duration: result.duration, log: write(result.output, named: "build", in: copy), started: built)
     }
 
     public func test(in copy: URL, request: TestRequest) -> TestRun {
@@ -137,7 +183,10 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
         settings.merge(request.scenarioSettings) { _, new in new }
-        var arguments = ["test", target.label] + common + ["--nocache_test_results", "--test_output=all", "--nozip_undeclared_test_outputs"]
+        // One attempt, and a failing run among repeated ones (`--runs_per_test`) fails the test: a retry or a run that passes
+        // makes Bazel exit with 0 and call the test FLAKY, which would hide a failed attempt from the run.
+        var arguments = startupOptions(for: copy) + ["test", target.label] + common
+            + ["--nocache_test_results", "--flaky_test_attempts=1", "--noruns_per_test_detects_flakes", "--test_output=all", "--nozip_undeclared_test_outputs"]
         var report: URL?
         if request.writesReport {
             // The test's sandbox allows writes only to the test's own folders and what it is told: the report folder.
@@ -148,7 +197,11 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
             arguments.append("--sandbox_writable_path=\(reports.resolvingSymlinksInPath().path)")
         }
         // CucumberSwift writes its coverage into the test's outputs when no path is set: Bazel gives the test a folder for it.
-        if request.measuresCoverage { settings["CUCUMBER_COVERAGE"] = "YES" }
+        // An inherited CUCUMBER_COVERAGE_PATH would send the files to a folder that keepCoverage doesn't read: an empty one is unset.
+        if request.measuresCoverage {
+            settings["CUCUMBER_COVERAGE"] = "YES"
+            settings["CUCUMBER_COVERAGE_PATH"] = ""
+        }
         for (key, value) in settings.sorted(by: { $0.key < $1.key }) { arguments.append("--test_env=\(key)=\(value)") }
         let result = commands.run(executable, arguments, in: copy, environment: [:], timeout: request.timeout)
         let results = resultFolders(in: copy)
@@ -170,12 +223,16 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         return run
     }
 
-    /// The folders in `bazel-testlogs` that hold the test's results, each with its `test.log` and `test.outputs`. They are
+    /// The folders in the testlogs folder that hold the test's results, each with its `test.log` and `test.outputs`. They are
     /// the target's folder, or, when the workspace runs a test more than once (`--runs_per_test`) or in shards, the
     /// `run_N_of_M` and `shard_N_of_M` folders inside it, which Bazel writes instead.
     private func resultFolders(in copy: URL) -> [URL] {
         let (package, name) = target.package ?? ("", "")
-        let target = copy.appendingPathComponent("bazel-testlogs").appendingPathComponent(package).appendingPathComponent(name)
+        // An absolute prefix names a folder of its own, as Bazel reads it; a relative one is relative to the workspace.
+        let testlogs = symlinkPrefix.hasPrefix("/")
+            ? URL(fileURLWithPath: symlinkPrefix + "testlogs", isDirectory: true)
+            : copy.appendingPathComponent(symlinkPrefix + "testlogs", isDirectory: true)
+        let target = testlogs.appendingPathComponent(package).appendingPathComponent(name)
         func parts(of folder: URL) -> [URL] {
             let children = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
             return children
@@ -194,13 +251,18 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// the result folder they came from when there is more than one.
     private func keepCoverage(from results: [URL], as number: Int, in folder: URL) -> URL? {
         let destination = folder.appendingPathComponent("coverage-\(number)")
-        let sources = results.map { ($0, $0.appendingPathComponent("test.outputs/_cucumberCoverage")) }
-        // Coverage that misses a result folder would name some scenarios' code as code no scenario runs: keep all or none.
-        guard !sources.isEmpty, sources.allSatisfy({ FileManager.default.fileExists(atPath: $0.1.path) }) else { return nil }
+        // Each result folder's coverage folder, with the folders in it.
+        let sources = results.map { result -> (result: URL, runs: [URL])? in
+            let source = result.appendingPathComponent("test.outputs/_cucumberCoverage").resolvingSymlinksInPath()
+            let runs = (try? FileManager.default.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)) ?? []
+            return runs.contains { $0.lastPathComponent.hasPrefix("run-") } ? (result, runs) : nil
+        }
+        // Coverage that misses a result folder, or that has no run folder in it, would name some scenarios' code as code no
+        // scenario runs: keep all or none.
+        guard !sources.isEmpty, !sources.contains(where: { $0 == nil }) else { return nil }
         try? FileManager.default.removeItem(at: destination)
         guard (try? FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)) != nil else { return nil }
-        for (result, source) in sources {
-            let runs = (try? FileManager.default.contentsOfDirectory(at: source.resolvingSymlinksInPath(), includingPropertiesForKeys: nil)) ?? []
+        for case let (result, runs)? in sources {
             // A run folder is `run-<id>`: a prefix of the result folder's name keeps the ids of two results apart.
             let tag = results.count > 1 ? result.pathComponents.suffix(2).joined(separator: "-") + "-" : ""
             for run in runs {
@@ -215,9 +277,9 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
     /// the server running, so this runs after a cancel too.
     public func cleanUp(copy: URL) {
         guard let executable, FileManager.default.fileExists(atPath: copy.path) else { return }
-        let result = cleanUpCommands.run(executable, ["clean", "--expunge"], in: copy, environment: [:], timeout: 120)
+        let result = cleanUpCommands.run(executable, startupOptions(for: copy) + ["clean", "--expunge"], in: copy, environment: [:], timeout: 120)
         if !result.succeeded {
-            _ = cleanUpCommands.run(executable, ["shutdown"], in: copy, environment: [:], timeout: 60)
+            _ = cleanUpCommands.run(executable, startupOptions(for: copy) + ["shutdown"], in: copy, environment: [:], timeout: 60)
         }
     }
 

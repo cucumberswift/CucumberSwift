@@ -7,49 +7,7 @@
 import XCTest
 @testable import CucumberSwiftMutation
 
-final class BazelRunnerTests: TemporaryFolderTestCase {
-    private let target = BazelRunner.Target(label: "//Tests:AppTests")
-
-    private func makeCopy(workspaceFile: String = "MODULE.bazel") throws -> URL {
-        let copy = folder.appendingPathComponent("work/workspace")
-        try FileManager.default.createDirectory(at: copy, withIntermediateDirectories: true)
-        try "module(name = \"app\")\n".write(to: copy.appendingPathComponent(workspaceFile), atomically: true, encoding: .utf8)
-        return copy
-    }
-
-    private func runner(
-        _ target: BazelRunner.Target? = nil,
-        commands: CommandRunning,
-        cleanUp: CommandRunning? = nil,
-        environment: [String: String] = [:]
-    ) -> BazelRunner {
-        BazelRunner(
-            target: target ?? self.target,
-            bazel: "/usr/bin/true",
-            diskCache: folder.appendingPathComponent("cache"),
-            commands: commands,
-            cleanUpCommands: cleanUp ?? commands,
-            environment: environment
-        )
-    }
-
-    /// A `bazel` that writes the test's log where Bazel does, with `output` in it, and the coverage it leaves in the test's outputs.
-    private func commands(in copy: URL, output: String = "Executed 3 tests, with 0 failures", status: Int32 = 0, coverage: Bool = false) -> RecordingCommands {
-        RecordingCommands { call in
-            if call.arguments.first == "test" {
-                let logs = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
-                try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
-                try? output.write(to: logs.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
-                if coverage {
-                    let run = logs.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
-                    try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                    try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
-                }
-            }
-            return .finished(status, output: "bazel output")
-        }
-    }
-
+final class BazelRunnerTests: BazelRunnerTestCase {
     func testTheLabelNamesThePackageFolderAndTheTest() {
         XCTAssertEqual(BazelRunner.Target(label: "//Tests:AppTests").package?.folder, "Tests")
         XCTAssertEqual(BazelRunner.Target(label: "//Tests:AppTests").package?.name, "AppTests")
@@ -83,12 +41,15 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         let result = runner(.init(label: "//Tests:AppTests", arguments: ["--config=ci"]), commands: commands).build(in: copy, timeout: 90)
         XCTAssertTrue(result.succeeded)
         let call = try XCTUnwrap(commands.calls.first)
-        XCTAssertEqual(Array(call.arguments.prefix(2)), ["build", "//Tests:AppTests"])
+        XCTAssertEqual(Array(call.afterStartup.prefix(2)), ["build", "//Tests:AppTests"])
         XCTAssertTrue(call.arguments.contains("--collect_code_coverage"))
         XCTAssertTrue(call.arguments.contains("--features=llvm_coverage_map_format"))
         XCTAssertTrue(call.arguments.contains("--features=-gcc_coverage_map_format"))
         XCTAssertTrue(call.arguments.contains("--disk_cache=\(folder.appendingPathComponent("cache").path)"))
-        XCTAssertEqual(call.arguments.last, "--config=ci")
+        XCTAssertEqual(call.arguments.last, "--experimental_convenience_symlinks=normal", "The runner's own link flags come after the target's")
+        let config = try XCTUnwrap(call.arguments.firstIndex(of: "--config=ci"))
+        let prefix = try XCTUnwrap(call.arguments.firstIndex(of: "--symlink_prefix=bazel-"))
+        XCTAssertLessThan(config, prefix, "A --config expands where it stands: the runner's prefix must come after it, or the config's wins")
         XCTAssertEqual(call.timeout, 90)
     }
 
@@ -105,7 +66,7 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
             in: copy, request: TestRequest(settings: ["CUCUMBERSWIFT_MUTANT": "7", "CUCUMBER_COVERAGE": "YES"])
         )
         let arguments = try XCTUnwrap(commands.calls.first).arguments
-        XCTAssertEqual(Array(arguments.prefix(2)), ["test", "//Tests:AppTests"])
+        XCTAssertEqual(Array(try XCTUnwrap(commands.calls.first).afterStartup.prefix(2)), ["test", "//Tests:AppTests"])
         XCTAssertTrue(arguments.contains("--test_env=CUCUMBER_TAGS=@a"))
         XCTAssertTrue(arguments.contains("--test_env=CUCUMBERSWIFT_MUTANT=7"))
         XCTAssertTrue(arguments.contains("--test_env=CUCUMBER_COVERAGE=YES"))
@@ -114,6 +75,24 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(arguments.contains("--nocache_test_results"), "A repeated test must run again")
         XCTAssertEqual(commands.calls.first?.environment, [:], "Bazel's environment doesn't carry the settings")
         XCTAssertTrue(run.succeeded)
+    }
+
+    func testATestIsRunOnceAndAFailedRunFailsItWhateverRetriesTheProjectSets() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        _ = runner(.init(label: "//Tests:AppTests", arguments: ["--flaky_test_attempts=3", "--runs_per_test_detects_flakes"]), commands: commands).test(in: copy, request: TestRequest())
+        let arguments = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertEqual(arguments.last { $0.hasPrefix("--flaky_test_attempts") }, "--flaky_test_attempts=1", "A retry that passes would hide a failed attempt")
+        XCTAssertEqual(arguments.last { $0.contains("runs_per_test_detects_flakes") }, "--noruns_per_test_detects_flakes", "A run that passes would hide one that failed")
+    }
+
+    func testAnInheritedCoveragePathIsClearedWhenCoverageIsMeasured() throws {
+        let copy = try makeCopy()
+        let commands = commands(in: copy)
+        _ = runner(commands: commands, environment: ["CUCUMBER_COVERAGE_PATH": "/elsewhere"]).test(in: copy, request: TestRequest(measuresCoverage: true))
+        let arguments = try XCTUnwrap(commands.calls.first).arguments
+        XCTAssertTrue(arguments.contains("--test_env=CUCUMBER_COVERAGE_PATH="), "An empty path puts the coverage in the test's outputs")
+        XCTAssertFalse(arguments.contains("--test_env=CUCUMBER_COVERAGE_PATH=/elsewhere"))
     }
 
     func testRunsOnlyTheScenariosOfARequestThroughCucumberScenarios() throws {
@@ -162,126 +141,46 @@ final class BazelRunnerTests: TemporaryFolderTestCase {
         XCTAssertTrue(runner(commands: commands(in: copy, status: 1)).build(in: copy, timeout: nil).started)
     }
 
-    func testTheReportIsWrittenToAFolderTheSandboxAllows() throws {
+    func testABuildThatStoppedWithAMachineProblemIsNotAnUnviableMutant() throws {
+        let copy = try makeCopy()
+        // 1 is a build that failed: the mutant doesn't build. 36 is a problem with the machine, and 2 a bad command line:
+        // neither says anything about the mutant, and a build that never really started stops the run with Bazel's output.
+        let failed = runner(commands: RecordingCommands { _ in .finished(1, output: "error: compile") }).build(in: copy, timeout: nil)
+        XCTAssertFalse(failed.succeeded)
+        XCTAssertTrue(failed.started, "A build that failed to compile is unviable")
+        for status: Int32 in [2, 36, 37] {
+            let result = runner(commands: RecordingCommands { _ in .finished(status, output: "infrastructure") }).build(in: copy, timeout: nil)
+            XCTAssertFalse(result.succeeded)
+            XCTAssertFalse(result.started, "Status \(status) isn't a build failure")
+        }
+        XCTAssertTrue(runner(commands: RecordingCommands()).build(in: copy, timeout: nil).started)
+    }
+
+    func testEveryCommandRunsWithAnOutputBaseOfTheRunsOwn() throws {
         let copy = try makeCopy()
         let commands = commands(in: copy)
-        let run = runner(commands: commands).test(in: copy, request: TestRequest(writesReport: true))
-        let arguments = try XCTUnwrap(commands.calls.first).arguments
-        let path = try XCTUnwrap(arguments.first { $0.hasPrefix("--test_env=CUCUMBER_REPORT_PATH=") }).replacingOccurrences(of: "--test_env=CUCUMBER_REPORT_PATH=", with: "")
-        XCTAssertTrue(path.hasSuffix("runner/reports/report-1.json"), path)
-        XCTAssertTrue(arguments.contains { $0.hasPrefix("--sandbox_writable_path=") && $0.hasSuffix("runner/reports") })
-        XCTAssertNil(run.cucumberReport, "No report was written")
-        try "[]".write(to: URL(fileURLWithPath: path), atomically: true, encoding: .utf8)
-        XCTAssertEqual(runner(commands: commands).test(in: copy, request: TestRequest(writesReport: true)).cucumberReport?.lastPathComponent, "report-1.json")
-    }
-
-    func testCoverageFromTheTestsOutputsIsKeptForEachRun() throws {
-        let copy = try makeCopy()
-        let bazel = runner(commands: commands(in: copy, coverage: true))
-        let first = bazel.test(in: copy, request: TestRequest(measuresCoverage: true))
-        let second = bazel.test(in: copy, request: TestRequest(measuresCoverage: true))
-        XCTAssertEqual(first.coverageFolder?.lastPathComponent, "coverage-1")
-        XCTAssertEqual(second.coverageFolder?.lastPathComponent, "coverage-2")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: try XCTUnwrap(first.coverageFolder).appendingPathComponent("run-1/manifest.json").path))
-        XCTAssertNil(bazel.test(in: copy, request: TestRequest()).coverageFolder, "A run that doesn't measure has no coverage folder")
-    }
-
-    func testRepeatedRunsAndShardsAreReadFromTheirOwnFolders() throws {
-        let copy = try makeCopy()
-        let commands = RecordingCommands { call in
-            if call.arguments.first == "test" {
-                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
-                for (result, count) in [("run_1_of_2/shard_1_of_2", 2), ("run_1_of_2/shard_2_of_2", 3), ("run_2_of_2", 5)] {
-                    let folder = target.appendingPathComponent(result)
-                    let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
-                    try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                    try? "Executed \(count) tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
-                    try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
-                }
-            }
-            return .finished(0, output: "bazel output")
+        let bazel = runner(commands: commands)
+        _ = bazel.build(in: copy, timeout: nil)
+        _ = bazel.test(in: copy, request: TestRequest())
+        bazel.cleanUp(copy: copy)
+        let expected = "--output_base=\(copy.deletingLastPathComponent().appendingPathComponent("runner/output-base").path)"
+        XCTAssertEqual(commands.calls.map(\.command), ["build", "test", "clean"])
+        for call in commands.calls {
+            XCTAssertEqual(call.arguments.first, expected, "A startup option goes before the command: \(call.arguments)")
         }
-        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
-        XCTAssertEqual(run.testsRun, 10, "Each run's and shard's own log counts its tests, and the counts add up: 2 + 3 + 5")
-        let coverage = try XCTUnwrap(run.coverageFolder)
-        let kept = try FileManager.default.contentsOfDirectory(atPath: coverage.path).sorted()
-        XCTAssertEqual(kept.count, 3, "Every run and shard keeps its run folder: \(kept)")
-        XCTAssertTrue(kept.allSatisfy { $0.hasPrefix("run-") })
-        for folder in kept {
-            XCTAssertTrue(FileManager.default.fileExists(atPath: coverage.appendingPathComponent(folder).appendingPathComponent("manifest.json").path))
-        }
-    }
-
-    func testCoverageThatMissesAShardIsNotKept() throws {
-        let copy = try makeCopy()
-        let commands = RecordingCommands { call in
-            if call.arguments.first == "test" {
-                let target = copy.appendingPathComponent("bazel-testlogs/Tests/AppTests")
-                for (shard, measured) in [("shard_1_of_2", true), ("shard_2_of_2", false)] {
-                    let folder = target.appendingPathComponent(shard)
-                    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                    try? "Executed 2 tests, with 0 failures".write(to: folder.appendingPathComponent("test.log"), atomically: true, encoding: .utf8)
-                    if measured {
-                        let run = folder.appendingPathComponent("test.outputs/_cucumberCoverage/run-1")
-                        try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
-                        try? "{}".write(to: run.appendingPathComponent("manifest.json"), atomically: true, encoding: .utf8)
-                    }
-                }
-            }
-            return .finished(0, output: "bazel output")
-        }
-        let run = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
-        XCTAssertNil(run.coverageFolder, "A shard without coverage would make its scenarios' code look untested")
-    }
-
-    func testTheTestsOutputsAreNotZipped() throws {
-        let copy = try makeCopy()
-        let commands = commands(in: copy)
-        _ = runner(commands: commands).test(in: copy, request: TestRequest(measuresCoverage: true))
-        let arguments = try XCTUnwrap(commands.calls.first).arguments
-        XCTAssertTrue(arguments.contains("--nozip_undeclared_test_outputs"), "A zipped outputs folder has no coverage folder to keep")
-        XCTAssertGreaterThan(try XCTUnwrap(arguments.firstIndex(of: "--nozip_undeclared_test_outputs")), try XCTUnwrap(arguments.firstIndex(of: "--nocache_test_results")))
     }
 
     func testCleanUpDeletesTheOutputBaseAndFallsBackToShuttingTheServerDown() throws {
         let copy = try makeCopy()
         let expunged = RecordingCommands()
         runner(commands: RecordingCommands(), cleanUp: expunged).cleanUp(copy: copy)
-        XCTAssertEqual(expunged.calls.map(\.arguments), [["clean", "--expunge"]])
-        let failing = RecordingCommands { call in .finished(call.arguments.first == "clean" ? 1 : 0) }
+        XCTAssertEqual(expunged.calls.map(\.afterStartup), [["clean", "--expunge"]])
+        let failing = RecordingCommands { call in .finished(call.command == "clean" ? 1 : 0) }
         runner(commands: RecordingCommands(), cleanUp: failing).cleanUp(copy: copy)
-        XCTAssertEqual(failing.calls.map(\.arguments), [["clean", "--expunge"], ["shutdown"]])
+        XCTAssertEqual(failing.calls.map(\.afterStartup), [["clean", "--expunge"], ["shutdown"]])
         let gone = RecordingCommands()
         runner(commands: RecordingCommands(), cleanUp: gone).cleanUp(copy: folder.appendingPathComponent("deleted"))
         XCTAssertTrue(gone.calls.isEmpty, "A copy that is already deleted has nothing to clean")
-    }
-
-    func testTheOptionsNameABazelTarget() throws {
-        let options = try MutationOptions.parse([
-            "--root", "/p", "--bazel-target", "//Tests:AppTests", "--sources", "App", "--bazel-arg", "--config=ci", "--bazel-arg", "--keep_going"
-        ])
-        XCTAssertEqual(options.bazelTarget, BazelRunner.Target(label: "//Tests:AppTests", arguments: ["--config=ci", "--keep_going"]))
-        XCTAssertTrue(options.makeRunner() is BazelRunner)
-        XCTAssertEqual(options.sources, ["App"])
-        XCTAssertNil(try MutationOptions.parse(["--root", "/p"]).bazelTarget)
-    }
-
-    func testRefusesBazelOptionsThatDoNotFitTogether() {
-        let root = ["--root", "/p"]
-        XCTAssertThrowsError(try MutationOptions.parse(root + ["--bazel-arg", "--keep_going"])) { XCTAssertTrue("\($0)".contains("need --bazel-target"), "\($0)") }
-        XCTAssertThrowsError(try MutationOptions.parse(root + ["--bazel-target", "//:t"])) { XCTAssertTrue("\($0)".contains("needs --sources"), "\($0)") }
-        XCTAssertThrowsError(try MutationOptions.parse(root + ["--bazel-target", "//:t", "--sources", "A", "--target", "A"])) { XCTAssertTrue("\($0)".contains("pass --sources"), "\($0)") }
-        XCTAssertThrowsError(try MutationOptions.parse(root + [
-            "--bazel-target", "//:t", "--sources", "A", "--project", "A.xcodeproj", "--scheme", "A", "--destination", "d"
-        ])) { XCTAssertTrue("\($0)".contains("not both"), "\($0)") }
-    }
-
-    func testTheRootProblemOfABazelWorkspaceNamesModuleBazel() throws {
-        var options = MutationOptions(root: folder)
-        options.bazelTarget = target
-        XCTAssertTrue(options.rootProblem?.contains("no MODULE.bazel") == true)
-        try "x".write(to: folder.appendingPathComponent("MODULE.bazel"), atomically: true, encoding: .utf8)
-        XCTAssertNil(options.rootProblem)
     }
 }
 #endif

@@ -29,8 +29,7 @@ The log also shows how many scenarios each tested mutant ran, as the run prints 
 The check fails unless every mutant that was tested has such a line, and each runs at least one scenario and at most
 all of them, and at least one runs fewer than all of them, so a run that ran every scenario for every mutant can't pass.
 Where the reports folder has the Cucumber report that the mutant's run wrote (cucumber-mutant-3.json), the report must
-hold no more scenarios than that. It can hold fewer: a package with an XCTest and a Swift Testing target has both
-runners write one report, and the one that finishes last replaces the other's.
+hold exactly that many scenarios.
 
 Only the standard library is used.
 """
@@ -197,15 +196,12 @@ def check_tested_ids(name, counts, tested_ids):
 
 
 def check_report_count(name, number, ran, reports):
-    """Return the errors for a mutant's Cucumber report holding more scenarios than the log says its run used."""
+    """Return the errors for a mutant's Cucumber report holding another number of scenarios than the log says its run used."""
     try:
         held = scenarios_in_report(os.path.join(reports, f"cucumber-mutant-{number}.json"))
     except MutantsError as error:
         return [f"error: {name}: {error}"]
-    # Not `!=`, until the report overwrite is fixed in main (#546): a package with an XCTest and a Swift Testing
-    # target has both runners write one report, and the last replaces the other's, so the report can hold fewer
-    # scenarios than ran. Then it must equal the log's count.
-    if held is not None and held > ran:
+    if held is not None and held != ran:
         return [f"error: {name}: the log says mutant {number} ran {ran} scenarios, and its Cucumber report holds {held}"]
     return []
 

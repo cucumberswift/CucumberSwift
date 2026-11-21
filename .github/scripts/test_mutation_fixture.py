@@ -207,12 +207,13 @@ class CheckTests(Folder):
         self.assertEqual(len(errors), 1)
         self.assertIn("mutant 1 ran 0 of 2", errors[0])
 
-    def test_the_mutants_cucumber_report_may_hold_fewer_scenarios_than_the_log_counts_but_not_more(self):
+    def test_the_mutants_cucumber_report_must_hold_as_many_scenarios_as_the_log_counts(self):
         self.write_cucumber_report(1, 0)
         self.write_cucumber_report(2, 3)
         errors = self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))
-        self.assertEqual(len(errors), 1)
-        self.assertIn("mutant 2 ran 2 scenarios, and its Cucumber report holds 3", errors[0])
+        self.assertEqual(len(errors), 2)
+        self.assertIn("mutant 1 ran 1 scenarios, and its Cucumber report holds 0", errors[0])
+        self.assertIn("mutant 2 ran 2 scenarios, and its Cucumber report holds 3", errors[1])
         with open(os.path.join(self.reports, "cucumber-mutant-1.json"), "w", encoding="utf-8") as f:
             f.write("not json")
         self.assertIn("isn't a Cucumber JSON report", self.scenario_errors(COUNT.format(1, "Killed", 1, 4), COUNT.format(2, "Survived", 2, 4))[0])
@@ -220,6 +221,44 @@ class CheckTests(Folder):
     def both(self):
         return (m.read_expected(os.path.join(self.fixture, "expected-mutants")),
                 m.read_report(os.path.join(self.reports, "mutation-report.json")))
+
+
+class DocumentedCommands(unittest.TestCase):
+    """Each build tool's command in the mutation testing article must be the one that a fixture runs in our CI (#522)."""
+
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+    def read(self, *path):
+        with open(os.path.join(self.root, *path), encoding="utf-8") as f:
+            return f.read()
+
+    def article(self):
+        return self.read("Sources", "CucumberSwift", "CucumberSwift.docc", "Mutation-Testing.md")
+
+    def test_the_swift_package_command_is_the_one_the_package_fixture_runs(self):
+        command = "swift run cucumberswift-cli mutation-test"
+        self.assertIn(command, self.article())
+        self.assertIn(command, self.read(".github", "scripts", "mutation-package-fixture.sh"))
+
+    def test_the_xcode_options_are_the_ones_the_xcode_fixtures_run_script_passes(self):
+        article, project = self.article(), self.read("Fixtures", "MutationTestingTuist", "Project.swift")
+        for option in ("--project", "--scheme", "--destination"):
+            self.assertIn(option, article)
+            self.assertIn(option, project)
+        self.assertIn("cucumberswift-cli mutation-test", project)
+
+    def test_the_bazel_command_is_the_one_the_bazel_fixture_runs_without_a_root(self):
+        label = "bazel run @cucumberswift//cli:cucumberswift-cli -- mutation-test"
+        script = self.read(".github", "scripts", "mutation-bazel-fixture.sh")
+        self.assertIn(label, self.article())
+        self.assertIn("@cucumberswift//cli:cucumberswift-cli -- mutation-test", script)
+        for option in ("--bazel-target", "--sources"):
+            self.assertIn(option, self.article())
+            self.assertIn(option, script)
+        # The article's command has no --root, so under `bazel run` the tool reads BUILD_WORKSPACE_DIRECTORY.
+        bazel_run = script[script.index("command=(bazel run"):script.index("else\n  command=(")]
+        self.assertNotIn("--root", bazel_run)
+        self.assertIn("MUTATION_VIA_BAZEL_RUN=1 .github/scripts/mutation-bazel-fixture.sh", self.read(".github", "workflows", "CI.yml"))
 
 
 if __name__ == "__main__":

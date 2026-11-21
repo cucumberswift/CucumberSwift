@@ -5,9 +5,9 @@ import CucumberSwiftMutationCommand
 #endif
 import Foundation
 
-// cucumberswift <command> …
+// cucumberswift-cli <command> …
 //
-// CucumberSwift's command-line tool, run with `swift run cucumberswift`. It picks the command by its first
+// CucumberSwift's command-line tool, run with `swift run cucumberswift-cli`. It picks the command by its first
 // argument, and the command's library target runs it with `run(arguments:) -> Int32`, which returns the exit
 // status. Another command is another case here and a library target that the tool depends on.
 //
@@ -16,11 +16,11 @@ import Foundation
 
 #if canImport(CucumberSwiftMutationCommand) && (os(macOS) || os(Linux))
 let usage = """
-    usage: cucumberswift coverage merge <coverage folder or run folder>…
-           cucumberswift mutation-test [options]
+    usage: cucumberswift-cli coverage merge <coverage folder or run folder>…
+           cucumberswift-cli mutation-test [options]
     """
 #else
-let usage = "usage: cucumberswift coverage merge <coverage folder or run folder>…"
+let usage = "usage: cucumberswift-cli coverage merge <coverage folder or run folder>…"
 #endif
 let arguments = Array(CommandLine.arguments.dropFirst())
 switch arguments.first {

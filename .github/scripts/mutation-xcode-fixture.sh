@@ -31,7 +31,7 @@ reports="$(cd "$dir" && pwd -P)/mutation-$name"
 version=999.0.0
 
 # The project from an earlier run of this script, one scenario at a time: the runner selects an XCTest scenario and
-# a Swift Testing scenario with the test names that ScenarioTestNames makes, and each run ran exactly that scenario.
+# a Swift Testing scenario with CUCUMBER_SCENARIOS, and each run ran exactly that scenario.
 # The tests skip without the folder, and a skipped test or a filter that matches nothing exits with success, so the
 # output must show tests that ran. It builds the package's tests, so a pull request doesn't run it: the nightly and
 # manual runs give the script `selection` as its second argument.

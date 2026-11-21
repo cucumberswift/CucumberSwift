@@ -7,7 +7,7 @@
 import XCTest
 @testable import CucumberSwiftMutation
 
-/// Runs one scenario at a time through `xcodebuild`, with the test names that `ScenarioTestNames` makes, on the generated
+/// Runs one scenario at a time through `xcodebuild`, selected with `CUCUMBER_SCENARIOS`, on the generated
 /// project of `Fixtures/MutationTestingTuist`. Our GitHub Actions CI workflow runs it from
 /// `.github/scripts/mutation-xcode-fixture.sh`, which generates the project and sets `MUTATION_XCODE_FIXTURE` to its
 /// folder. Without that variable the tests are skipped, because they build a project with `xcodebuild`.
@@ -54,7 +54,7 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
         let scenario = ScenarioID(feature: "Features/Voting.feature", line: 7, name: "A child cannot vote")
         let run = runner.test(in: copy, request: TestRequest(writesReport: true, scenarios: [scenario]))
         XCTAssertTrue(run.succeeded, output(of: run))
-        XCTAssertEqual(run.testsRun, 1, "A test for the scenario, not a test for each step")
+        XCTAssertGreaterThan(run.testsRun, 0)
         XCTAssertEqual(try scenarios(in: run.cucumberReport), ["A child cannot vote"])
     }
 
@@ -62,7 +62,7 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
         let scenario = ScenarioID(feature: "Features/Retiring.feature", line: 7, name: "A worker cannot retire")
         let run = runner.test(in: copy, request: TestRequest(writesReport: true, scenarios: [scenario]))
         XCTAssertTrue(run.succeeded, output(of: run))
-        XCTAssertEqual(run.testsRun, 1)
+        XCTAssertGreaterThan(run.testsRun, 0)
         XCTAssertEqual(try scenarios(in: run.cucumberReport), ["A worker cannot retire"])
     }
 
@@ -73,7 +73,7 @@ final class XcodebuildRunnerFixtureTests: TemporaryFolderTestCase {
         ]
         let run = runner.test(in: copy, request: TestRequest(writesReport: true, scenarios: scenarios))
         XCTAssertTrue(run.succeeded, output(of: run))
-        XCTAssertEqual(run.testsRun, 2)
+        XCTAssertEqual(Set(try self.scenarios(in: run.cucumberReport)), ["An adult can vote", "A senior can retire"])
     }
 }
 #endif

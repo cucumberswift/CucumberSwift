@@ -2,7 +2,7 @@
 //  ReportStaleAfter.swift
 //  CucumberSwift
 //
-// Its own file, not part of FeatureFlagValue.swift, because cucumberswift coverage merge compiles that file
+// Its own file, not part of FeatureFlagValue.swift, because cucumberswift-cli coverage merge compiles that file
 // through a symlink, without ReportFile. This folder is compiled by CucumberSwift and, through a symlink, by
 // CucumberSwiftTesting.
 

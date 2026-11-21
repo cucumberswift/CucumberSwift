@@ -2,7 +2,7 @@
 //  MergedCoverageTests.swift
 //  CucumberSwiftCoverageMergeTests
 //
-//  What mutation testing and cucumberswift coverage merge read through MergedCoverage (#515).
+//  What mutation testing and cucumberswift-cli coverage merge read through MergedCoverage (#515).
 //
 
 import Foundation
@@ -102,5 +102,11 @@ final class MergedCoverageTests: XCTestCase {
         XCTAssertEqual(CoverageCommand.run(arguments: ["merge", folder.appendingPathComponent("none").path]), 2)
         try writeRun("a", scenario: "one")
         XCTAssertEqual(CoverageCommand.run(arguments: ["merge", folder.path]), 0)
+    }
+
+    /// The help names the cucumberswift-cli product, not cucumberswift, which shares the CucumberSwift library's build
+    /// folder in Xcode on macOS (#603).
+    func testTheUsageNamesTheCucumberSwiftCLIProduct() {
+        XCTAssertEqual(CoverageCommand.usage, "usage: cucumberswift-cli coverage merge <coverage folder or run folder>…")
     }
 }

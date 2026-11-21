@@ -13,8 +13,8 @@ import XCTest
 final class MutationFindingsTests: XCTestCase {
     private let featureFile = URL(string: "file:///tmp/Voting.feature")
 
-    /// A report in the format `cucumberswift mutation-test` writes: three mutants on line 2 of Voting.swift, and one in
-    /// another file.
+    /// A report in the format `cucumberswift-cli mutation-test` writes: three mutants on line 2 of Voting.swift, and
+    /// one in another file.
     private func writeReport(_ statuses: [String] = ["Killed", "Survived", "Killed"]) throws -> String {
         let source = "public struct Voter {\n    var canVote: Bool { age >= 18 && isRegistered }\n}\n"
         let mutants = zip(statuses, [(29, 31, "<"), (29, 31, ">"), (35, 37, "||")]).enumerated().map { index, entry in
@@ -241,7 +241,7 @@ final class MutationFindingsTests: XCTestCase {
         XCTAssertEqual(found.issues.first?.line, 1)
         XCTAssertTrue(found.issues.first?.message.hasPrefix("The mutation report is from a run of other scenarios: the scenarios at lines 5, 9 weren't in it") ?? false,
                       "\(found.issues)")
-        XCTAssertTrue(found.issues.first?.message.hasSuffix("Run `swift run cucumberswift mutation-test` with the same CUCUMBER_TAGS as these tests.") ?? false)
+        XCTAssertTrue(found.issues.first?.message.hasSuffix("Run `swift run cucumberswift-cli mutation-test` with the same CUCUMBER_TAGS as these tests.") ?? false)
     }
 
     func testAReportMissingOneOfTheFeaturesScenariosNamesIt() throws {

@@ -44,6 +44,16 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         }
     }
 
+    func testAWorkspacePathWithATrailingSlashIsStillBuiltWithDashWorkspace() throws {
+        let commands = RecordingCommands()
+        let workspace = XcodebuildRunner.Target(container: "App.xcworkspace/", scheme: "App", destination: "platform=macOS")
+        let copy = try makeCopy(container: "App.xcworkspace")
+        _ = XcodebuildRunner(target: workspace, commands: commands).build(in: copy, timeout: nil)
+        let arguments = try XCTUnwrap(commands.calls.first?.arguments)
+        XCTAssertTrue(arguments.starts(with: ["build-for-testing", "-workspace", "App.xcworkspace/"]))
+        XCTAssertFalse(arguments.contains("-project"))
+    }
+
     func testBuildsForTestingWithCoverageIntoOneDerivedDataFolder() throws {
         let commands = RecordingCommands()
         let runner = XcodebuildRunner(target: target, commands: commands)
@@ -120,75 +130,31 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertEqual(commands.calls.count, 1, "There is no bundle to ask xcresulttool about")
     }
 
-    func testEachRunWritesItsOwnResultBundle() throws {
-        let commands = commands(total: 1)
+    func testEachRunWritesItsOwnResultBundleAndCountsTheTestsOfThatBundle() throws {
+        // The first bundle holds 6 tests and the second 0: a run that read the other run's bundle would count wrongly.
+        var written: [String] = []
+        let commands = RecordingCommands { call in
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                let path = call.arguments[index + 1]
+                try? FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+                written.append(path)
+            }
+            if call.arguments.first == "xcresulttool", let index = call.arguments.firstIndex(of: "--path") {
+                let position = written.firstIndex(of: call.arguments[index + 1])
+                return .finished(0, output: self.summary(position == 0 ? 6 : 0))
+            }
+            return .finished(0, output: "** TEST SUCCEEDED **")
+        }
         let runner = XcodebuildRunner(target: target, commands: commands)
         let copy = try makeCopy()
-        _ = runner.test(in: copy, request: TestRequest())
-        _ = runner.test(in: copy, request: TestRequest())
-        let bundles = commands.calls.compactMap { call in call.arguments.firstIndex(of: "-resultBundlePath").map { call.arguments[$0 + 1] } }
-        XCTAssertEqual(Set(bundles).count, 2, "xcodebuild fails when the bundle's path exists")
-    }
-
-    func testRunsOnlyTheTestsOfTheScenariosWithATestForEachScenario() throws {
-        let copy = try makeCopy()
-        let features = copy.appendingPathComponent("Features")
-        try FileManager.default.createDirectory(at: features, withIntermediateDirectories: true)
-        try """
-        Feature: Voting
-
-          Scenario: An adult can vote
-            Given a person aged 30
-            Then the person can vote
-        """.write(to: features.appendingPathComponent("Voting.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 1)
-        var scoped = target
-        scoped.testTargets = ["VotingTests"]
-        let runner = XcodebuildRunner(target: scoped, commands: commands)
-        _ = runner.test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "An adult can vote")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let index = try XCTUnwrap(call.arguments.firstIndex(of: "-only-testing"))
-        XCTAssertEqual(call.arguments[index + 1], "VotingTests/CucumberScenarioTest/Voting \u{203A} An adult can vote")
-        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"], "YES", "-only-testing finds no test of a test per step")
-    }
-
-    func testRunsASwiftTestingScenarioByItsGeneratedTestAndLeavesTheTestPerStepOff() throws {
-        let copy = try makeCopy()
-        let tests = copy.appendingPathComponent("SwiftTests")
-        try FileManager.default.createDirectory(at: tests.appendingPathComponent("Features"), withIntermediateDirectories: true)
-        try "import CucumberSwiftTesting\n".write(to: tests.appendingPathComponent("StepDefinitions.swift"), atomically: true, encoding: .utf8)
-        try """
-        Feature: Retiring
-
-          Scenario: A senior can retire
-            Given a person aged 70
-            Then the person can retire
-        """.write(to: tests.appendingPathComponent("Features/Retiring.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 3)
-        var scoped = target
-        scoped.testTargets = ["VotingSwiftTests"]
-        _ = XcodebuildRunner(target: scoped, commands: commands)
-            .test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Retiring.feature", line: 3, name: "")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let index = try XCTUnwrap(call.arguments.firstIndex(of: "-only-testing"))
-        XCTAssertEqual(call.arguments[index + 1], "VotingSwiftTests/CucumberFeatures/Retiring/ASeniorCanRetire(_:)")
-        XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"], "Only an XCTest scenario needs it")
-    }
-
-    func testAScenarioIsSelectedInEveryTestTargetBecauseItDoesntSayWhichHoldsIt() throws {
-        let copy = try makeCopy()
-        try FileManager.default.createDirectory(at: copy.appendingPathComponent("Features"), withIntermediateDirectories: true)
-        try "Feature: Voting\n\n  Scenario: An adult can vote\n    Given a person aged 30\n"
-            .write(to: copy.appendingPathComponent("Features/Voting.feature"), atomically: true, encoding: .utf8)
-        let commands = commands(total: 1)
-        var scoped = target
-        scoped.testTargets = ["A", "B"]
-        _ = XcodebuildRunner(target: scoped, commands: commands)
-            .test(in: copy, request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
-        let call = try XCTUnwrap(commands.calls.first)
-        let selected = call.arguments.indices.filter { call.arguments[$0] == "-only-testing" }.map { call.arguments[$0 + 1] }
-        let test = "CucumberScenarioTest/Voting \u{203A} An adult can vote"
-        XCTAssertEqual(selected, ["A/\(test)", "B/\(test)"], "One run selects the scenario in each test target")
+        let first = runner.test(in: copy, request: TestRequest())
+        let second = runner.test(in: copy, request: TestRequest())
+        XCTAssertEqual(first.testsRun, 6)
+        XCTAssertEqual(second.testsRun, 0, "The second run counts its own bundle, not the first run's")
+        XCTAssertEqual(Set(written).count, 2, "xcodebuild fails when the bundle's path exists")
+        let summaryPaths = commands.calls.filter { $0.arguments.first == "xcresulttool" }
+            .compactMap { call in call.arguments.firstIndex(of: "--path").map { call.arguments[$0 + 1] } }
+        XCTAssertEqual(summaryPaths, written, "Each summary reads the bundle its run wrote")
     }
 
     func testSeveralTestTargetsRunInOneXcodebuildWithOneReport() throws {
