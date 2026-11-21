@@ -24,7 +24,9 @@ extension Cucumber: @retroactive StepImplementation {
             BasketUI.tap(button, times: count)
         }
         #Then("the app shows {int} cukes") { (count: Int) in
-            XCTAssertEqual(BasketUI.cukes(), "Cukes: \(count)")
+            let shown = BasketUI.cukes()
+            XCTAssertEqual(shown, "Cukes: \(count)")
+            BasketUI.attachText("The app shows: \(shown)", named: "Cuke count the app shows")
         }
     }
 }
