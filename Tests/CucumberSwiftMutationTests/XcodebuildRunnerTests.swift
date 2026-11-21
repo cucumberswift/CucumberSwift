@@ -183,6 +183,24 @@ final class XcodebuildRunnerTests: TemporaryFolderTestCase {
         XCTAssertFalse(try XCTUnwrap(none.calls.first).arguments.contains("-only-testing"), "No test target named: every test of the scheme")
     }
 
+    func testARunOfAllTheScenariosKeepsTheTestPerStep() throws {
+        let commands = commands(total: 1)
+        _ = XcodebuildRunner(target: target, commands: commands).test(in: try makeCopy(), request: TestRequest())
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertFalse(call.arguments.contains("-only-testing"))
+        XCTAssertNil(call.environment["TEST_RUNNER_CUCUMBER_ONE_TEST_PER_SCENARIO"])
+    }
+
+    func testScenariosWithoutTheTestTargetsRunThroughCucumberScenariosAlone() throws {
+        let commands = commands(total: 1)
+        let run = XcodebuildRunner(target: target, commands: commands).test(
+            in: try makeCopy(), request: TestRequest(scenarios: [ScenarioID(feature: "Features/Voting.feature", line: 3, name: "")]))
+        XCTAssertEqual(run.status, 0)
+        let call = try XCTUnwrap(commands.calls.first)
+        XCTAssertFalse(call.arguments.contains("-only-testing"), "Without test targets there is no name to select")
+        XCTAssertEqual(call.environment["TEST_RUNNER_CUCUMBER_SCENARIOS"], "Features/Voting.feature:3")
+    }
+
     func testReadsTheTestCountOfASummary() {
         XCTAssertEqual(XcodebuildRunner.testCount(inSummary: summary(12)), 12)
         XCTAssertEqual(XcodebuildRunner.testCount(inSummary: "not json"), 0)
