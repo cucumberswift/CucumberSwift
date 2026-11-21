@@ -84,7 +84,7 @@ public class Scenario: NSObject, Taggable, Positionable {
     /// such as from a feature hook or a task a step left running, it records a failure and returns a new
     /// value that no scenario keeps.
     public static func state<Value: AnyObject>(_ make: () -> Value) -> Value {
-        guard let scenario = Cucumber.shared.currentStep?.scenario else {
+        guard !Cucumber.shared.isRunningFeatureHooks, let scenario = Cucumber.shared.currentStep?.scenario else {
             XCTFail("Scenario.state(_:) needs a running scenario: call it from a step or a scenario hook.")
             return make()
         }

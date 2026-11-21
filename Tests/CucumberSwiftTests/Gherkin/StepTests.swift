@@ -546,4 +546,21 @@ class StepTest: XCTestCase { // swiftlint:disable:this type_body_length
             XCTAssertEqual(Scenario.state(Basket.init).cukes, 0)
         }
     }
+
+    func testAskingForStateInAFeatureHookFailsAndReturnsAThrowawayValue() throws {
+        let scenario = try XCTUnwrap(twoScenarios().first)
+        let feature = try XCTUnwrap(scenario.feature)
+        var fromHooks = [Basket]()
+        BeforeFeature { _ in fromHooks.append(Scenario.state(Basket.init)) }
+        AfterFeature { _ in fromHooks.append(Scenario.state(Basket.init)) }
+        // The feature hooks run in the test of a step of the feature, which is the current step then.
+        Cucumber.shared.currentStep = scenario.steps[0]
+        XCTExpectFailure("Scenario.state(_:) needs a running scenario") {
+            Cucumber.shared.setupBeforeHooksFor(scenario.steps[0])
+            Cucumber.shared.finish(feature)
+        }
+        XCTAssertEqual(fromHooks.count, 2)
+        let basket = Scenario.state(Basket.init)
+        XCTAssertFalse(fromHooks.contains { $0 === basket }, "A feature hook should not get the scenario's own value")
+    }
 }
