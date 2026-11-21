@@ -72,6 +72,9 @@ public final class Cucumber {
     public static let shared = Cucumber()
 
     var definitions = [Definition]()
+    /// The step definitions whose regular expression doesn't compile, which match nothing. The Gherkin test
+    /// reports them, since `setupSteps()` runs while Swift Testing discovers the tests, outside any test.
+    var invalidDefinitions = [InvalidDefinition]()
     var beforeScenarioHooks = [Hook<Scenario>]()
     var afterScenarioHooks = [Hook<Scenario>]()
     var beforeStepHooks = [Hook<Step>]()

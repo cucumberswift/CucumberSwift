@@ -9,6 +9,21 @@ import Foundation
 import Testing
 
 extension StepDSL {
+    /// What is wrong with `pattern`, such as "expected ')'". `NSRegularExpression` only says that the value is
+    /// invalid, so ask Swift's own parser where the platform has one, as CucumberSwift does.
+    private static func reason(for pattern: String) -> String? {
+#if compiler(>=5.7) && canImport(_StringProcessing)
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
+            do {
+                _ = try Regex(pattern)
+            } catch {
+                return "\(error)"
+            }
+        }
+#endif
+        return nil
+    }
+
     /// The whole match and then each capture group that took part in it, or `nil` if the text doesn't match.
     private static func groups(of expression: NSRegularExpression?, in text: String) -> [String]? {
         guard let expression, let result = expression.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
@@ -31,8 +46,8 @@ extension StepDSL {
         do {
             expression = try NSRegularExpression(pattern: regex, options: .caseInsensitive)
         } catch {
-            Issue.record("Invalid regular expression '\(regex)': \(error.localizedDescription)",
-                         sourceLocation: SourceLocation(fileID: "\(file)", filePath: "\(file)", line: line, column: 1))
+            let message = "Invalid regular expression '\(regex)': \(Self.reason(for: regex) ?? error.localizedDescription)"
+            Cucumber.shared.invalidDefinitions.append(.init(message: message, file: "\(file)", line: line))
             expression = nil
         }
         let match: @MainActor (String) -> (@MainActor (Step) async throws -> Void)? = { text in
