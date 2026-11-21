@@ -202,7 +202,7 @@ Our CI's `Bazel tests` jobs run the same tests against a `git archive` of the co
 Keep these points in mind when you change the Bazel setup:
 
 - **A new source file needs no change.** `BUILD.bazel` globs `Sources`. A new dependency in `Package.swift` needs a `bazel_dep` in `MODULE.bazel` too.
-- **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in our CI's `Check every feature ran` step.
+- **A new consumer test suite** needs a `consumer_tests` line in `Tests/BUILD.bazel` and a floor in our CI's `Check every feature ran` step. A suite for the Swift Testing runner needs a `swift_testing_consumer_tests` line instead, and its floor is the `expected-tests` file in its folder.
 - **Keep the CucumberSwiftExpressions versions in step.** `MODULE.bazel`'s `bazel_dep` must be the version `Package.swift` starts from, so Bazel builds against what the SwiftPM and Xcode jobs test. Our CI's `Project checks` job fails otherwise, and so does its check that `Tests/MODULE.bazel` depends on the same versions as `MODULE.bazel` for the modules both use.
 - **`Tests/.bazelrc` runs the tests one at a time.** Each iOS suite needs a booted simulator, and booting several at once timed out in our CI. The first run boots a new simulator, and that can take a few minutes.
 - **`MODULE.bazel.lock` and the `bazel-*` output folders are not committed** (they're in `.gitignore`).

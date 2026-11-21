@@ -1511,18 +1511,37 @@ jobs:
               fi
             done
           done
+          # The Swift Testing suite (#533) counts its tests with the script that checks the fixtures: its
+          # expected-tests file gives the floor, and a run with no Swift Testing tests fails.
+          for t in CucumberSwiftTestingConsumerTests CucumberSwiftTestingConsumerTests_iOS; do
+            python3 ../.github/scripts/fixture_tests.py CucumberSwiftTestingConsumerTests "bazel-testlogs/$t/test.log" || status=1
+          done
           exit $status
-      # `bazel coverage` builds Grades with code coverage and runs the macOS test with COVERAGE=1: the
+      # `bazel coverage` builds Grades with code coverage and runs the macOS tests with COVERAGE=1: the
       # runner must accept it, and CucumberSwift must write each scenario's coverage into the test's
-      # outputs, with scores (#522). CucumberSwift reads the coverage format of Xcode 26, so this step
-      # builds with Xcode 26.2 rather than the image's default.
+      # outputs, with scores (#522). The XCTest runner and the Swift Testing runner (#533) run the same
+      # Grading feature in one bazel run, and must score it alike. CucumberSwift reads the coverage format
+      # of Xcode 26, so this step builds with Xcode 26.2 rather than the image's default.
       - name: Check per-scenario coverage under bazel coverage
         working-directory: Tests
         run: |
-          bazel coverage //:CucumberSwiftCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
-          grep -h 'CucumberSwift coverage' bazel-testlogs/CucumberSwiftCoverageTests/test.log
-          grep -q 'CucumberSwift coverage: Grading' bazel-testlogs/CucumberSwiftCoverageTests/test.log
-          python3 ../.github/scripts/check_bazel_coverage.py bazel-testlogs/CucumberSwiftCoverageTests/test.outputs 3 1
+          bazel coverage //:CucumberSwiftCoverageTests //:CucumberSwiftTestingCoverageTests --override_module=cucumberswift="$MODULE_PATH" --override_module=cucumberswift_expressions="$EXPRESSIONS_PATH" --xcode_version=26.2 --test_output=errors
+          for t in CucumberSwiftCoverageTests CucumberSwiftTestingCoverageTests; do
+            echo "== $t"
+            grep -h 'CucumberSwift coverage' "bazel-testlogs/$t/test.log"
+            grep -q 'CucumberSwift coverage: Grading' "bazel-testlogs/$t/test.log"
+            python3 ../.github/scripts/check_bazel_coverage.py "bazel-testlogs/$t/test.outputs" 3 1
+          done
+          # The Swift Testing run ran its three scenarios as Swift Testing tests: a run with none passes too.
+          python3 ../.github/scripts/fixture_tests.py CucumberSwiftTestingCoverageTests bazel-testlogs/CucumberSwiftTestingCoverageTests/test.log
+          # The scores, without the time spent: the Swift Testing runner scores the feature as the XCTest runner does.
+          scores() { local test_name="$1"; grep -h 'CucumberSwift coverage: Grading' "bazel-testlogs/$test_name/test.log" | sed 's/, about .*//'; }
+          if [ "$(scores CucumberSwiftCoverageTests)" != "$(scores CucumberSwiftTestingCoverageTests)" ]; then
+            echo "::error::The runners scored the Grading feature differently:"
+            scores CucumberSwiftCoverageTests
+            scores CucumberSwiftTestingCoverageTests
+            exit 1
+          fi
       # Mutation testing on the Bazel fixture, run by the command-line tool as a Bazel project's script would: it
       # builds the test target with `bazel build` and coverage, tests each mutant's scenarios with `bazel test` and
       # reads the results from bazel-testlogs. The run must kill and keep the mutants that Tests/expected-mutants
