@@ -102,7 +102,7 @@ struct MutationTestingPlugin: CommandPlugin {
         // The Swift of the toolchain that runs the command, so that the copy builds with it too.
         if let swift = try? context.tool(named: "swift") { toolArguments += ["--swift", swift.url.path] }
         let process = Process()
-        process.executableURL = try context.tool(named: "CucumberSwiftCommand").url
+        process.executableURL = try context.tool(named: "CucumberSwiftPluginCommand").url
         process.arguments = toolArguments
         // The tool writes to the plugin's own output, so a long run shows its progress as it goes.
         try process.run()

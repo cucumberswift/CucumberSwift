@@ -8,7 +8,7 @@ import PackagePlugin
 struct CucumberSwiftTestingPlugin: BuildToolPlugin {
     func createBuildCommands(context: PluginContext, target: Target) async throws -> [Command] {
         guard let target = target as? SourceModuleTarget else { return [] }
-        return try generateCommands(tool: context.tool(named: "CucumberSwiftTestingGenerator").url,
+        return try generateCommands(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                                     workDirectory: context.pluginWorkDirectoryURL,
                                     targetName: target.name,
                                     paths: target.sourceFiles.map(\.url.path) + [target.directoryURL.path])
@@ -20,7 +20,7 @@ import XcodeProjectPlugin
 
 extension CucumberSwiftTestingPlugin: XcodeBuildToolPlugin {
     func createBuildCommands(context: XcodePluginContext, target: XcodeTarget) throws -> [Command] {
-        try generateCommands(tool: context.tool(named: "CucumberSwiftTestingGenerator").url,
+        try generateCommands(tool: context.tool(named: "CucumberSwiftPluginCommand").url,
                              workDirectory: context.pluginWorkDirectoryURL,
                              targetName: target.displayName,
                              paths: target.inputFiles.map(\.url.path))
@@ -39,7 +39,7 @@ private func generateCommands(tool: URL, workDirectory: URL, targetName: String,
     return [
         .buildCommand(displayName: "Generating Swift Testing tests for the feature files in \(targetName)",
                       executable: tool,
-                      arguments: ["--output", output.path] + features + swiftFiles.flatMap { ["--swift", $0] },
+                      arguments: ["generate", "--output", output.path] + features + swiftFiles.flatMap { ["--swift", $0] },
                       inputFiles: (features + swiftFiles).map { URL(fileURLWithPath: $0) },
                       outputFiles: [output])
     ]
