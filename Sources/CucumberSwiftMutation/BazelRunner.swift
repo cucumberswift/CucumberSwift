@@ -17,9 +17,9 @@ import Foundation
 /// Bazel's `test.xml` can't give it: Bazel writes that file itself, with one test for the target.
 ///
 /// A project builds with LLVM's coverage format under `bazel coverage` and here: the runner passes
-/// `--features=llvm_coverage_map_format`, because the bundle doesn't link with Bazel's default, gcov's. It runs every
-/// scenario of the test target in each run: a filter selects tests by the names the bundle declares, and CucumberSwift
-/// generates one for each scenario while the bundle runs.
+/// `--features=llvm_coverage_map_format`, because the bundle doesn't link with Bazel's default, gcov's. A run of some
+/// scenarios sets `CUCUMBER_SCENARIOS`, as the SwiftPM runner does: a filter selects tests by the names the bundle
+/// declares, and CucumberSwift generates one for each scenario while the bundle runs.
 ///
 /// The disk cache is shared by every copy and every run, so a new copy, which Bazel builds in a folder of its own, finds
 /// what an earlier one built. The copy's output base is deleted with `bazel clean --expunge` after the run: Bazel keeps
@@ -182,6 +182,7 @@ public final class BazelRunner: TestRunner, @unchecked Sendable {
         let number = nextRun()
         var settings = environment.filter { $0.key.hasPrefix("CUCUMBER_") }
         settings.merge(request.settings) { _, new in new }
+        settings.merge(request.scenarioSettings) { _, new in new }
         // One attempt, and a failing run among repeated ones (`--runs_per_test`) fails the test: a retry or a run that passes
         // makes Bazel exit with 0 and call the test FLAKY, which would hide a failed attempt from the run.
         var arguments = startupOptions(for: copy) + ["test", target.label] + common

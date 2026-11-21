@@ -16,6 +16,15 @@ public struct TestRequest: Sendable {
     public var measuresCoverage: Bool
     /// Write the Cucumber JSON report. The runner picks the file, and returns it in `TestRun.cucumberReport`.
     public var writesReport: Bool
+    /// Run only these scenarios. `nil` runs every one.
+    public var scenarios: [ScenarioID]?
+
+    /// `CUCUMBER_SCENARIOS`, which makes CucumberSwift run only `scenarios`, whichever build tool starts the tests. Empty
+    /// for a run of every scenario.
+    var scenarioSettings: [String: String] {
+        scenarios.map { ["CUCUMBER_SCENARIOS": $0.map { Self.escaped($0.id) }.joined(separator: ",")] } ?? [:]
+    }
+
     /// Stop the run after this many seconds and report it as timed out.
     public var timeout: TimeInterval?
 
@@ -23,11 +32,13 @@ public struct TestRequest: Sendable {
         settings: [String: String] = [:],
         measuresCoverage: Bool = false,
         writesReport: Bool = false,
+        scenarios: [ScenarioID]? = nil,
         timeout: TimeInterval? = nil
     ) {
         self.settings = settings
         self.measuresCoverage = measuresCoverage
         self.writesReport = writesReport
+        self.scenarios = scenarios
         self.timeout = timeout
     }
 }
@@ -120,5 +131,13 @@ func runnerFolder(for copy: URL) -> URL {
 func makeFolder(_ folder: URL) throws -> URL {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     return folder
+}
+
+extension TestRequest {
+    /// `id` with `%` and `,` written as `%25` and `%2C`, so that a comma in a feature file's path doesn't split the list.
+    /// CucumberSwift's `ScenarioList` reads it back, and reads every other character, whitespace included, as written.
+    static func escaped(_ id: String) -> String {
+        id.replacingOccurrences(of: "%", with: "%25").replacingOccurrences(of: ",", with: "%2C")
+    }
 }
 #endif
