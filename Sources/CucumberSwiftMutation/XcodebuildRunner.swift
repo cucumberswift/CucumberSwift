@@ -16,8 +16,9 @@ import Foundation
 ///
 /// A run of some scenarios sets `CUCUMBER_SCENARIOS`, as every runner does, so CucumberSwift runs only those. With the
 /// names of the test targets, the run also starts only the test targets whose built bundle holds one of the scenarios'
-/// feature files, which keeps Xcode from starting a test bundle that would run none of them. A run that includes a Swift
-/// DSL scenario starts every test target, because the DSL scenario has no feature file to look for.
+/// feature files, which keeps Xcode from starting a test bundle that would run none of them. A Swift DSL scenario has no
+/// feature file, so the run learns which test target holds it from the coverage of the run that measured it, the one
+/// before any mutant, and starts every test target for a DSL scenario whose target it hasn't learned.
 public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     public struct Failure: Error, Equatable, CustomStringConvertible {
         public let description: String
@@ -56,6 +57,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     private let environment: [String: String]
     private let lock = NSLock()
     private var runs = 0
+    /// The test targets whose process ran each feature, by the feature's path, as the manifests of the coverage runs say.
+    private var targetsOfFeatures = [String: Set<String>]()
 
     /// Whether one of `files`, relative to a bundle, is the feature file of one of `scenarios`.
     private static func holds(_ files: [String], oneOf scenarios: [ScenarioID]) -> Bool {
@@ -145,7 +148,35 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             coverageFolder: coverage.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
         )
         run.started = result.started
+        if let coverage = run.coverageFolder { learnTargets(ofFeaturesIn: coverage) }
         return run
+    }
+
+    /// Notes which test target ran each feature of the coverage runs under `folder`: each run's manifest names the test
+    /// bundle's binary, such as `.../VotingTests.xctest/Contents/MacOS/VotingTests`, and the features that its scenarios ran.
+    private func learnTargets(ofFeaturesIn folder: URL) {
+        let runs = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        var learned = [String: Set<String>]()
+        for run in runs where run.lastPathComponent.hasPrefix("run-") {
+            guard let data = try? Data(contentsOf: run.appendingPathComponent("manifest.json")),
+                  let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+            let bundles = (manifest["binaries"] as? [[String: Any]] ?? []).compactMap { binary -> String? in
+                (binary["path"] as? String)?.components(separatedBy: "/").first { $0.hasSuffix(".xctest") }
+                    .map { String($0.dropLast(".xctest".count)) }
+            }
+            for feature in (manifest["features"] as? [[String: Any]] ?? []).compactMap({ $0["feature"] as? String }) {
+                learned[ScenarioID.feature(ofURI: feature), default: []].formUnion(bundles)
+            }
+        }
+        lock.lock()
+        defer { lock.unlock() }
+        targetsOfFeatures.merge(learned) { $0.union($1) }
+    }
+
+    private func learnedTargets(ofFeature feature: String) -> Set<String>? {
+        lock.lock()
+        defer { lock.unlock() }
+        return targetsOfFeatures[feature]
     }
 
     /// The test targets that one run starts: all of them for a run of every scenario or a project with one test target,
@@ -161,13 +192,21 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// `Contents/Resources` of a macOS bundle, or in a resource bundle inside it, as SwiftPM makes for a target's resources.
     /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
     /// any, so that a run never skips all of them. A Swift DSL scenario has no feature file: its feature is the Swift file
-    /// that declares it, which no bundle holds, so a run with one starts every target.
+    /// that declares it, which no bundle holds. Its target is the one whose process ran it in the run that measured the
+    /// coverage, and every target is kept when that run didn't tell.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
-        guard scenarios.allSatisfy({ $0.feature.hasSuffix(".feature") }) else { return target.testTargets }
+        let files = scenarios.filter { $0.feature.hasSuffix(".feature") }
+        var learned = Set<String>()
+        for scenario in scenarios where !scenario.feature.hasSuffix(".feature") {
+            guard let targets = learnedTargets(ofFeature: scenario.feature) else { return target.testTargets }
+            learned.formUnion(targets)
+        }
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
+            if learned.contains(name) { return true }
+            guard !files.isEmpty else { return false }
             guard let bundle = bundles[name] else { return true }
-            return Self.holds(featureFiles(in: bundle), oneOf: scenarios)
+            return Self.holds(featureFiles(in: bundle), oneOf: files)
         }
         return holding.isEmpty ? target.testTargets : holding
     }

@@ -37,6 +37,25 @@ final class DSLContainerMacroTests: XCTestCase {
             macros: macros)
     }
 
+    /// The compiler expands a macro inside a container from the container's expansion, counting its lines from there, so
+    /// the container writes onto it the position that it has in the Swift file, which it then uses. (swift-syntax 600's
+    /// test context can't locate a macro inside another, so the container's side is tested by the fixture that compiles
+    /// features written with the macros, and its position in the reports.)
+    func testAMacroWithAPositionFromItsContainerUsesIt() {
+        assertMacroExpansion(
+            """
+            /*cucumberswift-position:4:14:/Tests/Checkout.swift*/ #Scenario("Buy") {
+                /*cucumberswift-position:5:15:/Tests/Checkout.swift*/ #Given(I: shop())
+            }
+            """,
+            expandedSource: """
+            /*cucumberswift-position:4:14:/Tests/Checkout.swift*/ Scenario("Buy", line: 4, column: 14) {
+                /*cucumberswift-position:5:15:/Tests/Checkout.swift*/ #Given(I: shop())
+            }
+            """,
+            macros: ["Scenario": DSLScenarioMacro.self])
+    }
+
     // One macro at a time: SwiftSyntax's test support reports a macro nested in another with the same
     // implementation as recursive, where the compiler expands an argument's macro on its own.
     func testAScenarioAndARuleHaveTheirPosition() {

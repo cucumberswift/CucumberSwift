@@ -47,12 +47,12 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
     }
 
     /// The test targets that `-only-testing` names in the one `xcodebuild test-without-building` call, in order.
-    private func testedTargets(_ commands: RecordingCommands) -> [String] {
+    private func testedTargets(_ commands: RecordingCommands, call number: Int = 1) -> [String] {
         let calls = commands.calls.filter { $0.arguments.first == "test-without-building" }
-        XCTAssertEqual(calls.count, 1, "All the test targets run in one xcodebuild run")
+        XCTAssertEqual(calls.count, number, "All the test targets run in one xcodebuild run")
         var targets = [String]()
-        for (index, argument) in (calls.first?.arguments ?? []).enumerated() where argument == "-only-testing" {
-            let name = calls[0].arguments[index + 1].components(separatedBy: "/")[0]
+        for (index, argument) in (calls.last?.arguments ?? []).enumerated() where argument == "-only-testing" {
+            let name = calls[calls.count - 1].arguments[index + 1].components(separatedBy: "/")[0]
             if !targets.contains(name) { targets.append(name) }
         }
         return targets
@@ -90,16 +90,47 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(none), ["A", "B"], "A run never skips every target")
     }
 
-    func testATargetWithACoveringSwiftDSLScenarioIsRun() throws {
+    /// A coverage run of every scenario, with a test bundle `bundle` whose process ran the features at `features`, as the
+    /// manifest of its run folder says.
+    private func measuringCommands(bundle: String, features: [String]) -> RecordingCommands {
+        RecordingCommands { call in
+            if call.arguments.first == "xcresulttool" { return .finished(0, output: "{\"totalTestCount\": 2}") }
+            if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
+                try? FileManager.default.createDirectory(atPath: call.arguments[index + 1], withIntermediateDirectories: true)
+            }
+            if let path = call.environment["TEST_RUNNER_CUCUMBER_COVERAGE_PATH"] {
+                let run = URL(fileURLWithPath: path).appendingPathComponent("run-1")
+                try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
+                let manifest: [String: Any] = [
+                    "binaries": [["path": "/x/Build/Products/Debug/\(bundle).xctest/Contents/MacOS/\(bundle)"]],
+                    "features": features.map { ["feature": $0] }
+                ]
+                try? JSONSerialization.data(withJSONObject: manifest).write(to: run.appendingPathComponent("manifest.json"))
+            }
+            return .finished(0, output: "** TEST SUCCEEDED **")
+        }
+    }
+
+    func testATargetThatRanACoveringSwiftDSLScenarioIsTheOneRun() throws {
         let copy = try makeCopy()
-        // A holds the feature file of one covering scenario. B's covering scenario is written with the Swift DSL, so its
-        // feature is the Swift file that declares it (`#file`), which B's bundle doesn't hold.
+        // B's bundle holds no feature file of the scenario, and a DSL scenario has none: its feature is the Swift file that
+        // declares it. The coverage run says which target ran it.
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
         try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
-        let dsl = ScenarioID(uri: copy.appendingPathComponent("B/RetiringFeature.swift").path, line: 12, name: "A senior can retire")
-        let commands = commands()
-        _ = XcodebuildRunner(target: target, commands: commands).test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
-        XCTAssertEqual(testedTargets(commands), ["A", "B"], "B runs the DSL scenario, though its bundle holds no feature file of it")
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let runner = { (commands: RecordingCommands) in XcodebuildRunner(target: self.target, commands: commands) }
+        let unknown = commands()
+        _ = runner(unknown).test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
+        XCTAssertEqual(testedTargets(unknown), ["A", "B"], "Nothing says which target holds the DSL scenario: every one runs")
+
+        let measuring = measuringCommands(bundle: "B", features: [swiftFile])
+        let learning = runner(measuring)
+        _ = learning.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = learning.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 2), ["B"], "Only B ran the DSL scenario in the coverage run")
+        _ = learning.test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 3), ["A", "B"], "A holds the feature file, B ran the DSL scenario")
     }
 
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {

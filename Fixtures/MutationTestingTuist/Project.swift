@@ -59,6 +59,8 @@ let project = Project(
             dependencies: [
                 .target(name: "Voting"),
                 .package(product: "CucumberSwiftTesting"),
+                // The DSL macros, for the feature written in Swift.
+                .package(product: "CucumberSwiftTestingMacros"),
                 .package(product: "CucumberSwiftTestingPlugin", type: .plugin),
                 // Checks the feature files and step definitions on every build.
                 .package(product: "CucumberSwiftLint", type: .plugin)
