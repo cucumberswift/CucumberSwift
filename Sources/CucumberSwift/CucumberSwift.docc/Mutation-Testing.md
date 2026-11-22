@@ -214,7 +214,7 @@ The command runs `xcodebuild` with `-skipMacroValidation` and `-skipPackagePlugi
 
 ### Xcode destinations
 
-The `--destination` option takes the `-destination` value of `xcodebuild`, so the command tests an Xcode project on macOS, on Mac Catalyst, and on the iOS, tvOS and watchOS Simulators. Each run finds the same mutants, with the same results, as the run on macOS. Our CI runs the sample Xcode project on each of them with these values:
+The `--destination` option takes the `-destination` value of `xcodebuild`, so the command tests an Xcode project on macOS, on Mac Catalyst, and on the iOS, tvOS and watchOS Simulators. Our CI runs the sample Xcode project on each of them with these values, and each run finds the same mutants, with the same results, as the run on macOS:
 
 | Destination | `--destination` value |
 |---|---|
