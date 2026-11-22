@@ -197,7 +197,7 @@ swift run --package-path ~/src/CucumberSwift --traits Macros cucumberswift-cli m
   --project Shop.xcodeproj --scheme Shop --destination 'platform=macOS'
 ```
 
-Name the project with `--project`, or a workspace with `--workspace`. Give the scheme and the destination that `xcodebuild` runs the tests with. The command passes the destination to `xcodebuild` as it is, and our GitHub Actions CI workflow tests it with `platform=macOS`. The scheme's test action must run unit test bundles that use CucumberSwift, with the XCTest runner or the Swift Testing runner. UI test bundles aren't supported, because the changed code runs in the app.
+Name the project with `--project`, or a workspace with `--workspace`. Give the scheme and the destination that `xcodebuild` runs the tests with. The command passes the destination to `xcodebuild` as it is, and <doc:#Xcode-destinations> lists the destinations that our GitHub Actions CI workflow tests. The scheme's test action must run unit test bundles that use CucumberSwift, with the XCTest runner or the Swift Testing runner. UI test bundles aren't supported, because the changed code runs in the app.
 
 The command mutates the Swift files in the `Sources` folder of your project's folder. Pass `--sources` once for each other folder with code. An Xcode project has no package to read its targets from, so `--target` isn't available. These options apply to Xcode projects:
 
@@ -211,6 +211,28 @@ The command mutates the Swift files in the `Sources` folder of your project's fo
 | `--xcodebuild-arg <argument>` | Adds one argument to every `xcodebuild` command, such as `-quiet`. Repeat it for more arguments. |
 
 The command runs `xcodebuild` with `-skipMacroValidation` and `-skipPackagePluginValidation`, so Xcode doesn't ask to trust the macros and plugins of your project's packages, and with `CODE_SIGNING_ALLOWED=NO`.
+
+### Xcode destinations
+
+The `--destination` option takes the `-destination` value of `xcodebuild`, so the command tests an Xcode project on macOS, on Mac Catalyst, and on the iOS, tvOS and watchOS Simulators. Our CI runs the sample Xcode project on each of them with these values, and each run finds the same mutants, with the same results, as the run on macOS:
+
+| Destination | `--destination` value |
+|---|---|
+| macOS | `platform=macOS` |
+| Mac Catalyst | `platform=macOS,variant=Mac Catalyst` |
+| iOS Simulator | `platform=iOS Simulator,id=<identifier>` |
+| tvOS Simulator | `platform=tvOS Simulator,id=<identifier>` |
+| watchOS Simulator | `platform=watchOS Simulator,id=<identifier>` |
+
+Our CI runs macOS and the iOS Simulator in the merge queue, in the nightly and manual runs, and on a pull request that changes mutation testing. It runs Mac Catalyst, tvOS and watchOS in the nightly and manual runs only.
+
+The Mutation test, which <doc:#Fail-your-tests-on-a-surviving-mutant> describes, reads each code file where the tests run and compares it with the text that the report recorded. A test that can't read a file there can't tell whether the report is out of date. The Mutation test then scores the mutants as the report says, and adds a warning on the feature that names the files it couldn't read:
+
+```
+The mutation report can't be checked against the code: Voting.swift can't be read where the tests run, so the report is taken as it is, … Run the tests where they can read the code, such as on the Mac or on a Simulator, to check that the report is up to date.
+```
+
+The warning doesn't fail the test. With the XCTest runner, a surviving mutant fails the test. With the Swift Testing runner, a surviving mutant fails the feature's suite only when `Cucumber.coverageRecordsIssuesInSuites` is `true`, as <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> describes, and otherwise prints an error and fails no test.
 
 ### Bazel targets
 
