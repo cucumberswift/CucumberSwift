@@ -337,7 +337,7 @@ The command writes its reports to `.build/mutation-testing` in the package, or t
 
 ### Open the report in a Stryker viewer
 
-`mutation-report.json` is in the Stryker mutation testing report format, version 2, the format that Stryker's mutation testing tools write. Its schema is in the [mutation-testing-elements repository](https://github.com/stryker-mutator/mutation-testing-elements/tree/master/packages/report-schema). A viewer for that format, such as [Mutation Testing Elements](https://github.com/stryker-mutator/mutation-testing-elements), shows the mutants over your source code. The report's `statusReason` names the failed steps of a killed mutant, the scenarios that run the code of a surviving one, and the comment's text for an ignored one. Each mutant's `killedBy` lists the scenarios that failed on it, and its `coveredBy` lists the scenarios that run its code. Both use the IDs in `testFiles`, such as `Features/Basket-killed.feature:18`, which is the feature file's path inside the test bundle and the scenario's line.
+`mutation-report.json` is in the Stryker mutation testing report format, version 2, the format that Stryker's mutation testing tools write. Its schema is in the [mutation-testing-elements repository](https://github.com/stryker-mutator/mutation-testing-elements/tree/master/packages/report-schema). A viewer for that format, such as [Mutation Testing Elements](https://github.com/stryker-mutator/mutation-testing-elements), shows the mutants over your source code. The report's `statusReason` names the failed steps of a killed mutant, the scenarios that run the code of a surviving one, and the comment's text for an ignored one. Each mutant's `killedBy` lists the scenarios that failed on it, and its `coveredBy` lists the scenarios that run its code. Both use the IDs in `testFiles`, such as `Features/Basket-killed.feature:18`, which is the feature file's path inside the test bundle and the scenario's line. A scenario that you write in Swift has the path of its Swift file from the package's folder, such as `Tests/ShopTests/BasketFeature.swift:12`. See <doc:Mutation-Testing#Test-features-written-in-Swift>.
 
 ### Find the scenario in the Cucumber report
 
@@ -351,6 +351,52 @@ The entry is CucumberSwift's own JSON, not the Stryker format, with the mutant's
 ```json
 { "change" : "> → >=", "location" : "Sources/Shop/Basket.swift:22:27", "mutant" : 13, "mutator" : "RelationalOperator", "status" : "Survived" }
 ```
+
+## Test features written in Swift
+
+A feature that you write in Swift, with the DSL, gets mutation testing like a feature file does, with the XCTest runner and with the Swift Testing runner. The command finds the scenarios that run each mutant's code, runs only those, and names them in the results. A Swift scenario has no feature file, so the results name it by its Swift file, from the package's folder, and the line of its `Scenario`.
+
+Write the feature as <doc:Matching-Steps> describes. The Swift Package Manager tab uses the DSL macros, which need the `Macros` trait, and the Carthage tab uses the DSL functions. The command runs both, and it needs the `Macros` trait either way, as <doc:Mutation-Testing#Swift-packages> shows:
+
+@TabNavigator {
+@Tab("Swift Package Manager") {
+<!-- swift-example: steps -->
+```swift
+@MainActor func aBasket(costing prices: Int...) { prices.forEach { basket.add($0) } }
+@MainActor func theTotalIs(_ total: Int) { XCTAssertEqual(basket.total, total) }
+
+#Feature("Basket") {
+    #Scenario("Three items get a discount") {
+        #Given(a: aBasket(costing: 50, 50, 50))
+        #Then(the: theTotalIs(135))
+    }
+}
+```
+}
+@Tab("Carthage") {
+<!-- swift-example: steps -->
+```swift
+@MainActor func aBasket(costing prices: Int...) { prices.forEach { basket.add($0) } }
+@MainActor func theTotalIs(_ total: Int) { XCTAssertEqual(basket.total, total) }
+
+Feature("Basket") {
+    Scenario("Three items get a discount") {
+        Given(a: aBasket(costing: 50, 50, 50))
+        Then(the: theTotalIs(135))
+    }
+}
+```
+}
+}
+
+The list names a Swift scenario that runs a surviving mutant's code by its title and its line, as it does a scenario of a feature file:
+
+```
+  Sources/Shop/Basket.swift:22:27 RelationalOperator > → >=
+    Scenarios that run this code: Three items get a discount (line 12)
+```
+
+In `mutation-report.json` and in `CUCUMBER_SCENARIOS`, the scenario's ID is `Tests/ShopTests/BasketFeature.swift:12`. A feature file and a Swift feature can be in the same test target, as the `Voting` and `Voting in Swift` features are in the [fixture that our CI tests](https://github.com/cucumberswift/CucumberSwift/tree/main/Fixtures/MutationTestingPackage).
 
 ## Ignore an equivalent mutant
 
@@ -454,15 +500,17 @@ The command builds and runs your test suite once for each mutant, after a few se
 
 ### Run only the scenarios that cover a mutant
 
-The command runs the scenarios that run a mutant's code by setting `CUCUMBER_SCENARIOS` to their ids, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Mutation-Testing#Bazel-targets>). The XCTest runner and the Swift Testing runner both read the variable. You can set it yourself to run one scenario of the sample, the "Three items get a discount" scenario on line 9 of `Basket.feature`:
+The command chooses the scenarios for each mutant itself. It sets `CUCUMBER_SCENARIOS` to the IDs of the scenarios that run the mutant's code, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Mutation-Testing#Bazel-targets>). The XCTest runner and the Swift Testing runner both read the variable. Each result line shows the saving, such as `4 of 8 scenarios`.
+
+You never set the variable for a mutation run. Set it to run the scenarios of a surviving mutant yourself, while you strengthen them. The `coveredBy` list of the mutant in `mutation-report.json` has their IDs. The sample's `>` to `>=` mutant survives, and the first two scenarios run its code:
 
 ```bash
-CUCUMBER_SCENARIOS=Features/Basket.feature:9 swift test
+CUCUMBER_SCENARIOS=Features/Basket.feature:5,Features/Basket.feature:9 swift test
 ```
 
-An id is the path of the feature file inside the test bundle, a colon and the line of the scenario. <doc:Settings#Settings-that-work-differently> describes the format of the list.
+An ID is the path of the feature file inside the test bundle, a colon and the line of the scenario. A Swift scenario's ID is its Swift file from the package's folder, as <doc:Mutation-Testing#Test-features-written-in-Swift> shows. <doc:Settings#Settings-that-work-differently> describes the format of the list.
 
-An Xcode project with several test targets that you name with `--test-target` gets one more saving. The command runs a test target only when its built bundle contains a feature file of the mutant's scenarios. When no bundle contains one, or the command can't find a bundle, it runs every target.
+An Xcode project with several test targets that you name with `--test-target` gets one more saving: the command starts only the test targets that run a mutant's scenarios. It finds a feature file's target by looking for the file in each target's built bundle. It finds a Swift scenario's target from the first run, which records the test target that ran each Swift scenario. The command starts every target when it can't find the target of a scenario, and when it would skip all of them.
 
 ## Know that your files are safe
 
@@ -480,7 +528,6 @@ The command stops with an error that lists the folders it tried if none of them 
 
 The command has these limits today:
 
-- It runs the whole test suite for each mutant that a scenario covers. It doesn't yet run only the scenarios that cover the changed code.
 - It doesn't yet remember the result of an earlier run, so every run tests every mutant again.
 - It doesn't run Bazel test targets for iOS or watchOS, or Swift Testing targets under Bazel.
 - It doesn't run UI tests, because the changed code runs in the app and each mutant would need a full UI test run.
