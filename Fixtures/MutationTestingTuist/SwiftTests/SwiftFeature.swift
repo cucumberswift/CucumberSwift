@@ -2,11 +2,10 @@
 //  SwiftFeature.swift
 //  VotingSwiftTests
 //
-//  A feature written in Swift with the macros, with no feature file, that runs with the feature files' scenarios.
+//  A feature written in Swift, with no feature file, that runs with the feature files' scenarios.
 //
 
 import CucumberSwiftTesting
-import CucumberSwiftTestingMacros
 import Testing
 import Voting
 
@@ -29,14 +28,14 @@ extension Cucumber {
     /// Called from `setupSteps()`.
     @MainActor
     func addRetiringInSwift() {
-        #Feature("Retiring in Swift") {
-            #Scenario("A senior can retire in Swift") {
-                #Given(a: aPerson(aged: 70))
-                #Then(the: theyCanRetire())
+        Feature("Retiring in Swift") {
+            Scenario("A senior can retire in Swift") {
+                Given(a: aPerson(aged: 70))
+                Then(the: theyCanRetire())
             }
-            #Scenario("An adult cannot retire in Swift") {
-                #Given(a: aPerson(aged: 30))
-                #Then(the: theyCannotRetire())
+            Scenario("An adult cannot retire in Swift") {
+                Given(a: aPerson(aged: 30))
+                Then(the: theyCannotRetire())
             }
         }
     }
