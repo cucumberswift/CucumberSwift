@@ -232,7 +232,7 @@ The Mutation test, which <doc:#Fail-your-tests-on-a-surviving-mutant> describes,
 The mutation report can't be checked against the code: Voting.swift can't be read where the tests run, so the report is taken as it is, … Run the tests where they can read the code, such as on the Mac or on a Simulator, to check that the report is up to date.
 ```
 
-The warning doesn't fail the test. A surviving mutant still fails it.
+The warning doesn't fail the test. With the XCTest runner, a surviving mutant fails the test. With the Swift Testing runner, a surviving mutant fails the feature's suite only when `Cucumber.coverageRecordsIssuesInSuites` is `true`, as <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> describes, and otherwise prints an error and fails no test.
 
 ### Bazel targets
 
