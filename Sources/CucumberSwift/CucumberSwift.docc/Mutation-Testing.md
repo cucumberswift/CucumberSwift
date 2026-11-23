@@ -4,13 +4,147 @@ Find the scenarios that still pass when the code they test is wrong.
 
 ## Overview
 
-The `cucumberswift-cli mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed. Run it from a Swift package that has CucumberSwift tests, on an Xcode project as <doc:#Xcode-projects> shows, or on a Bazel target as <doc:#Bazel-targets> shows:
+The `cucumberswift-cli mutation-test` command safely changes your code in small ways, runs your tests against each change, and lists the changes that no test noticed.
+
+> Note: What is mutation testing? Mutation testing is a technique for making small changes in code to see if tests still pass. If they do, we say a "mutant" survived. The goal of mutation testing is to "kill mutants" by finding tests that pass when they should fail and improving them. Don't worry, no bugs will be introduced into your code on purpose! The command changes only a throwaway copy of your code in a temporary folder, and never touches your repository. See <doc:#Know-that-your-files-are-safe>.
+
+Run it from a Swift package that has CucumberSwift tests, on an Xcode project as <doc:#Xcode-projects> shows, or on a Bazel target as <doc:#Bazel-targets> shows:
 
 ```bash
 swift run cucumberswift-cli mutation-test
 ```
 
-> Note: What is mutation testing? Mutation testing is a technique for making small changes in code to see if tests still pass. If they do, we say a "mutant" survived. The goal of mutation testing is to "kill mutants" by finding tests that pass when they should fail and improving them. Don't worry, no bugs will be introduced into your code on purpose! The command changes only a throwaway copy of your code in a temporary folder, and never touches your repository. See <doc:#Know-that-your-files-are-safe>.
+## Turn it on
+
+Turn mutation testing on for the build tool that runs your scenarios: <doc:Mutation-Testing#Swift-packages>, <doc:Mutation-Testing#Xcode-projects> or <doc:Mutation-Testing#Bazel-targets>.
+
+### Swift packages
+
+Mutation testing reads your Swift code with swift-syntax, so it needs CucumberSwift's `Macros` package trait, as <doc:Using-Step-Definition-Macros> describes. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift. The sample's `Package.swift` does both, and uses a local CucumberSwift checkout when `CUCUMBER_SWIFT_PATH` is set:
+
+```swift
+// swift-tools-version:6.1
+import PackageDescription
+
+// The same code and scenarios as Project.swift, as a Swift package, for `swift run cucumberswift-cli mutation-test`.
+// Mutation testing runs on Swift packages: it copies this package to a temporary folder, changes
+// Sources/Shop there, and runs `swift test` against each change. It never changes this folder.
+//
+// Mutation testing reads Swift code with swift-syntax, so CucumberSwift's Macros trait is on. To use a
+// local CucumberSwift checkout, set CUCUMBER_SWIFT_PATH, as for Project.swift:
+//
+//     CUCUMBER_SWIFT_PATH=~/src/CucumberSwift swift run cucumberswift-cli mutation-test
+let cucumberSwift: Package.Dependency = {
+    if let path = Context.environment["CUCUMBER_SWIFT_PATH"], !path.isEmpty {
+        return .package(name: "CucumberSwift", path: path, traits: ["Macros"])
+    }
+    return .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.9.0", traits: ["Macros"])
+}()
+
+let package = Package(
+    name: "MutationTesting",
+    platforms: [.macOS(.v14)],
+    products: [
+        .library(name: "Shop", targets: ["Shop"])
+    ],
+    dependencies: [
+        cucumberSwift,
+        // Before Swift 6.4, SwiftPM needs this to resolve the Macros trait. No target uses it.
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"605.0.0")
+    ],
+    targets: [
+        .target(name: "Shop", path: "Sources/Shop"),
+        .testTarget(
+            name: "MutationTestingTests",
+            dependencies: [
+                "Shop",
+                .product(name: "CucumberSwift", package: "CucumberSwift")
+            ],
+            path: "Tests",
+            resources: [.copy("Features")]
+        )
+    ]
+)
+```
+
+Without the trait, the command prints what to turn on and changes nothing. It needs Swift 6.1 or later, and it works with the XCTest runner and the Swift Testing runner alike.
+
+### Xcode projects
+
+The command builds and tests an Xcode project with `xcodebuild`, so the project needs no change. An Xcode project has no `Package.swift` to run the command from. Clone CucumberSwift at the version your project uses, and run its command from your project's folder with `--package-path`. The command reads your Swift code with swift-syntax, so it needs the `Macros` package trait:
+
+```bash
+swift run --package-path ~/src/CucumberSwift --traits Macros cucumberswift-cli mutation-test \
+  --project Shop.xcodeproj --scheme Shop --destination 'platform=macOS'
+```
+
+Name the project with `--project`, or a workspace with `--workspace`. Give the scheme and the destination that `xcodebuild` runs the tests with. The command passes the destination to `xcodebuild` as it is, and <doc:#Xcode-destinations> lists the destinations that our GitHub Actions CI workflow tests. The scheme's test action must run unit test bundles that use CucumberSwift, with the XCTest runner or the Swift Testing runner. UI test bundles aren't supported, because the changed code runs in the app.
+
+The command mutates the Swift files in the `Sources` folder of your project's folder. Pass `--sources` once for each other folder with code. An Xcode project has no package to read its targets from, so `--target` isn't available. These options apply to Xcode projects:
+
+| Option | Effect |
+|---|---|
+| `--project <name>` or `--workspace <name>` | The `.xcodeproj` or `.xcworkspace` in the project's folder. Pass one of them. |
+| `--scheme <name>` | The scheme that builds and tests the project. |
+| `--destination <destination>` | The `-destination` that `xcodebuild` builds for and runs the tests on. |
+| `--test-target <name>` | A test target of the scheme. Pass it once for each test target that contains scenarios when the scheme has several. The run then tests only the targets you name, and tests every target of the scheme when you name none. |
+| `--sources <folder>` | A folder with code to mutate, relative to the project's folder. The default is `Sources`. |
+| `--xcodebuild-arg <argument>` | Adds one argument to every `xcodebuild` command, such as `-quiet`. Repeat it for more arguments. |
+
+A run on an Xcode project with several test targets that you name with `--test-target` starts only the test targets that run the scenarios of a mutant, so that the others don't start. The command finds the target of a feature file by looking for the file in each target's built bundle. The first run records the test target that ran each Swift scenario, and the command uses that for a Swift scenario. It starts every target when the first run didn't record a Swift scenario's target, and when no target would run any of the scenarios.
+
+The command runs `xcodebuild` with `-skipMacroValidation` and `-skipPackagePluginValidation`, so Xcode doesn't ask to trust the macros and plugins of your project's packages, and with `CODE_SIGNING_ALLOWED=NO`.
+
+### Xcode destinations
+
+The `--destination` option takes the `-destination` value of `xcodebuild`, so the command tests an Xcode project on macOS, on Mac Catalyst, and on the iOS, tvOS and watchOS Simulators. Our CI runs the sample Xcode project on each of them with these values, and each run finds the same mutants, with the same results, as the run on macOS:
+
+| Destination | `--destination` value |
+|---|---|
+| macOS | `platform=macOS` |
+| Mac Catalyst | `platform=macOS,variant=Mac Catalyst` |
+| iOS Simulator | `platform=iOS Simulator,id=<identifier>` |
+| tvOS Simulator | `platform=tvOS Simulator,id=<identifier>` |
+| watchOS Simulator | `platform=watchOS Simulator,id=<identifier>` |
+
+Our CI runs macOS and the iOS Simulator in the merge queue, in the nightly and manual runs, and on a pull request that changes mutation testing. It runs Mac Catalyst, tvOS and watchOS in the nightly and manual runs only.
+
+The Mutation test, which <doc:#Fail-your-tests-on-a-surviving-mutant> describes, reads each code file where the tests run and compares it with the text that the report recorded. A test that can't read a file there can't tell whether the report is out of date. The Mutation test then scores the mutants as the report says, and adds a warning on the feature that names the files it couldn't read:
+
+```
+The mutation report can't be checked against the code: Voting.swift can't be read where the tests run, so the report is taken as it is, … Run the tests where they can read the code, such as on the Mac or on a Simulator, to check that the report is up to date.
+```
+
+The warning doesn't fail the test. With the XCTest runner, a surviving mutant fails the test. With the Swift Testing runner, a surviving mutant fails the feature's suite only when `Cucumber.coverageRecordsIssuesInSuites` is `true`, as <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> describes, and otherwise prints an error and fails no test.
+
+### Bazel targets
+
+The command builds and tests a Bazel test target with `bazel`. Your workspace needs the `cucumberswift` module, as <doc:Running-Tests-With-Bazel#Add-the-module> shows. Run the command from your workspace with `bazel run`. Name the test target with `--bazel-target`, and the folders with the code to mutate with `--sources`:
+
+```bash
+bazel run @cucumberswift//cli:cucumberswift-cli -- mutation-test \
+  --bazel-target //Shop:ShopTests --sources Shop/Sources
+```
+
+`bazel run` starts the command in a folder of its own, so the command takes your workspace from the `BUILD_WORKSPACE_DIRECTORY` variable that `bazel run` sets. Pass `--root` to test another workspace. The test target must be a macOS unit test bundle that runs your scenarios with the XCTest runner. It needs CucumberSwift 6.9.2 or later, because the command measures coverage as <doc:Running-Tests-With-Bazel#Measure-code-coverage> describes for `bazel coverage`.
+
+The command copies your workspace to a temporary folder, as <doc:#Know-that-your-files-are-safe> describes for a package. In the copy, it builds the test target once with `bazel build` and code coverage on, then runs `bazel test` on it without a change. For each mutant, it builds the copy with the change and runs `bazel test` again. Every `bazel` command of the run uses one disk cache, in `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`, so a new copy doesn't build everything again. When the run ends, the command runs `bazel clean --expunge` on the copy. That command stops the copy's Bazel server and deletes its output base, which Bazel keeps outside the copy.
+
+The command counts the tests that ran from the test's `test.log` in `bazel-testlogs`, not from the output, because Bazel writes the target's `test.xml` itself, with one test for the whole target. The command stops when a run of the tests runs no test, as it does for an Xcode project. It passes the `CUCUMBER_` variables of its environment to the tests as `--test_env` arguments, because Bazel passes a test only the variables that `--test_env` names. So `--tags` and `CUCUMBER_TAGS` choose the scenarios, as <doc:#Choose-what-to-test> describes. The command writes its reports to `.build/mutation-testing` in your workspace, so add `.build` to your `.gitignore`.
+
+A Bazel workspace has no package to read its targets from, so `--target` isn't available, and `--sources` has no default. These options apply to Bazel targets:
+
+| Option | Effect |
+|---|---|
+| `--bazel-target <label>` | The test target that the run builds and tests. |
+| `--sources <folder>` | A folder with code to mutate, relative to the workspace. Pass it once for each folder. |
+| `--bazel-arg <flag>` | Adds one flag to every `bazel build` and `bazel test` command, such as `--config=ci`. Repeat it for more flags. |
+| `--bazel <path>` | The `bazel` that the command runs. The default is `bazel`, which the command looks for in `PATH`. |
+| `--bazel-disk-cache <folder>` | The disk cache of the run, instead of `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`. |
+
+The Bazel options can't be combined with `--project` or `--workspace`, which are for an Xcode project.
+
+## An example run
 
 The example on this page is derived from our [MutationTesting sample project](https://github.com/cucumberswift/CucumberSwiftSample/tree/main/Tuist/MutationTesting). The sample's `Basket.swift` gives 10% off from 3 items and free shipping over 100:
 
@@ -133,133 +267,23 @@ Mutation score: 100.0% (14 of 14 mutants detected)
 Killed 14, timed out 0, survived 0, did not build 0, ignored 2, in code no scenario runs 1
 ```
 
-## Turn it on
+## How a run works
 
-Turn mutation testing on for the build tool that runs your scenarios: <doc:Mutation-Testing#Swift-packages>, <doc:Mutation-Testing#Xcode-projects> or <doc:Mutation-Testing#Bazel-targets>.
-
-### Swift packages
-
-Mutation testing reads your Swift code with swift-syntax, so it needs CucumberSwift's `Macros` package trait, as <doc:Using-Step-Definition-Macros> describes. Before Swift 6.4, SwiftPM also needs swift-syntax declared next to CucumberSwift. The sample's `Package.swift` does both, and uses a local CucumberSwift checkout when `CUCUMBER_SWIFT_PATH` is set:
-
-```swift
-// swift-tools-version:6.1
-import PackageDescription
-
-// The same code and scenarios as Project.swift, as a Swift package, for `swift run cucumberswift-cli mutation-test`.
-// Mutation testing runs on Swift packages: it copies this package to a temporary folder, changes
-// Sources/Shop there, and runs `swift test` against each change. It never changes this folder.
-//
-// Mutation testing reads Swift code with swift-syntax, so CucumberSwift's Macros trait is on. To use a
-// local CucumberSwift checkout, set CUCUMBER_SWIFT_PATH, as for Project.swift:
-//
-//     CUCUMBER_SWIFT_PATH=~/src/CucumberSwift swift run cucumberswift-cli mutation-test
-let cucumberSwift: Package.Dependency = {
-    if let path = Context.environment["CUCUMBER_SWIFT_PATH"], !path.isEmpty {
-        return .package(name: "CucumberSwift", path: path, traits: ["Macros"])
-    }
-    return .package(url: "https://github.com/cucumberswift/CucumberSwift.git", from: "6.9.0", traits: ["Macros"])
-}()
-
-let package = Package(
-    name: "MutationTesting",
-    platforms: [.macOS(.v14)],
-    products: [
-        .library(name: "Shop", targets: ["Shop"])
-    ],
-    dependencies: [
-        cucumberSwift,
-        // Before Swift 6.4, SwiftPM needs this to resolve the Macros trait. No target uses it.
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0"..<"605.0.0")
-    ],
-    targets: [
-        .target(name: "Shop", path: "Sources/Shop"),
-        .testTarget(
-            name: "MutationTestingTests",
-            dependencies: [
-                "Shop",
-                .product(name: "CucumberSwift", package: "CucumberSwift")
-            ],
-            path: "Tests",
-            resources: [.copy("Features")]
-        )
-    ]
-)
-```
-
-Without the trait, the command prints what to turn on and changes nothing. It needs Swift 6.1 or later, and it works with the XCTest runner and the Swift Testing runner alike.
-
-### Xcode projects
-
-The command builds and tests an Xcode project with `xcodebuild`, so the project needs no change. An Xcode project has no `Package.swift` to run the command from. Clone CucumberSwift at the version your project uses, and run its command from your project's folder with `--package-path`. The command reads your Swift code with swift-syntax, so it needs the `Macros` package trait:
+A run has six steps, shown in the figure. The command does the first five itself, and you do the last:
 
 ```bash
-swift run --package-path ~/src/CucumberSwift --traits Macros cucumberswift-cli mutation-test \
-  --project Shop.xcodeproj --scheme Shop --destination 'platform=macOS'
+swift run cucumberswift-cli mutation-test
 ```
 
-Name the project with `--project`, or a workspace with `--workspace`. Give the scheme and the destination that `xcodebuild` runs the tests with. The command passes the destination to `xcodebuild` as it is, and <doc:#Xcode-destinations> lists the destinations that our GitHub Actions CI workflow tests. The scheme's test action must run unit test bundles that use CucumberSwift, with the XCTest runner or the Swift Testing runner. UI test bundles aren't supported, because the changed code runs in the app.
+![A flow of six steps. The command copies your package into a temporary folder, runs your tests unchanged and notes which scenarios run which code, changes the copy in one small way, runs only the scenarios that run the changed code, and records whether a test failed or all of them passed, then repeats with the next change. You then read each mutant that survived, add or strengthen a scenario that fails on it, optionally run only that mutant's scenarios with CUCUMBER_SCENARIOS, and run the command again.](MutationTesting-Workflow.png)
 
-The command mutates the Swift files in the `Sources` folder of your project's folder. Pass `--sources` once for each other folder with code. An Xcode project has no package to read its targets from, so `--target` isn't available. These options apply to Xcode projects:
-
-| Option | Effect |
-|---|---|
-| `--project <name>` or `--workspace <name>` | The `.xcodeproj` or `.xcworkspace` in the project's folder. Pass one of them. |
-| `--scheme <name>` | The scheme that builds and tests the project. |
-| `--destination <destination>` | The `-destination` that `xcodebuild` builds for and runs the tests on. |
-| `--test-target <name>` | A test target of the scheme. Pass it once for each test target that contains scenarios when the scheme has several. The run then tests only the targets you name, and tests every target of the scheme when you name none. |
-| `--sources <folder>` | A folder with code to mutate, relative to the project's folder. The default is `Sources`. |
-| `--xcodebuild-arg <argument>` | Adds one argument to every `xcodebuild` command, such as `-quiet`. Repeat it for more arguments. |
-
-The command runs `xcodebuild` with `-skipMacroValidation` and `-skipPackagePluginValidation`, so Xcode doesn't ask to trust the macros and plugins of your project's packages, and with `CODE_SIGNING_ALLOWED=NO`.
-
-### Xcode destinations
-
-The `--destination` option takes the `-destination` value of `xcodebuild`, so the command tests an Xcode project on macOS, on Mac Catalyst, and on the iOS, tvOS and watchOS Simulators. Our CI runs the sample Xcode project on each of them with these values, and each run finds the same mutants, with the same results, as the run on macOS:
-
-| Destination | `--destination` value |
-|---|---|
-| macOS | `platform=macOS` |
-| Mac Catalyst | `platform=macOS,variant=Mac Catalyst` |
-| iOS Simulator | `platform=iOS Simulator,id=<identifier>` |
-| tvOS Simulator | `platform=tvOS Simulator,id=<identifier>` |
-| watchOS Simulator | `platform=watchOS Simulator,id=<identifier>` |
-
-Our CI runs macOS and the iOS Simulator in the merge queue, in the nightly and manual runs, and on a pull request that changes mutation testing. It runs Mac Catalyst, tvOS and watchOS in the nightly and manual runs only.
-
-The Mutation test, which <doc:#Fail-your-tests-on-a-surviving-mutant> describes, reads each code file where the tests run and compares it with the text that the report recorded. A test that can't read a file there can't tell whether the report is out of date. The Mutation test then scores the mutants as the report says, and adds a warning on the feature that names the files it couldn't read:
-
-```
-The mutation report can't be checked against the code: Voting.swift can't be read where the tests run, so the report is taken as it is, … Run the tests where they can read the code, such as on the Mac or on a Simulator, to check that the report is up to date.
-```
-
-The warning doesn't fail the test. With the XCTest runner, a surviving mutant fails the test. With the Swift Testing runner, a surviving mutant fails the feature's suite only when `Cucumber.coverageRecordsIssuesInSuites` is `true`, as <doc:Measuring-Code-Coverage#Fail-a-test-on-low-coverage> describes, and otherwise prints an error and fails no test.
-
-### Bazel targets
-
-The command builds and tests a Bazel test target with `bazel`. Your workspace needs the `cucumberswift` module, as <doc:Running-Tests-With-Bazel#Add-the-module> shows. Run the command from your workspace with `bazel run`. Name the test target with `--bazel-target`, and the folders with the code to mutate with `--sources`:
+Suppose two scenarios, at lines 5 and 9 of `Features/Basket.feature`, run the code of a mutant that survived. In the last step, run only those two:
 
 ```bash
-bazel run @cucumberswift//cli:cucumberswift-cli -- mutation-test \
-  --bazel-target //Shop:ShopTests --sources Shop/Sources
+CUCUMBER_SCENARIOS=Features/Basket.feature:5,Features/Basket.feature:9 swift test
 ```
 
-`bazel run` starts the command in a folder of its own, so the command takes your workspace from the `BUILD_WORKSPACE_DIRECTORY` variable that `bazel run` sets. Pass `--root` to test another workspace. The test target must be a macOS unit test bundle that runs your scenarios with the XCTest runner. It needs CucumberSwift 6.9.2 or later, because the command measures coverage as <doc:Running-Tests-With-Bazel#Measure-code-coverage> describes for `bazel coverage`.
-
-The command copies your workspace to a temporary folder, as <doc:#Know-that-your-files-are-safe> describes for a package. In the copy, it builds the test target once with `bazel build` and code coverage on, then runs `bazel test` on it without a change. For each mutant, it builds the copy with the change and runs `bazel test` again. Every `bazel` command of the run uses one disk cache, in `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`, so a new copy doesn't build everything again. When the run ends, the command runs `bazel clean --expunge` on the copy. That command stops the copy's Bazel server and deletes its output base, which Bazel keeps outside the copy.
-
-The command counts the tests that ran from the test's `test.log` in `bazel-testlogs`, not from the output, because Bazel writes the target's `test.xml` itself, with one test for the whole target. The command stops when a run of the tests runs no test, as it does for an Xcode project. It passes the `CUCUMBER_` variables of its environment to the tests as `--test_env` arguments, because Bazel passes a test only the variables that `--test_env` names. So `--tags` and `CUCUMBER_TAGS` choose the scenarios, as <doc:#Choose-what-to-test> describes. The command writes its reports to `.build/mutation-testing` in your workspace, so add `.build` to your `.gitignore`.
-
-A Bazel workspace has no package to read its targets from, so `--target` isn't available, and `--sources` has no default. These options apply to Bazel targets:
-
-| Option | Effect |
-|---|---|
-| `--bazel-target <label>` | The test target that the run builds and tests. |
-| `--sources <folder>` | A folder with code to mutate, relative to the workspace. Pass it once for each folder. |
-| `--bazel-arg <flag>` | Adds one flag to every `bazel build` and `bazel test` command, such as `--config=ci`. Repeat it for more flags. |
-| `--bazel <path>` | The `bazel` that the command runs. The default is `bazel`, which the command looks for in `PATH`. |
-| `--bazel-disk-cache <folder>` | The disk cache of the run, instead of `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`. |
-
-The Bazel options can't be combined with `--project` or `--workspace`, which are for an Xcode project.
+In the Test step, the command runs only the scenarios that ran the changed code in the Measure step, not your whole suite. <doc:Mutation-Testing#Keep-the-run-short> describes how it picks them. <doc:Mutation-Testing#Re-run-the-scenarios-of-a-surviving-mutant> shows how to run the scenarios of one survivor yourself in the last step.
 
 ## Find those mutants!
 
@@ -287,7 +311,7 @@ Mutation score: 85.7% (12 of 14 mutants detected)
 Killed 12, timed out 0, survived 2, did not build 0, ignored 2, in code no scenario runs 1
 ```
 
-Each line of a tested mutant ends with the number of scenarios that the command ran for it, out of the scenarios that ran without a change. Without coverage, the command runs every scenario for every mutant and prints no number. The section <doc:Mutation-Testing#Run-only-the-scenarios-that-cover-a-mutant> describes how the command picks the scenarios.
+Each line of a tested mutant ends with the number of scenarios that the command ran for it, out of the scenarios that ran without a change. Without coverage, the command runs every scenario for every mutant and prints no number. The section <doc:Mutation-Testing#Keep-the-run-short> describes how the command picks the scenarios.
 
 Add `--format xcode` to also print each surviving mutant as a warning in the compiler's format, with the file's full path. Xcode shows such a warning at its line when a Run Script build phase prints it:
 
@@ -520,19 +544,19 @@ The command makes these changes, one at a time. It reads your code as swift-synt
 
 The command builds and runs your test suite once for each mutant, after a few seconds of rebuilding the one changed file. The first run without a change measures which scenarios run which code. The command doesn't test a mutant in code that no scenario runs, and it runs only the scenarios that run the code of every other mutant. Two options cut a run down further: `--target` limits the code, and `--max-mutants` limits the count.
 
-### Run only the scenarios that cover a mutant
+### Re-run the scenarios of a surviving mutant
 
-The command chooses the scenarios for each mutant itself. It sets `CUCUMBER_SCENARIOS` to the IDs of the scenarios that run the mutant's code, with each of the three build tools it tests with: Swift Package Manager (<doc:Mutation-Testing#Swift-packages>), Xcode (<doc:Mutation-Testing#Xcode-projects>) and Bazel (<doc:Mutation-Testing#Bazel-targets>). The XCTest runner and the Swift Testing runner both read the variable. Each result line shows the saving, such as `4 of 8 scenarios`.
+You don't need this to run mutation testing. Use it in the last step of <doc:Mutation-Testing#How-a-run-works>, after a run reports a mutant that survived: run only the scenarios that ran the mutant's code, not your whole suite, to check your edits to them. In the Test step, the command already runs only those scenarios for each mutant, and you set nothing for that.
 
-You never set the variable for a mutation run. Set it to run the scenarios of a surviving mutant yourself, while you strengthen them. The `coveredBy` list of the mutant in `mutation-report.json` has their IDs. The sample's `>` to `>=` mutant survives, and the first two scenarios run its code:
+The `coveredBy` list of the mutant in `mutation-report.json` has the IDs of those scenarios. The sample's `>` to `>=` mutant survives, and the first two scenarios run its code. Set `CUCUMBER_SCENARIOS` to their IDs when you run your tests, with the XCTest runner or the Swift Testing runner:
 
 ```bash
 CUCUMBER_SCENARIOS=Features/Basket.feature:5,Features/Basket.feature:9 swift test
 ```
 
-An ID is the path of the feature file inside the test bundle, a colon and the line of the scenario. A Swift scenario's ID is its Swift file from the package's folder, as <doc:Mutation-Testing#Test-features-written-in-Swift> shows. <doc:Settings#Settings-that-work-differently> describes the format of the list.
+That run shows that the scenarios still pass. The next run of the command shows whether they now kill the mutant.
 
-An Xcode project with several test targets that you name with `--test-target` gets one more saving: the command starts only the test targets that run a mutant's scenarios. It finds a feature file's target by looking for the file in each target's built bundle. It finds a Swift scenario's target from the first run, which records the test target that ran each Swift scenario. The command starts every target when it can't find the target of a scenario, and when it would skip all of them.
+An ID is the path of the feature file inside the test bundle, a colon and the line of the scenario. A Swift scenario's ID is its Swift file from the package's folder, as <doc:Mutation-Testing#Test-features-written-in-Swift> shows. <doc:Settings#Settings-that-work-differently> describes the format of the list.
 
 ## Know that your files are safe
 
