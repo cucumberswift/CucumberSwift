@@ -56,6 +56,24 @@ final class DSLContainerMacroTests: XCTestCase {
             macros: ["Scenario": DSLScenarioMacro.self])
     }
 
+    /// A path with `/*` or `%` in it is written onto the marker encoded, so the comment stays one comment.
+    func testAMarkerKeepsAFilePathWithACommentDelimiterInIt() {
+        let file = "/tmp/*checkout/100%/Tests/Feature.swift"
+        let encoded = PositionMarker.encoded(file)
+        XCTAssertFalse(encoded.contains("/*") || encoded.contains("*/"), encoded)
+        XCTAssertEqual(encoded, "/tmp/%2Acheckout/100%25/Tests/Feature.swift")
+        assertMacroExpansion(
+            """
+            /*cucumberswift-position:4:14:\(encoded)*/ #Scenario("Buy") {
+            }
+            """,
+            expandedSource: """
+            /*cucumberswift-position:4:14:\(encoded)*/ Scenario("Buy", line: 4, column: 14) {
+            }
+            """,
+            macros: ["Scenario": DSLScenarioMacro.self])
+    }
+
     // One macro at a time: SwiftSyntax's test support reports a macro nested in another with the same
     // implementation as recursive, where the compiler expands an argument's macro on its own.
     func testAScenarioAndARuleHaveTheirPosition() {

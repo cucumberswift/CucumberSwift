@@ -4,6 +4,7 @@
 //
 
 #if Macros
+import Foundation
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -129,9 +130,18 @@ enum PositionMarker {
             guard case .blockComment(let text) = piece, text.hasPrefix(prefix), text.hasSuffix("*/") else { continue }
             let parts = text.dropFirst(prefix.count).dropLast(2).split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
             guard parts.count == 3, let line = Int(parts[0]), let column = Int(parts[1]) else { return nil }
-            return AbstractSourceLocation(file: "\(literal: String(parts[2]))", line: "\(literal: line)", column: "\(literal: column)")
+            guard let file = String(parts[2]).removingPercentEncoding else { return nil }
+            return AbstractSourceLocation(file: "\(literal: file)", line: "\(literal: line)", column: "\(literal: column)")
         }
         return nil
+    }
+
+    /// A file path to write in a comment: Swift counts the `/*` and `*/` in a block comment, so a path that has either one
+    /// (a folder named `*checkout`) would leave the comment unterminated. The `*` and `%` are written as `%2A` and `%25`.
+    static func encoded(_ file: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("*")
+        return file.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
     }
 
     static func isMarked(_ node: some FreestandingMacroExpansionSyntax) -> Bool { location(in: node) != nil }
@@ -160,9 +170,8 @@ private final class MarkingRewriter: SyntaxRewriter {
               let location = DSLContainer.location(of: node, in: context),
               let line = location.line.as(IntegerLiteralExprSyntax.self)?.literal.text,
               let column = location.column.as(IntegerLiteralExprSyntax.self)?.literal.text,
-              let file = location.file.as(StringLiteralExprSyntax.self)?.representedLiteralValue,
-              !file.contains("*/") else { return visited }
-        let marker = Trivia(pieces: [.blockComment("\(PositionMarker.prefix)\(line):\(column):\(file)*/"), .spaces(1)])
+              let file = location.file.as(StringLiteralExprSyntax.self)?.representedLiteralValue else { return visited }
+        let marker = Trivia(pieces: [.blockComment("\(PositionMarker.prefix)\(line):\(column):\(PositionMarker.encoded(file))*/"), .spaces(1)])
         expansion.pound = expansion.pound.with(\.leadingTrivia, expansion.pound.leadingTrivia + marker)
         return ExprSyntax(expansion)
     }

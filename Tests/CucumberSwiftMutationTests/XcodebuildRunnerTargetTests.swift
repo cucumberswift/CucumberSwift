@@ -92,7 +92,7 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
 
     /// A coverage run of every scenario, with a test bundle `bundle` whose process ran the features at `features`, as the
     /// manifest of its run folder says.
-    private func measuringCommands(bundle: String, features: [String]) -> RecordingCommands {
+    private func measuringCommands(bundle: String?, features: [String]) -> RecordingCommands {
         RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: "{\"totalTestCount\": 2}") }
             if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
@@ -102,7 +102,7 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
                 let run = URL(fileURLWithPath: path).appendingPathComponent("run-1")
                 try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
                 let manifest: [String: Any] = [
-                    "binaries": [["path": "/x/Build/Products/Debug/\(bundle).xctest/Contents/MacOS/\(bundle)"]],
+                    "binaries": bundle.map { [["path": "/x/Build/Products/Debug/\($0).xctest/Contents/MacOS/\($0)"]] } ?? [],
                     "features": features.map { ["feature": $0] }
                 ]
                 try? JSONSerialization.data(withJSONObject: manifest).write(to: run.appendingPathComponent("manifest.json"))
@@ -131,6 +131,19 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(measuring, call: 2), ["B"], "Only B ran the DSL scenario in the coverage run")
         _ = learning.test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
         XCTAssertEqual(testedTargets(measuring, call: 3), ["A", "B"], "A holds the feature file, B ran the DSL scenario")
+    }
+
+    func testARunWithNoTestBundleInItsManifestTeachesNoTarget() throws {
+        let copy = try makeCopy()
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let measuring = measuringCommands(bundle: nil, features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: measuring)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "No binary is no evidence: every target runs")
     }
 
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
