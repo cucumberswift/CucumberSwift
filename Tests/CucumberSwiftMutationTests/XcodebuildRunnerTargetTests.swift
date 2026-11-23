@@ -93,6 +93,10 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
     /// A coverage run of every scenario, with a test bundle `bundle` whose process ran the features at `features`, as the
     /// manifest of its run folder says.
     private func measuringCommands(bundle: String?, features: [String]) -> RecordingCommands {
+        measuringCommands(bundles: bundle.map { [$0] } ?? [], features: features)
+    }
+
+    private func measuringCommands(bundles: [String], features: [String]) -> RecordingCommands {
         RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: "{\"totalTestCount\": 2}") }
             if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
@@ -102,7 +106,7 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
                 let run = URL(fileURLWithPath: path).appendingPathComponent("run-1")
                 try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
                 let manifest: [String: Any] = [
-                    "binaries": bundle.map { [["path": "/x/Build/Products/Debug/\($0).xctest/Contents/MacOS/\($0)"]] } ?? [],
+                    "binaries": bundles.map { ["path": "/x/Build/Products/Debug/\($0).xctest/Contents/MacOS/\($0)"] },
                     "features": features.map { ["feature": $0] }
                 ]
                 try? JSONSerialization.data(withJSONObject: manifest).write(to: run.appendingPathComponent("manifest.json"))
@@ -158,6 +162,13 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
         _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
         XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "RenamedB is no target: every target runs")
+
+        // A run that also names a real target, `A`, must not narrow the next run to `A` alone: B may hold the scenario.
+        let both = measuringCommands(bundles: ["A", "RenamedB"], features: [swiftFile])
+        let learning = XcodebuildRunner(target: target, commands: both)
+        _ = learning.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = learning.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(both, call: 2), ["A", "B"], "RenamedB is no target: A alone must not be chosen")
     }
 
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
