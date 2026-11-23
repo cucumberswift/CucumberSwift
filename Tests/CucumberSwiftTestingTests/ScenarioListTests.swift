@@ -25,6 +25,10 @@ extension CucumberTests {
         #expect(Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift", line: 12)))
         #expect(!Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift", line: 13)))
         #expect(!Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift", line: 12)))
+        Cucumber.shared.environment = ["CUCUMBER_SCENARIOS": "BasketFeature.swift:12"]
+        #expect(Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift", line: 12)))
+        Cucumber.shared.environment = ["CUCUMBER_SCENARIOS": "ShopTests/BasketFeature.swift:12"]
+        #expect(!Cucumber.shared.shouldRun(swiftScenario(file: "/x/OtherShopTests/BasketFeature.swift", line: 12)))
     }
 
     @Test func everyScenarioRunsWithoutCucumberScenarios() {

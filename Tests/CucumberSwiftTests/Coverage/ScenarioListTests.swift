@@ -73,6 +73,9 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: uri, line: 13, environment: environment))
         XCTAssertFalse(ScenarioList.runs(feature: "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift", line: 12, environment: environment), "Another folder")
         XCTAssertFalse(ScenarioList.runs(feature: "/Users/me/Shop/XTests/ShopTests/BasketFeature.swift", line: 12, environment: ["CUCUMBER_SCENARIOS": "ests/ShopTests/BasketFeature.swift:12"]), "A whole folder name")
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: ["CUCUMBER_SCENARIOS": "BasketFeature.swift:12"]), "The file name alone")
+        XCTAssertFalse(ScenarioList.runs(feature: "/x/OtherShopTests/BasketFeature.swift", line: 12,
+                                         environment: ["CUCUMBER_SCENARIOS": "ShopTests/BasketFeature.swift:12"]), "Not the end of a folder's name")
         XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: ["CUCUMBER_SCENARIOS": "\(uri):12"]), "The absolute path, exactly")
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Tests/ShopTests/Basket.feature", line: 12,
                                          environment: ["CUCUMBER_SCENARIOS": "Basket.feature:12"]), "A feature file is read exactly")
