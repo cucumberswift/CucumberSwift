@@ -17,8 +17,19 @@ enum ScenarioList {
     /// or of the example of an outline, with `%` and `,` in a path written as `%25` and `%2C`. An entry is read exactly as written, spaces and tabs included. CucumberSwift's reports name scenarios the same way.
     static func runs(feature uri: String, line: Int, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         guard let list = environment[variable] else { return true }
-        let id = "\(MutationReport.feature(ofURI: uri)):\(line)"
-        return list.split(separator: ",").contains { unescaped(String($0)) == id }
+        let path = MutationReport.feature(ofURI: uri)
+        return list.split(separator: ",").contains { names(entry: unescaped(String($0)), path: path, line: line) }
+    }
+
+    /// Whether `entry` names the scenario at `line` of the feature at `path`: exactly, or, for a Swift scenario, by its file's
+    /// path from the package's folder. A Swift scenario that runs outside the mutation-test tool's copy of the package
+    /// reports the absolute path of its file, and `Tests/ShopTests/BasketFeature.swift:12`, the id that the tool's report
+    /// names it by, ends that path. An entry that starts with `/` is read exactly.
+    private static func names(entry: String, path: String, line: Int) -> Bool {
+        if entry == "\(path):\(line)" { return true }
+        guard path.hasPrefix("/"), path.hasSuffix(".swift"), !entry.hasPrefix("/"), let colon = entry.lastIndex(of: ":"),
+              Int(entry[entry.index(after: colon)...]) == line else { return false }
+        return path.hasSuffix("/" + entry[..<colon])
     }
 
     /// An entry with `%2C` read as `,` and `%25` as `%`: the mutation-test tool writes them so that a comma in a path

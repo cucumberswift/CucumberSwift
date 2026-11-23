@@ -195,7 +195,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
     /// any, so that a run never skips all of them. A Swift DSL scenario has no feature file: its feature is the Swift file
     /// that declares it, which no bundle holds. Its target is the one whose process ran it in the run that measured the
-    /// coverage, and every target is kept when that run didn't tell.
+    /// coverage, and every target is kept when that run didn't tell, or named a bundle that is no test target's.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
         let files = scenarios.filter { $0.feature.hasSuffix(".feature") }
         var learned = Set<String>()
@@ -203,6 +203,9 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             guard let targets = learnedTargets(ofFeature: scenario.feature) else { return target.testTargets }
             learned.formUnion(targets)
         }
+        // A bundle is named for its product, which can differ from the name of its test target: a name that is no test
+        // target's can't say which target to leave out.
+        if !learned.isSubset(of: target.testTargets) { return target.testTargets }
         let bundles = builtBundles(in: copy)
         let holding = target.testTargets.filter { name in
             if learned.contains(name) { return true }

@@ -146,6 +146,20 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "No binary is no evidence: every target runs")
     }
 
+    func testABundleNamedForNoTestTargetTeachesNoTarget() throws {
+        // `B` builds `RenamedB.xctest`, as a PRODUCT_NAME can make it: the name says nothing about which target to skip.
+        let copy = try makeCopy()
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let measuring = measuringCommands(bundle: "RenamedB", features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: measuring)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "RenamedB is no target: every target runs")
+    }
+
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {
         let copy = try makeCopy()
         // A is found by a feature file next to its tests, and B by one in the resource bundle that SwiftPM makes.

@@ -17,6 +17,16 @@ extension CucumberTests {
         #expect(!Cucumber.shared.shouldRun(scenario("Other feature", feature: "G", line: 5, steps: [])))
     }
 
+    @Test func cucumberScenariosNamesASwiftScenarioByItsFileFromThePackagesFolder() {
+        func swiftScenario(file: String, line: Int) -> GherkinScenario {
+            GherkinScenario(featureTitle: "F", featureTags: [], title: "S", tags: [], file: file, line: line, column: 3, steps: [])
+        }
+        Cucumber.shared.environment = ["CUCUMBER_SCENARIOS": "Tests/ShopTests/BasketFeature.swift:12"]
+        #expect(Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift", line: 12)))
+        #expect(!Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift", line: 13)))
+        #expect(!Cucumber.shared.shouldRun(swiftScenario(file: "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift", line: 12)))
+    }
+
     @Test func everyScenarioRunsWithoutCucumberScenarios() {
         Cucumber.shared.environment = [:]
         #expect(Cucumber.shared.shouldRun(scenario("Any", line: 6, steps: [])))
