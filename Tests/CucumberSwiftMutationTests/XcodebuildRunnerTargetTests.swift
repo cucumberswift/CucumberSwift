@@ -174,6 +174,20 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(measuring, call: 4), ["A", "B"], "A run that named no bundle may have been B's")
     }
 
+    func testABundleNamedForAnotherTargetsProductKeepsEveryTarget() throws {
+        // A's product is `Alpha` and B's is `A`, so B's run names the bundle `A`, which is also the name of target A.
+        let copy = try makeCopy()
+        try makeBundle("Alpha", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("A", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let measuring = measuringCommands(bundle: "A", features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: measuring)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "Target B has no bundle of its name: A may be B's product")
+    }
+
     func testABundleNamedForNoTestTargetTeachesNoTarget() throws {
         // `B` builds `RenamedB.xctest`, as a PRODUCT_NAME can make it: the name says nothing about which target to skip.
         let copy = try makeCopy()
