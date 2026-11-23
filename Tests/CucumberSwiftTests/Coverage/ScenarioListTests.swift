@@ -71,14 +71,19 @@ final class ScenarioListTests: XCTestCase {
         let environment = ["CUCUMBER_SCENARIOS": "Tests/ShopTests/BasketFeature.swift:12"]
         XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: environment))
         XCTAssertFalse(ScenarioList.runs(feature: uri, line: 13, environment: environment))
-        XCTAssertFalse(ScenarioList.runs(feature: "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift", line: 12, environment: environment), "Another folder")
-        XCTAssertFalse(ScenarioList.runs(feature: "/Users/me/Shop/XTests/ShopTests/BasketFeature.swift", line: 12, environment: ["CUCUMBER_SCENARIOS": "ests/ShopTests/BasketFeature.swift:12"]), "A whole folder name")
-        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: ["CUCUMBER_SCENARIOS": "BasketFeature.swift:12"]), "The file name alone")
-        XCTAssertFalse(ScenarioList.runs(feature: "/x/OtherShopTests/BasketFeature.swift", line: 12,
-                                         environment: ["CUCUMBER_SCENARIOS": "ShopTests/BasketFeature.swift:12"]), "Not the end of a folder's name")
-        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: ["CUCUMBER_SCENARIOS": "\(uri):12"]), "The absolute path, exactly")
-        XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Tests/ShopTests/Basket.feature", line: 12,
-                                         environment: ["CUCUMBER_SCENARIOS": "Basket.feature:12"]), "A feature file is read exactly")
+        func runs(_ feature: String, _ entry: String) -> Bool {
+            ScenarioList.runs(feature: feature, line: 12, environment: ["CUCUMBER_SCENARIOS": entry])
+        }
+        let other = "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift"
+        XCTAssertFalse(runs(other, "Tests/ShopTests/BasketFeature.swift:12"), "Another folder")
+        XCTAssertFalse(runs("/Users/me/Shop/XTests/ShopTests/BasketFeature.swift", "ests/ShopTests/BasketFeature.swift:12"),
+                       "A whole folder name")
+        XCTAssertTrue(runs(uri, "BasketFeature.swift:12"), "The file name alone")
+        XCTAssertFalse(runs("/x/OtherShopTests/BasketFeature.swift", "ShopTests/BasketFeature.swift:12"),
+                       "Not the end of a folder's name")
+        XCTAssertTrue(runs(uri, "\(uri):12"), "The absolute path, exactly")
+        XCTAssertFalse(runs("file:///x/Tests.xctest/Tests/ShopTests/Basket.feature", "Basket.feature:12"),
+                       "A feature file is read exactly")
     }
 
     func testAnEmptyListRunsNoScenario() {
