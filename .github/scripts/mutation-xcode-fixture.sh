@@ -78,15 +78,18 @@ fi
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
 # Both runners' scenarios must be in each run's Cucumber report: the XCTest target's (Voting) and the Swift Testing
-# target's (Retiring). Each killed mutant then names the scenarios that failed on it.
+# target's (Retiring), each with a feature in a feature file and one written in Swift with the DSL functions. Each
+# killed mutant then names the scenarios that failed on it, and the report names a Swift scenario by its path from the
+# package's folder, not the temporary copy's.
 python3 -I - "$reports" <<'PYTHON'
 import json, os, sys
 
 reports = sys.argv[1]
 with open(os.path.join(reports, "cucumber-baseline.json"), encoding="utf-8") as f:
     features = {feature["name"] for feature in json.load(f)}
-if not {"Retiring", "Voting"} <= features:
-    sys.exit(f"::error::MutationTestingTuist: the baseline report has the features {sorted(features)}, not Retiring and Voting")
+expected = {"Retiring", "Retiring in Swift", "Voting", "Voting in Swift"}
+if not expected <= features:
+    sys.exit(f"::error::MutationTestingTuist: the baseline report has the features {sorted(features)}, not {sorted(expected)}")
 with open(os.path.join(reports, "mutation-report.json"), encoding="utf-8") as f:
     report = json.load(f)
 for name, entry in report["files"].items():
@@ -94,5 +97,11 @@ for name, entry in report["files"].items():
         if mutant["status"] == "Killed" and not mutant.get("killedBy"):
             line = mutant["location"]["start"]["line"]
             sys.exit(f"::error::MutationTestingTuist: no scenario is named as killing the mutant at {name}:{line}")
+swift = {"Tests/SwiftFeature.swift:32", "Tests/SwiftFeature.swift:36", "SwiftTests/SwiftFeature.swift:32", "SwiftTests/SwiftFeature.swift:36"}
+covered = {id for entry in report["files"].values() for mutant in entry["mutants"] for id in mutant.get("coveredBy", [])}
+if not swift <= covered:
+    sys.exit(f"::error::MutationTestingTuist: coveredBy names {sorted(covered)}, not every Swift scenario {sorted(swift)}")
+if any(id.startswith("/") for id in covered):
+    sys.exit("::error::MutationTestingTuist: a scenario id is an absolute path")
 print("MutationTestingTuist: each run's report has both runners' scenarios.")
 PYTHON
