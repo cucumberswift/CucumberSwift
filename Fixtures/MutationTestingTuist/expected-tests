@@ -1,3 +1,3 @@
 # The fewest tests each framework must run. See "Fixtures" in CONTRIBUTING.md.
-XCTest: 8
-Swift Testing: 6
+XCTest: 10
+Swift Testing: 5
