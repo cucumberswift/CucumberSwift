@@ -164,10 +164,10 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
                 (binary["path"] as? String)?.components(separatedBy: "/").first { $0.hasSuffix(".xctest") }
                     .map { String($0.dropLast(".xctest".count)) }
             }
-            // A run whose process loaded no test bundle says nothing about the target that ran a feature.
-            guard !bundles.isEmpty else { continue }
+            // A run whose process loaded no test bundle doesn't say which target ran a feature: the empty name, which is no
+            // test target's, makes every target run the feature, even when another run named a bundle for it.
             for feature in (manifest["features"] as? [[String: Any]] ?? []).compactMap({ $0["feature"] as? String }) {
-                learned[ScenarioID.feature(ofURI: feature), default: []].formUnion(bundles)
+                learned[ScenarioID.feature(ofURI: feature), default: []].formUnion(bundles.isEmpty ? [""] : bundles)
             }
         }
         lock.lock()

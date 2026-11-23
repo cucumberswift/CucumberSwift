@@ -97,12 +97,20 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
     }
 
     private func measuringCommands(bundles: [String], features: [String]) -> RecordingCommands {
-        RecordingCommands { call in
+        measuringCommands(runs: [bundles], features: features)
+    }
+
+    /// Each coverage run of the commands names the bundles of the next of `runs`, the last one again once they are used.
+    private func measuringCommands(runs: [[String]], features: [String]) -> RecordingCommands {
+        var measured = 0
+        return RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: "{\"totalTestCount\": 2}") }
             if let index = call.arguments.firstIndex(of: "-resultBundlePath") {
                 try? FileManager.default.createDirectory(atPath: call.arguments[index + 1], withIntermediateDirectories: true)
             }
             if let path = call.environment["TEST_RUNNER_CUCUMBER_COVERAGE_PATH"] {
+                let bundles = runs[min(measured, runs.count - 1)]
+                measured += 1
                 let run = URL(fileURLWithPath: path).appendingPathComponent("run-1")
                 try? FileManager.default.createDirectory(at: run, withIntermediateDirectories: true)
                 let manifest: [String: Any] = [
@@ -148,6 +156,22 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
         _ = runner.test(in: copy, request: TestRequest(scenarios: [voting, dsl]))
         XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "No binary is no evidence: every target runs")
+    }
+
+    func testARunWithNoTestBundleAfterOneThatNamedItKeepsEveryTarget() throws {
+        let copy = try makeCopy()
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let measuring = measuringCommands(runs: [["A"], []], features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: measuring)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 2), ["A"], "Only A ran the scenario so far")
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(measuring, call: 4), ["A", "B"], "A run that named no bundle may have been B's")
     }
 
     func testABundleNamedForNoTestTargetTeachesNoTarget() throws {
