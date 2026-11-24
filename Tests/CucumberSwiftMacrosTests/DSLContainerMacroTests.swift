@@ -15,10 +15,9 @@ import XCTest
 /// A context that locates any node: the line is its offset in the source, the column is 7, in `file`.
 private final class LocatingContext: MacroExpansionContext {
     let file: String
+    var lexicalContext: [Syntax] { [] }
 
     init(file: String) { self.file = file }
-
-    var lexicalContext: [Syntax] { [] }
 
     func makeUniqueName(_ name: String) -> TokenSyntax { .identifier(name) }
 
