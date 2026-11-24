@@ -86,6 +86,13 @@ final class ScenarioListTests: XCTestCase {
                        "A feature file is read exactly")
     }
 
+    func testAnAbsoluteEntryStillSelectsASwiftScenarioInTheMutationCopy() {
+        let file = "/tmp/mutation-copy-42-a1b2c3d4/package/Tests/F.swift"
+        XCTAssertTrue(ScenarioList.runs(feature: file, line: 12, environment: ["CUCUMBER_SCENARIOS": "\(file):12"]), "Absolute")
+        XCTAssertTrue(ScenarioList.runs(feature: file, line: 12, environment: ["CUCUMBER_SCENARIOS": "Tests/F.swift:12"]), "Relative")
+        XCTAssertFalse(ScenarioList.runs(feature: file, line: 13, environment: ["CUCUMBER_SCENARIOS": "\(file):12"]), "Other line")
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }

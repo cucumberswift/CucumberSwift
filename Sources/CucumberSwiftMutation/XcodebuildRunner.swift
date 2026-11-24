@@ -195,8 +195,8 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
     /// A target whose bundle isn't found is kept, because it may hold one, and so is every target when none of them holds
     /// any, so that a run never skips all of them. A Swift DSL scenario has no feature file: its feature is the Swift file
     /// that declares it, which no bundle holds. Its target is the one whose process ran it in the run that measured the
-    /// coverage, and every target is kept when that run didn't tell, or named a bundle that is no test target's or that
-    /// can't be told from another target's product.
+    /// coverage, and every target is kept when that run didn't tell, or named a bundle that the `.xctestrun` file doesn't
+    /// tie to a test target.
     private func testTargets(holding scenarios: [ScenarioID], in copy: URL) -> [String] {
         let files = scenarios.filter { $0.feature.hasSuffix(".feature") }
         var learned = Set<String>()
@@ -204,17 +204,21 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             guard let targets = learnedTargets(ofFeature: scenario.feature) else { return target.testTargets }
             learned.formUnion(targets)
         }
-        // A bundle is named for its product, which can differ from the name of its test target: a name that is no test
-        // target's can't say which target to leave out.
-        if !learned.isSubset(of: target.testTargets) { return target.testTargets }
+        // A bundle is named for its product, which can differ from the name of its test target, and two targets can swap
+        // products, so a bundle name is a target's only as the build's `.xctestrun` file says: a name that it doesn't tie
+        // to a test target can't say which target to leave out.
         let bundles = builtBundles(in: copy)
-        // A name that is a target's can still be another target's product: with A's product named `Alpha` and B's named
-        // `A`, B's run learns the name `A`. The names are the targets' own only when every target has a bundle of its name.
-        if !learned.isEmpty, !target.testTargets.allSatisfy({ bundles[$0] != nil }) { return target.testTargets }
+        let owners = testTargetsByBundle(in: copy)
+        if !learned.isEmpty {
+            let tied = Set(learned.compactMap { owners[$0] })
+            guard tied.count == learned.count, tied.isSubset(of: target.testTargets) else { return target.testTargets }
+            learned = tied
+        }
+        let products = Dictionary(owners.map { ($1, $0) }) { first, _ in first }
         let holding = target.testTargets.filter { name in
             if learned.contains(name) { return true }
             guard !files.isEmpty else { return false }
-            guard let bundle = bundles[name] else { return true }
+            guard let bundle = bundles[products[name] ?? name] else { return true }
             return Self.holds(featureFiles(in: bundle), oneOf: files)
         }
         return holding.isEmpty ? target.testTargets : holding
@@ -226,6 +230,37 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         let base = bundle.resolvingSymlinksInPath().path.count + 1
         let urls = enumerator.compactMap { $0 as? URL }.filter { $0.pathExtension == "feature" }
         return urls.map { String($0.resolvingSymlinksInPath().path.dropFirst(base)) }
+    }
+
+    /// The test target that each `.xctest` bundle name belongs to, as the `.xctestrun` file of `build-for-testing` says: its
+    /// `BlueprintName` (or, in the older format, the key of the target) and the bundle of its `TestBundlePath`. Empty when
+    /// no file is found or one can't be read, which ties no name to a target.
+    private func testTargetsByBundle(in copy: URL) -> [String: String] {
+        let products = runnerFolder(for: copy).appendingPathComponent("DerivedData/Build/Products")
+        let files = ((try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "xctestrun" }
+        var owners = [String: String]()
+        for file in files {
+            guard let data = try? Data(contentsOf: file),
+                  let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any]
+            else { continue }
+            var entries = [(target: String, path: String)]()
+            for (key, value) in plist {
+                if let target = value as? [String: Any], let path = target["TestBundlePath"] as? String { entries.append((key, path)) }
+            }
+            for configuration in plist["TestConfigurations"] as? [[String: Any]] ?? [] {
+                for target in configuration["TestTargets"] as? [[String: Any]] ?? [] {
+                    if let name = target["BlueprintName"] as? String, let path = target["TestBundlePath"] as? String {
+                        entries.append((name, path))
+                    }
+                }
+            }
+            for entry in entries {
+                guard let bundle = entry.path.components(separatedBy: "/").last(where: { $0.hasSuffix(".xctest") }) else { continue }
+                owners[String(bundle.dropLast(".xctest".count))] = entry.target
+            }
+        }
+        return owners
     }
 
     /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,

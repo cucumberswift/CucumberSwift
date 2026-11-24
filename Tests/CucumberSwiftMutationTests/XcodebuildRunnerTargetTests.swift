@@ -36,6 +36,19 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         }
     }
 
+    /// The `.xctestrun` file of `build-for-testing`, which says which bundle each test target builds: the older format,
+    /// with a dictionary for each target, or the newer one, with the targets of a test configuration.
+    private func makeXCTestRun(_ bundles: [String: String], in copy: URL, newFormat: Bool = false) throws {
+        let products = copy.deletingLastPathComponent().appendingPathComponent("runner/DerivedData/Build/Products")
+        try FileManager.default.createDirectory(at: products, withIntermediateDirectories: true)
+        let path = { (bundle: String) in "__TESTROOT__/Debug/\(bundle).xctest" }
+        let plist: [String: Any] = newFormat
+            ? ["TestConfigurations": [["TestTargets": bundles.map { ["BlueprintName": $0.key, "TestBundlePath": path($0.value)] }]]]
+            : bundles.mapValues { ["TestBundlePath": path($0)] }
+        try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+            .write(to: products.appendingPathComponent("Scheme_iphonesimulator.xctestrun"))
+    }
+
     private func commands() -> RecordingCommands {
         RecordingCommands { call in
             if call.arguments.first == "xcresulttool" { return .finished(0, output: "{\"totalTestCount\": 2}") }
@@ -129,6 +142,7 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         // declares it. The coverage run says which target ran it.
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
         try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        try makeXCTestRun(["A": "A", "B": "B"], in: copy)
         let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
         let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
         let runner = { (commands: RecordingCommands) in XcodebuildRunner(target: self.target, commands: commands) }
@@ -162,6 +176,7 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         let copy = try makeCopy()
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
         try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        try makeXCTestRun(["A": "A", "B": "B"], in: copy)
         let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
         let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
         let measuring = measuringCommands(runs: [["A"], []], features: [swiftFile])
@@ -174,39 +189,48 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(testedTargets(measuring, call: 4), ["A", "B"], "A run that named no bundle may have been B's")
     }
 
-    func testABundleNamedForAnotherTargetsProductKeepsEveryTarget() throws {
-        // A's product is `Alpha` and B's is `A`, so B's run names the bundle `A`, which is also the name of target A.
+    func testABundleNameIsATargetsOnlyAsTheXCTestRunFileSays() throws {
         let copy = try makeCopy()
+        // A builds `Alpha.xctest` and B builds `A.xctest`: B's run names the bundle `A`, which is no sign of target A.
         try makeBundle("Alpha", features: ["Features/Voting.feature"], in: copy)
         try makeBundle("A", features: ["Features/Other.feature"], in: copy, macOS: false)
         let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
         let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
-        let measuring = measuringCommands(bundle: "A", features: [swiftFile])
-        let runner = XcodebuildRunner(target: target, commands: measuring)
-        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
-        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
-        XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "Target B has no bundle of its name: A may be B's product")
+        for newFormat in [false, true] {
+            let tied = measuringCommands(bundle: "A", features: [swiftFile])
+            try makeXCTestRun(["A": "Alpha", "B": "A"], in: copy, newFormat: newFormat)
+            let runner = XcodebuildRunner(target: target, commands: tied)
+            _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+            _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+            XCTAssertEqual(testedTargets(tied, call: 2), ["B"], "The file ties `A.xctest` to B (new format: \(newFormat))")
+        }
+        // The same products swapped: A builds `B.xctest` and B builds `A.xctest`.
+        try makeXCTestRun(["A": "B", "B": "A"], in: copy)
+        let swapped = measuringCommands(bundle: "A", features: [swiftFile])
+        let swappedRunner = XcodebuildRunner(target: target, commands: swapped)
+        _ = swappedRunner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = swappedRunner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's")
     }
 
-    func testABundleNamedForNoTestTargetTeachesNoTarget() throws {
-        // `B` builds `RenamedB.xctest`, as a PRODUCT_NAME can make it: the name says nothing about which target to skip.
+    func testEveryTargetRunsWhenNoXCTestRunFileTiesALearnedBundleToATarget() throws {
         let copy = try makeCopy()
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
         try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
         let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
         let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
-        let measuring = measuringCommands(bundle: "RenamedB", features: [swiftFile])
-        let runner = XcodebuildRunner(target: target, commands: measuring)
+        let withoutFile = measuringCommands(bundle: "B", features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: withoutFile)
         _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
         _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
-        XCTAssertEqual(testedTargets(measuring, call: 2), ["A", "B"], "RenamedB is no target: every target runs")
+        XCTAssertEqual(testedTargets(withoutFile, call: 2), ["A", "B"], "No file: nothing ties `B` to a target")
 
-        // A run that also names a real target, `A`, must not narrow the next run to `A` alone: B may hold the scenario.
-        let both = measuringCommands(bundles: ["A", "RenamedB"], features: [swiftFile])
-        let learning = XcodebuildRunner(target: target, commands: both)
-        _ = learning.test(in: copy, request: TestRequest(measuresCoverage: true))
-        _ = learning.test(in: copy, request: TestRequest(scenarios: [dsl]))
-        XCTAssertEqual(testedTargets(both, call: 2), ["A", "B"], "RenamedB is no target: A alone must not be chosen")
+        try makeXCTestRun(["A": "A", "B": "B"], in: copy)
+        let unknown = measuringCommands(bundles: ["A", "Ghost"], features: [swiftFile])
+        let unknownRunner = XcodebuildRunner(target: target, commands: unknown)
+        _ = unknownRunner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = unknownRunner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(unknown, call: 2), ["A", "B"], "`Ghost` is in no target: A alone must not be chosen")
     }
 
     func testAFeatureInAResourceBundleInsideATestBundleKeepsItsTarget() throws {

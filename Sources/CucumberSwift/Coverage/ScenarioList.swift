@@ -18,13 +18,18 @@ enum ScenarioList {
     static func runs(feature uri: String, line: Int, environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         guard let list = environment[variable] else { return true }
         let path = MutationReport.feature(ofURI: uri)
-        return list.split(separator: ",").contains { names(entry: unescaped(String($0)), path: path, line: line) }
+        let absolute = uri.hasPrefix("file:") ? (URL(string: uri)?.path ?? uri) : uri
+        return list.split(separator: ",").contains {
+            let entry = unescaped(String($0))
+            return entry == "\(absolute):\(line)" || names(entry: entry, path: path, line: line)
+        }
     }
 
     /// Whether `entry` names the scenario at `line` of the feature at `path`: exactly, or, for a Swift scenario, by its file's
     /// path from the package's folder. A Swift scenario that runs outside the mutation-test tool's copy of the package
     /// reports the absolute path of its file, and `Tests/ShopTests/BasketFeature.swift:12`, the id that the tool's report
-    /// names it by, ends that path. An entry that starts with `/` is read exactly.
+    /// names it by, ends that path. An entry that starts with `/` is read exactly, against the file's absolute path as well, so that an entry for a file in
+    /// the tool's copy that was written before ids were package-relative still selects it.
     private static func names(entry: String, path: String, line: Int) -> Bool {
         if entry == "\(path):\(line)" { return true }
         guard path.hasPrefix("/"), path.hasSuffix(".swift"), !entry.hasPrefix("/"), let colon = entry.lastIndex(of: ":"),
