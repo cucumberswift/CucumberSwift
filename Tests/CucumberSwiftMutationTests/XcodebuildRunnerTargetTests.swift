@@ -206,39 +206,6 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         }
     }
 
-    func testSwappedProductsKeepTheTargetThatRanTheScenario() throws {
-        // A builds `B.xctest` and B builds `A.xctest`: every target has a bundle of its own name, so only the
-        // `.xctestrun` file tells that `A.xctest`, which B's run names, is B's.
-        let copy = try makeCopy()
-        try makeBundle("B", features: ["Features/Voting.feature"], in: copy)
-        try makeBundle("A", features: ["Features/Other.feature"], in: copy, macOS: false)
-        try makeXCTestRun(["A": "B", "B": "A"], in: copy)
-        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
-        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
-        let swapped = measuringCommands(bundle: "A", features: [swiftFile])
-        let runner = XcodebuildRunner(target: target, commands: swapped)
-        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
-        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
-        XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's, not A's")
-    }
-
-    func testABundleNameThatTwoTargetsBuildTiesToNoTarget() throws {
-        let copy = try makeCopy()
-        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
-        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
-        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
-        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
-        for newFormat in [false, true] {
-            // Both targets build a `Shared.xctest`, in folders of their own: the name can't say which one ran the scenario.
-            try makeXCTestRun(["A": "Shared", "B": "Shared"], in: copy, newFormat: newFormat)
-            let shared = measuringCommands(bundle: "Shared", features: [swiftFile])
-            let runner = XcodebuildRunner(target: target, commands: shared)
-            _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
-            _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
-            XCTAssertEqual(testedTargets(shared, call: 2), ["A", "B"], "`Shared` has two owners (new format: \(newFormat))")
-        }
-    }
-
     func testEveryTargetRunsWhenNoXCTestRunFileTiesALearnedBundleToATarget() throws {
         let copy = try makeCopy()
         try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
@@ -300,4 +267,40 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         XCTAssertEqual(call.arguments.filter { $0 == "-only-testing" }.count, 2, "Each test target, not a test")
     }
 }
+
+extension XcodebuildRunnerTargetTests {
+    func testSwappedProductsKeepTheTargetThatRanTheScenario() throws {
+        // A builds `B.xctest` and B builds `A.xctest`: every target has a bundle of its own name, so only the
+        // `.xctestrun` file tells that `A.xctest`, which B's run names, is B's.
+        let copy = try makeCopy()
+        try makeBundle("B", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("A", features: ["Features/Other.feature"], in: copy, macOS: false)
+        try makeXCTestRun(["A": "B", "B": "A"], in: copy)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        let swapped = measuringCommands(bundle: "A", features: [swiftFile])
+        let runner = XcodebuildRunner(target: target, commands: swapped)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's, not A's")
+    }
+
+    func testABundleNameThatTwoTargetsBuildTiesToNoTarget() throws {
+        let copy = try makeCopy()
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        for newFormat in [false, true] {
+            // Both targets build a `Shared.xctest`, in folders of their own: the name can't say which one ran the scenario.
+            try makeXCTestRun(["A": "Shared", "B": "Shared"], in: copy, newFormat: newFormat)
+            let shared = measuringCommands(bundle: "Shared", features: [swiftFile])
+            let runner = XcodebuildRunner(target: target, commands: shared)
+            _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+            _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+            XCTAssertEqual(testedTargets(shared, call: 2), ["A", "B"], "`Shared` has two owners (new format: \(newFormat))")
+        }
+    }
+}
+
 #endif

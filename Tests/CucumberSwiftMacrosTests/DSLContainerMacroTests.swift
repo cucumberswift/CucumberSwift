@@ -12,6 +12,30 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 @testable import CucumberSwiftMacrosPlugin
 
+/// A context that locates any node: the line is its offset in the source, the column is 7, in `file`.
+private final class LocatingContext: MacroExpansionContext {
+    let file: String
+
+    init(file: String) { self.file = file }
+
+    var lexicalContext: [Syntax] { [] }
+
+    func makeUniqueName(_ name: String) -> TokenSyntax { .identifier(name) }
+
+    func diagnose(_ diagnostic: Diagnostic) {}
+
+    func location(
+        of node: some SyntaxProtocol,
+        at position: PositionInSyntaxNode,
+        filePathMode: SourceLocationFilePathMode
+    ) -> AbstractSourceLocation? {
+        AbstractSourceLocation(
+            file: "\(literal: file)",
+            line: "\(literal: node.positionAfterSkippingLeadingTrivia.utf8Offset)",
+            column: "7")
+    }
+}
+
 /// Each container macro of the Swift DSL expands to the call it stands for, with the same arguments and the line
 /// and column of its opening parenthesis, and `#Feature` its file, before its contents.
 final class DSLContainerMacroTests: XCTestCase {
@@ -257,26 +281,6 @@ final class DSLContainerMacroTests: XCTestCase {
             }
             """,
             macros: macros)
-    }
-}
-
-/// A context that locates any node: the line is its offset in the source, the column is 7, in `file`.
-private final class LocatingContext: MacroExpansionContext {
-    let file: String
-    init(file: String) { self.file = file }
-
-    var lexicalContext: [Syntax] { [] }
-
-    func makeUniqueName(_ name: String) -> TokenSyntax { .identifier(name) }
-
-    func diagnose(_ diagnostic: Diagnostic) {}
-
-    func location(of node: some SyntaxProtocol, at position: PositionInSyntaxNode,
-                  filePathMode: SourceLocationFilePathMode) -> AbstractSourceLocation? {
-        AbstractSourceLocation(
-            file: "\(literal: file)",
-            line: "\(literal: node.positionAfterSkippingLeadingTrivia.utf8Offset)",
-            column: "7")
     }
 }
 #endif
