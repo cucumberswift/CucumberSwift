@@ -204,13 +204,22 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
             _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
             XCTAssertEqual(testedTargets(tied, call: 2), ["B"], "The file ties `A.xctest` to B (new format: \(newFormat))")
         }
-        // The same products swapped: A builds `B.xctest` and B builds `A.xctest`.
+    }
+
+    func testSwappedProductsKeepTheTargetThatRanTheScenario() throws {
+        // A builds `B.xctest` and B builds `A.xctest`: every target has a bundle of its own name, so only the
+        // `.xctestrun` file tells that `A.xctest`, which B's run names, is B's.
+        let copy = try makeCopy()
+        try makeBundle("B", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("A", features: ["Features/Other.feature"], in: copy, macOS: false)
         try makeXCTestRun(["A": "B", "B": "A"], in: copy)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
         let swapped = measuringCommands(bundle: "A", features: [swiftFile])
-        let swappedRunner = XcodebuildRunner(target: target, commands: swapped)
-        _ = swappedRunner.test(in: copy, request: TestRequest(measuresCoverage: true))
-        _ = swappedRunner.test(in: copy, request: TestRequest(scenarios: [dsl]))
-        XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's")
+        let runner = XcodebuildRunner(target: target, commands: swapped)
+        _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+        _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+        XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's, not A's")
     }
 
     func testEveryTargetRunsWhenNoXCTestRunFileTiesALearnedBundleToATarget() throws {
