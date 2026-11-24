@@ -11,7 +11,7 @@ CucumberSwift is a Bazel module. Its library builds with [rules_swift](https://g
 CucumberSwift is in the [Bazel Central Registry](https://registry.bazel.build/modules/cucumberswift) as a module named `cucumberswift`. Add it to your `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "cucumberswift", version = "6.9.2")
+bazel_dep(name = "cucumberswift", version = "6.9.0")
 ```
 
 Bazel adds CucumberSwiftExpressions (the module `cucumberswift_expressions`) for you. The registry lists every version you can use.
@@ -19,8 +19,8 @@ Bazel adds CucumberSwiftExpressions (the module `cucumberswift_expressions`) for
 Fetch a release from GitHub with a `git_override` on its release tag if it isn't in the registry yet:
 
 ```starlark
-bazel_dep(name = "cucumberswift", version = "6.9.2")
-git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.9.2")
+bazel_dep(name = "cucumberswift", version = "6.9.0")
+git_override(module_name = "cucumberswift", remote = "https://github.com/cucumberswift/CucumberSwift.git", tag = "6.9.0")
 ```
 
 Change the version and the tag together. If the release also needs a CucumberSwiftExpressions version that isn't in the registry, add `cucumberswift_expressions` the same way. Use the version that CucumberSwift's `MODULE.bazel` names:
@@ -156,7 +156,7 @@ macos_unit_test(
 )
 ```
 
-`bazel coverage` needs CucumberSwift 6.9.2 or later. Version 6.8.1 and earlier stop it with the error "this runner does not collect coverage".
+`bazel coverage` needs CucumberSwift 6.9.0 or later. Version 6.8.1 and earlier stop it with the error "this runner does not collect coverage".
 
 Bazel builds with gcov's coverage format by default, and the test bundle then fails to link. Add these lines to your `.bazelrc` to build with LLVM's format. The last line names the targets that hold the code you test, because Bazel builds only the targets that `--instrumentation_filter` matches with coverage:
 
