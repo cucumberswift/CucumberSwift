@@ -4,6 +4,9 @@
 //
 
 #if Macros
+import SwiftDiagnostics
+import SwiftParser
+import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
@@ -72,6 +75,28 @@ final class DSLContainerMacroTests: XCTestCase {
             }
             """,
             macros: ["Scenario": DSLScenarioMacro.self])
+    }
+
+    /// swift-syntax 600's test context can't locate a token inside a macro, so the container's side of the marker is run
+    /// here with a context that can: it places each token at the line of its offset and the column 7, in a file whose path
+    /// has a `*` in it. The container writes onto each macro in its contents the position that the context gives it.
+    func testAContainerWritesTheFilePositionOntoEachMacroInItsContents() throws {
+        let source = "#Scenario(\"Buy\") {\n    #Given(I: shop())\n    #When(I: pay())\n    #Background {\n    }\n}"
+        let tree = Parser.parse(source: source)
+        let found = tree.tokens(viewMode: .sourceAccurate).compactMap { $0.parent?.as(MacroExpansionExprSyntax.self) }
+        let scenario = try XCTUnwrap(found.first { $0.macroName.text == "Scenario" })
+        let context = LocatingContext(file: "/Pkg/*checkout/Tests/F.swift")
+        let expansion = try DSLScenarioMacro.expansion(of: scenario, in: context)
+        let text = expansion.description
+        func marker(of name: String) throws -> String {
+            let node = try XCTUnwrap(found.first { $0.macroName.text == name })
+            let paren = try XCTUnwrap(node.leftParen)
+            let line = paren.positionAfterSkippingLeadingTrivia.utf8Offset
+            return "/*cucumberswift-position:\(line):7:/Pkg/%2Acheckout/Tests/F.swift*/ #\(name)"
+        }
+        XCTAssertTrue(text.contains(try marker(of: "Given")), text)
+        XCTAssertTrue(text.contains(try marker(of: "When")), text)
+        XCTAssertEqual(text.components(separatedBy: "/*cucumberswift-position:").count - 1, 2, "No marker on #Background: \(text)")
     }
 
     // One macro at a time: SwiftSyntax's test support reports a macro nested in another with the same
@@ -232,6 +257,26 @@ final class DSLContainerMacroTests: XCTestCase {
             }
             """,
             macros: macros)
+    }
+}
+
+/// A context that locates any node: the line is its offset in the source, the column is 7, in `file`.
+private final class LocatingContext: MacroExpansionContext {
+    let file: String
+    init(file: String) { self.file = file }
+
+    var lexicalContext: [Syntax] { [] }
+
+    func makeUniqueName(_ name: String) -> TokenSyntax { .identifier(name) }
+
+    func diagnose(_ diagnostic: Diagnostic) {}
+
+    func location(of node: some SyntaxProtocol, at position: PositionInSyntaxNode,
+                  filePathMode: SourceLocationFilePathMode) -> AbstractSourceLocation? {
+        AbstractSourceLocation(
+            file: "\(literal: file)",
+            line: "\(literal: node.positionAfterSkippingLeadingTrivia.utf8Offset)",
+            column: "7")
     }
 }
 #endif

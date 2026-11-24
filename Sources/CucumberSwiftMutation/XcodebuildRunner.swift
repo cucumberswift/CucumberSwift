@@ -239,7 +239,7 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
         let products = runnerFolder(for: copy).appendingPathComponent("DerivedData/Build/Products")
         let files = ((try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.pathExtension == "xctestrun" }
-        var owners = [String: String]()
+        var owners = [String: Set<String>]()
         for file in files {
             guard let data = try? Data(contentsOf: file),
                   let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any]
@@ -257,10 +257,11 @@ public final class XcodebuildRunner: TestRunner, @unchecked Sendable {
             }
             for entry in entries {
                 guard let bundle = entry.path.components(separatedBy: "/").last(where: { $0.hasSuffix(".xctest") }) else { continue }
-                owners[String(bundle.dropLast(".xctest".count))] = entry.target
+                owners[String(bundle.dropLast(".xctest".count)), default: []].insert(entry.target)
             }
         }
-        return owners
+        // Two targets can build bundles of one name, in different folders: such a name ties to no target.
+        return owners.compactMapValues { $0.count == 1 ? $0.first : nil }
     }
 
     /// The `.xctest` bundles that `build-for-testing` made, by the target's name. A test target can be inside a host app,

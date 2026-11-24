@@ -41,10 +41,10 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
     private func makeXCTestRun(_ bundles: [String: String], in copy: URL, newFormat: Bool = false) throws {
         let products = copy.deletingLastPathComponent().appendingPathComponent("runner/DerivedData/Build/Products")
         try FileManager.default.createDirectory(at: products, withIntermediateDirectories: true)
-        let path = { (bundle: String) in "__TESTROOT__/Debug/\(bundle).xctest" }
+        let path = { (target: String, bundle: String) in "__TESTROOT__/\(target)/\(bundle).xctest" }
         let plist: [String: Any] = newFormat
-            ? ["TestConfigurations": [["TestTargets": bundles.map { ["BlueprintName": $0.key, "TestBundlePath": path($0.value)] }]]]
-            : bundles.mapValues { ["TestBundlePath": path($0)] }
+            ? ["TestConfigurations": [["TestTargets": bundles.map { ["BlueprintName": $0.key, "TestBundlePath": path($0.key, $0.value)] }]]]
+            : Dictionary(uniqueKeysWithValues: bundles.map { ($0.key, ["TestBundlePath": path($0.key, $0.value)]) })
         try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
             .write(to: products.appendingPathComponent("Scheme_iphonesimulator.xctestrun"))
     }
@@ -220,6 +220,23 @@ final class XcodebuildRunnerTargetTests: TemporaryFolderTestCase {
         _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
         _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
         XCTAssertEqual(testedTargets(swapped, call: 2), ["B"], "Swapped products: `A.xctest` is B's, not A's")
+    }
+
+    func testABundleNameThatTwoTargetsBuildTiesToNoTarget() throws {
+        let copy = try makeCopy()
+        try makeBundle("A", features: ["Features/Voting.feature"], in: copy)
+        try makeBundle("B", features: ["Features/Other.feature"], in: copy, macOS: false)
+        let swiftFile = copy.appendingPathComponent("Tests/B/RetiringFeature.swift").path
+        let dsl = ScenarioID(uri: swiftFile, line: 12, name: "A senior can retire")
+        for newFormat in [false, true] {
+            // Both targets build a `Shared.xctest`, in folders of their own: the name can't say which one ran the scenario.
+            try makeXCTestRun(["A": "Shared", "B": "Shared"], in: copy, newFormat: newFormat)
+            let shared = measuringCommands(bundle: "Shared", features: [swiftFile])
+            let runner = XcodebuildRunner(target: target, commands: shared)
+            _ = runner.test(in: copy, request: TestRequest(measuresCoverage: true))
+            _ = runner.test(in: copy, request: TestRequest(scenarios: [dsl]))
+            XCTAssertEqual(testedTargets(shared, call: 2), ["A", "B"], "`Shared` has two owners (new format: \(newFormat))")
+        }
     }
 
     func testEveryTargetRunsWhenNoXCTestRunFileTiesALearnedBundleToATarget() throws {
