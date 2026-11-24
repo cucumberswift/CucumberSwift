@@ -22,6 +22,7 @@ extension Cucumber: @retroactive StepImplementation {
     }
 
     public func setupSteps() {
+        addVotingInSwift()
         Given("a person aged {int}") { match, _ in
             World.age = try match.first(\.int)
         }

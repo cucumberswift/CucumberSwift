@@ -21,15 +21,19 @@ let package = Package(
     targets: [
         // The code that mutation testing changes.
         .target(name: "Voting"),
-        // Runs the Voting feature with XCTest.
+        // Runs the Voting feature, and a feature written in Swift, with XCTest.
         .testTarget(
             name: "VotingTests",
             dependencies: ["Voting", .product(name: "CucumberSwift", package: "CucumberSwift")],
             resources: [.copy("Features")]),
-        // Runs the Retiring feature with Swift Testing.
+        // Runs the Retiring feature, and a feature written in Swift with the macros, with Swift Testing.
         .testTarget(
             name: "VotingSwiftTests",
-            dependencies: ["Voting", .product(name: "CucumberSwiftTesting", package: "CucumberSwift")],
+            dependencies: [
+                "Voting",
+                .product(name: "CucumberSwiftTesting", package: "CucumberSwift"),
+                .product(name: "CucumberSwiftTestingMacros", package: "CucumberSwift")
+            ],
             exclude: ["Features"],
             plugins: [.plugin(name: "CucumberSwiftTestingPlugin", package: "CucumberSwift")])
     ]

@@ -4,10 +4,36 @@
 //
 
 #if Macros
+import SwiftDiagnostics
+import SwiftParser
+import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 @testable import CucumberSwiftMacrosPlugin
+
+/// A context that locates any node: the line is its offset in the source, the column is 7, in `file`.
+private final class LocatingContext: MacroExpansionContext {
+    let file: String
+    var lexicalContext: [Syntax] { [] }
+
+    init(file: String) { self.file = file }
+
+    func makeUniqueName(_ name: String) -> TokenSyntax { .identifier(name) }
+
+    func diagnose(_ diagnostic: Diagnostic) {}
+
+    func location(
+        of node: some SyntaxProtocol,
+        at position: PositionInSyntaxNode,
+        filePathMode: SourceLocationFilePathMode
+    ) -> AbstractSourceLocation? {
+        AbstractSourceLocation(
+            file: "\(literal: file)",
+            line: "\(literal: node.positionAfterSkippingLeadingTrivia.utf8Offset)",
+            column: "7")
+    }
+}
 
 /// Each container macro of the Swift DSL expands to the call it stands for, with the same arguments and the line
 /// and column of its opening parenthesis, and `#Feature` its file, before its contents.
@@ -35,6 +61,65 @@ final class DSLContainerMacroTests: XCTestCase {
             }
             """,
             macros: macros)
+    }
+
+    /// The compiler expands a macro inside a container from the container's expansion, counting its lines from there, so
+    /// the container writes onto it the position that it has in the Swift file, which it then uses. (swift-syntax 600's
+    /// test context can't locate a macro inside another, so the container's side is tested by the fixture that compiles
+    /// features written with the macros, and its position in the reports.)
+    func testAMacroWithAPositionFromItsContainerUsesIt() {
+        assertMacroExpansion(
+            """
+            /*cucumberswift-position:4:14:/Tests/Checkout.swift*/ #Scenario("Buy") {
+                /*cucumberswift-position:5:15:/Tests/Checkout.swift*/ #Given(I: shop())
+            }
+            """,
+            expandedSource: """
+            /*cucumberswift-position:4:14:/Tests/Checkout.swift*/ Scenario("Buy", line: 4, column: 14) {
+                /*cucumberswift-position:5:15:/Tests/Checkout.swift*/ #Given(I: shop())
+            }
+            """,
+            macros: ["Scenario": DSLScenarioMacro.self])
+    }
+
+    /// A path with `/*` or `%` in it is written onto the marker encoded, so the comment stays one comment.
+    func testAMarkerKeepsAFilePathWithACommentDelimiterInIt() {
+        let file = "/tmp/*checkout/100%/Tests/Feature.swift"
+        let encoded = PositionMarker.encoded(file)
+        XCTAssertFalse(encoded.contains("/*") || encoded.contains("*/"), encoded)
+        XCTAssertEqual(encoded, "/tmp/%2Acheckout/100%25/Tests/Feature.swift")
+        assertMacroExpansion(
+            """
+            /*cucumberswift-position:4:14:\(encoded)*/ #Scenario("Buy") {
+            }
+            """,
+            expandedSource: """
+            /*cucumberswift-position:4:14:\(encoded)*/ Scenario("Buy", line: 4, column: 14) {
+            }
+            """,
+            macros: ["Scenario": DSLScenarioMacro.self])
+    }
+
+    /// swift-syntax 600's test context can't locate a token inside a macro, so the container's side of the marker is run
+    /// here with a context that can: it places each token at the line of its offset and the column 7, in a file whose path
+    /// has a `*` in it. The container writes onto each macro in its contents the position that the context gives it.
+    func testAContainerWritesTheFilePositionOntoEachMacroInItsContents() throws {
+        let source = "#Scenario(\"Buy\") {\n    #Given(I: shop())\n    #When(I: pay())\n    #Background {\n    }\n}"
+        let tree = Parser.parse(source: source)
+        let found = tree.tokens(viewMode: .sourceAccurate).compactMap { $0.parent?.as(MacroExpansionExprSyntax.self) }
+        let scenario = try XCTUnwrap(found.first { $0.macroName.text == "Scenario" })
+        let context = LocatingContext(file: "/Pkg/*checkout/Tests/F.swift")
+        let expansion = try DSLScenarioMacro.expansion(of: scenario, in: context)
+        let text = expansion.description
+        func marker(of name: String) throws -> String {
+            let node = try XCTUnwrap(found.first { $0.macroName.text == name })
+            let paren = try XCTUnwrap(node.leftParen)
+            let line = paren.positionAfterSkippingLeadingTrivia.utf8Offset
+            return "/*cucumberswift-position:\(line):7:/Pkg/%2Acheckout/Tests/F.swift*/ #\(name)"
+        }
+        XCTAssertTrue(text.contains(try marker(of: "Given")), text)
+        XCTAssertTrue(text.contains(try marker(of: "When")), text)
+        XCTAssertEqual(text.components(separatedBy: "/*cucumberswift-position:").count - 1, 2, "No marker on #Background: \(text)")
     }
 
     // One macro at a time: SwiftSyntax's test support reports a macro nested in another with the same

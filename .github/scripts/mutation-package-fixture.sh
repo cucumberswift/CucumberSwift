@@ -37,21 +37,33 @@ cd "$repo"
 python3 .github/scripts/mutation_fixture.py "$fixture" "$reports" "$log"
 
 # Both runners' scenarios must be in each run's Cucumber report: the XCTest target's (Voting) and the
-# Swift Testing target's (Retiring). Each killed mutant then names the scenarios that failed on it.
+# Swift Testing target's (Retiring), each as a feature file and as a feature written in Swift. Each killed mutant then
+# names the scenarios that failed on it, and a Swift scenario by its file from the package's folder and its line, as
+# `Tests/VotingTests/SwiftFeature.swift:32`, not by the temporary folder that the run copied the package to.
 python3 -I - "$reports" <<'PYTHON'
 import json, os, sys
 
 reports = sys.argv[1]
 with open(os.path.join(reports, "cucumber-baseline.json"), encoding="utf-8") as f:
     features = sorted(feature["name"] for feature in json.load(f))
-if features != ["Retiring", "Voting"]:
-    sys.exit(f"::error::MutationTestingPackage: the baseline report has the features {features}, not Retiring and Voting")
+expected = ["Retiring", "Retiring in Swift", "Voting", "Voting in Swift"]
+if features != expected:
+    sys.exit(f"::error::MutationTestingPackage: the baseline report has the features {features}, not {expected}")
 with open(os.path.join(reports, "mutation-report.json"), encoding="utf-8") as f:
     report = json.load(f)
+swift_scenarios = {"Tests/VotingTests/SwiftFeature.swift:32", "Tests/VotingTests/SwiftFeature.swift:36",
+                   "Tests/VotingSwiftTests/SwiftFeature.swift:33", "Tests/VotingSwiftTests/SwiftFeature.swift:37"}
+named = set()
 for name, entry in report["files"].items():
     for mutant in entry["mutants"]:
+        named.update(mutant.get("coveredBy", []))
         if mutant["status"] == "Killed" and not mutant.get("killedBy"):
             line = mutant["location"]["start"]["line"]
             sys.exit(f"::error::MutationTestingPackage: no scenario is named as killing the mutant at {name}:{line}")
-print("MutationTestingPackage: each run's report has both runners' scenarios.")
+if not swift_scenarios <= named:
+    sys.exit(f"::error::MutationTestingPackage: the report names {sorted(named)} as running the code, not {sorted(swift_scenarios)} among them")
+absolute = sorted(path for path in report.get("testFiles", {}) if path.startswith("/"))
+if absolute:
+    sys.exit(f"::error::MutationTestingPackage: the report names test files by their path in the temporary copy: {absolute}")
+print("MutationTestingPackage: each run's report has both runners' scenarios, written in feature files and in Swift.")
 PYTHON

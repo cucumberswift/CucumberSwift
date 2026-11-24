@@ -65,6 +65,34 @@ final class ScenarioListTests: XCTestCase {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Tests.xctest/Basket.feature", line: 2, environment: environment))
     }
 
+    func testASwiftScenarioIsNamedByItsFileFromThePackagesFolderWhereverThePackageIs() {
+        // Outside the mutation-test tool's copy, a Swift scenario's feature is its file's absolute path.
+        let uri = "/Users/me/Shop/Tests/ShopTests/BasketFeature.swift"
+        let environment = ["CUCUMBER_SCENARIOS": "Tests/ShopTests/BasketFeature.swift:12"]
+        XCTAssertTrue(ScenarioList.runs(feature: uri, line: 12, environment: environment))
+        XCTAssertFalse(ScenarioList.runs(feature: uri, line: 13, environment: environment))
+        func runs(_ feature: String, _ entry: String) -> Bool {
+            ScenarioList.runs(feature: feature, line: 12, environment: ["CUCUMBER_SCENARIOS": entry])
+        }
+        let other = "/Users/me/Shop/Tests/OtherTests/BasketFeature.swift"
+        XCTAssertFalse(runs(other, "Tests/ShopTests/BasketFeature.swift:12"), "Another folder")
+        XCTAssertFalse(runs("/Users/me/Shop/XTests/ShopTests/BasketFeature.swift", "ests/ShopTests/BasketFeature.swift:12"),
+                       "A whole folder name")
+        XCTAssertTrue(runs(uri, "BasketFeature.swift:12"), "The file name alone")
+        XCTAssertFalse(runs("/x/OtherShopTests/BasketFeature.swift", "ShopTests/BasketFeature.swift:12"),
+                       "Not the end of a folder's name")
+        XCTAssertTrue(runs(uri, "\(uri):12"), "The absolute path, exactly")
+        XCTAssertFalse(runs("file:///x/Tests.xctest/Tests/ShopTests/Basket.feature", "Basket.feature:12"),
+                       "A feature file is read exactly")
+    }
+
+    func testAnAbsoluteEntryStillSelectsASwiftScenarioInTheMutationCopy() {
+        let file = "/tmp/mutation-copy-42-a1b2c3d4/package/Tests/F.swift"
+        XCTAssertTrue(ScenarioList.runs(feature: file, line: 12, environment: ["CUCUMBER_SCENARIOS": "\(file):12"]), "Absolute")
+        XCTAssertTrue(ScenarioList.runs(feature: file, line: 12, environment: ["CUCUMBER_SCENARIOS": "Tests/F.swift:12"]), "Relative")
+        XCTAssertFalse(ScenarioList.runs(feature: file, line: 13, environment: ["CUCUMBER_SCENARIOS": "\(file):12"]), "Other line")
+    }
+
     func testAnEmptyListRunsNoScenario() {
         XCTAssertFalse(ScenarioList.runs(feature: "file:///x/Basket.feature", line: 2, environment: ["CUCUMBER_SCENARIOS": ""]))
     }
