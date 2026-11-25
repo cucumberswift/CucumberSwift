@@ -126,7 +126,7 @@ bazel run @cucumberswift//cli:cucumberswift-cli -- mutation-test \
   --bazel-target //Shop:ShopTests --sources Shop/Sources
 ```
 
-`bazel run` starts the command in a folder of its own, so the command takes your workspace from the `BUILD_WORKSPACE_DIRECTORY` variable that `bazel run` sets. Pass `--root` to test another workspace. The test target must be a macOS unit test bundle that runs your scenarios with the XCTest runner. It needs CucumberSwift 6.9.2 or later, because the command measures coverage as <doc:Running-Tests-With-Bazel#Measure-code-coverage> describes for `bazel coverage`.
+`bazel run` starts the command in a folder of its own, so the command takes your workspace from the `BUILD_WORKSPACE_DIRECTORY` variable that `bazel run` sets. Pass `--root` to test another workspace. The test target must be a macOS unit test bundle that runs your scenarios with the XCTest runner. It needs CucumberSwift 6.9.0 or later, because the command measures coverage as <doc:Running-Tests-With-Bazel#Measure-code-coverage> describes for `bazel coverage`.
 
 The command copies your workspace to a temporary folder, as <doc:#Know-that-your-files-are-safe> describes for a package. In the copy, it builds the test target once with `bazel build` and code coverage on, then runs `bazel test` on it without a change. For each mutant, it builds the copy with the change and runs `bazel test` again. Every `bazel` command of the run uses one disk cache, in `~/Library/Caches/CucumberSwiftMutation/bazel-disk-cache`, so a new copy doesn't build everything again. When the run ends, the command runs `bazel clean --expunge` on the copy. That command stops the copy's Bazel server and deletes its output base, which Bazel keeps outside the copy.
 
