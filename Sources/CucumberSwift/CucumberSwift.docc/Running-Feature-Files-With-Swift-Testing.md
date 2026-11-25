@@ -13,7 +13,7 @@ In a unit test target, you can run your feature files with Swift Testing instead
 
 - A suite for each feature.
 - A test for each Scenario.
-- A parameterized test for each Scenario Outline, with 1 test case for each row of its Examples tables.
+- A suite for each Scenario Outline, with a test for each row of its Examples tables.
 
 Xcode's test navigator shows every feature and scenario before anything runs. You can run a single scenario from Xcode, with `swift test --filter`, or with `xcodebuild -only-testing`.
 
@@ -150,6 +150,60 @@ extension Cucumber: @retroactive StepImplementation {
 
 Xcode's test report shows the attachment under the scenario, and `swift test --attachments-path` writes it to a folder. An attachment added in `AfterFeature` is under the feature. The JSON report doesn't include attachments, as with CucumberSwift. `Attach` needs Swift 6.2, the first version with attachments in Swift Testing. With Swift 6.1, calling `Attach` is a compile error, so you can't lose an attachment without noticing. To keep supporting Swift 6.1, put the call between `#if compiler(>=6.2)` and `#endif`, as the example does.
 
+### Set up a scenario from its tags
+
+`Cucumber.mapTags` turns a scenario's tags into Swift Testing scoping traits. Register a closure in `setupSteps()`. The closure takes the scenario's tags and returns the traits that the scenario runs in:
+
+```swift
+import CucumberSwiftTestingMacros
+import Testing
+
+struct ExampleWorld: Sendable {
+    @TaskLocal static var current: ExampleWorld?
+    var cukes = 10
+}
+
+/// Runs a scenario with an example world as its test data.
+struct FixturesTrait: TestTrait, TestScoping {
+    let world: ExampleWorld
+
+    func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+        try await ExampleWorld.$current.withValue(world) {
+            try await function()
+        }
+    }
+}
+
+extension TestScoping where Self == FixturesTrait {
+    static func fixtures(_ world: ExampleWorld) -> Self { Self(world: world) }
+}
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        Cucumber.mapTags { tags in
+            tags.contains("@fixtures:exampleWorld") ? [.fixtures(ExampleWorld())] : []
+        }
+        #Given("the example world has {int} cukes") { (count: Int) in
+            #expect(ExampleWorld.current?.cukes == count)
+        }
+    }
+}
+```
+
+The runner calls the closure once for each scenario, and once for each example of a Scenario Outline. The tags are the feature's, then the Rule's, the scenario's and the Examples block's, each once and with its `@`, such as `["@fixtures:exampleWorld"]`. The first trait in the array is the outermost scope. A scenario runs in this order:
+
+1. The traits' setup, from the first trait to the last.
+2. The `BeforeScenario` hooks.
+3. The steps, with their `BeforeStep` and `AfterStep` hooks.
+4. The `AfterScenario` hooks.
+5. The traits' clean-up, from the last trait to the first.
+
+The steps and hooks see what the traits set up, including task-local values such as `ExampleWorld.current`. Every trait's clean-up runs, even after a step fails. Each scenario gets its own scopes, with parallel testing on or off.
+
+A closure that throws, or a trait that throws before the scenario starts, fails the scenario's first step at its line in the feature file. The scenario's hooks and steps then don't run, and the other scenarios still run. Without `Cucumber.mapTags`, no scenario runs in a scope from its tags.
+
+Each scenario's test has a `GherkinTagsTrait` with the same tags. A step or a hook reads them from `Test.current?.traits`. The XCTest runner doesn't support this, because XCTest has no traits.
+
 ### Without the macros
 
 Each macro expands to a step definition that you can also write yourself, with `Given`, `When`, `Then`, `And`, `But` or `MatchAll` and a closure that takes the `Match` and the `Step`. The macros are the recommended style. Use this form when you can't use them:
@@ -177,7 +231,7 @@ This form needs no package trait, so it works in an Xcode project with Xcode 16.
 
 Each scenario is a test, named after its title in camel case. For example, the scenario "Pay with a gift card" in the feature "Checkout" is `CucumberFeatures/Checkout/PayWithAGiftCard(_:)`. Xcode's test navigator and test reports show the titles as you wrote them, such as "Pay with a gift card". A repeated name gets `_2`, `_3` and so on.
 
-As with CucumberSwift, each step is a test of its own. The scenario's test has a test case for each step, named as CucumberSwift names the step's test, such as `3 › Then the total is 99`, or `Step002_ThenTheTotalIs99` with `Cucumber.readableTestNames` off. An example of a Scenario Outline adds `Example (line 7)` before the step's name. The test navigator and the test report give a result for each step.
+As with CucumberSwift, each step is a test of its own. The scenario's test has a test case for each step, named as CucumberSwift names the step's test, such as `3 › Then the total is 99`, or `Step002_ThenTheTotalIs99` with `Cucumber.readableTestNames` off. A step of an example of a Scenario Outline adds `Example (line 7)` before the step's name. The test navigator and the test report give a result for each step.
 
 A scenario's `BeforeScenario` hooks run with its first step, and its `AfterScenario` hooks with its last. Running 1 step alone runs the steps before it. Once a step fails, the later steps don't run. With Swift 6.3, they're reported as cancelled. Before Swift 6.3, Swift Testing can't skip a test case from inside it, so they pass without running.
 
@@ -192,9 +246,14 @@ swift test --filter PayWithAGiftCard
 xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithAGiftCard(_:)'
 ```
 
-A Scenario Outline is 1 test, and each example is one of its test cases. Each example is named after the line of its row, such as `Example (line 17)`, so its results stay on its row when you change a value. Xcode can run a single example from the test navigator. `xcodebuild -only-testing` can select only the whole outline. Given a test case, it runs nothing, and still succeeds.
+A Scenario Outline is a suite, and each example is a test in it, so each example runs in the scopes of its own tags (see <doc:#Set-up-a-scenario-from-its-tags>). The tests are named `Example 1`, `Example 2` and so on, in the order of the rows, and their functions `Example1(_:)`, `Example2(_:)`. Changing a value in a row doesn't rename its test, and neither does adding a line above it. Adding or removing a row renumbers the examples after it. You can select a whole outline or one example:
 
-`CUCUMBER_TAGS` works as it does with CucumberSwift. It takes a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios are reported as skipped. An outline whose examples are all left out runs no test cases, and Swift Testing reports that as a pass.
+```bash
+swift test --filter 'PayWithACard/Example2'
+xcodebuild test -scheme MyApp -only-testing:'MyAppTests/CucumberFeatures/Checkout/PayWithACard/Example2(_:)'
+```
+
+`CUCUMBER_TAGS` works as it does with CucumberSwift. It takes a comma-separated list of regular expressions, and a scenario runs when any of its tags matches any of them. The other scenarios and examples are reported as skipped.
 
 Scenarios run one at a time, in the order of the feature files, as with CucumberSwift. This applies only to the scenarios. Your target's other Swift Testing tests can run at the same time as them. To run scenarios at the same time, see <doc:#Run-scenarios-in-parallel>.
 
@@ -341,7 +400,7 @@ extension Cucumber: @retroactive StepImplementation {
 
 The options work like this:
 
-- **`shouldRunWith(scenario:tags:)`** decides in code which scenarios run. The runner calls it once for each scenario, before any scenario runs, after it calls `setupSteps()` if that hasn't happened yet. It doesn't call it when `CUCUMBER_TAGS` is set. Xcode shows a scenario that it leaves out as skipped, as it does with `CUCUMBER_TAGS`. An example of a Scenario Outline that it leaves out isn't a test case at all, as with `CUCUMBER_TAGS`.
+- **`shouldRunWith(scenario:tags:)`** decides in code which scenarios run. The runner calls it once for each scenario, before any scenario runs, after it calls `setupSteps()` if that hasn't happened yet. It doesn't call it when `CUCUMBER_TAGS` is set. Xcode shows a scenario or an example of a Scenario Outline that it leaves out as skipped, as it does with `CUCUMBER_TAGS`.
 - **`reverseOrderForAfterHooks`** runs the `AfterFeature`, `AfterScenario` and `AfterStep` hooks in the reverse of their usual order.
 - **`asyncStepTimeout`** is how many seconds a step or a hook may run, 60 by default. A step or hook that suspends for longer is cancelled and fails on its line in the feature file, if what it awaits ends when it's cancelled. The runner waits for it to finish. As in CucumberSwift, the timeout applies only to a step or a hook that suspends. One that blocks the main actor can't be interrupted, and isn't failed.
 - **`continueTestingAfterFailure`** is described in <doc:#After-a-failed-assertion>.
@@ -526,7 +585,7 @@ You can test both targets with 1 scheme. To move a unit test target:
 
 ## Differences from the XCTest runner
 
-The Swift Testing runner does everything the XCTest runner does, with these exceptions:
+The Swift Testing runner and the XCTest runner differ in these ways:
 
 1. **No UI testing.** Swift Testing doesn't support `XCUIApplication`, so you can use it only for unit tests. This is a known limitation of Swift Testing that Apple describes in [Meet Swift Testing](https://developer.apple.com/videos/play/wwdc2024/10179/).
 2. **`continueTestingAfterFailure`.** This is the setting for fail-fast mode. By default, it's `true`, and both runners let a step run to its end after a failed assertion. To fail fast, return `false` from `continueTestingAfterFailure` in your `StepImplementation`, as the example below does. XCTest then stops the step at its first failed assertion. Swift Testing can't stop the step's code part way at a failed `#expect`. So check `continueTestingAfterFailure` in the step. Use `#expect` when it's `true`, and `try #require` when it's `false`, because it stops the step at once. See <doc:#After-a-failed-assertion>.
@@ -585,6 +644,8 @@ The Swift Testing runner does everything the XCTest runner does, with these exce
    The container is safe to use from any task of the step. The value you keep in it isn't made safe for you. Steps run on the main actor, so a plain class works. If you pass the value to other tasks, make it `Sendable`, for example an `actor`.
 
 4. **The Info.plist keys `FeaturesPath` and `FeatureScenarioDelimiter`.** The plugin finds the feature files in the test target's folder, whatever value `FeaturesPath` has. The runner reads `FeaturesPath` only to map the files to the bundled files for the report's URIs. It doesn't read `FeatureScenarioDelimiter`. Support for both is planned ([#462](https://github.com/cucumberswift/CucumberSwift/issues/462)).
+
+5. **Tags as scoping traits.** Only the Swift Testing runner runs a scenario in the scopes of traits that its tags map to, with `Cucumber.mapTags`. XCTest has no traits. See <doc:#Set-up-a-scenario-from-its-tags>.
 
 <doc:Settings#Settings-that-work-differently> has more on the settings. <doc:#Requirements> lists the Swift version limits.
 

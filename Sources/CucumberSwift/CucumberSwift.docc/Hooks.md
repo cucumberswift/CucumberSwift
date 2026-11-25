@@ -127,6 +127,36 @@ BeforeScenario { scenario in
 
 An async hook's closure runs on the main actor, at the same point as a synchronous hook. CucumberSwift waits for each one to finish before it goes on, so hooks and steps never run in parallel. A thrown error fails the test at the hook. The `asyncStepTimeout` described in <doc:Matching-Steps#Async-steps> applies to hooks too. Each kind of hook runs its async and synchronous hooks together, in `priority` order (see <doc:Hooks#Hook-order>).
 
+### Scopes from tags with Swift Testing
+
+`Cucumber.mapTags` runs each scenario in Swift Testing scoping traits that its tags map to. Register it in `setupSteps()`. Only the Swift Testing runner supports it, because XCTest has no traits:
+
+```swift
+import CucumberSwiftTestingMacros
+import Testing
+
+extension Cucumber: @retroactive StepImplementation {
+    public func setupSteps() {
+        Cucumber.mapTags { tags in
+            tags.contains("@fixtures:exampleWorld") ? [.fixtures(ExampleWorld())] : []
+        }
+        #BeforeScenario { (scenario: Scenario) in
+            // Runs inside the scope, so it sees ExampleWorld.current.
+        }
+    }
+}
+```
+
+A scenario then runs in this order:
+
+1. The traits' setup, from the first trait to the last.
+2. The `BeforeScenario` hooks.
+3. The steps, with their `BeforeStep` and `AfterStep` hooks.
+4. The `AfterScenario` hooks.
+5. The traits' clean-up, from the last trait to the first.
+
+<doc:Running-Feature-Files-With-Swift-Testing#Set-up-a-scenario-from-its-tags> shows the `fixtures` trait that the example uses, and what happens when a trait fails.
+
 ### Feature hooks in a parallel run
 
 Each worker runs `BeforeFeature` and `AfterFeature` for the features it runs when scenarios run in parallel. When `AfterFeature` runs depends on which worker executes which test classes. See <doc:Running-Scenarios-In-Parallel#Feature-hooks>.
