@@ -79,8 +79,7 @@ public struct GherkinTagsTrait: TestTrait, TestScoping {
     /// wraps fails the scenario at its first step instead, inside the scopes around it.
     private func nest(_ scopes: ArraySlice<any TestScoping>, for test: Test, around function: @Sendable () async throws -> Void) async throws {
         guard let scope = scopes.first else {
-            try await function()
-            await endScenario()
+            try await runAndEndScenario(function)
             return
         }
         let entered = Entered()
@@ -99,9 +98,19 @@ public struct GherkinTagsTrait: TestTrait, TestScoping {
         let message = "A scope for the tags \(tags.joined(separator: " ")) failed: "
             + ((error as? any LocalizedError)?.errorDescription ?? String(describing: error))
         try await ScenarioContext.$scopeFailure.withValue(message) {
-            try await function()
-            await endScenario()
+            try await runAndEndScenario(function)
         }
+    }
+
+    /// Runs `function`, then ends the scenario inside the scopes, also when `function` throws.
+    private func runAndEndScenario(_ function: @Sendable () async throws -> Void) async throws {
+        do {
+            try await function()
+        } catch {
+            await endScenario()
+            throw error
+        }
+        await endScenario()
     }
 
     /// Ends the scenario inside the scopes, if its last case didn't, such as when only some of its steps' tests ran.

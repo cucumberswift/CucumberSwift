@@ -197,4 +197,23 @@ extension CucumberTests {
         }
         #expect(log.entries == ["fixtures setup", "after scenario in fixtures", "fixtures clean-up"])
     }
+
+    @Test func aScenarioWhoseTestThrowsAfterItsFirstCaseEndsInsideItsScopes() async throws {
+        useOneTestPerScenario(false)
+        defer { useOneTestPerScenario(nil) }
+        let log = ScopeLog()
+        Cucumber.mapTags { _ in [LoggingScope(name: "fixtures", log: log)] }
+        AfterScenario { _ in log.append("after scenario in \(ScopeValue.name ?? "no scope")") }
+        Given("a {int}") { _, _ in }
+        let scenario = tagged(["f"], steps: [step(.given, "a 1", line: 3), step(.given, "a 2", line: 4)])
+        let test = try #require(Test.current)
+
+        await #expect(throws: ScopeError.self) {
+            try await GherkinTagsTrait.gherkinTags(of: scenario).provideScope(for: test, testCase: nil) {
+                try await Cucumber.shared.run(Cucumber.shared.casesToRun(scenario)[0])
+                throw ScopeError()
+            }
+        }
+        #expect(log.entries == ["fixtures setup", "after scenario in fixtures", "fixtures clean-up"])
+    }
 }
