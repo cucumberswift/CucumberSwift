@@ -61,7 +61,8 @@ extension CucumberTests {
             featureTags: ["f"],
             title: "S \(line)",
             tags: tags,
-            file: "/Features/Test.feature",
+            // The feature file of the suite's other scenarios.
+            file: scenario([]).file,
             line: line,
             column: 3,
             steps: steps)
