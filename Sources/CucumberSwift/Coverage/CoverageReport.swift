@@ -78,7 +78,8 @@ struct CoverageReport {
     /// The time the redundant scenarios took, of all the scenarios' time, such as ", about 4.2 s of 12.6 s
     /// in redundant scenarios", or nothing with the redundancy score off or no scenario redundant.
     static func wasted(_ scores: CoverageScores) -> String {
-        guard let wasted = scores.wastedTime, let redundancy = scores.redundancy, redundancy > 0 else { return "" }
+        // Not the score: with mutation testing it also counts overlapping scenarios, which aren't redundant.
+        guard let wasted = scores.wastedTime, scores.scenarios.contains(where: \.addsNothing) else { return "" }
         return ", about \(seconds(wasted)) of \(seconds(scores.duration)) in redundant scenarios"
     }
 
