@@ -2,7 +2,7 @@
 //  ScenarioCase.swift
 //  CucumberSwiftTesting
 //
-// What the generated tests run. A scenario's test is parameterized, because Swift Testing names its tests with
+// What the generated tests run. A scenario's test, and each example's of a Scenario Outline, is parameterized, because Swift Testing names its tests with
 // literals when they build, and names a test case when they run, which is when `Cucumber.readableTestNames`
 // and `Cucumber.oneTestPerScenario` are known. With CucumberSwift's default, a test for each step, each case
 // is a step; with `oneTestPerScenario`, the scenario is one case. They are public only so that the generated
@@ -55,7 +55,14 @@ extension Cucumber {
         cases(of: scenario, label: nil)
     }
 
-    /// The cases of the examples of a Scenario Outline that run, as ``shouldRun(_:)`` decides for each.
+    /// The cases of an example of a Scenario Outline, which its generated test takes as its arguments. They are
+    /// named after the example's row, as `Example (line 7) › 1 › Given a basket`.
+    public func casesToRun(_ example: GherkinExample) -> [ScenarioCase] {
+        cases(of: example.scenario, label: example.testDescription)
+    }
+
+    /// The cases of the examples of a Scenario Outline that run, as ``shouldRun(_:)`` decides for each. Code
+    /// generated before each example became a test of its own passes them all to one test.
     public func casesToRun(_ examples: [GherkinExample]) -> [ScenarioCase] {
         examplesToRun(examples).flatMap { cases(of: $0.scenario, label: $0.testDescription) }
     }

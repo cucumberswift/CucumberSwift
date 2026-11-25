@@ -5,6 +5,7 @@
 // The settings the runner reads besides CUCUMBER_TAGS, named as in CucumberSwift.
 
 import Foundation
+import Testing
 
 /// What runs together when scenarios run at the same time. See ``Cucumber/parallelTestingUnit``.
 public enum ParallelTestingUnit: String, Sendable {
@@ -19,6 +20,9 @@ public enum ParallelTestingUnit: String, Sendable {
 /// from any isolation, and don't warn in a consumer's Swift 6 target, as stored ones on a main-actor
 /// class would.
 enum CucumberSettings {
+    /// What ``Cucumber/mapTags(_:)`` registers: a scenario's tags to the traits whose scopes it runs in.
+    typealias TagMapping = @Sendable ([String]) throws -> [any TestScoping]
+
     private final class Storage: @unchecked Sendable {
         private let lock = NSLock()
         private var storedReportPath: String?
@@ -30,6 +34,20 @@ enum CucumberSettings {
         private var storedGenerateRegexLiterals: Bool?
         private var flags = [String: Bool]()
         private var storedCoveragePath: String?
+        private var storedTagMapping: TagMapping?
+
+        var tagMapping: TagMapping? {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storedTagMapping
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storedTagMapping = newValue
+            }
+        }
 
         var coveragePath: String? {
             get {
@@ -150,6 +168,12 @@ enum CucumberSettings {
     }
 
     private static let storage = Storage()
+
+    /// The closure ``Cucumber/mapTags(_:)`` registered, if any.
+    static var tagMapping: TagMapping? {
+        get { storage.tagMapping }
+        set { storage.tagMapping = newValue }
+    }
 
     static let reportPathEnvironmentKey = "CUCUMBER_REPORT_PATH"
     static let reportStaleAfterEnvironmentKey = "CUCUMBER_REPORT_STALE_AFTER"

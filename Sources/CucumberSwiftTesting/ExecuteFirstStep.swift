@@ -12,6 +12,9 @@ import Testing
 /// scenarios running side by side each see their own.
 enum ScenarioContext {
     @TaskLocal static var gherkinScenario: GherkinScenario?
+    /// Why a scope of the scenario's tags failed before the scenario started, so that its first step fails and
+    /// nothing else of it runs. See ``GherkinTagsTrait``.
+    @TaskLocal static var scopeFailure: String?
 }
 
 /// From inside a step or a hook, runs the first step definition that matches `matching` and waits for it.
