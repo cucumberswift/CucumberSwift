@@ -141,6 +141,16 @@ final class MutationAwareRedundancyTests: XCTestCase {
         XCTAssertTrue(issues.contains { $0.message.contains("are redundant or overlap another, by the code they run after the Background and the mutants they detect") })
     }
 
+    func testTheSummaryOfScenariosThatOnlyOverlapLeavesOutTheRedundantTime() {
+        // Both overlap, so the redundancy is 100%, but neither is redundant: removing either would lose something.
+        let scores = CoverageScores(scenarios: [scenario(4, [0, 1, 2]), scenario(9, [0, 1])],
+                                    code: code,
+                                    isRedundancy: true,
+                                    detections: detections([9: ["m1"]]))
+        let header = CoverageReport(scores: scores, settings: CoverageSettings()).summary(name: "Basket").components(separatedBy: "\n")[0]
+        XCTAssertTrue(header.hasSuffix(", redundancy 100%"), header)
+    }
+
     func testAMutationAwareRedundantScenarioSaysItDetectsNothingNew() {
         let scores = CoverageScores(scenarios: [scenario(4, [0, 1]), scenario(9, [0, 1])],
                                     code: code,
