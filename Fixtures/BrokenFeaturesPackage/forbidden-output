@@ -1,0 +1,3 @@
+# Text `mise run test-fixtures` fails on if this fixture's test output contains it, one line each.
+# The step after a failed assertion must not run, with either runner.
+The step after a failed assertion ran

@@ -88,6 +88,16 @@ expect_all() {
     fi
   done
 }
+# Fails if any line of $1, other than comments and blank lines, is in the output $2.
+expect_none() {
+  grep -v '^#' "$1" | while IFS= read -r forbidden; do
+    [ -z "$forbidden" ] && continue
+    if grep -qF "$forbidden" "$2"; then
+      echo "error: $name: the output contains, as $(basename "$1") forbids: $forbidden"
+      exit 1
+    fi
+  done
+}
 # Runs a command with the fixture's Xcode, if it names one.
 with_xcode() {
   if [ -n "$developer_dir" ]; then DEVELOPER_DIR="$developer_dir" "$@"; else "$@"; fi
@@ -187,6 +197,8 @@ for fixture in Fixtures/*/; do
       -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO "$@" > "$log" 2>&1 || status=$?
   fi
   cat "$log"
+  # A forbidden-output file lists text that must not be in the output, such as the failure of a step that must not run.
+  if [ -f "$fixture/forbidden-output" ]; then expect_none "$fixture/forbidden-output" "$log"; fi
   if [ -f "$fixture/expected-failures" ]; then
     if [ "$status" -eq 0 ]; then
       echo "error: $name: its tests passed, but they should fail with each failure in expected-failures"
