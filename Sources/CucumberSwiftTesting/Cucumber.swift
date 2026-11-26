@@ -62,6 +62,8 @@ public final class Cucumber {
         var isStopped = false
         /// Why a step skipped the scenario, by throwing `XCTSkip` or calling `Test.cancel`.
         var skipReason: String?
+        /// Whether a scope of the scenario's tags failed, so that none of its hooks run.
+        var isScopeFailed = false
         init(_ gherkin: GherkinScenario, scenario: Scenario, featureRun: FeatureRun) {
             self.gherkin = gherkin
             self.scenario = scenario
@@ -250,8 +252,10 @@ public final class Cucumber {
         // BeforeFeature and BeforeScenario hooks fail the scenario's first step in XCTest, which is the current
         // step while they run, and the later steps are skipped.
         let featureHookFailure = featureRun.takeStartFailure()
-        let scenarioHookFailure = await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record)
-        if let beforeFailure = featureHookFailure ?? scenarioHookFailure {
+        recordScopeFailure(of: progress)
+        let scenarioHookFailure = progress.isScopeFailed ? nil
+            : await runHooks(beforeScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record)
+        if let beforeFailure = featureHookFailure ?? ScenarioContext.scopeFailure ?? scenarioHookFailure {
             progress.isFailed = true
             progress.isStopped = true
             if let first = scenario.steps.first { reportFailed(first, beforeFailure) }
@@ -277,7 +281,7 @@ public final class Cucumber {
         startedScenarios[Self.key(of: progress.gherkin)] = nil
         let (scenario, file) = (progress.scenario, progress.gherkin.file)
         var isFailed = progress.isFailed
-        if await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record, reversed: reversesAfterHooks) != nil {
+        if !progress.isScopeFailed, await runHooks(afterScenarioHooks, with: scenario, at: scenario.location, in: file, record: progress.record, reversed: reversesAfterHooks) != nil {
             isFailed = true
         }
         scenario.internalState.removeAll()
@@ -535,6 +539,26 @@ extension Cucumber {
 
 // In this file, for the runner's private types; outside the class, which is long enough.
 extension Cucumber {
+    /// Ends a scenario that its test started and that its last case didn't end, such as when only some of its
+    /// steps' tests ran, so that its `AfterScenario` hooks run inside the scopes of its tags.
+    func endIfStarted(_ gherkinScenario: GherkinScenario) async {
+        guard let progress = startedScenarios[Self.key(of: gherkinScenario)] else { return }
+        await ScenarioContext.$gherkinScenario.withValue(gherkinScenario) {
+            _ = await end(progress)
+        }
+    }
+
+    /// Fails the scenario's first step, at its line, when a scope of the scenario's tags failed, so that none of
+    /// its hooks run. See ``GherkinTagsTrait``.
+    private func recordScopeFailure(of progress: ScenarioProgress) {
+        guard let scopeFailure = ScenarioContext.scopeFailure else { return }
+        progress.isScopeFailed = true
+        let gherkin = progress.gherkin
+        let first = gherkin.steps.first
+        let location = Location(line: first?.line ?? gherkin.line, column: first?.column ?? gherkin.column)
+        Issue.record(Comment(rawValue: scopeFailure), sourceLocation: Self.sourceLocation(gherkin.file, location))
+    }
+
     /// `Cucumber.parallelTesting` set in `setupSteps()` is read when Swift Testing discovers the tests, if
     /// that happens on the main thread, which is where `setupSteps()` can run then. If it can't be read
     /// in time, the scenarios run one at a time and this says so once, without failing the run.

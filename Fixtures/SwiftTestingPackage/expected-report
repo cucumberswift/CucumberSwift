@@ -8,6 +8,7 @@ Rules
 Feature hooks and attachments
 Counting cukes
 Hook macros
+Tag scopes
 I can eat fruit
 Swift DSL
 Checkout with XCTest
