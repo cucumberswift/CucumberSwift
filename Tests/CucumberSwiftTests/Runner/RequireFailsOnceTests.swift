@@ -77,5 +77,63 @@ class RequireFailsOnceTests: XCTestCase {
     func testAFailedRequireFailsItsStepWhenNothingElseDid() throws {
         XCTAssertTrue(Cucumber.reportsError(try requireError(), afterFailure: false))
     }
+
+    // MARK: executeFirstStep
+
+    /// The failures counted while a test replaces `Cucumber.failureCounter`. A step definition whose `#require`
+    /// failed raises it, as Swift Testing's issue does through XCTest's interop.
+    private static let failures = Locked(0)
+
+    /// Defines a step whose `#require` failed and one that throws, in a feature that uses both.
+    private func defineFailingSteps() throws {
+        Cucumber.shared.reset()
+        Cucumber.failureCounter.withLock { $0 = { _ in Self.failures.snapshot } }
+        Self.failures.withLock { $0 = 0 }
+        addTeardownBlock {
+            Cucumber.shared.reset()
+            Cucumber.failureCounter.withLock { $0 = { $0?.testRun?.totalFailureCount ?? 0 } }
+        }
+        Cucumber.shared.parseIntoFeatures("""
+        Feature: Failing steps
+           Scenario: Steps that fail
+             When a requirement fails
+             And a step throws
+        """)
+        let error = try requireError()
+        When("a requirement fails") { _, _ in
+            Self.failures.withLock { $0 += 1 }
+            throw error
+        }
+        When("a step throws") { _, _ in throw StepError() }
+    }
+
+    func testExecuteFirstStepDoesNotFailAgainForAFailedRequire() throws {
+        try defineFailingSteps()
+        Cucumber.shared.executeFirstStep(matching: "a requirement fails")
+        XCTAssertEqual(Self.failures.snapshot, 1)
+    }
+
+    @MainActor
+    func testAsyncExecuteFirstStepDoesNotFailAgainForAFailedRequire() async throws {
+        try defineFailingSteps()
+        await Cucumber.shared.executeFirstStep(matching: "a requirement fails")
+        XCTAssertEqual(Self.failures.snapshot, 1)
+    }
+
+    func testExecuteFirstStepFailsForAnError() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        try defineFailingSteps()
+        XCTExpectFailure("The step throws") {
+            Cucumber.shared.executeFirstStep(matching: "a step throws")
+        }
+    }
+
+    @MainActor
+    func testAsyncExecuteFirstStepFailsForAnError() async throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        try defineFailingSteps()
+        XCTExpectFailure("The step throws")
+        await Cucumber.shared.executeFirstStep(matching: "a step throws")
+    }
     #endif
 }

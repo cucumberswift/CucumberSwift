@@ -273,7 +273,7 @@ import XCTest
         if matches.count > 1 {
             XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
         } else {
-            XCTAssertNoThrow(try definition.execute?(matching, step))
+            Self.failOnError(in: currentStep?.testCase) { try definition.execute?(matching, step) }
         }
     }
 
@@ -289,6 +289,9 @@ import XCTest
             XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
             return
         }
+        let testCase = currentStep?.testCase
+        let failureCount = Self.failureCounter.snapshot
+        let failuresBefore = failureCount(testCase)
         do {
             if let executeAsync = definition.executeAsync {
                 try await executeAsync(matching, step)
@@ -296,6 +299,8 @@ import XCTest
                 try definition.execute?(matching, step)
             }
         } catch {
+            // A failed `try #require` has already failed the test, as in `failOnError`.
+            guard Self.reportsError(error, afterFailure: failureCount(testCase) > failuresBefore) else { return }
             XCTFail("ExecuteFirstStep threw error \"\(error)\"")
         }
     }
@@ -469,8 +474,12 @@ extension Cucumber {
                             file: StaticString = #filePath,
                             line: UInt = #line,
                             _ body: () throws -> Void) {
-        failOnError(failureCount: { testCase?.testRun?.totalFailureCount ?? 0 }, file: file, line: line, body)
+        let count = failureCounter.snapshot
+        failOnError(failureCount: { count(testCase) }, file: file, line: line, body)
     }
+
+    /// Counts the failures a test has recorded. Tests replace it, so that a failure counts without failing them.
+    static let failureCounter = Locked<(XCTestCase?) -> Int> { $0?.testRun?.totalFailureCount ?? 0 }
 
     /// Like `failOnError(in:file:line:_:)`, with the test's failures counted by `failureCount`.
     static func failOnError(failureCount: () -> Int, file: StaticString, line: UInt, _ body: () throws -> Void) {
