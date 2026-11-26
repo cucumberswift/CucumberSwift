@@ -28,6 +28,13 @@ class RequireFailsOnceTests: XCTestCase {
         Cucumber.failOnError(in: self) {}
     }
 
+    func testAStepThatThrowsFails() throws {
+        guard #available(iOS 14.0, macOS 11.0, tvOS 14.0, *) else { throw XCTSkip("XCTExpectFailure needs iOS 14") }
+        XCTExpectFailure("The step throws") {
+            Cucumber.failOnError(in: self) { throw StepError() }
+        }
+    }
+
     #if canImport(Testing)
     /// What a failed `try #require` throws. Its failure is expected, and isn't recorded at all where XCTest
     /// has no interop with Swift Testing, as on Xcode 16.
@@ -52,6 +59,17 @@ class RequireFailsOnceTests: XCTestCase {
 
     func testAFailedRequireDoesNotFailItsStepAgain() throws {
         XCTAssertFalse(Cucumber.reportsError(try requireError(), afterFailure: true))
+    }
+
+    // The step fails once: the failure Swift Testing recorded counts, and the error it then threw doesn't fail
+    // this test.
+    func testAStepWhoseRequireFailedIsNotFailedAgainForItsError() throws {
+        let error = try requireError()
+        var failures = 0
+        Cucumber.failOnError(failureCount: { failures }, file: #filePath, line: #line) {
+            failures += 1
+            throw error
+        }
     }
 
     // Without XCTest's interop with Swift Testing nothing failed the step, so the error must.

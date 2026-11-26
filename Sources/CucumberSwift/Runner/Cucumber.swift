@@ -469,12 +469,16 @@ extension Cucumber {
                             file: StaticString = #filePath,
                             line: UInt = #line,
                             _ body: () throws -> Void) {
-        let failuresBefore = testCase?.testRun?.totalFailureCount ?? 0
+        failOnError(failureCount: { testCase?.testRun?.totalFailureCount ?? 0 }, file: file, line: line, body)
+    }
+
+    /// Like `failOnError(in:file:line:_:)`, with the test's failures counted by `failureCount`.
+    static func failOnError(failureCount: () -> Int, file: StaticString, line: UInt, _ body: () throws -> Void) {
+        let failuresBefore = failureCount()
         do {
             try body()
         } catch {
-            let hasFailed = (testCase?.testRun?.totalFailureCount ?? 0) > failuresBefore
-            guard reportsError(error, afterFailure: hasFailed) else { return }
+            guard reportsError(error, afterFailure: failureCount() > failuresBefore) else { return }
             XCTAssertNoThrow(try { throw error }(), file: file, line: line)
         }
     }
