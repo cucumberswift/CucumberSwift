@@ -87,11 +87,12 @@ class RequireFailsOnceTests: XCTestCase {
     /// Defines a step whose `#require` failed and one that throws, in a feature that uses both.
     private func defineFailingSteps() throws {
         Cucumber.shared.reset()
+        let originalCounter = Cucumber.failureCounter.snapshot
         Cucumber.failureCounter.withLock { $0 = { _ in Self.failures.snapshot } }
         Self.failures.withLock { $0 = 0 }
         addTeardownBlock {
             Cucumber.shared.reset()
-            Cucumber.failureCounter.withLock { $0 = { $0?.testRun?.totalFailureCount ?? 0 } }
+            Cucumber.failureCounter.withLock { $0 = originalCounter }
         }
         Cucumber.shared.parseIntoFeatures("""
         Feature: Failing steps
