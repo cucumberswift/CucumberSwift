@@ -482,14 +482,15 @@ public final class Cucumber {
 // MARK: Skips and hooks
 
 extension Cucumber {
-    /// Why a step skipped its scenario, when the error is a skip: an `XCTSkip`, as in CucumberSwift, or what
-    /// `Test.cancel` throws. That type isn't public, so it is known by its name, and its comment is the reason.
     /// Whether Swift Testing has already recorded the issue behind `error`: a failed `try #require` records
     /// its failure and then throws `ExpectationFailedError`, so recording the error again reports it twice.
+    /// That type isn't public, so it is known by its name.
     static func isAlreadyRecorded(_ error: any Error) -> Bool {
         String(reflecting: type(of: error)) == "Testing.ExpectationFailedError"
     }
 
+    /// Why a step skipped its scenario, when the error is a skip: an `XCTSkip`, as in CucumberSwift, or what
+    /// `Test.cancel` throws. That type isn't public, so it is known by its name, and its comment is the reason.
     static func skipReason(of error: any Error) -> String? {
         #if canImport(XCTest)
         if let skip = error as? XCTSkip { return skip.message ?? "Skipped" }

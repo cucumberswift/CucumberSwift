@@ -32,4 +32,32 @@ extension CucumberTests {
         #expect(!Cucumber.isAlreadyRecorded(CancellationError()))
         #expect(!Cucumber.isAlreadyRecorded(ExpectationFailedError()))
     }
+
+    @Test func aStepWhoseRequirementFailsRecordsOneIssue() async {
+        Given("a requirement fails") { _, _ in try #require(1 == 2, "required on purpose") }
+        var comments = [String]()
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a requirement fails", line: 3)]))
+        } matching: { issue in
+            comments.append(issue.comments.map(\.rawValue).joined())
+            return true
+        }
+        #expect(comments.count == 1)
+        #expect(comments.first?.contains("required on purpose") == true)
+    }
+
+    @available(*, deprecated) // runs ExecuteFirstStep on purpose
+    @Test func aRequirementThatFailsInExecuteFirstStepRecordsOneIssue() async {
+        Given("a basket") { _, _ in await ExecuteFirstStep(matching: "a requirement fails") }
+        When("a requirement fails") { _, _ in try #require(1 == 2, "required on purpose") }
+        var comments = [String]()
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a basket", line: 3)]))
+        } matching: { issue in
+            comments.append(issue.comments.map(\.rawValue).joined())
+            return true
+        }
+        #expect(comments.count == 1)
+        #expect(comments.first?.contains("required on purpose") == true)
+    }
 }

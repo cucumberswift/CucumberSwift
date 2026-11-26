@@ -63,8 +63,10 @@ extension Cucumber {
                         in: scenario)
         do {
             try await runWithTimeout(record: running.record) { try await match.body(step) }
-        } catch {
+        } catch where !Cucumber.isAlreadyRecorded(error) {
             Issue.record(Comment(rawValue: "ExecuteFirstStep threw error \"\(error)\""), sourceLocation: running.location)
+        } catch {
+            // A failed `try #require` in the nested step has already recorded its issue.
         }
     }
 }
