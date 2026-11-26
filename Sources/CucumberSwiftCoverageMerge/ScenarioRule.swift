@@ -1,0 +1,1 @@
+../CucumberSwift/Coverage/ScenarioRule.swift

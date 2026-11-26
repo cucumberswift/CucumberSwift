@@ -85,6 +85,13 @@ enum FeatureFlags {
         return trimmed?.isEmpty == false ? trimmed : nil
     }
 
+    /// How long the report can go unwritten before it is taken for an earlier run's: the static variable,
+    /// then `CUCUMBER_REPORT_STALE_AFTER`, then 10 minutes.
+    static var reportStaleAfter: TimeInterval {
+        FeatureFlagValue.reportStaleAfter(setting: Cucumber.reportStaleAfter,
+                                          environment: Cucumber.shared.environment["CUCUMBER_REPORT_STALE_AFTER"])
+    }
+
     /// Whether coverage is set on or off: the static variable, then `CUCUMBER_COVERAGE`. Nil for `auto`, the
     /// default, as `AUTO` or no value gives.
     static var coverageSetting: Bool? {
@@ -107,6 +114,7 @@ enum FeatureFlags {
 
     static let storage = Storage<Bool>()
     static let stringStorage = Storage<String>()
+    static let intervalStorage = Storage<TimeInterval>()
     static let parallelTestingUnitStorage = Locked<ParallelTestingUnit?>(nil)
 
     /// `scenario` or `feature`, in any case. Any other value is not a setting.
@@ -214,6 +222,20 @@ extension Cucumber {
     public static var reportPath: String? {
         get { FeatureFlags.stringStorage["reportPath"] }
         set { FeatureFlags.stringStorage["reportPath"] = newValue }
+    }
+
+    /// How long the Cucumber JSON report can go unwritten before CucumberSwift takes it for an earlier run's,
+    /// in seconds: 600, which is 10 minutes, by default. A test process that starts when no other process
+    /// of its run is running, and that none of the other rules in <doc:Generating-Reports#One-report-for-each-test-run>
+    /// decides, empties a report older than this. Set this, or the environment variable
+    /// `CUCUMBER_REPORT_STALE_AFTER`, to a number above 0 that is longer than the time between one test
+    /// target ending and the next starting, such as 1800 for a slow build between targets, or shorter than
+    /// the time between two runs that you start by hand, so that a rerun in Xcode replaces the report. A
+    /// value that isn't a number above 0 is ignored. This variable, when set, wins over the environment
+    /// variable. Set it in your `StepImplementation`'s `setupSteps()`.
+    public static var reportStaleAfter: TimeInterval? {
+        get { FeatureFlags.intervalStorage["reportStaleAfter"] }
+        set { FeatureFlags.intervalStorage["reportStaleAfter"] = newValue }
     }
 
     /// Whether CucumberSwift measures each scenario's code coverage, and scores each feature. `nil`, the

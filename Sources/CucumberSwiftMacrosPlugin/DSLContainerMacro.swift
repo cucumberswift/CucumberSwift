@@ -4,6 +4,7 @@
 //
 
 #if Macros
+import Foundation
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -21,6 +22,7 @@ enum DSLContainer {
     /// fixed that), so there the column is counted on from the macro to the parenthesis.
     static func location(of node: some FreestandingMacroExpansionSyntax,
                          in context: some MacroExpansionContext) -> AbstractSourceLocation? {
+        if let marked = PositionMarker.location(in: node) { return marked }
         guard let paren = node.leftParen else {
             return context.location(of: node, at: .afterLeadingTrivia, filePathMode: .filePath)
         }
@@ -45,7 +47,19 @@ enum DSLContainer {
                           withFile: Bool,
                           withPosition: Bool = true) -> ExprSyntax {
         DSLPlacement.reportStepDefinitions(in: node, context: context)
-        var arguments = Array(node.arguments)
+        // A macro inside the container is expanded from the container's expansion, where the compiler counts its lines
+        // from the start of that expansion, so the container writes each one's position, in the Swift file, onto it first.
+        let marking = !PositionMarker.isMarked(node)
+        func marked(_ expression: ExprSyntax) -> ExprSyntax {
+            marking ? PositionMarker.marked(expression, in: context) : expression
+        }
+        func marked(_ closure: ClosureExprSyntax) -> ClosureExprSyntax {
+            ClosureExprSyntax(marked(ExprSyntax(closure))) ?? closure
+        }
+        var arguments = Array(node.arguments).map { $0.with(\.expression, marked($0.expression)) }
+        let trailingClosure = node.trailingClosure.map(marked)
+        let additionalTrailingClosures = MultipleTrailingClosureElementListSyntax(
+            node.additionalTrailingClosures.map { $0.with(\.closure, marked($0.closure)) })
         if withPosition {
             let location = location(of: node, in: context)
             var position: [LabeledExprSyntax] = [
@@ -72,8 +86,8 @@ enum DSLContainer {
             leftParen: .leftParenToken(),
             arguments: list,
             rightParen: .rightParenToken(),
-            trailingClosure: node.trailingClosure,
-            additionalTrailingClosures: node.additionalTrailingClosures)
+            trailingClosure: trailingClosure,
+            additionalTrailingClosures: additionalTrailingClosures)
         return ExprSyntax(call)
     }
 }
@@ -99,6 +113,67 @@ public struct DSLPartMacro: ExpressionMacro {
     public static func expansion(of node: some FreestandingMacroExpansionSyntax,
                                  in context: some MacroExpansionContext) throws -> ExprSyntax {
         DSLContainer.expansion(of: node, in: context, withFile: false, withPosition: false)
+    }
+}
+
+/// The position, in the Swift file, of a DSL macro inside another one's contents, written onto the macro as a comment
+/// before it: `/*cucumberswift-position:16:13:/path/File.swift*/ #Scenario(…)`. The container macro that holds it
+/// writes the comment, because only its own node is in the Swift file: its contents' macros expand from its expansion.
+enum PositionMarker {
+    static let prefix = "/*cucumberswift-position:"
+    /// The macros that have no position to write.
+    static let unpositioned: Set<String> = ["Background", "Description"]
+
+    /// The marker of `node`, if the macro around it wrote one.
+    static func location(in node: some FreestandingMacroExpansionSyntax) -> AbstractSourceLocation? {
+        for piece in node.pound.leadingTrivia.reversed() {
+            guard case .blockComment(let text) = piece, text.hasPrefix(prefix), text.hasSuffix("*/") else { continue }
+            let parts = text.dropFirst(prefix.count).dropLast(2).split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+            guard parts.count == 3, let line = Int(parts[0]), let column = Int(parts[1]) else { return nil }
+            guard let file = String(parts[2]).removingPercentEncoding else { return nil }
+            return AbstractSourceLocation(file: "\(literal: file)", line: "\(literal: line)", column: "\(literal: column)")
+        }
+        return nil
+    }
+
+    /// A file path to write in a comment: Swift counts the `/*` and `*/` in a block comment, so a path that has either one
+    /// (a folder named `*checkout`) would leave the comment unterminated. The `*` and `%` are written as `%2A` and `%25`.
+    static func encoded(_ file: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove("*")
+        return file.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+    }
+
+    static func isMarked(_ node: some FreestandingMacroExpansionSyntax) -> Bool { location(in: node) != nil }
+
+    /// `syntax` with a marker on each macro in it that has none, at its position in the Swift file.
+    static func marked(_ syntax: ExprSyntax, in context: some MacroExpansionContext) -> ExprSyntax {
+        MarkingRewriter(context: context).rewrite(Syntax(syntax)).cast(ExprSyntax.self)
+    }
+}
+
+private final class MarkingRewriter: SyntaxRewriter {
+    let context: any MacroExpansionContext
+
+    init(context: any MacroExpansionContext) {
+        self.context = context
+        super.init()
+    }
+
+    override func visit(_ node: MacroExpansionExprSyntax) -> ExprSyntax {
+        let visited = super.visit(node)
+        // A part with no position, and a step definition, which is reported as an error, take no marker.
+        let name = node.macroName.text
+        guard !PositionMarker.unpositioned.contains(name),
+              !(DSLPlacement.stepNames.contains(name) && DSLPlacement.isStepDefinition(node.arguments)),
+              !PositionMarker.isMarked(node), var expansion = visited.as(MacroExpansionExprSyntax.self),
+              let location = DSLContainer.location(of: node, in: context),
+              let line = location.line.as(IntegerLiteralExprSyntax.self)?.literal.text,
+              let column = location.column.as(IntegerLiteralExprSyntax.self)?.literal.text,
+              let file = location.file.as(StringLiteralExprSyntax.self)?.representedLiteralValue else { return visited }
+        let marker = Trivia(pieces: [.blockComment("\(PositionMarker.prefix)\(line):\(column):\(PositionMarker.encoded(file))*/"), .spaces(1)])
+        expansion.pound = expansion.pound.with(\.leadingTrivia, expansion.pound.leadingTrivia + marker)
+        return ExprSyntax(expansion)
     }
 }
 #endif

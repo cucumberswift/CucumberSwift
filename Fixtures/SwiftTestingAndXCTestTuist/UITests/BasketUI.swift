@@ -6,6 +6,7 @@
 //  to this file, so that the two fixtures differ only in how they write step definitions.
 //
 
+import CucumberSwift
 import XCTest
 
 /// Drives the app with XCUITest. Synchronous, as XCUITest expects: its calls wait on the main run loop
@@ -24,6 +25,24 @@ enum BasketUI {
                 app.buttons[button].tap()
             }
         }
+    }
+
+    /// Attaches a screenshot of the app to the running test, as a medium quality JPEG. A passing test
+    /// keeps it only when the test plan says to keep every attachment (Proof.xctestplan).
+    static func attachScreenshot(named name: String) {
+        MainActor.assumeIsolated {
+            let attachment = XCTAttachment(screenshot: app.screenshot(), quality: .medium)
+            attachment.name = name
+            Attach(attachment)
+        }
+    }
+
+    /// Attaches text to the running test, as a plain text file. Like a screenshot, a passing test keeps
+    /// it only when the test plan says to keep every attachment (Proof.xctestplan).
+    static func attachText(_ text: String, named name: String) {
+        let attachment = XCTAttachment(string: text)
+        attachment.name = name
+        Attach(attachment)
     }
 
     /// The cuke count the app shows, found by its identifier whatever kind of element SwiftUI makes of

@@ -143,7 +143,7 @@ Xcode passes the command the targets you choose in its dialog, and what you add 
 
 To narrow a conversion in Xcode, follow these steps:
 
-1. Select the project or package, or the target that holds the file or folder.
+1. Select the project or package, or the target that contains the file or folder.
 2. In the command's dialog, open **Arguments**, click **+**, and type `--path` followed by a path relative to the project folder, such as `--path Tests/MyAppTests/Checkout`.
 3. Keep the argument's checkbox ticked. To report only, add `--dry-run` in the same way.
 
@@ -163,7 +163,7 @@ The command converts hook calls, such as `BeforeScenario { … }`, to their macr
 
 It also converts the step definitions of every macro keyword, including localized ones such as ``ES_Dado``. A step definition can have a trailing closure or `callback:`. Its pattern can be a string literal, with or without `as CucumberExpression` (the macro adds it itself), or a regex literal.
 
-The command converts a step definition when its closure reads each parameter from `match` in its first statements, in the pattern's order, and uses `match` for nothing else. Reads such as `let count = try match.first(\.int)` and `let count: Int = match[\.int, index: 0]` qualify. Those statements become the closure's arguments, and the macro expands to the same step definition as before. If you wrote a type on a read, the type stays. Otherwise the argument gets the type that the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are. The command adds `import CucumberSwiftMacros`, or `CucumberSwiftTestingMacros`, when the file doesn't import it.
+The command converts a step definition when its closure reads each parameter from `match` in its first statements, in the pattern's order, and uses `match` for nothing else. Reads such as `let count = try match.first(\.int)` and `let count: Int = match[\.int, index: 0]` qualify. Those statements become the closure's arguments, and the macro expands to the same step definition as the original call. If you wrote a type on a read, the type stays. Otherwise the argument gets the type that the pattern gives. Comments, formatting, a capture list, `async`, `throws` and other attributes stay as they are. The command adds `import CucumberSwiftMacros`, or `CucumberSwiftTestingMacros`, when the file doesn't import it.
 
 ### Before it changes anything
 

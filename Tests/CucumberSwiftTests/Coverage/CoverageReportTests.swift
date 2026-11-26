@@ -160,6 +160,19 @@ final class CoverageReportTests: XCTestCase {
         XCTAssertTrue(header.hasSuffix(", redundancy 50%, about 0.25 s of 0.75 s in redundant scenarios"), header)
     }
 
+    func testTheSummaryWithNoRedundantScenarioLeavesOutTheTime() {
+        var settings = CoverageSettings()
+        settings.isRedundancy = true
+        // Each scenario runs code the other doesn't, so neither is redundant.
+        let scenarios = [
+            CoverageScores.Scenario(name: "Classifying", line: 19, tags: [], duration: 0.5, regions: [0, 1, 2]),
+            CoverageScores.Scenario(name: "Dividing", line: 25, tags: [], duration: 0.25, regions: [0, 3, 4])
+        ]
+        let report = CoverageReport(scores: CoverageScores(scenarios: scenarios, code: code, isRedundancy: true), settings: settings)
+        let header = report.summary(name: "Arithmetic").components(separatedBy: "\n")[0]
+        XCTAssertTrue(header.hasSuffix(", redundancy 0%"), header)
+    }
+
     func testSecondsHaveTwoDecimalsBelowOneSecondAndOneAbove() {
         XCTAssertEqual(CoverageReport.seconds(0.042), "0.04 s")
         XCTAssertEqual(CoverageReport.seconds(4.24), "4.2 s")

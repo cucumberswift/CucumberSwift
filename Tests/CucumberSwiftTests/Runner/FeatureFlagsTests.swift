@@ -19,6 +19,7 @@ class FeatureFlagsTests: XCTestCase {
         "CUCUMBER_PARALLEL_TESTING",
         "CUCUMBER_PARALLEL_TESTING_UNIT",
         "CUCUMBER_REPORT_PATH",
+        "CUCUMBER_REPORT_STALE_AFTER",
         "CUCUMBER_COVERAGE",
         "CUCUMBER_COVERAGE_PATH"
     ]
@@ -31,6 +32,7 @@ class FeatureFlagsTests: XCTestCase {
         Cucumber.parallelTesting = nil
         Cucumber.parallelTestingUnit = nil
         Cucumber.reportPath = nil
+        Cucumber.reportStaleAfter = nil
         Cucumber.coverage = nil
         Cucumber.coveragePath = nil
         variables.forEach { Cucumber.shared.environment[$0] = nil }
@@ -75,6 +77,35 @@ class FeatureFlagsTests: XCTestCase {
         XCTAssertEqual(FeatureFlags.reportPath, "reports/from-code.json")
         Cucumber.reportPath = nil
         XCTAssertEqual(FeatureFlags.reportPath, "reports/from-environment.json")
+    }
+
+    func testTheReportIsStaleAfterTenMinutesByDefault() {
+        XCTAssertEqual(FeatureFlags.reportStaleAfter, 600)
+    }
+
+    func testTheReportStaleAfterComesFromTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_REPORT_STALE_AFTER"] = " 1800 "
+        XCTAssertEqual(FeatureFlags.reportStaleAfter, 1_800)
+    }
+
+    func testTheReportStaleAfterStaticVariableWinsOverTheEnvironmentVariable() {
+        Cucumber.shared.environment["CUCUMBER_REPORT_STALE_AFTER"] = "1800"
+        Cucumber.reportStaleAfter = 90
+        XCTAssertEqual(FeatureFlags.reportStaleAfter, 90)
+        Cucumber.reportStaleAfter = nil
+        XCTAssertEqual(FeatureFlags.reportStaleAfter, 1_800)
+    }
+
+    func testAReportStaleAfterThatIsNotANumberAboveZeroIsIgnored() {
+        for value in ["", "soon", "0", "-5", "inf", "nan", "10m"] {
+            Cucumber.shared.environment["CUCUMBER_REPORT_STALE_AFTER"] = value
+            XCTAssertEqual(FeatureFlags.reportStaleAfter, 600, value)
+        }
+        Cucumber.shared.environment["CUCUMBER_REPORT_STALE_AFTER"] = "1800"
+        for setting in [0, -1, TimeInterval.infinity, TimeInterval.nan] {
+            Cucumber.reportStaleAfter = setting
+            XCTAssertEqual(FeatureFlags.reportStaleAfter, 1_800, "\(setting)")
+        }
     }
 
     func testEmptyReportPathIsIgnored() {

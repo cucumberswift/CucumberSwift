@@ -143,6 +143,8 @@ extension CucumberTests {
         await Cucumber.shared.endSuite()
 
         #expect(try readReport(url).first?["uri"] as? String == URL(fileURLWithPath: scenario.file).absoluteString)
-        #expect(try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path) == ["report.json"])
+        // The report's lock files are beside it.
+        let files = try FileManager.default.contentsOfDirectory(atPath: url.deletingLastPathComponent().path)
+        #expect(files.filter { !$0.hasPrefix("report.json.") } == ["report.json"])
     }
 }

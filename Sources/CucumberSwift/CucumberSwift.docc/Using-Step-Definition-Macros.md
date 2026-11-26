@@ -238,7 +238,7 @@ extension Cucumber: @retroactive StepImplementation {
 }
 ```
 
-The macros work the same with both runners, including localized macros (see <doc:Using-Step-Definition-Macros#Keywords-in-other-languages>). <doc:Running-Feature-Files-With-Swift-Testing> describes the Swift Testing runner.
+The XCTest runner and the Swift Testing runner take the same macros, with the same compiler checks, including localized macros (see <doc:Using-Step-Definition-Macros#Keywords-in-other-languages>). <doc:Running-Feature-Files-With-Swift-Testing> describes the Swift Testing runner.
 
 ### Cucumber expressions
 
@@ -352,7 +352,7 @@ The **Convert to Gherkin Macros** command rewrites step definitions written with
 
 The command leaves these things for you to do:
 
-- **Set the project up first.** The command never edits `Package.swift`, `Project.swift` or the Xcode project, so turn the trait on and add the macros product as described above. Until you do, the command stops and says what to change.
+- **Set the project up first.** The command never edits `Package.swift`, `Project.swift` or the Xcode project, so turn the trait on and add the macros product first, as <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>, <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> or <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project> describes. Until you do, the command stops and says what to change.
 - **Convert what it leaves by hand.** The command marks each step definition that it can't convert with a `#warning` that gives the reason. <doc:Running-Tests-In-Xcode#What-it-leaves> lists the reasons.
 - **Trust the macros.** Xcode asks the first time you build the converted code (see <doc:Using-Step-Definition-Macros#Xcode-asks-you-to-trust-the-macros>).
 - **Review and build.** Check the changes with your version control, and build your tests. A macro reports a mistake that the original found only when the tests ran.
@@ -373,7 +373,7 @@ On a build server, nobody can answer Xcode's request to trust a macro. So pass `
 
 ### A macro reports that the Macros trait is off
 
-The trait isn't on for CucumberSwift, or your Xcode doesn't apply it. Turn it on as described above for your kind of project. In an Xcode project or a Tuist project, setting it on the package needs Xcode 26.4 or later. With an earlier Xcode, use the `MacrosTrait` local package (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>).
+The trait isn't on for CucumberSwift, or your Xcode doesn't apply it. Turn it on as <doc:Using-Step-Definition-Macros#Set-up-a-Swift-package>, <doc:Using-Step-Definition-Macros#Set-up-an-Xcode-project> or <doc:Using-Step-Definition-Macros#Set-up-a-Tuist-project> describes. In an Xcode project or a Tuist project, setting it on the package needs Xcode 26.4 or later. With an earlier Xcode, use the `MacrosTrait` local package (see <doc:Using-Step-Definition-Macros#Before-Xcode-264>).
 
 ### swift-syntax can't be resolved
 

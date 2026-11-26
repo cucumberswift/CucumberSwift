@@ -18,6 +18,13 @@ mkdir -p "$work/bin"
 cat > "$work/bin/xcrun" <<'EOF'
 #!/bin/bash
 if [[ "$1" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
+if [[ "$1" == "llvm-profdata" ]]; then echo "$*" >> "$FAKE_LLVM"; touch "${@: -1}"; exit 0; fi
+if [[ "$1" == "llvm-cov" ]]; then
+  echo "$*" >> "$FAKE_LLVM"
+  echo "SF:Fake.swift"
+  [[ -z "${FAKE_COV_STDERR-}" ]] || printf '%s\n' "$FAKE_COV_STDERR" >&2
+  exit "${FAKE_COV_STATUS:-0}"
+fi
 if [[ "$1" == "simctl" ]]; then
   echo "${*:2}" >> "$FAKE_SIMCTL"
   if [[ "$2" == "--sdk" ]]; then echo "$FAKE_SDK_VERSION"; exit 0; fi
@@ -35,6 +42,8 @@ fi
 printf '%s\n' "$@" > "$FAKE_ARGS"
 printf '%s' "${PROBE-unset}" > "$FAKE_PROBE"
 printf '%s' "${DEVELOPER_DIR-unset}" > "$FAKE_DEVELOPER_DIR"
+printf '%s' "${LLVM_PROFILE_FILE-unset}" > "$FAKE_PROFILE_FILE"
+if [[ -n "${FAKE_WRITE_PROFILE-}" && -n "${LLVM_PROFILE_FILE-}" ]]; then echo profile > "$LLVM_PROFILE_FILE"; fi
 printf "\t Executed %s tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds\n" "$FAKE_COUNT"
 exit "$FAKE_STATUS"
 EOF
@@ -50,6 +59,9 @@ probe="a,b=c,d"
 # The runner's bundle: the zip, unless a case sets it. The platform: macOS, unless a case sets it.
 bundle="$work/Fake.zip"
 platform="macos"
+
+# The coverage manifest rules_apple gives the runner: none, unless a case sets it.
+manifest=""
 
 # What `simctl list --json runtimes` prints: three watchOS runtimes, an unavailable newer one,
 # and an iOS one. The selected Xcode's watchOS SDK is FAKE_SDK_VERSION, 26.4 unless a case sets it.
@@ -80,11 +92,13 @@ run() {
     -e "s|%(test_host_path)s||" \
     -e "s|%(test_bundle_path)s|$bundle|" \
     -e "s|%(test_filter)s|$filter|" \
+    -e "s|%(test_coverage_manifest)s|$manifest|" \
     -e "s|__PLATFORM__|$platform|" \
     "$template" > "$work/runner.sh"
-  rm -f "$work/simctl" "$work/child_excluded"
+  rm -f "$work/simctl" "$work/child_excluded" "$work/llvm" "$work/profile_file"
   status=0
-  env -u TEST_PREMATURE_EXIT_FILE -u TESTBRIDGE_TEST_ONLY \
+  env -u TEST_PREMATURE_EXIT_FILE -u TESTBRIDGE_TEST_ONLY -u COVERAGE -u COVERAGE_OUTPUT_FILE -u COVERAGE_MANIFEST \
+    FAKE_LLVM="$work/llvm" FAKE_PROFILE_FILE="$work/profile_file" \
     PATH="$work/bin:$PATH" FAKE_ARGS="$work/args" FAKE_PROBE="$work/probe" FAKE_DEVELOPER_DIR="$work/developer_dir" \
     FAKE_SIMCTL="$work/simctl" FAKE_CHILD_EXCLUDED="$work/child_excluded" FAKE_RUNTIMES="$runtimes" \
     FAKE_SDK_VERSION=26.4 FAKE_COUNT=3 FAKE_STATUS=0 "$@" \
@@ -138,7 +152,51 @@ run "" TESTBRIDGE_TEST_ONLY="Mod.A,-Mod.B"
 run ""
 [[ ! -e "$work/simctl" ]] || fail "a macOS run used simctl: $(cat "$work/simctl")"
 
+# Without COVERAGE, xctest gets no profile file and no coverage tool runs.
+[[ "$(cat "$work/profile_file")" == "unset" && ! -e "$work/llvm" ]] || fail "a run without coverage set up coverage: $(cat "$work/profile_file")"
+
+# With COVERAGE=1 (bazel coverage), xctest writes its profile into a folder the runner owns, and the
+# runner turns it into the lcov file that Bazel collects.
+echo "$work/covered.swift" > "$work/manifest.txt"
+manifest="$work/manifest.txt"
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" COVERAGE_MANIFEST="$work/other-manifest.txt" FAKE_WRITE_PROFILE=1
+manifest=""
+[[ "$status" -eq 0 ]] || fail "a coverage run exited $status: $(cat "$work/err")"
+[[ "$(cat "$work/profile_file")" == */coverage.profraw ]] || fail "LLVM_PROFILE_FILE reached xctest as '$(cat "$work/profile_file")'"
+grep -q "^llvm-profdata merge .*coverage.profraw --output .*coverage.profdata" "$work/llvm" || fail "no profdata merge: $(cat "$work/llvm")"
+grep -q "^llvm-cov export -format lcov .* @$work/manifest.txt" "$work/llvm" || fail "the rule's coverage manifest wasn't used: $(cat "$work/llvm")"
+[[ "$(cat "$work/lcov.dat")" == "SF:Fake.swift" ]] || fail "no lcov report: $(cat "$work/lcov.dat" 2>&1)"
+
+# Without a manifest from the rule, Bazel's COVERAGE_MANIFEST is used.
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" COVERAGE_MANIFEST="$work/other-manifest.txt" FAKE_WRITE_PROFILE=1
+grep -q "^llvm-cov export .* @$work/other-manifest.txt" "$work/llvm" || fail "COVERAGE_MANIFEST wasn't used: $(cat "$work/llvm")"
+
+# A bundle with nothing built with coverage writes no profile: the test passes, with a warning and no report.
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat"
+[[ "$status" -eq 0 ]] || fail "a coverage run with no profile exited $status"
+grep -q "wrote no coverage profile" "$work/err" || fail "no warning: $(cat "$work/err")"
+[[ ! -e "$work/llvm" ]] || fail "a coverage tool ran with no profile: $(cat "$work/llvm")"
+
+# llvm-cov's warning that the binary is newer than the profile doesn't fail the test; any other message does.
+stale="warning: /x/Fake: profile data may be out of date - object is newer"
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STDERR="$stale"
+[[ "$status" -eq 0 ]] || fail "the out-of-date warning failed the run: $(cat "$work/err")"
+[[ "$(cat "$work/lcov.dat")" == "SF:Fake.swift" ]] || fail "no lcov report after the warning"
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STDERR="$stale"$'\n'"warning: 1 functions have mismatched data"
+[[ "$status" -ne 0 ]] || fail "another llvm-cov warning next to the out-of-date one passed"
+grep -q "mismatched data" "$work/err" || fail "the other warning wasn't shown: $(cat "$work/err")"
+
+# A failing export fails the test.
+run "" COVERAGE=1 COVERAGE_OUTPUT_FILE="$work/lcov.dat" FAKE_WRITE_PROFILE=1 FAKE_COV_STATUS=1
+[[ "$status" -ne 0 ]] || fail "a failing coverage export passed"
+grep -q "while exporting the coverage report" "$work/err" || fail "no export error: $(cat "$work/err")"
+
 platform="watchos"
+
+# Coverage is for macOS only.
+run "" COVERAGE=1
+[[ "$status" -ne 0 ]] || fail "a watchOS coverage run passed"
+grep -q "coverage on macOS only" "$work/err" || fail "no macOS-only error: $(cat "$work/err")"
 
 # A watchOS run makes a simulator of the newest available watchOS that is not newer than the
 # selected Xcode's watchOS SDK, boots it, runs the
