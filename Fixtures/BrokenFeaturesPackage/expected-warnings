@@ -8,3 +8,5 @@ BrokenSwiftTestingTests/Features/Broken.feature:6:5: warning: Undefined step: no
 BrokenSwiftTestingTests/Features/Broken.feature:9:7: warning: This row has 3 cells, but the table's first row (line 8) has 2
 BrokenXCTestTests/Features/Unsupported.feature:1:1: warning: CucumberSwift doesn't support the language 'xx'
 BrokenSwiftTestingTests/Features/Unsupported.feature:1:1: warning: CucumberSwift doesn't support the language 'xx'
+BrokenXCTestTests/StepDefinitions.swift:15:1: warning: This step definition can never match: CucumberExpression: "^an (unclosed anchored group$" starts with ^ or ends with $, so it is treated as a regular expression, but it is not valid as one: expected ')'. Remove the anchors, or write a valid regular expression.
+BrokenSwiftTestingTests/StepDefinitions.swift:12:1: warning: This step definition can never match: CucumberExpression: "^an (unclosed anchored group$" starts with ^ or ends with $, so it is treated as a regular expression, but it is not valid as one: expected ')'. Remove the anchors, or write a valid regular expression.

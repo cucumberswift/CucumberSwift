@@ -12,6 +12,10 @@ Each target has the same two files:
 - `Unsupported.feature`: a `# language:` that Gherkin doesn't have. Each runner fails it as a Gherkin
   error. (`CucumberSwiftLint` only checks English feature files.)
 
+Each target also has a `StepDefinitions.swift` with two step definitions whose regular expression doesn't
+compile, one in a `String` and one a Cucumber expression with anchors. Each runner fails at their lines there,
+with the same messages. (`CucumberSwiftLint` warns about the second.)
+
 Its tests are meant to fail. `mise run test-fixtures` requires them to, and requires every warning in
 `expected-warnings` and every failure in `expected-failures` to appear in the output. Don't fix the feature
 files: change the expectations when CucumberSwift's messages change.

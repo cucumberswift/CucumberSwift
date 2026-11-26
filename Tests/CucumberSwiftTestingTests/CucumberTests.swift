@@ -35,6 +35,7 @@ final class CucumberTests {
     init() {
         let cucumber = Cucumber.shared
         cucumber.definitions = []
+        cucumber.invalidDefinitions = []
         cucumber.beforeScenarioHooks = []
         cucumber.afterScenarioHooks = []
         cucumber.beforeStepHooks = []

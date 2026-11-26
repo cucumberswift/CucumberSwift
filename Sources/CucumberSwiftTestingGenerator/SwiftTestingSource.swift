@@ -122,14 +122,15 @@ enum SwiftTestingSource {
         return source + "}\n\n" + "// MARK: - What the tests run\n\n" + parallelTesting + gherkinProblems(problems) + data.source
     }
 
-    /// Records each problem in the feature files, as CucumberSwift's `testGherkin()` does.
+    /// Records each problem in the feature files, and each step definition whose regular expression doesn't
+    /// compile, as CucumberSwift's `testGherkin()` does.
     private static func gherkinProblems(_ problems: [(path: String, problem: String)]) -> String {
         let issues = problems.map { problem in
             let fileID = literal("Features/" + URL(fileURLWithPath: problem.path).lastPathComponent)
             let location = "SourceLocation(fileID: \(fileID), filePath: \(literal(problem.path)), line: 1, column: 1)"
             return "    Issue.record(\(literal(problem.problem)), sourceLocation: \(location))\n"
         }
-        return "private func cucumberGherkinProblems() {\n" + issues.joined() + "}\n"
+        return "@MainActor private func cucumberGherkinProblems() {\n    CucumberSwiftTesting.Cucumber.shared.reportInvalidStepDefinitions()\n" + issues.joined() + "}\n"
     }
 
     private static func suite(for feature: FeatureFile.Feature, named name: String, path: String, data: inout Data) -> String {

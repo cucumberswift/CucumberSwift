@@ -110,10 +110,17 @@ struct Hook<Argument> {
     let body: @MainActor (Argument) async throws -> Void
 
     var sourceLocation: SourceLocation {
-        let path = "\(file)"
+        SourceLocation(writtenIn: "\(file)", line: Int(line), folder: "Hooks")
+    }
+}
+
+extension SourceLocation {
+    /// Line `line` of the file at `path`, where a hook or step definition is written. The file ID is the file's
+    /// folder and name, or `folder` and its name if the path has no folder.
+    init(writtenIn path: String, line: Int, folder: String) {
         let components = path.split(separator: "/").suffix(2)
-        let fileID = components.count == 2 ? components.joined(separator: "/") : "Hooks/\(components.joined())"
-        return SourceLocation(fileID: fileID, filePath: path, line: max(Int(line), 1), column: 1)
+        let fileID = components.count == 2 ? components.joined(separator: "/") : "\(folder)/\(components.joined())"
+        self.init(fileID: fileID, filePath: path, line: max(line, 1), column: 1)
     }
 }
 
