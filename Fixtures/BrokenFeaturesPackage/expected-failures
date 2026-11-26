@@ -14,6 +14,8 @@ Assertions.feature:4: error: -[Failing assertions › An XCTest assertion fails 
 Assertions.feature:8: error: -[Failing assertions › An expectation fails its step 1 › When an expectation fails] : Expectation failed: 1 == 2: expect failed on purpose
 Assertions.feature:12: error: -[Failing assertions › A requirement fails its step 1 › When a requirement fails] : Expectation failed: 1 == 2: require failed on purpose
 Assertions.feature:16: error: -[Failing assertions › A recorded issue fails its step 1 › When an issue is recorded] : Issue recorded: issue recorded on purpose
+# The XCTest runner fails each step once: 7 failures in all, without a second one for the error #require throws.
+Executed 14 tests, with 5 tests skipped and 7 failures (0 unexpected)
 # The Swift Testing runner: #expect, #require and Issue.record, at their lines in the feature file.
 ✘ Test "An expectation fails its step" recorded an issue with 1 argument testCase → 1 › When an expectation fails at Assertions.feature:4:5
 ✘ Test "A requirement fails its step" recorded an issue with 1 argument testCase → 1 › When a requirement fails at Assertions.feature:8:5

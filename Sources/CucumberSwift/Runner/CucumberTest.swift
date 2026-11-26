@@ -433,13 +433,13 @@ extension Step {
     /// Runs the step. One that throws `XCTSkip` skips its scenario: it and the steps after it don't run.
     fileprivate func runSkippingScenarioOnXCTSkip() {
         var skip: XCTSkip?
-        XCTAssertNoThrow(try {
+        Cucumber.failOnError(in: testCase) {
             do {
                 try self.run()
             } catch let thrown as XCTSkip {
                 skip = thrown
             }
-        }())
+        }
         if let skip = skip {
             recordSkip(skip)
         }
