@@ -8,8 +8,8 @@ import Foundation
 
 /// The Swift Testing source for a target's feature files: one suite for all of them, serialized as
 /// CucumberSwift runs one scenario at a time unless `CUCUMBER_PARALLEL_TESTING` says otherwise; in it a
-/// suite per feature; in that a test per Scenario, and a parameterized test per Scenario Outline, with a
-/// test case per example.
+/// suite per feature; in that a test per Scenario, and a suite per Scenario Outline with a test per example.
+/// Each test is parameterized, with a test case per step, or one for the whole scenario.
 enum SwiftTestingSource {
     /// A parsed feature file and its path.
     struct Input {
@@ -169,12 +169,13 @@ enum SwiftTestingSource {
                 backgroundStepCount: scenario.backgroundStepCount)
             let constant = data.add("Scenario", gherkinScenario(parts, of: feature, path: path, indent: 0))
             return """
-                    @Test(\(displayName).serialized, .enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(constant)) },
+                    @Test(\(displayName).serialized, .gherkinTags(of: \(constant)), \(enabled(constant)),
                           arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(\(constant)))
                     func \(name)(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
             """
         }
-        let arguments = examples.map { example in
+        // Each example is a test of its own, so that the scopes of its tags wrap it alone, in a suite for the outline.
+        let tests = examples.enumerated().map { index, example in
             let parts = ScenarioParts(title: example.title,
                                       tags: example.tags,
                                       line: example.line,
@@ -183,13 +184,25 @@ enum SwiftTestingSource {
                                       ruleTitle: scenario.ruleTitle,
                                       ruleLine: scenario.ruleLine,
                                       backgroundStepCount: example.backgroundStepCount)
-            return "    CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 8) + ")"
+            let constant = data.add("Example", "CucumberSwiftTesting.GherkinExample(\n" + gherkinScenario(parts, of: feature, path: path, indent: 4) + ")")
+            return """
+                            @Test("Example \(index + 1)", .serialized, .gherkinTags(of: \(constant).scenario), \(enabled("\(constant).scenario")),
+                                  arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(\(constant)))
+                            func Example\(index + 1)(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
+                """
         }
-        let constant = data.add("Examples", "[\n" + arguments.joined(separator: ",\n") + "\n]")
         return """
-                @Test(\(displayName).serialized, arguments: await CucumberSwiftTesting.Cucumber.shared.casesToRun(\(constant)))
-                func \(name)(_ testCase: CucumberSwiftTesting.ScenarioCase) async throws { try await CucumberSwiftTesting.Cucumber.shared.run(testCase) }
+                @MainActor
+                @Suite\(scenario.title.isEmpty ? "" : "(" + literal(scenario.title) + ")")
+                struct \(name) {
+        \(tests.joined(separator: "\n\n"))
+                }
         """
+    }
+
+    /// The trait that leaves a scenario out when ``Cucumber/shouldRun(_:)`` says so, which shows it as skipped.
+    private static func enabled(_ scenario: String) -> String {
+        ".enabled { await CucumberSwiftTesting.Cucumber.shared.shouldRun(\(scenario)) }"
     }
 
     private static func gherkinScenario(_ parts: ScenarioParts, of feature: FeatureFile.Feature, path: String, indent: Int) -> String {

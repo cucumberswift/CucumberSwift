@@ -43,8 +43,10 @@ extension Cucumber {
         } else {
             runs = true
         }
-        if runs { approvedScenarios.insert(Cucumber.key(of: gherkinScenario)) }
-        return runs
+        // `CUCUMBER_SCENARIOS` narrows whichever of them decided, as it does with CucumberSwift.
+        let selected = runs && ScenarioList.runs(feature: feature(of: gherkinScenario).uri, line: gherkinScenario.line, environment: environment)
+        if selected { approvedScenarios.insert(Cucumber.key(of: gherkinScenario)) }
+        return selected
     }
 
     /// The examples of a Scenario Outline that run, as ``shouldRun(_:)`` decides for each. The test that

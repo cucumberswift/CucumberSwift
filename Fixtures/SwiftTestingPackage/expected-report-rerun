@@ -1,0 +1,5 @@
+# `mise run test-fixtures` runs `swift test` again straight after the first run, with CUCUMBER_TAGS set to
+# these tags. The new run replaces the first run's report, so the report then has only these features.
+# See .github/scripts/fixture_report.py.
+tags: checkout
+Checkout with XCTest

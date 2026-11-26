@@ -73,26 +73,42 @@ final class TestBundleFilesTests: XCTestCase {
 
         TestBundleFiles.copyReport(at: report, forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
 
-        XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
+        let features = try JSONSerialization.jsonObject(with: Data(contentsOf: copy)) as? [[String: Any]]
+        XCTAssertEqual(features?.count, 1)
     }
 
-    /// A report written where the copy goes, as when `reportPath` names it, stays.
-    func testAReportThatIsAlreadyTheCopyStays() throws {
-        let copy = folder.appendingPathComponent("CucumberTestResultsForTests.json")
-        try Data("[{}]".utf8).write(to: copy)
-
-        TestBundleFiles.copyReport(at: copy, forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
-
-        XCTAssertEqual(try Data(contentsOf: copy), Data("[{}]".utf8))
+    private func copiedNames(forBundle bundle: String, report: [[String: Any]]) throws -> [String] {
+        let reportURL = folder.appendingPathComponent("report.json")
+        try XCTUnwrap(ReportFile.serialize(report)).write(to: reportURL)
+        TestBundleFiles.copyReport(at: reportURL, forBundleAt: folder.appendingPathComponent(bundle), into: folder)
+        let name = TestBundleFiles.resultsFileName(forBundleAt: folder.appendingPathComponent(bundle))
+        let copy = try JSONSerialization.jsonObject(with: Data(contentsOf: folder.appendingPathComponent(name))) as? [[String: Any]]
+        return (copy ?? []).compactMap { $0["name"] as? String }
     }
 
-    /// Without a report, an earlier run's copy stays rather than leaving nothing.
-    func testAnEarlierCopyStaysWhenThereIsNoReport() throws {
-        let copy = folder.appendingPathComponent("CucumberTestResultsForTests.json")
-        try Data("[]".utf8).write(to: copy)
+    private func feature(_ name: String, uri: String) -> [String: Any] {
+        ["name": name, "uri": uri, "line": 1, "keyword": "Feature", "elements": [[String: Any]]()]
+    }
 
-        TestBundleFiles.copyReport(at: folder.appendingPathComponent("missing.json"), forBundleAt: folder.appendingPathComponent("Tests.xctest"), into: folder)
+    /// A run of several test bundles writes one report, and each bundle's copy has only its own features (#546).
+    func testTheCopyOfABundleHasOnlyTheFeaturesInThatBundle() throws {
+        let build = folder.appendingPathComponent("Build")
+        func uri(_ path: String) -> String { build.appendingPathComponent(path).absoluteString }
+        let report = [
+            feature("Unit", uri: uri("Unit Tests.xctest/Contents/Resources/Features/Unit.feature")),
+            feature("UI", uri: uri("UITests.xctest/Features/UI.feature")),
+            feature("Elsewhere", uri: uri("Sources/Features/Elsewhere.feature"))
+        ]
+        XCTAssertEqual(try copiedNames(forBundle: "Unit Tests.xctest", report: report).sorted(), ["Elsewhere", "Unit"])
+    }
 
-        XCTAssertEqual(try Data(contentsOf: copy), Data("[]".utf8))
+    /// A Swift package has one test bundle for every target, whose features are in resource bundles.
+    func testTheCopyOfASwiftPackagesBundleHasEveryFeature() throws {
+        let build = folder.appendingPathComponent("Build")
+        let report = [
+            feature("XCTest", uri: build.appendingPathComponent("Package_XTTests.bundle/Features/A.feature").absoluteString),
+            feature("Swift Testing", uri: build.appendingPathComponent("Tests/ST/Features/B.feature").absoluteString)
+        ]
+        XCTAssertEqual(try copiedNames(forBundle: "PackageTests.xctest", report: report).sorted(), ["Swift Testing", "XCTest"])
     }
 }

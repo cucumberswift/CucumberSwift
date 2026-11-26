@@ -52,6 +52,7 @@ final class CucumberTests {
         Cucumber.generateRegexLiterals = nil
         Cucumber.generateMacros = nil
         cucumber.skipsLaterStepsAfterRecordedIssue = true
+        CucumberSettings.tagMapping = nil
     }
 
     func step(_ keyword: Step.Keyword, _ text: String, line: Int) -> GherkinStep {

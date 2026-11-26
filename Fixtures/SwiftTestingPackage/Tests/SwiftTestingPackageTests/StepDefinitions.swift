@@ -25,6 +25,8 @@ enum World {
     static var featureScenarios = [String: Int]()
     /// What the hook macros did in the "Hook macros" feature, in the order they ran.
     static var hooks = [String]()
+    /// The basket the "Tag scopes" feature's scope set up when its scenario started.
+    static var basket: UUID?
 
     static func record(_ hook: String, in feature: Feature?) {
         if feature?.title == "Hook macros" { hooks.append(hook) }
@@ -78,6 +80,7 @@ extension Cucumber: @retroactive StepImplementation {
         localizedSteps()
         hookSteps()
         hookMacros()
+        tagScopeSteps()
         swiftDSLFeatures()
     }
 
