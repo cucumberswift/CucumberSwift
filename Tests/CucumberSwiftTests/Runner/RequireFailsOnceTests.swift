@@ -66,10 +66,11 @@ class RequireFailsOnceTests: XCTestCase {
     func testAStepWhoseRequireFailedIsNotFailedAgainForItsError() throws {
         let error = try requireError()
         var failures = 0
-        Cucumber.failOnError(failureCount: { failures }, file: #filePath, line: #line) {
+        let body = {
             failures += 1
             throw error
         }
+        Cucumber.failOnError(failureCount: { failures }, file: #filePath, line: #line, body)
     }
 
     // Without XCTest's interop with Swift Testing nothing failed the step, so the error must.
