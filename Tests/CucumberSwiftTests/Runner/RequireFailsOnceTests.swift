@@ -15,6 +15,10 @@ import XCTest
 class RequireFailsOnceTests: XCTestCase {
     private struct StepError: Error {}
 
+    /// The failures counted while a test replaces `Cucumber.failureCounter`. A step definition whose `#require`
+    /// failed raises it, as Swift Testing's issue does through XCTest's interop.
+    private static let failures = Locked(0)
+
     func testAnErrorIsNotAlreadyRecordedUnlessSwiftTestingThrewIt() {
         XCTAssertFalse(Cucumber.isAlreadyRecorded(StepError()))
     }
@@ -79,10 +83,6 @@ class RequireFailsOnceTests: XCTestCase {
     }
 
     // MARK: executeFirstStep
-
-    /// The failures counted while a test replaces `Cucumber.failureCounter`. A step definition whose `#require`
-    /// failed raises it, as Swift Testing's issue does through XCTest's interop.
-    private static let failures = Locked(0)
 
     /// Defines a step whose `#require` failed and one that throws, in a feature that uses both.
     private func defineFailingSteps() throws {

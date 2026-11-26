@@ -460,6 +460,9 @@ import XCTest
 }
 
 extension Cucumber {
+    /// Counts the failures a test has recorded. Tests replace it, so that a failure counts without failing them.
+    static let failureCounter = Locked<(XCTestCase?) -> Int> { $0?.testRun?.totalFailureCount ?? 0 }
+
     /// Whether `error` is the one a failed `try #require` throws after Swift Testing has recorded its failure:
     /// `ExpectationFailedError`. CucumberSwift doesn't import Testing, so the type is known by its name.
     static func isAlreadyRecorded(_ error: any Error) -> Bool {
@@ -477,9 +480,6 @@ extension Cucumber {
         let count = failureCounter.snapshot
         failOnError(failureCount: { count(testCase) }, file: file, line: line, body)
     }
-
-    /// Counts the failures a test has recorded. Tests replace it, so that a failure counts without failing them.
-    static let failureCounter = Locked<(XCTestCase?) -> Int> { $0?.testRun?.totalFailureCount ?? 0 }
 
     /// Like `failOnError(in:file:line:_:)`, with the test's failures counted by `failureCount`.
     static func failOnError(failureCount: () -> Int, file: StaticString, line: UInt, _ body: () throws -> Void) {
