@@ -18,5 +18,5 @@ The scheme sets `CUCUMBER_COVERAGE_SOURCES` to the framework's folder. CucumberS
 files in its own package folder, and this fixture is inside it. A project that depends on CucumberSwift
 doesn't need it.
 
-Needs the Tuist version pinned in `.mise.toml`, and Xcode 26, whose coverage format CucumberSwift reads.
+Needs the Tuist version pinned in `.mise.toml`. The fixture's tests run with Xcode 16.0 and later, as CucumberSwift reads the coverage formats of each. The pinned Tuist can't compile `Project.swift` with Xcode 16.0's Swift 6.0, so generate the project with a newer Xcode, such as 16.4 or 26, and then run the tests with the Xcode you want to test.
 Run every fixture with `mise run test-fixtures`.

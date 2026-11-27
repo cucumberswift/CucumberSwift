@@ -82,6 +82,50 @@ struct MachImage {
 }
 #endif
 
+/// The layout of a version of LLVM's raw profile format, as `InstrProfData.inc` defines it in the LLVM of
+/// the Xcode that uses it. The profile runtime builds a binary's `__llvm_prf_data` records with the same
+/// layout, so the version also says how to read them.
+struct RawProfileFormat: Equatable {
+    /// Version 8: Xcode 16.0 to 16.2, whose Swift 6.0 uses LLVM 17. A record holds the name's hash, the
+    /// function's hash, the counters' address relative to the record, the function's address, its values,
+    /// its counter count and 2 counts of value sites.
+    static let version8 = RawProfileFormat(version: 8, recordSize: 48, valueSites: 44..<48)
+    /// Version 10: Xcode 16.3 and later, Xcode 26 included. A record adds the bitmap's address after the
+    /// counters' and its size at the end, and has 3 counts of value sites.
+    static let version10 = RawProfileFormat(version: 10, recordSize: 64, valueSites: 52..<58)
+
+    /// Every version that CucumberSwift writes.
+    static let all = [version8, version10]
+
+    /// The version, as the low 32 bits of `__llvm_profile_raw_version` hold it.
+    let version: UInt64
+    /// The size of a `__llvm_prf_data` record, padded to 8 bytes.
+    let recordSize: Int
+    /// Where a record's counts of value sites are, which come after its 32-bit counter count.
+    let valueSites: Range<Int>
+
+    /// Whether the header describes a bitmap, which version 9 added for MC/DC coverage.
+    var hasBitmap: Bool { version >= 9 }
+    /// Whether the header counts virtual tables, which version 10 added.
+    var hasVirtualTables: Bool { version >= 10 }
+    /// The last kind of value that a profile can hold, the header's last word. Version 10 added
+    /// virtual table targets to the 2 kinds before.
+    var valueKindLast: UInt64 { hasVirtualTables ? 2 : 1 }
+
+    /// The format of a binary's raw profile `version`, as `__llvm_profile_raw_version` holds it: the low
+    /// bytes hold the version, and the high bits flags for the kind of profile. Nil for another version.
+    init?(version: UInt64) {
+        guard let format = Self.all.first(where: { $0.version == version & 0xFFFF_FFFF }) else { return nil }
+        self = format
+    }
+
+    private init(version: UInt64, recordSize: Int, valueSites: Range<Int>) {
+        self.version = version
+        self.recordSize = recordSize
+        self.valueSites = valueSites
+    }
+}
+
 /// The code coverage counters of the binaries in this process that were built with code coverage.
 ///
 /// The compiler puts counters into every binary it builds with coverage, such as the test bundle, a
@@ -103,6 +147,8 @@ struct ProfileCounters {
         fileprivate let bitmap: UnsafeRawBufferPointer
         /// The profile runtime's raw profile version of this binary, as `__llvm_profile_raw_version` holds it.
         fileprivate let version: UInt64
+        /// The layout of that version.
+        fileprivate let format: RawProfileFormat
         #if canImport(Compression)
         /// The binary's coverage map, which the scores need. Nil when it can't be read, as
         /// ``mapProblem`` says.
@@ -123,10 +169,6 @@ struct ProfileCounters {
     enum WriteError: Error, Equatable {
         case writeFailed(binary: String)
     }
-
-    /// The raw profile version that CucumberSwift writes: the one that Xcode 26's LLVM uses. A binary
-    /// built with another version is left out, and listed in ``unsupportedVersions``.
-    static let supportedVersion: UInt64 = 10
 
     private(set) var binaries: [Binary]
     /// The raw profile versions of the binaries that were built with code coverage but that
@@ -164,7 +206,7 @@ struct ProfileCounters {
                   let names = image.section(segment: "__DATA", name: "__llvm_prf_names"),
                   let versionAddress = image.localSymbol("___llvm_profile_raw_version") else { continue }
             let version = versionAddress.load(as: UInt64.self)
-            guard counters.accept(version: version) else { continue }
+            guard counters.accept(version: version), let format = RawProfileFormat(version: version) else { continue }
             var binary = Binary(
                 path: path,
                 uuid: image.uuid,
@@ -173,7 +215,8 @@ struct ProfileCounters {
                 names: UnsafeRawBufferPointer(names),
                 bitmap: image.section(segment: "__DATA", name: "__llvm_prf_bits", allowsEmpty: true).map { UnsafeRawBufferPointer($0) }
                     ?? UnsafeRawBufferPointer(start: nil, count: 0),
-                version: version
+                version: version,
+                format: format
             )
             #if canImport(Compression)
             if let covmap = image.section(segment: "__LLVM_COV", name: "__llvm_covmap"),
@@ -183,7 +226,8 @@ struct ProfileCounters {
                                                  covfun: UnsafeRawBufferPointer(covfun),
                                                  data: binary.data,
                                                  counters: UnsafeRawBufferPointer(cnts),
-                                                 names: binary.names)
+                                                 names: binary.names,
+                                                 recordSize: format.recordSize)
                 } catch {
                     binary.mapProblem = "\(URL(fileURLWithPath: path).lastPathComponent): \(error)"
                 }
@@ -221,7 +265,7 @@ struct ProfileCounters {
     /// it: the low bytes hold the version, and the high bits flags for the kind of profile. Remembers a
     /// version that it doesn't write.
     mutating func accept(version: UInt64) -> Bool {
-        guard version & 0xFFFF_FFFF == Self.supportedVersion else {
+        guard RawProfileFormat(version: version) != nil else {
             unsupportedVersions.append(version & 0xFFFF_FFFF)
             return false
         }
@@ -269,41 +313,67 @@ struct ProfileCounters {
 }
 
 extension ProfileCounters.Binary {
-    /// The raw profile of `counters`, laid out as the profile runtime lays out its own: a header of 16
-    /// 64-bit words, the data records, the counters, the bitmap bytes, and the names, each padded to 8 bytes.
-    /// `llvm-profdata` reads it as it reads the runtime's.
+    /// The raw profile of `counters`, as ``RawProfileFormat/rawProfile(version:data:countersSection:counters:bitmap:names:)``
+    /// lays it out for the binary's version.
     func rawProfile(counters: [UInt8]) -> Data {
-        let recordSize = 64
+        format.rawProfile(version: version,
+                          data: data,
+                          countersSection: UnsafeRawBufferPointer(self.counters),
+                          counters: counters,
+                          bitmap: bitmap,
+                          names: names)
+    }
+}
+
+extension RawProfileFormat {
+    /// The raw profile of `counters`, laid out as the profile runtime of this version lays out its own: the
+    /// header's 64-bit words, the data records, the counters, the bitmap bytes, if the version has them, and
+    /// the names, each padded to 8 bytes. `llvm-profdata` reads it as it reads the runtime's.
+    ///
+    /// `version` is the binary's `__llvm_profile_raw_version`, flags included. `data`, `bitmap` and `names`
+    /// are the binary's sections, and `countersSection` its counters, which locate `counters` as the header
+    /// gives it.
+    func rawProfile(version: UInt64,
+                    data: UnsafeRawBufferPointer,
+                    countersSection: UnsafeRawBufferPointer,
+                    counters: [UInt8],
+                    bitmap: UnsafeRawBufferPointer,
+                    names: UnsafeRawBufferPointer) -> Data {
         func padding(_ size: Int) -> Int { (8 - size % 8) % 8 }
         let address = { (buffer: UnsafeRawBufferPointer) in UInt64(UInt(bitPattern: buffer.baseAddress)) }
 
-        var header = [UInt64](repeating: 0, count: 16)
-        header[0] = 0xFF6C_7072_6F66_7281 // "\xFFlprofr\x81"
-        header[1] = version
-        header[3] = UInt64(data.count / recordSize)
-        header[5] = UInt64(counters.count / 8)
-        header[7] = UInt64(bitmap.count)
-        header[8] = UInt64(padding(bitmap.count))
-        header[9] = UInt64(names.count)
+        // The magic number, "\xFFlprofr\x81", the version, the size of the binary IDs, which this profile
+        // has none of, the records' count, the padding before the counters, their count and the padding after.
+        var header: [UInt64] = [0xFF6C_7072_6F66_7281, version, 0, UInt64(data.count / recordSize), 0, UInt64(counters.count / 8), 0]
+        if hasBitmap {
+            header += [UInt64(bitmap.count), UInt64(padding(bitmap.count))]
+        }
+        header.append(UInt64(names.count))
         // The counters and the bitmap are located relative to the data, and the names by their address.
-        header[10] = address(UnsafeRawBufferPointer(self.counters)) &- address(data)
-        header[11] = bitmap.baseAddress == nil ? 0 : address(bitmap) &- address(data)
-        header[12] = address(names)
-        header[15] = 2 // The last kind of value that a profile can hold.
+        header.append(address(countersSection) &- address(data))
+        if hasBitmap {
+            header.append(bitmap.baseAddress == nil ? 0 : address(bitmap) &- address(data))
+        }
+        header.append(address(names))
+        if hasVirtualTables {
+            header += [0, 0] // The virtual tables' count and the size of their names.
+        }
+        header.append(valueKindLast)
 
-        var records = [UInt8](data)
-        // A record's three counts of value sites, which this profile has no data for, come after its
-        // 32-bit counter count at byte 48.
+        var records = [UInt8](data.prefix(data.count / recordSize * recordSize))
+        // A record's counts of value sites, which this profile has no data for.
         for record in stride(from: 0, to: records.count, by: recordSize) {
-            for byte in (record + 52)..<(record + 58) { records[byte] = 0 }
+            for byte in valueSites { records[record + byte] = 0 }
         }
 
         var profile = Data()
         header.withUnsafeBytes { profile.append(contentsOf: $0) }
         profile.append(contentsOf: records)
         profile.append(contentsOf: counters)
-        profile.append(contentsOf: bitmap)
-        profile.append(contentsOf: [UInt8](repeating: 0, count: padding(bitmap.count)))
+        if hasBitmap {
+            profile.append(contentsOf: bitmap)
+            profile.append(contentsOf: [UInt8](repeating: 0, count: padding(bitmap.count)))
+        }
         profile.append(contentsOf: names)
         profile.append(contentsOf: [UInt8](repeating: 0, count: padding(names.count)))
         return profile
