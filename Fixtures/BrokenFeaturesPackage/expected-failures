@@ -8,3 +8,6 @@ error: -[CucumberSwift.CucumberTest testGherkin] : failed - File: Unsupported.fe
 ↳ No CucumberSwift expression found that matches this step.
 ✘ Test "Feature files are valid Gherkin" recorded an issue at Unsupported.feature:1:1
 ↳ File: Unsupported.feature declares an unsupported language
+# The Swift Testing runner: a failed `try #require`, at its line in the feature file. unexpected-output requires
+# that the runner doesn't record the error it throws as a second issue.
+✘ Test "A requirement fails its step" recorded an issue with 1 argument testCase → 1 › When a requirement fails at Assertions.feature:4:5
