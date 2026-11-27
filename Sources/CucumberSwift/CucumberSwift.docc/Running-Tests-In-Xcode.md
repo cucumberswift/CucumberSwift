@@ -16,7 +16,7 @@ To run scenarios, you need only to add CucumberSwift to your project and turn of
 
 Add the CucumberSwift package to your project with **File > Add Package Dependencies…**, and add the `CucumberSwift` library to your test target. <doc:SPM-Step-By-Step> walks through it, with a `Features` folder, a first feature file and its step definitions. <doc:Matching-Steps> has every way to match a step.
 
-Add CucumberSwift with Swift Package Manager to get the plugins. With Carthage, your tests run in the same way, but Carthage can't deliver Swift package plugins.
+Add CucumberSwift with Swift Package Manager to get the plugins. With Carthage, your tests run in the same way, but Carthage can't deliver Swift package plugins. A Carthage project checks its feature files with a Run Script build phase instead, as <doc:Checking-Feature-Files#Check-feature-files-in-a-Carthage-project> shows.
 
 ### Turn off parallel testing
 

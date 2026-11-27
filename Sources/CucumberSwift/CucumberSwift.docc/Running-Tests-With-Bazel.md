@@ -180,6 +180,39 @@ bazel-testlogs/MyApp/MyAppFeatureTests/test.outputs/_cucumberCoverage
 
 The folder holds one `run-<id>` folder with the files that <doc:Measuring-Code-Coverage#What-a-run-writes> describes. The runner also writes the lcov report that Bazel collects for the whole run.
 
+### Check feature files and generate tests
+
+Bazel has no plugins, so the module has three rules in `@cucumberswift//bazel:cucumberswift.bzl` that run the commands of the `cucumberswift-cli` tool, which the CucumberSwiftLint, Fix Feature Files and CucumberSwiftTestingPlugin plugins run in a Swift package. Load them in your `BUILD.bazel` file:
+
+```starlark
+load("@cucumberswift//bazel:cucumberswift.bzl", "cucumberswift_fix_feature_files", "cucumberswift_generate", "cucumberswift_lint")
+
+cucumberswift_lint(
+    name = "lint",
+    feature_files = glob(["Features/**/*.feature"]),
+    swift_srcs = glob(["*.swift"]),
+)
+
+cucumberswift_fix_feature_files(
+    name = "fix_feature_files",
+    paths = ["Features"],
+)
+
+cucumberswift_generate(
+    name = "FeaturesTests_generated",
+    feature_files = glob(["Features/**/*.feature"]),
+    swift_srcs = glob(["*.swift"]),
+)
+```
+
+`bazel build :lint` runs `cucumberswift-cli lint`, which checks the feature files against the step definitions in `swift_srcs`, as <doc:Checking-Feature-Files> describes. Bazel shows the command's output, and the build fails when the command exits with status 1.
+
+`bazel run :fix_feature_files` runs `cucumberswift-cli fix-feature-files` on the feature files in your source tree, in the folders that `paths` lists, relative to the package. It changes your files, as <doc:Checking-Feature-Files#Fix-misspelt-keywords> describes. Put more files or folders after `--` to fix them too.
+
+`bazel build :FeaturesTests_generated` runs `cucumberswift-cli generate`, which writes the Swift Testing tests of the feature files to `FeaturesTests_generated.swift`. The file imports the `CucumberSwiftTesting` module, which the `cucumberswift` module doesn't build under Bazel yet, so a Bazel target can't compile that file until it does.
+
+The `convert-to-gherkin-macros` command needs swift-syntax, which the Bazel build of `cucumberswift-cli` doesn't include yet. There, it prints what to turn on and changes nothing.
+
 ### Run tests on watchOS
 
 Run your features on a watchOS simulator with a `watchos_unit_test` target and the runner the `cucumberswift` module provides. rules_apple's own watchOS runner doesn't run tests, so pass CucumberSwift's as the test's `runner`:
