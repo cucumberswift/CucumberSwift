@@ -56,8 +56,7 @@ description = "Build and test every project in Fixtures/"
 # plugin only runs when its inputs change, and the build must make new ones. A Swift package fixture
 # that uses the plugin and has no expected-warnings also runs Fix Feature Files, which must change
 # nothing. A fixture with expected-failures must fail its tests, with each failure it lists. A fixture
-# with expected-output must print each line it lists, such as a test that must have run, and one with
-# unexpected-output must print none of the lines it lists, such as an issue recorded twice.
+# with expected-output must print each line it lists, such as a test that must have run.
 # A fixture must run at least as many XCTest and Swift Testing tests as its expected-tests lists, since
 # a run can exit with success having run none (.github/scripts/fixture_tests.py).
 # A fixture with expected-report writes its Cucumber JSON report to the caller's CUCUMBER_REPORT_PATH, or
@@ -91,10 +90,10 @@ expect_all() {
 }
 # Fails if any line of $1, other than comments and blank lines, is in the output $2.
 expect_none() {
-  grep -v '^#' "$1" | while IFS= read -r unexpected; do
-    [ -z "$unexpected" ] && continue
-    if grep -qF "$unexpected" "$2"; then
-      echo "error: $name: the output contains, as $(basename "$1") forbids: $unexpected"
+  grep -v '^#' "$1" | while IFS= read -r forbidden; do
+    [ -z "$forbidden" ] && continue
+    if grep -qF "$forbidden" "$2"; then
+      echo "error: $name: the output contains, as $(basename "$1") forbids: $forbidden"
       exit 1
     fi
   done
@@ -198,6 +197,8 @@ for fixture in Fixtures/*/; do
       -derivedDataPath "$build" -skipMacroValidation CODE_SIGNING_ALLOWED=NO "$@" > "$log" 2>&1 || status=$?
   fi
   cat "$log"
+  # A forbidden-output file lists text that must not be in the output, such as the failure of a step that must not run.
+  if [ -f "$fixture/forbidden-output" ]; then expect_none "$fixture/forbidden-output" "$log"; fi
   if [ -f "$fixture/expected-failures" ]; then
     if [ "$status" -eq 0 ]; then
       echo "error: $name: its tests passed, but they should fail with each failure in expected-failures"
@@ -245,10 +246,6 @@ for fixture in Fixtures/*/; do
   if [ -f "$fixture/expected-output" ]; then
     expect_all "$fixture/expected-output" "$log"
     echo "$name: the output has every line in expected-output."
-  fi
-  if [ -f "$fixture/unexpected-output" ]; then
-    expect_none "$fixture/unexpected-output" "$log"
-    echo "$name: the output has no line in unexpected-output."
   fi
   if grep -qs CucumberSwiftLint "$fixture/Package.swift" "$fixture/Project.swift"; then
     if [ -z "$(find "$build" -name '*.lint-stamp' 2>/dev/null)" ]; then

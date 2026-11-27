@@ -1,3 +1,0 @@
-# Text that `mise run test-fixtures` requires this fixture's test output not to contain, one per line.
-# A failed `try #require` records its issue once: recording the error it throws again adds this one.
-An API was misused
