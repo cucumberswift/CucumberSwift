@@ -7,7 +7,8 @@ CucumberSwift's coverage levels at their defaults.
 The `Grading` feature covers less than half of the code it enters. CucumberSwift scores it, and the
 `Grading › Coverage scores` suite's `Coverage` test passes, because by default coverage only warns.
 `expected-output` lists the lines that show both. If coverage stops scoring, or a low score fails the
-test again, this fixture fails.
+test again, this fixture fails. It also lists the feature's coverage warning as each runner prints it,
+with the feature file and line (cucumberswift/CucumberSwift#531).
 
 `GradesSwiftTests` runs the same feature with Swift Testing, through `CucumberSwiftTesting`. In Xcode, the
 Swift Testing runner used to crash the test process at the first coverage warning, and Xcode still reported

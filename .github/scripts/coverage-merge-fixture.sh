@@ -149,12 +149,11 @@ same swift-serial swift-shards
 same xctest-serial swift-serial
 
 # A run one scenario at a time printed each feature's and each Rule's summary as it went. The merge must print
-# the same ones, and the Swift Testing runner's issues, which it prints in the same form.
+# the same ones, and the runners' issues, which both print in the same form (#531).
 for runner in xctest swift; do
   grep -hE '^(CucumberSwift coverage: .*% of the code its scenarios ran|[^ ]*\.feature:[0-9]+: (warning|error): )' "$logs/$runner-serial.log" \
     | normalized /dev/stdin | sort -u > "$logs/$runner-printed"
-  pattern='^CucumberSwift coverage: .*% of the code its scenarios ran'
-  [[ "$runner" = swift ]] && pattern="$pattern|\\.feature:[0-9]+: (warning|error): "
+  pattern='^CucumberSwift coverage: .*% of the code its scenarios ran|\.feature:[0-9]+: (warning|error): '
   grep -E "$pattern" "$logs/$runner-serial.scores" | sort -u > "$logs/$runner-expected"
   if [[ ! -s "$logs/$runner-printed" ]] || ! diff -u "$logs/$runner-expected" "$logs/$runner-printed"; then
     echo "error: the merge doesn't print what the $runner runner printed while its scenarios ran" >&2
