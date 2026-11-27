@@ -1,0 +1,34 @@
+name: Interop probe
+
+# Temporary probe for #562, removed after one run on its pull request: what each
+# SWIFT_TESTING_XCTEST_INTEROP_MODE does under `swift test` and under xcodebuild, on macOS only.
+# No ruleset requires it.
+on:
+  pull_request:
+
+permissions: {}
+
+jobs:
+  interop_probe:
+    name: Interop probe
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show the toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Run each interop mode with both drivers
+        run: .github/scripts/interop-probe.sh "$RUNNER_TEMP/interop-probe"
+      - name: Upload the logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: interop-probe-logs
+          path: ${{ runner.temp }}/interop-probe/*.log
+          retention-days: 7
