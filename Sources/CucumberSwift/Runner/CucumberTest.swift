@@ -213,7 +213,7 @@ open class CucumberTest: XCTestCase {
             .forEach { step, testCase in
                 testCase.addTeardownBlock {
                     (step.executeInstance as? XCTestCase)?.tearDown()
-                    Cucumber.shared.afterStepHooks.forEach { $0.hook(step) }
+                    step.runAfterStepHooks()
                     Cucumber.shared.setupAfterHooksFor(step)
                     step.endTime = Date()
                 }
@@ -409,7 +409,7 @@ extension Step {
             self.startTime = startTime
             Cucumber.shared.currentStep = self
             Cucumber.shared.setupBeforeHooksFor(self)
-            Cucumber.shared.beforeStepHooks.forEach { $0.hook(self) }
+            self.runBeforeStepHooks()
 
             func runAndReport() {
                 Cucumber.shared.reporters.forEach { $0.didStart(step: self, at: startTime) }
@@ -454,6 +454,20 @@ extension Step {
         if let scenario = scenario {
             StepTestCase.skippedScenarios.append((scenario, skip.message ?? "Skipped"))
         }
+    }
+
+    /// Runs the `BeforeStep` hooks, but only for a step that runs: not an ambiguous one or one with no step definition.
+    fileprivate func runBeforeStepHooks() {
+        guard canExecute, !isAmbiguous else { return }
+        ranBeforeStepHooks = true
+        Cucumber.shared.beforeStepHooks.forEach { $0.hook(self) }
+    }
+
+    /// Runs the `AfterStep` hooks, but only for a step whose `BeforeStep` hooks ran.
+    func runAfterStepHooks() {
+        guard ranBeforeStepHooks else { return }
+        ranBeforeStepHooks = false
+        Cucumber.shared.afterStepHooks.forEach { $0.hook(self) }
     }
 
     fileprivate func run() throws {
