@@ -1,5 +1,6 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load(":consumer_tests.bzl", "consumer_tests")
+load("@cucumberswift//bazel:swift_testing.bzl", "cucumberswift_testing_sources")
+load(":consumer_tests.bzl", "consumer_tests", "swift_testing_consumer_tests")
 load("@cucumberswift//bazel:xctest_runner.bzl", "macos_xctest_runner")
 load("@rules_apple//apple:macos.bzl", "macos_unit_test")
 load("@rules_apple//apple:resources.bzl", "apple_resource_group")
@@ -44,6 +45,12 @@ consumer_tests(
     copts = ["-swift-version", "6"],
 )
 
+# The Swift Testing runner, from generated tests (#533), at the lowest OS versions CucumberSwift supports.
+swift_testing_consumer_tests(
+    name = "CucumberSwiftTestingConsumerTests",
+    copts = ["-swift-version", "6"],
+)
+
 # Per-scenario coverage (#522): `bazel coverage //:CucumberSwiftCoverageTests` builds Grades with code
 # coverage, and CucumberSwift writes each scenario's coverage into the test's outputs. CI checks them.
 swift_library(
@@ -77,4 +84,39 @@ macos_unit_test(
     minimum_os_version = "10.15",
     runner = ":macos_xctest_runner",
     deps = [":CucumberSwiftCoverageTestsLib"],
+)
+
+# The same per-scenario coverage with the Swift Testing runner (#533): `bazel coverage
+# //:CucumberSwiftTestingCoverageTests` scores its Grading feature as CucumberSwiftCoverageTests' is scored.
+apple_resource_group(
+    name = "CucumberSwiftTestingCoverageTestsFeatures",
+    strip_structured_resources_prefixes = ["CucumberSwiftTestingCoverageTests"],
+    structured_resources = glob(["CucumberSwiftTestingCoverageTests/Features/**"]),
+)
+
+cucumberswift_testing_sources(
+    name = "CucumberSwiftTestingCoverageTestsGenerated",
+    feature_files = glob(["CucumberSwiftTestingCoverageTests/Features/**/*.feature"]),
+    swift_srcs = glob(["CucumberSwiftTestingCoverageTests/*.swift"]),
+)
+
+swift_library(
+    name = "CucumberSwiftTestingCoverageTestsLib",
+    testonly = True,
+    srcs = glob(["CucumberSwiftTestingCoverageTests/*.swift"]) + [":CucumberSwiftTestingCoverageTestsGenerated"],
+    copts = ["-swift-version", "6"],
+    data = [":CucumberSwiftTestingCoverageTestsFeatures"],
+    module_name = "CucumberSwiftTestingCoverageTests",
+    deps = [
+        ":Grades",
+        "@cucumberswift//:CucumberSwiftTesting",
+    ],
+)
+
+macos_unit_test(
+    name = "CucumberSwiftTestingCoverageTests",
+    env = {"CUCUMBER_COVERAGE_SOURCES": "Grades.swift"},
+    minimum_os_version = "13.0",
+    runner = ":macos_xctest_runner",
+    deps = [":CucumberSwiftTestingCoverageTestsLib"],
 )
