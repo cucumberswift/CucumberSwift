@@ -60,9 +60,15 @@ Put all of a package's step definitions behind 1 `StepImplementation`. SwiftPM l
 
 Give each step implementation its own package if you need separate ones, for example for 2 apps. That is a folder with a `Package.swift` whose test target depends on your main package by path.
 
-### Don't run in parallel
+### Run in parallel
 
-Run CucumberSwift tests without `--parallel`. `swift test --parallel` runs each test that `swift test list` shows in a process of its own. Scenarios aren't in that list, so none of them run, and the run still passes.
+The XCTest runner works with `swift test --parallel`. `swift test --parallel` runs each test that `swift test list` shows in a process of its own, so under `--parallel` CucumberSwift makes one test for each scenario, as `CUCUMBER_ONE_TEST_PER_SCENARIO` does. Each scenario then runs whole in one process, and its steps keep their state.
+
+```bash
+swift test --parallel
+```
+
+Each process has its own copy of your step definitions' state, so a scenario can't depend on state that another scenario leaves behind. `AfterFeature` runs in each process for each feature that process started, after its last test.
 
 ### Choose scenarios with tags
 

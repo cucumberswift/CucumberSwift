@@ -81,17 +81,37 @@ extension CucumberTest {
         return tests
     }
 
+    /// Under `swift test --parallel` (#567), `CucumberScenarioTest`'s own suite holds the scenarios'
+    /// tests (see `swiftPMScenarioSuite()`), so this suite holds only the coverage scores.
     static func addScenarioTests(to rootSuite: XCTestSuite) {
         guard let testClass = scenarioTestClass else { return }
         let tests = scenarioTests()
+        let inScenarioSuite = FeatureFlags.isParallelSwiftTest
         for (index, (name, scenario)) in tests.enumerated() {
-            guard let selector = addScenarioMethod(named: name, running: scenario) else { continue }
-            rootSuite.addTest(testClass.init(selector: selector))
+            if !inScenarioSuite {
+                guard let selector = addScenarioMethod(named: name, running: scenario) else { continue }
+                rootSuite.addTest(testClass.init(selector: selector))
+            }
             if let feature = scenario.feature,
                let scores = scoreTests(after: feature, next: tests.dropFirst(index + 1).first?.scenario.feature) {
                 rootSuite.addTest(scores)
             }
         }
+    }
+
+    /// With one test per scenario, under `swift test --parallel` (#567): the suite of
+    /// `CucumberScenarioTest`, holding a test for each scenario that will run. Nil otherwise.
+    static func swiftPMScenarioSuite() -> XCTestSuite? {
+        guard Cucumber.shared is StepImplementation, let testClass = scenarioTestClass else { return nil }
+        // The flag can be set in setupSteps(), so the features and steps are loaded first.
+        loadFeaturesIfNeeded()
+        guard FeatureFlags.isParallelSwiftTest, FeatureFlags.isOneTestPerScenario else { return nil }
+        let suite = XCTestSuite(forTestCaseClass: testClass)
+        for (name, scenario) in scenarioTests() {
+            guard let selector = addScenarioMethod(named: name, running: scenario) else { continue }
+            suite.addTest(testClass.init(selector: selector))
+        }
+        return suite
     }
 
     /// With parallel testing, a suite for each scenario that will run, as `scenarioSuites()` makes for a

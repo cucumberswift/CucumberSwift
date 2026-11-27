@@ -10,6 +10,7 @@
 @protocol CucumberTestSupport
 + (BOOL)resolveScenarioTestNamed:(NSString *)name;
 + (XCTIssue *)locateIssue:(XCTIssue *)issue;
++ (nullable XCTestSuite *)scenarioTestSuite;
 @end
 
 static Class<CucumberTestSupport> _Nullable CucumberTestSupport(void) {
@@ -26,6 +27,19 @@ static Class<CucumberTestSupport> _Nullable CucumberTestSupport(void) {
         return YES;
     }
     return [super resolveInstanceMethod:sel];
+}
+
+/// With `swift test`, SwiftPM lists a test under the suite that holds it, and runs it by asking XCTest for
+/// `<suite>/<test>`, which finds a test of the class of that name only. So under `swift test --parallel`,
+/// this class's own suite holds the scenarios, and the list names them right (#567).
++ (XCTestSuite *)defaultTestSuite {
+    if (self == [CucumberScenarioTest class]) {
+        XCTestSuite *suite = [CucumberTestSupport() scenarioTestSuite];
+        if (suite) {
+            return suite;
+        }
+    }
+    return [super defaultTestSuite];
 }
 
 /// A failure while a step runs is recorded at the step's line in its feature file.
