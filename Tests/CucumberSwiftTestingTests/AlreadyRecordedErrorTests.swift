@@ -46,6 +46,24 @@ extension CucumberTests {
         #expect(comments.first?.contains("required on purpose") == true)
     }
 
+    @Test func aHookWhoseRequirementFailsRecordsOneIssueAndFailsTheScenario() async {
+        let observer = RecordingObserver()
+        Cucumber.shared.reporters = [observer]
+        BeforeScenario { _ in try #require(1 == 2, "required on purpose") }
+        Given("a step") { [self] _, _ in ran.append("step") }
+        var comments = [String]()
+        await withKnownIssue {
+            await Cucumber.shared.run(scenario([step(.given, "a step", line: 3)]))
+        } matching: { issue in
+            comments.append(issue.comments.map(\.rawValue).joined())
+            return true
+        }
+        #expect(comments.count == 1)
+        #expect(comments.first?.contains("required on purpose") == true)
+        #expect(ran.isEmpty)
+        #expect(observer.log.contains("scenario failed S"))
+    }
+
     @available(*, deprecated) // runs ExecuteFirstStep on purpose
     @Test func aRequirementThatFailsInExecuteFirstStepRecordsOneIssue() async {
         Given("a basket") { _, _ in await ExecuteFirstStep(matching: "a requirement fails") }
