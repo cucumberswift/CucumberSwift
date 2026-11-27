@@ -1,7 +1,8 @@
 # Lines `mise run test-fixtures` expects in this fixture's test output. They show that CucumberSwift
 # measured the coverage and scored the Grading feature, and that its Coverage test passed although the
-# feature is below 50%: with the default settings, coverage only warns (#507).
-CucumberSwift coverage: Grading: 
+# feature is below 50%: with the default settings, coverage only warns (#507). The nightly run expects the same
+# scores on iOS, tvOS, watchOS and Mac Catalyst (.github/scripts/xcode-project-coverage.sh).
+CucumberSwift coverage: Grading: 38% of the code its scenarios ran (3 of 8 regions in 1 function), 38% of all measured code, redundancy 0%,
 Test Case '-[Grading › Coverage scores Coverage]' passed
 ✔ Test "A high score" with 2 test cases passed
 Grading.feature:1: warning: Feature coverage
