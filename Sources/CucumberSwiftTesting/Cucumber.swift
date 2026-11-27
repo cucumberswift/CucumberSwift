@@ -3,6 +3,7 @@
 //  CucumberSwiftTesting
 //
 
+import CucumberSwiftTestingInterop
 import Foundation
 import Testing
 #if canImport(XCTest)
@@ -395,6 +396,8 @@ public final class Cucumber {
 
     /// Calls `setupSteps()` once, before the first scenario or the suite starts.
     func loadStepDefinitions() {
+        // Keeps the interop target's constructor in the test binary: see CucumberSwiftTestingInterop.c.
+        cucumberswift_testing_interop_linked()
         guard !isSetUp else { return }
         isSetUp = true
         (self as Any as? StepImplementation)?.setupSteps()

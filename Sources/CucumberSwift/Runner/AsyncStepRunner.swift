@@ -109,7 +109,7 @@ enum AsyncStepRunner {
 
     /// Like `run`, but a thrown error fails the test at `file` and `line` instead of propagating.
     static func runFailingOnError(_ body: @escaping Body, file: StaticString, line: UInt) {
-        XCTAssertNoThrow(try run(body), file: file, line: line)
+        Cucumber.failOnError(in: Cucumber.shared.currentStep?.testCase, file: file, line: line) { try run(body) }
     }
 
     /// Runs `body` to completion in the current step's test, and throws what it threw, or `TimeoutError`.

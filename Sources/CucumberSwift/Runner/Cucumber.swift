@@ -273,7 +273,7 @@ import XCTest
         if matches.count > 1 {
             XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
         } else {
-            XCTAssertNoThrow(try definition.execute?(matching, step))
+            Self.failOnError(in: currentStep?.testCase) { try definition.execute?(matching, step) }
         }
     }
 
@@ -289,6 +289,9 @@ import XCTest
             XCTFail(CucumberTest.ambiguousStepMessage(step: matching, definitions: matches.map(\.definition)))
             return
         }
+        let testCase = currentStep?.testCase
+        let failureCount = Self.failureCounter.snapshot
+        let failuresBefore = failureCount(testCase)
         do {
             if let executeAsync = definition.executeAsync {
                 try await executeAsync(matching, step)
@@ -296,6 +299,8 @@ import XCTest
                 try definition.execute?(matching, step)
             }
         } catch {
+            // A failed `try #require` has already failed the test, as in `failOnError`.
+            guard Self.reportsError(error, afterFailure: failureCount(testCase) > failuresBefore) else { return }
             XCTFail("ExecuteFirstStep threw error \"\(error)\"")
         }
     }
@@ -451,5 +456,45 @@ import XCTest
                              file: file,
                              executeSelector: selector,
                              executeClass: `class`)
+    }
+}
+
+extension Cucumber {
+    /// Counts the failures a test has recorded. Tests replace it, so that a failure counts without failing them.
+    static let failureCounter = Locked<(XCTestCase?) -> Int> { $0?.testRun?.totalFailureCount ?? 0 }
+
+    /// Whether `error` is the one a failed `try #require` throws after Swift Testing has recorded its failure:
+    /// `ExpectationFailedError`. CucumberSwift doesn't import Testing, so the type is known by its name.
+    static func isAlreadyRecorded(_ error: any Error) -> Bool {
+        String(reflecting: type(of: error)) == "Testing.ExpectationFailedError"
+    }
+
+    /// Runs `body`, and fails `testCase` at `file` and `line` with an error it throws, as `XCTAssertNoThrow`
+    /// does, unless Swift Testing has already failed `testCase` for that error. A failed `try #require` then
+    /// fails the test once, as a failed `#expect` does. Without XCTest's interop with Swift Testing, which
+    /// Xcode 16 lacks, nothing fails the test before the error, so the error still fails it.
+    static func failOnError(in testCase: XCTestCase?,
+                            file: StaticString = #filePath,
+                            line: UInt = #line,
+                            _ body: () throws -> Void) {
+        let count = failureCounter.snapshot
+        failOnError(failureCount: { count(testCase) }, file: file, line: line, body)
+    }
+
+    /// Like `failOnError(in:file:line:_:)`, with the test's failures counted by `failureCount`.
+    static func failOnError(failureCount: () -> Int, file: StaticString, line: UInt, _ body: () throws -> Void) {
+        let failuresBefore = failureCount()
+        do {
+            try body()
+        } catch {
+            guard reportsError(error, afterFailure: failureCount() > failuresBefore) else { return }
+            XCTAssertNoThrow(try { throw error }(), file: file, line: line)
+        }
+    }
+
+    /// Whether an error a step or hook threw fails its test: always, unless the error is one Swift Testing
+    /// already recorded and the test has failed since the step or hook started.
+    static func reportsError(_ error: any Error, afterFailure hasFailed: Bool) -> Bool {
+        !(hasFailed && isAlreadyRecorded(error))
     }
 }

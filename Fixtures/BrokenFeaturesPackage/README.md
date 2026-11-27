@@ -12,6 +12,10 @@ Each target has the same two files:
 - `Unsupported.feature`: a `# language:` that Gherkin doesn't have. Each runner fails it as a Gherkin
   error. (`CucumberSwiftLint` only checks English feature files.)
 
+- `Assertions.feature`: scenarios whose first step fails an assertion on purpose, with XCTest's `XCTAssert`
+  (XCTest runner only), and Swift Testing's `#expect`, `#require` and `Issue.record`. Each runner fails that step
+  and skips the next one. Under `swift test` the Swift Testing runner doesn't see a failed `XCTAssert` on Xcode 26.4, although `xcodebuild` does.
+
 Its tests are meant to fail. `mise run test-fixtures` requires them to, and requires every warning in
 `expected-warnings` and every failure in `expected-failures` to appear in the output. Don't fix the feature
 files: change the expectations when CucumberSwift's messages change.
